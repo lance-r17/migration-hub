@@ -78,7 +78,7 @@ export const mockProjects: Project[] = [
     ],
     approvals: [
       { id: 'a1', role: 'Technical Lead', approver: 'Sarah J.', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u-tech-lead' },
-      { id: 'a2', role: 'Business Owner', status: 'waiting', icon: 'CreditCard', userId: 'u-biz-owner' },
+      { id: 'a2', role: 'Business Owner', approver: 'Sarah Jenkins', status: 'approved', timestamp: 'Mar 22, 02:30 PM', icon: 'CreditCard', userId: 'u-biz-owner' },
       { id: 'a3', role: 'Platform Migration Lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
     ],
 

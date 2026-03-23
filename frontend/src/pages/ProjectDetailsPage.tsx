@@ -91,12 +91,16 @@ export function ProjectDetailsPage() {
   const handleConfirm = async (approvedRole: string) => {
     setModalOpen(false)
     const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    const updatedApprovals = project.approvals.map(a =>
+      a.role === approvedRole
+        ? { ...a, status: 'approved' as const, approver: user?.name ?? '', timestamp: now }
+        : a
+    )
     try {
-      await saveSection('approvals', project.approvals.map(a =>
-        a.role === approvedRole
-          ? { ...a, status: 'approved' as const, approver: user?.name ?? '', timestamp: now }
-          : a
-      ))
+      await saveSection('approvals', updatedApprovals)
+      if (updatedApprovals.every(a => a.status === 'approved')) {
+        await saveSection('status', 'signed-off')
+      }
       toast.success('Sign-off submitted successfully', {
         description: 'Approval recorded. Jira issues will be created shortly.',
       })
