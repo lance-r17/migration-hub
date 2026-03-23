@@ -1,0 +1,50 @@
+import { Check, AlertCircle } from 'lucide-react'
+import type { Activity } from '@/types'
+
+interface ActivityTimelineProps {
+  activities: Activity[]
+}
+
+function ActivityDot({ type }: { type: Activity['type'] }) {
+  if (type === 'success') {
+    return (
+      <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center border-4 border-background z-10">
+        <Check size={10} className="text-emerald-700 dark:text-emerald-300 font-bold" strokeWidth={3} />
+      </div>
+    )
+  }
+  if (type === 'error') {
+    return (
+      <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center border-4 border-background z-10">
+        <AlertCircle size={10} className="text-destructive font-bold" strokeWidth={3} />
+      </div>
+    )
+  }
+  // info
+  return (
+    <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center border-4 border-background z-10">
+      <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+    </div>
+  )
+}
+
+export function ActivityTimeline({ activities }: ActivityTimelineProps) {
+  return (
+    <div className="bg-card p-6 rounded-xl border border-border">
+      <h3 className="text-sm font-bold text-foreground mb-6 uppercase tracking-widest">Recent Activity</h3>
+      <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border">
+        {activities.map((activity) => (
+          <div key={activity.id} className="relative pl-8">
+            <ActivityDot type={activity.type} />
+            <div>
+              <p className="text-sm font-medium text-foreground">{activity.message}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {activity.time} • By {activity.actor}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

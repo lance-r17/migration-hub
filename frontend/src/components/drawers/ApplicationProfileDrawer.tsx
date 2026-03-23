@@ -1,0 +1,165 @@
+import { useState, useEffect } from 'react'
+import { SectionEditDrawer } from './SectionEditDrawer'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
+import type { ApplicationOverview, ApplicationTier } from '@/types'
+
+interface Props {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  data: ApplicationOverview | undefined
+  onSave: (data: ApplicationOverview) => void
+}
+
+const textareaClass =
+  'min-h-[80px] w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-y dark:bg-input/30'
+
+const sectionLabel = 'text-xs font-semibold uppercase text-muted-foreground tracking-wide pt-2'
+
+export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: Props) {
+  const [draft, setDraft] = useState({
+    applicationName: '',
+    shortName: '',
+    eimId: '',
+    applicationTier: '' as ApplicationTier | '',
+    userBaseType: 'Internal' as 'Internal' | 'External' | 'Both',
+    userBaseCount: '',
+    businessFunction: '',
+  })
+
+  useEffect(() => {
+    if (open) {
+      setDraft({
+        applicationName: data?.applicationName ?? '',
+        shortName: data?.shortName ?? '',
+        eimId: data?.eimId ?? '',
+        applicationTier: data?.applicationTier ?? '',
+        userBaseType: data?.userBase?.type ?? 'Internal',
+        userBaseCount: data?.userBase?.count ?? '',
+        businessFunction: data?.businessFunction ?? '',
+      })
+    }
+  }, [open, data])
+
+  function handleSave() {
+    onSave({
+      ...data,
+      applicationName: draft.applicationName,
+      shortName: draft.shortName || undefined,
+      eimId: draft.eimId || undefined,
+      applicationTier: (draft.applicationTier as ApplicationTier) || undefined,
+      userBase: { type: draft.userBaseType, count: draft.userBaseCount || undefined },
+      businessFunction: draft.businessFunction || undefined,
+    })
+    onOpenChange(false)
+  }
+
+  return (
+    <SectionEditDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit Application Profile"
+      onSave={handleSave}
+    >
+      <p className={sectionLabel}>Application Details</p>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="ap-name">Application Name *</Label>
+        <Input
+          id="ap-name"
+          value={draft.applicationName}
+          onChange={(e) => setDraft(d => ({ ...d, applicationName: e.target.value }))}
+          placeholder="Application name"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="ap-short">Short Name</Label>
+        <Input
+          id="ap-short"
+          value={draft.shortName}
+          onChange={(e) => setDraft(d => ({ ...d, shortName: e.target.value }))}
+          placeholder="Short name or alias"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="ap-eim">EIM ID</Label>
+          <Input
+            id="ap-eim"
+            value={draft.eimId}
+            onChange={(e) => setDraft(d => ({ ...d, eimId: e.target.value }))}
+            placeholder="EIM ID"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Application Tier</Label>
+          <Select
+            value={draft.applicationTier}
+            onValueChange={(v) => setDraft(d => ({ ...d, applicationTier: v as ApplicationTier }))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select tier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="P1">P1</SelectItem>
+              <SelectItem value="P2">P2</SelectItem>
+              <SelectItem value="P3">P3</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <p className={sectionLabel}>User Base</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>User Type</Label>
+          <Select
+            value={draft.userBaseType}
+            onValueChange={(v) => setDraft(d => ({ ...d, userBaseType: v as 'Internal' | 'External' | 'Both' }))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Internal">Internal</SelectItem>
+              <SelectItem value="External">External</SelectItem>
+              <SelectItem value="Both">Both</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ap-ub-count">User Count</Label>
+          <Input
+            id="ap-ub-count"
+            value={draft.userBaseCount}
+            onChange={(e) => setDraft(d => ({ ...d, userBaseCount: e.target.value }))}
+            placeholder="e.g. ~5,000"
+          />
+        </div>
+      </div>
+
+      <p className={sectionLabel}>Business Function</p>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="ap-biz">Description</Label>
+        <textarea
+          id="ap-biz"
+          className={textareaClass}
+          value={draft.businessFunction}
+          onChange={(e) => setDraft(d => ({ ...d, businessFunction: e.target.value }))}
+          placeholder="Describe the business function of this application"
+        />
+      </div>
+    </SectionEditDrawer>
+  )
+}
