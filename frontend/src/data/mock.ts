@@ -106,7 +106,7 @@ export const mockProjects: Project[] = [
         {
           id: 'res2', name: 'Primary Oracle DB', category: 'Database',
           specs: '8 vCPU, 64 GB RAM', quantity: 2, availabilityZones: ['AZ-A (primary)', 'AZ-B (replica)'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
         },
         {
           id: 'res3', name: 'Redis Session Cache', category: 'VM',
@@ -117,7 +117,7 @@ export const mockProjects: Project[] = [
         {
           id: 'res4', name: 'Static Assets Bucket', category: 'Buckets',
           specs: '2 TB, 3,000 IOPS Sync, Daily backup', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Ready', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
         },
         // — VMs —
         {
@@ -133,7 +133,7 @@ export const mockProjects: Project[] = [
         {
           id: 'res-a7', name: 'HR Module App Server', category: 'VM',
           specs: '4 vCPU, 16 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
         },
         {
           id: 'res-a8', name: 'Finance Module App Server', category: 'VM',
@@ -148,12 +148,12 @@ export const mockProjects: Project[] = [
         {
           id: 'res-a10', name: 'Batch Processing Server', category: 'VM',
           specs: '8 vCPU, 32 GB RAM', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'out-of-sync',
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
         },
         {
           id: 'res-a11', name: 'SFTP File Transfer Server', category: 'VM',
           specs: '2 vCPU, 4 GB RAM', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
           needMigration: false,
         },
         // — Databases —
@@ -170,7 +170,7 @@ export const mockProjects: Project[] = [
         {
           id: 'res-a14', name: 'Audit Trail Database', category: 'Database',
           specs: '4 vCPU, 16 GB RAM, 2 TB SSD', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
         },
         {
           id: 'res-a15', name: 'Oracle RAC Node 3', category: 'Database',
@@ -181,12 +181,12 @@ export const mockProjects: Project[] = [
         {
           id: 'res-a16', name: 'Document Archive Store', category: 'Buckets',
           specs: '800 GB, Geo-Redundant, Daily lifecycle tiering', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Ready', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'provisioning',
         },
         {
           id: 'res-a17', name: 'Backup Vault (Cold)', category: 'Buckets',
           specs: '12 TB, Archive tier, 7-year retention', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B', 'AZ-C'],
-          existingStatus: 'Ready', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
         },
         {
           id: 'res-a18', name: 'SAP Media Library Bucket', category: 'Buckets',
@@ -202,7 +202,7 @@ export const mockProjects: Project[] = [
         {
           id: 'res-a20', name: 'Perimeter Firewall Cluster', category: 'Network',
           specs: 'HA pair, 40 Gbps throughput', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
         },
         {
           id: 'res-a21', name: 'Internal WAF Appliance', category: 'Network',
@@ -212,7 +212,7 @@ export const mockProjects: Project[] = [
         {
           id: 'res-a22', name: 'MPLS Gateway Router', category: 'Network',
           specs: '10 Gbps dedicated circuit, BGP peering', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'out-of-sync',
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
         },
         // — Other —
         {
@@ -385,6 +385,26 @@ export const mockProjects: Project[] = [
           specs: 'db.t3.medium, 100 GB SSD', quantity: 1, availabilityZones: ['AZ-A'],
           existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
         },
+        {
+          id: 'res-m11-3', name: 'OAuth Token Cache', category: 'VM',
+          specs: '2 vCPU, 4 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+        },
+        {
+          id: 'res-m11-4', name: 'Auth Audit Log Store', category: 'Buckets',
+          specs: '200 GB, Standard tier, 3-year retention', quantity: 1, availabilityZones: ['AZ-A'],
+          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+        },
+        {
+          id: 'res-m11-5', name: 'Identity Provider DB', category: 'Database',
+          specs: 'db.t3.large, 250 GB SSD', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
+          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+        },
+        {
+          id: 'res-m11-6', name: 'Auth API Gateway', category: 'Network',
+          specs: 'Internal NLB, 1 Gbps', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
+          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+        },
       ],
       network: {
         loadBalancerType: 'Internal ALB',
@@ -517,7 +537,7 @@ export const mockProjects: Project[] = [
         {
           id: 'res7', name: 'DNS Primary Cluster (APAC)', category: 'VM',
           specs: '8 vCPU, 32 GB RAM', quantity: 3, availabilityZones: ['AZ-A', 'AZ-B', 'AZ-C'],
-          existingStatus: 'Live', targetStatus: 'Live', syncStatus: 'synced',
+          existingStatus: 'Live', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
         },
         {
           id: 'res8', name: 'DNS Secondary Cluster (EU)', category: 'VM',
@@ -527,7 +547,7 @@ export const mockProjects: Project[] = [
         {
           id: 'res9', name: 'Anycast Edge Nodes ×12', category: 'VM',
           specs: '4 vCPU, 8 GB RAM each', quantity: 12, availabilityZones: ['AZ-A', 'AZ-B', 'AZ-C'],
-          existingStatus: 'Starting', targetStatus: 'Live', syncStatus: 'provisioning',
+          existingStatus: 'Starting', targetStatus: 'Provisioning', syncStatus: 'provisioning',
         },
       ],
       network: {

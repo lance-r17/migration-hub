@@ -109,6 +109,8 @@ export function ProjectDetailsPage() {
     }
   }
 
+  const isProjectMember = project.team.some(m => m.id === user?.id)
+
   const preSignOffStatuses: ProjectStatus[] = ['planning', 'in-progress', 'blocked']
   const currentUserRole =
     project.approvals.find(a => a.userId === user?.id)?.role
@@ -205,6 +207,7 @@ export function ProjectDetailsPage() {
             data={project.currentInfrastructure}
             onSave={(d) => handleSave('currentInfrastructure', d)}
             projectStatus={project.status}
+            isProjectMember={isProjectMember}
           />
           <DataPersistenceSection
             data={project.dataPersistence}

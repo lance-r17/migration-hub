@@ -12,6 +12,7 @@ interface CurrentInfrastructureSectionProps {
   data?: CurrentInfrastructure
   onSave?: (data: CurrentInfrastructure) => void
   projectStatus?: ProjectStatus
+  isProjectMember?: boolean
 }
 
 function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
@@ -39,7 +40,7 @@ function getStatusVariant(status: string): 'green' | 'blue' | 'default' {
   return 'default'
 }
 
-export function CurrentInfrastructureSection({ data, onSave, projectStatus }: CurrentInfrastructureSectionProps) {
+export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false }: CurrentInfrastructureSectionProps) {
   const [networkDrawerOpen, setNetworkDrawerOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
   const [editingResource, setEditingResource] = useState<CloudResource | null>(null)
@@ -219,6 +220,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus }: Cu
           resources={data?.resources ?? []}
           editingResource={editingResource}
           projectStatus={projectStatus}
+          isProjectMember={isProjectMember}
           onSave={(updated) => { onSave({ ...(data ?? { resources: [] }), resources: updated }); setEditingResource(null) }}
         />
       )}

@@ -13,6 +13,7 @@ interface Props {
   resources: CloudResource[]
   editingResource: CloudResource | null
   projectStatus?: ProjectStatus
+  isProjectMember: boolean
   onSave: (resources: CloudResource[]) => void
 }
 
@@ -58,10 +59,10 @@ function StatusChip({ label }: { label: string }) {
   )
 }
 
-const isMigrationPhase = (status?: ProjectStatus) =>
-  status === 'in-progress' || status === 'migrating'
+const isSignedOff = (status?: ProjectStatus) =>
+  status === 'signed-off' || status === 'completed'
 
-export function CloudResourceEditDrawer({ open, onOpenChange, resources, editingResource, projectStatus, onSave }: Props) {
+export function CloudResourceEditDrawer({ open, onOpenChange, resources, editingResource, projectStatus, isProjectMember, onSave }: Props) {
   const [needMigration, setNeedMigration] = useState(true)
 
   useEffect(() => {
@@ -86,7 +87,8 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
     onOpenChange(false)
   }
 
-  const canMarkSynced = isMigrationPhase(projectStatus) && editingResource.syncStatus !== 'synced'
+  const canSave = isProjectMember && !isSignedOff(projectStatus)
+  const canMarkSynced = isProjectMember && isSignedOff(projectStatus) && editingResource.syncStatus !== 'synced'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -133,6 +135,7 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
               id="cr-need-migration"
               checked={needMigration}
               onCheckedChange={(checked) => setNeedMigration(!!checked)}
+              disabled={!canSave}
             />
             <Label htmlFor="cr-need-migration" className="cursor-pointer text-sm">
               Needs Migration
@@ -152,7 +155,7 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
             <SheetClose asChild>
               <Button variant="outline">Cancel</Button>
             </SheetClose>
-            <Button onClick={handleSave}>Save Changes</Button>
+            {canSave && <Button onClick={handleSave}>Save Changes</Button>}
           </div>
         </SheetFooter>
       </SheetContent>
