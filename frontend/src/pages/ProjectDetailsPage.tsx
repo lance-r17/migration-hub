@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BadgeCheck } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,6 +15,7 @@ import { NonFunctionalRequirementsSection } from '@/components/project/NonFuncti
 import { MigrationConstraintsSection } from '@/components/project/MigrationCutoverSection'
 import { TargetArchitectureSection } from '@/components/project/TargetArchitectureSection'
 import { SignOffModal } from '@/components/modals/SignOffModal'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,23 +24,37 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { mockProjects } from '@/data/mock'
+import { useProject } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
-import type { Project, ProjectStatus } from '@/types'
+import type { ProjectStatus } from '@/types'
 
 export function ProjectDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  const mockCurrentUser = useCurrentUser()
+  const { user } = useCurrentUser()
+  const { project, loading, saveSection } = useProject(id)
   const [modalOpen, setModalOpen] = useState(false)
-  const [project, setProject] = useState<Project | undefined>(
-    () => mockProjects.find(p => p.id === id)
-  )
 
-  const handleSave = useCallback(<K extends keyof Project>(key: K, value: Project[K]) => {
-    setProject(prev => prev ? { ...prev, [key]: value } : prev)
-  }, [])
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="max-w-screen-xl mx-auto w-full space-y-8">
+          <Skeleton className="h-5 w-48 rounded" />
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-96 rounded" />
+            <Skeleton className="h-4 w-72 rounded" />
+          </div>
+          <Skeleton className="h-16 rounded-xl" />
+          <div className="space-y-6">
+            <Skeleton className="h-48 rounded-xl" />
+            <Skeleton className="h-48 rounded-xl" />
+            <Skeleton className="h-48 rounded-xl" />
+          </div>
+        </div>
+      </AppShell>
+    )
+  }
 
   if (!project) {
     return (
@@ -62,23 +77,27 @@ export function ProjectDetailsPage() {
     )
   }
 
-  const handleConfirm = (approvedRole: string) => {
+  const handleConfirm = async (approvedRole: string) => {
     setModalOpen(false)
     const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-    handleSave('approvals', project.approvals.map(a =>
-      a.role === approvedRole
-        ? { ...a, status: 'approved' as const, approver: mockCurrentUser.name, timestamp: now }
-        : a
-    ))
-    toast.success('Sign-off submitted successfully', {
-      description: 'Approval recorded. Jira issues will be created shortly.',
-    })
+    try {
+      await saveSection('approvals', project.approvals.map(a =>
+        a.role === approvedRole
+          ? { ...a, status: 'approved' as const, approver: user?.name ?? '', timestamp: now }
+          : a
+      ))
+      toast.success('Sign-off submitted successfully', {
+        description: 'Approval recorded. Jira issues will be created shortly.',
+      })
+    } catch {
+      toast.error('Failed to submit sign-off. Please try again.')
+    }
   }
 
   const preSignOffStatuses: ProjectStatus[] = ['planning', 'in-progress', 'blocked']
   const currentUserRole =
-    project.approvals.find(a => a.userId === mockCurrentUser.id)?.role
-    ?? (mockCurrentUser.role ?? null)
+    project.approvals.find(a => a.userId === user?.id)?.role
+    ?? (user?.role ?? null)
   const canSignOff =
     preSignOffStatuses.includes(project.status) &&
     currentUserRole !== null &&
@@ -154,40 +173,40 @@ export function ProjectDetailsPage() {
           <ApplicationOverviewSection
             data={project.applicationOverview}
             projectId={project.id}
-            onSave={(d) => handleSave('applicationOverview', d)}
+            onSave={(d) => saveSection('applicationOverview', d)}
           />
           <RisksBlockersSection
             risks={project.risks}
-            onSave={(risks) => handleSave('risks', risks)}
+            onSave={(risks) => saveSection('risks', risks)}
           />
           <CurrentInfrastructureSection
             data={project.currentInfrastructure}
-            onSave={(d) => handleSave('currentInfrastructure', d)}
+            onSave={(d) => saveSection('currentInfrastructure', d)}
             projectStatus={project.status}
           />
           <DataPersistenceSection
             data={project.dataPersistence}
-            onSave={(d) => handleSave('dataPersistence', d)}
+            onSave={(d) => saveSection('dataPersistence', d)}
           />
           <AvailabilityResilienceSection
             data={project.availability}
-            onSave={(d) => handleSave('availability', d)}
+            onSave={(d) => saveSection('availability', d)}
           />
           <DependenciesSection
             data={project.dependencies}
-            onSave={(d) => handleSave('dependencies', d)}
+            onSave={(d) => saveSection('dependencies', d)}
           />
           <NonFunctionalRequirementsSection
             data={project.nfrs}
-            onSave={(d) => handleSave('nfrs', d)}
+            onSave={(d) => saveSection('nfrs', d)}
           />
           <MigrationConstraintsSection
             data={project.migrationConstraints}
-            onSave={(d) => handleSave('migrationConstraints', d)}
+            onSave={(d) => saveSection('migrationConstraints', d)}
           />
           <TargetArchitectureSection
             data={project.targetArchitecture}
-            onSave={(d) => handleSave('targetArchitecture', d)}
+            onSave={(d) => saveSection('targetArchitecture', d)}
           />
         </div>
       </div>

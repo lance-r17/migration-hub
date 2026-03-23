@@ -4,7 +4,7 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { cn } from '@/lib/utils'
 import { ApplicationProfileDrawer } from '@/components/drawers/ApplicationProfileDrawer'
 import { ContactsOwnershipDrawer } from '@/components/drawers/ContactsOwnershipDrawer'
-import { mockUsers } from '@/data/mock'
+import { useUsers } from '@/hooks/use-users'
 import type { ApplicationOverview, ApplicationTier } from '@/types'
 
 interface ApplicationOverviewSectionProps {
@@ -32,10 +32,11 @@ function Label({ children }: { children: React.ReactNode }) {
 
 export function ApplicationOverviewSection({ data, projectId, onSave }: ApplicationOverviewSectionProps) {
   const [editingCard, setEditingCard] = useState<'profile' | 'contacts' | null>(null)
+  const { users } = useUsers()
 
-  const businessOwner = mockUsers.find(u => u.id === data?.businessOwnerId)
-  const technicalLead = mockUsers.find(u => u.id === data?.technicalLeadId)
-  const dbaDataOwner  = mockUsers.find(u => u.id === data?.dbaDataOwnerId)
+  const businessOwner = users.find(u => u.id === data?.businessOwnerId)
+  const technicalLead = users.find(u => u.id === data?.technicalLeadId)
+  const dbaDataOwner  = users.find(u => u.id === data?.dbaDataOwnerId)
 
   return (
     <div>

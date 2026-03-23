@@ -8,7 +8,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
-import { mockUsers, mockProjectUsers } from '@/data/mock'
+import { useProjectUsers } from '@/hooks/use-users'
 import type { ApplicationOverview } from '@/types'
 
 interface Props {
@@ -21,8 +21,8 @@ interface Props {
 
 const sectionLabel = 'text-xs font-semibold uppercase text-muted-foreground tracking-wide pt-2'
 
-function UserPreview({ userId }: { userId: string }) {
-  const user = mockUsers.find(u => u.id === userId)
+function UserPreview({ userId, users }: { userId: string; users: { id: string; name: string; team?: string; department: string; email: string }[] }) {
+  const user = users.find(u => u.id === userId)
   if (!user) return null
   return (
     <div className="mt-1.5 px-3 py-2 rounded-lg bg-muted/50 border border-border">
@@ -33,11 +33,7 @@ function UserPreview({ userId }: { userId: string }) {
 }
 
 export function ContactsOwnershipDrawer({ open, onOpenChange, data, projectId, onSave }: Props) {
-  const availableUsers = (
-    mockProjectUsers.find(pu => pu.projectId === projectId)
-      ?.userIds.map(id => mockUsers.find(u => u.id === id)!)
-      .filter(Boolean)
-  ) ?? mockUsers
+  const { users: availableUsers, loading: usersLoading } = useProjectUsers(projectId)
 
   const [draft, setDraft] = useState({ boUserId: '', tlUserId: '', dbaUserId: '' })
 
@@ -73,42 +69,42 @@ export function ContactsOwnershipDrawer({ open, onOpenChange, data, projectId, o
       <div className="space-y-1.5">
         <Label>User</Label>
         <Select value={draft.boUserId} onValueChange={(v) => setDraft(d => ({ ...d, boUserId: v }))}>
-          <SelectTrigger><SelectValue placeholder="Select a user…" /></SelectTrigger>
+          <SelectTrigger disabled={usersLoading}><SelectValue placeholder={usersLoading ? 'Loading users…' : 'Select a user…'} /></SelectTrigger>
           <SelectContent>
             {availableUsers.map(u => (
               <SelectItem key={u.id} value={u.id}>{u.name} — {u.department}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {draft.boUserId && <UserPreview userId={draft.boUserId} />}
+        {draft.boUserId && <UserPreview userId={draft.boUserId} users={availableUsers} />}
       </div>
 
       <p className={sectionLabel}>Technical Lead</p>
       <div className="space-y-1.5">
         <Label>User</Label>
         <Select value={draft.tlUserId} onValueChange={(v) => setDraft(d => ({ ...d, tlUserId: v }))}>
-          <SelectTrigger><SelectValue placeholder="Select a user…" /></SelectTrigger>
+          <SelectTrigger disabled={usersLoading}><SelectValue placeholder={usersLoading ? 'Loading users…' : 'Select a user…'} /></SelectTrigger>
           <SelectContent>
             {availableUsers.map(u => (
               <SelectItem key={u.id} value={u.id}>{u.name} — {u.department}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {draft.tlUserId && <UserPreview userId={draft.tlUserId} />}
+        {draft.tlUserId && <UserPreview userId={draft.tlUserId} users={availableUsers} />}
       </div>
 
       <p className={sectionLabel}>DBA / Data Owner</p>
       <div className="space-y-1.5">
         <Label>User</Label>
         <Select value={draft.dbaUserId} onValueChange={(v) => setDraft(d => ({ ...d, dbaUserId: v }))}>
-          <SelectTrigger><SelectValue placeholder="Select a user…" /></SelectTrigger>
+          <SelectTrigger disabled={usersLoading}><SelectValue placeholder={usersLoading ? 'Loading users…' : 'Select a user…'} /></SelectTrigger>
           <SelectContent>
             {availableUsers.map(u => (
               <SelectItem key={u.id} value={u.id}>{u.name} — {u.department}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {draft.dbaUserId && <UserPreview userId={draft.dbaUserId} />}
+        {draft.dbaUserId && <UserPreview userId={draft.dbaUserId} users={availableUsers} />}
       </div>
     </SectionEditDrawer>
   )

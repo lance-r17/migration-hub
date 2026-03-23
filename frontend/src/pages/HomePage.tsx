@@ -6,14 +6,20 @@ import { StatCard } from '@/components/home/StatCard'
 import { ProjectCard } from '@/components/home/ProjectCard'
 import { ActivityTimeline } from '@/components/home/ActivityTimeline'
 import { SecurityHealthWidget } from '@/components/home/SecurityHealthWidget'
-import { overallStats, recentActivity, mockProjects } from '@/data/mock'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useDashboard } from '@/hooks/use-dashboard'
+import { useProjects } from '@/hooks/use-projects'
 
 type SortKey = 'progress' | 'status'
 
 export function HomePage() {
   const [sortKey, setSortKey] = useState<SortKey>('progress')
+  const { stats, activity, loading: dashLoading } = useDashboard()
+  const { projects, loading: projectsLoading } = useProjects()
 
-  const sortedProjects = [...mockProjects].sort((a, b) => {
+  const loading = dashLoading || projectsLoading
+
+  const sortedProjects = [...projects].sort((a, b) => {
     if (sortKey === 'progress') return b.progress - a.progress
     if (sortKey === 'status') return a.status.localeCompare(b.status)
     return 0
@@ -44,21 +50,31 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <OverallProgressCard stats={overallStats} />
-            <StatCard
-              label="Completed Projects"
-              value={overallStats.completed}
-              icon={CheckCircle2}
-              iconBg="bg-emerald-100 dark:bg-emerald-900/30"
-              iconColor="text-emerald-700 dark:text-emerald-300"
-            />
-            <StatCard
-              label="In Progress"
-              value={overallStats.inProgress}
-              icon={Clock}
-              iconBg="bg-secondary"
-              iconColor="text-secondary-foreground"
-            />
+            {loading || !stats ? (
+              <>
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+              </>
+            ) : (
+              <>
+                <OverallProgressCard stats={stats} />
+                <StatCard
+                  label="Completed Projects"
+                  value={stats.completed}
+                  icon={CheckCircle2}
+                  iconBg="bg-emerald-100 dark:bg-emerald-900/30"
+                  iconColor="text-emerald-700 dark:text-emerald-300"
+                />
+                <StatCard
+                  label="In Progress"
+                  value={stats.inProgress}
+                  icon={Clock}
+                  iconBg="bg-secondary"
+                  iconColor="text-secondary-foreground"
+                />
+              </>
+            )}
           </div>
         </section>
 
@@ -80,16 +96,28 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {sortedProjects.map(project => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
+            {loading ? (
+              <>
+                <Skeleton className="h-40 rounded-xl" />
+                <Skeleton className="h-40 rounded-xl" />
+                <Skeleton className="h-40 rounded-xl" />
+              </>
+            ) : (
+              sortedProjects.map(project => (
+                <ProjectCard key={project.id} project={project} />
+              ))
+            )}
           </div>
         </section>
 
         {/* Section 3: Secondary */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <ActivityTimeline activities={recentActivity} />
+            {loading ? (
+              <Skeleton className="h-48 rounded-xl" />
+            ) : (
+              <ActivityTimeline activities={activity} />
+            )}
           </div>
           <SecurityHealthWidget />
         </section>

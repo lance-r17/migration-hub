@@ -50,7 +50,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation()
-  const currentUser = useCurrentUser()
+  const { user } = useCurrentUser()
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -74,7 +74,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={{ name: currentUser.name, email: currentUser.email, avatar: '' }} />
+        {user && <NavUser user={{ name: user.name, email: user.email, avatar: '' }} />}
       </SidebarFooter>
     </Sidebar>
   )
