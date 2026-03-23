@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/breadcrumb'
 import { useProject } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
-import type { ProjectStatus } from '@/types'
+import type { Project, ProjectStatus } from '@/types'
 
 export function ProjectDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -75,6 +75,15 @@ export function ProjectDetailsPage() {
         </div>
       </AppShell>
     )
+  }
+
+  const handleSave = async <K extends keyof Project>(key: K, value: Project[K]) => {
+    try {
+      await saveSection(key, value)
+      toast.success('Changes saved')
+    } catch {
+      toast.error('Failed to save changes. Please try again.')
+    }
   }
 
   const handleConfirm = async (approvedRole: string) => {
@@ -173,40 +182,40 @@ export function ProjectDetailsPage() {
           <ApplicationOverviewSection
             data={project.applicationOverview}
             projectId={project.id}
-            onSave={(d) => saveSection('applicationOverview', d)}
+            onSave={(d) => handleSave('applicationOverview', d)}
           />
           <RisksBlockersSection
             risks={project.risks}
-            onSave={(risks) => saveSection('risks', risks)}
+            onSave={(risks) => handleSave('risks', risks)}
           />
           <CurrentInfrastructureSection
             data={project.currentInfrastructure}
-            onSave={(d) => saveSection('currentInfrastructure', d)}
+            onSave={(d) => handleSave('currentInfrastructure', d)}
             projectStatus={project.status}
           />
           <DataPersistenceSection
             data={project.dataPersistence}
-            onSave={(d) => saveSection('dataPersistence', d)}
+            onSave={(d) => handleSave('dataPersistence', d)}
           />
           <AvailabilityResilienceSection
             data={project.availability}
-            onSave={(d) => saveSection('availability', d)}
+            onSave={(d) => handleSave('availability', d)}
           />
           <DependenciesSection
             data={project.dependencies}
-            onSave={(d) => saveSection('dependencies', d)}
+            onSave={(d) => handleSave('dependencies', d)}
           />
           <NonFunctionalRequirementsSection
             data={project.nfrs}
-            onSave={(d) => saveSection('nfrs', d)}
+            onSave={(d) => handleSave('nfrs', d)}
           />
           <MigrationConstraintsSection
             data={project.migrationConstraints}
-            onSave={(d) => saveSection('migrationConstraints', d)}
+            onSave={(d) => handleSave('migrationConstraints', d)}
           />
           <TargetArchitectureSection
             data={project.targetArchitecture}
-            onSave={(d) => saveSection('targetArchitecture', d)}
+            onSave={(d) => handleSave('targetArchitecture', d)}
           />
         </div>
       </div>
