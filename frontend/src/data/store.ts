@@ -5,14 +5,17 @@ import {
   mockCurrentUser,
   overallStats,
   recentActivity,
+  mockAuditEntries,
 } from '@/data/mock'
 import type { Project, User, OverallStats, Activity } from '@/types'
+import type { AuditLogEntry } from '@/types/audit'
 
 // Mutable in-memory session store — deep copy of mock data.
 // Writes persist for the lifetime of the browser tab (resets on page refresh).
 // All service functions read/write exclusively through this store.
 
 let _projects: Project[] = structuredClone(mockProjects)
+let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntries)
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
@@ -53,6 +56,19 @@ export const store = {
     return entry.userIds
       .map(uid => _users.find(u => u.id === uid))
       .filter((u): u is User => u !== undefined)
+  },
+
+  // ─── Audit Log ─────────────────────────────────────────────────────────────
+
+  getAuditLog(projectId: string): AuditLogEntry[] {
+    return (_auditLogs[projectId] ?? []).slice().sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+  },
+
+  appendAuditEntry(entry: AuditLogEntry): void {
+    if (!_auditLogs[entry.projectId]) _auditLogs[entry.projectId] = []
+    _auditLogs[entry.projectId].push(entry)
   },
 
   // ─── Dashboard ─────────────────────────────────────────────────────────────

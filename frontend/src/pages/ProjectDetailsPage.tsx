@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { BadgeCheck } from 'lucide-react'
+import { BadgeCheck, History } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -15,6 +15,7 @@ import { NonFunctionalRequirementsSection } from '@/components/project/NonFuncti
 import { MigrationConstraintsSection } from '@/components/project/MigrationCutoverSection'
 import { TargetArchitectureSection } from '@/components/project/TargetArchitectureSection'
 import { SignOffModal } from '@/components/modals/SignOffModal'
+import { AuditLogDrawer } from '@/components/drawers/AuditLogDrawer'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Breadcrumb,
@@ -35,6 +36,7 @@ export function ProjectDetailsPage() {
   const { user } = useCurrentUser()
   const { project, loading, saveSection } = useProject(id)
   const [modalOpen, setModalOpen] = useState(false)
+  const [auditLogOpen, setAuditLogOpen] = useState(false)
 
   if (loading) {
     return (
@@ -140,6 +142,13 @@ export function ProjectDetailsPage() {
           <div className="flex items-center gap-3 mb-1 flex-wrap">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">{project.name}</h1>
             <StatusBadge status={project.status} />
+            <button
+              onClick={() => setAuditLogOpen(true)}
+              className="ml-auto flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <History className="size-4" />
+              Change History
+            </button>
           </div>
           <p className="text-muted-foreground">
             {project.description ?? 'No description provided.'}
@@ -226,6 +235,12 @@ export function ProjectDetailsPage() {
         onConfirm={handleConfirm}
         approvals={project.approvals}
         currentUserRole={currentUserRole}
+      />
+
+      <AuditLogDrawer
+        projectId={project.id}
+        open={auditLogOpen}
+        onClose={() => setAuditLogOpen(false)}
       />
     </AppShell>
   )
