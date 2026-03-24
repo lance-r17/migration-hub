@@ -25,3 +25,9 @@ export async function getProjectUsers(projectId: string): Promise<User[]> {
   if (USE_MOCK) { await delay(); return store.getProjectUsers(projectId) }
   return apiClient.get<User[]>(ENDPOINTS.projectUsers(projectId))
 }
+
+export async function login(_email: string, _password: string): Promise<User> {
+  // TODO (backend): return apiClient.post<User>('/api/v1/auth/login', { email: _email, password: _password })
+  if (USE_MOCK) { await delay(); return store.getCurrentUser() }
+  return apiClient.post<User>('/api/v1/auth/login', { email: _email, password: _password })
+}

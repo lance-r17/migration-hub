@@ -24,6 +24,8 @@ import {
   BellIcon,
   LogOutIcon,
 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useCurrentUser } from "@/context/UserContext"
 
 export function NavUser({
   user,
@@ -35,6 +37,13 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const { logout } = useCurrentUser()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate("/login", { replace: true })
+  }
 
   const initials = user.name
     .split(" ")
@@ -97,7 +106,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOutIcon />
               Log out
             </DropdownMenuItem>

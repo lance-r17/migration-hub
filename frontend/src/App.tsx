@@ -1,14 +1,25 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { HomePage } from './pages/HomePage'
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
+import { LoginPage } from './pages/LoginPage'
+import { useCurrentUser } from '@/context/UserContext'
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated, loading } = useCurrentUser()
+  if (loading) return null
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
       </Routes>
       <Toaster />
     </BrowserRouter>
