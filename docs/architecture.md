@@ -1,0 +1,112 @@
+# Architecture
+
+## Overview
+
+Migration Hub is a monorepo with a React SPA frontend and a planned Python/FastAPI backend. Today the frontend runs entirely on a client-side mock store; the service layer is designed to switch to real HTTP calls by setting one environment variable.
+
+```
+┌──────────────────────────────────────────────────────┐
+│                   Browser (React SPA)                │
+│                                                      │
+│  Pages → Components → Hooks → Services               │
+│                                    │                 │
+│                    ┌───────────────┴──────────────┐  │
+│                    │  VITE_API_BASE_URL set?       │  │
+│                    │  No  → In-memory mock store   │  │
+│                    │  Yes → HTTP REST API          │  │
+│                    └───────────────┬──────────────┘  │
+└────────────────────────────────────┼─────────────────┘
+                                     │ JSON / REST
+                         ┌───────────▼───────────┐
+                         │  FastAPI (Python)      │
+                         │  /api/v1/...           │
+                         └───────────┬───────────┘
+                                     │ SQLAlchemy
+                         ┌───────────▼───────────┐
+                         │  PostgreSQL            │
+                         └───────────────────────┘
+                                     │
+                         ┌───────────▼───────────┐
+                         │  Background jobs       │
+                         │  • Jira issue creation │
+                         │  • Resource scanning   │
+                         └───────────────────────┘
+```
+
+## Frontend layers
+
+```
+src/
+├── pages/          Route-level components (one per URL)
+├── components/     Presentational UI — layout, sections, drawers, shared
+├── hooks/          Business logic + data fetching (custom hooks)
+├── services/       API abstraction (one file per domain)
+├── context/        React Context (auth state only)
+├── types/          TypeScript interfaces and enums
+├── data/           In-memory mock store (session-scoped)
+└── utils/          Pure utilities (diff engine, cn())
+```
+
+Data flows strictly downward: pages call hooks, hooks call services, services call the store or the HTTP client. Components receive data and callbacks as props; they never call services directly.
+
+## Mock vs. real API
+
+The toggle lives in `frontend/src/services/client.ts`:
+
+```ts
+export const USE_MOCK = !import.meta.env.VITE_API_BASE_URL
+```
+
+When `USE_MOCK` is `true`, every service function reads/writes `src/data/store.ts` (an in-memory session store seeded from `src/data/mock.ts`) with a 200 ms simulated latency. When `false`, the same function calls the real HTTP API via `apiClient`.
+
+No code changes are needed to switch modes — set `VITE_API_BASE_URL` in `.env.local`.
+
+## Authentication
+
+Auth state is managed by `UserContext` (`src/context/UserContext.tsx`):
+
+- On mount it reads `sessionStorage.getItem('auth')` to restore session
+- `login(user)` stores the user in state and writes `'true'` to `sessionStorage`
+- `logout()` clears both
+- `ProtectedRoute` in `App.tsx` redirects unauthenticated requests to `/login`
+- Role-based feature gating happens inside individual pages/components using `user.role`
+
+## Routing
+
+Defined in `frontend/src/App.tsx`:
+
+| Route | Component | Guard |
+|---|---|---|
+| `/login` | `LoginPage` | None |
+| `/` | `HomePage` | `ProtectedRoute` |
+| `/projects/:id` | `ProjectDetailsPage` | `ProtectedRoute` |
+| `/waves` | `WavesPage` | `ProtectedRoute` + role check |
+
+## State management
+
+There is no global state library. State is local to each hook and flows down via props:
+
+- `useProject(id)` owns the single-project state for `ProjectDetailsPage`
+- `useProjects()` owns the project list for `HomePage`
+- `useWaves()` owns wave list + mutations for `WavesPage`
+- `useCurrentUser()` (from `UserContext`) provides the authenticated user to any component
+
+## Audit logging
+
+Every call to `saveSection()` in `useProject` compares the previous and next values using `diffObjects()` from `src/utils/diff.ts`, classifies the change into an `AuditEventType`, and appends an `AuditLogEntry` to the store. In production, the backend creates these rows as a transaction side-effect — no frontend POST is needed.
+
+## Jira integration
+
+Sign-off by the Platform Migration Lead triggers `createJiraJob()` in `src/services/jiraJobs.ts`. This simulates an async job queue:
+
+1. Immediately — writes a pending job record; sets `project.jiraJobStatus = 'pending'`
+2. ~5 seconds — transitions to `'processing'`
+3. ~30 seconds — generates a story key and per-resource subtask keys; writes them back to the project and each `CloudResource`
+
+`useProject` polls `getProject(id)` every 5 seconds while `jiraJobStatus` is `'pending'` or `'processing'`, then stops.
+
+## Planned backend (Phase 2)
+
+The FastAPI backend will expose `/api/v1/...` endpoints that mirror what the frontend services already call. Alembic manages schema migrations. Background jobs (Jira issue creation, resource scanning) will run as async FastAPI background tasks or a separate worker process.
+
+See [backend/overview.md](backend/overview.md) and [backend/api.md](backend/api.md) for the expected contract.
