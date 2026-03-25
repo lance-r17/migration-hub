@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BadgeCheck, History } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,6 +16,7 @@ import { MigrationConstraintsSection } from '@/components/project/MigrationCutov
 import { TargetArchitectureSection } from '@/components/project/TargetArchitectureSection'
 import { SignOffModal } from '@/components/modals/SignOffModal'
 import { AuditLogDrawer } from '@/components/drawers/AuditLogDrawer'
+import { AssignWaveDrawer } from '@/components/drawers/AssignWaveDrawer'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Breadcrumb,
@@ -26,17 +27,33 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { useProject } from '@/hooks/use-projects'
+import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
+import { createJiraJob } from '@/services/jiraJobs'
 import type { Project, ProjectStatus } from '@/types'
+import type { JiraSubtaskConfig } from '@/types/wave'
 
 export function ProjectDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
   const { user } = useCurrentUser()
-  const { project, loading, saveSection } = useProject(id)
+  const { project, loading, saveSection, refreshProject } = useProject(id)
+  const { waves } = useWaves()
   const [modalOpen, setModalOpen] = useState(false)
   const [auditLogOpen, setAuditLogOpen] = useState(false)
+  const [assignWaveOpen, setAssignWaveOpen] = useState(false)
+
+  // Fire completion toast when jiraJobStatus transitions to 'completed'
+  const prevJiraStatus = useRef(project?.jiraJobStatus)
+  useEffect(() => {
+    if (prevJiraStatus.current !== 'completed' && project?.jiraJobStatus === 'completed') {
+      toast.success(`Jira story ${project.jiraStoryKey} created`, {
+        description: 'All sub-tasks have been linked to cloud resources.',
+      })
+    }
+    prevJiraStatus.current = project?.jiraJobStatus
+  }, [project?.jiraJobStatus, project?.jiraStoryKey])
 
   if (loading) {
     return (
@@ -88,19 +105,24 @@ export function ProjectDetailsPage() {
     }
   }
 
-  const handleConfirm = async (approvedRole: string) => {
-    setModalOpen(false)
+  const applyApproval = async (approvedRole: string) => {
     const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     const updatedApprovals = project.approvals.map(a =>
       a.role === approvedRole
         ? { ...a, status: 'approved' as const, approver: user?.name ?? '', timestamp: now }
         : a
     )
+    await saveSection('approvals', updatedApprovals)
+    if (updatedApprovals.every(a => a.status === 'approved')) {
+      await saveSection('status', 'signed-off')
+    }
+    return updatedApprovals
+  }
+
+  const handleConfirm = async (approvedRole: string) => {
+    setModalOpen(false)
     try {
-      await saveSection('approvals', updatedApprovals)
-      if (updatedApprovals.every(a => a.status === 'approved')) {
-        await saveSection('status', 'signed-off')
-      }
+      await applyApproval(approvedRole)
       toast.success('Sign-off submitted successfully', {
         description: 'Approval recorded. Jira issues will be created shortly.',
       })
@@ -109,7 +131,33 @@ export function ProjectDetailsPage() {
     }
   }
 
+  const handleConfirmWithJira = async (approvedRole: string, config: JiraSubtaskConfig) => {
+    setModalOpen(false)
+    try {
+      await applyApproval(approvedRole)
+      await saveSection('jiraSubtaskConfig', config)
+      createJiraJob(
+        project.id,
+        config,
+        project.currentInfrastructure?.resources ?? [],
+        assignedWave?.jiraEpicKey,
+      )
+      await refreshProject()
+      toast.success('Jira story creation queued', {
+        description: 'Processing will begin shortly. Sub-tasks will appear in Compute & Resources.',
+      })
+    } catch {
+      toast.error('Failed to submit sign-off. Please try again.')
+    }
+  }
+
+  const handleAssignWave = async (waveId: string | undefined) => {
+    await handleSave('waveId', waveId)
+  }
+
   const isProjectMember = project.team.some(m => m.id === user?.id)
+  const isPlatformLead = user?.role === 'Platform Migration Lead'
+  const assignedWave = waves.find(w => w.id === project.waveId)
 
   const preSignOffStatuses: ProjectStatus[] = ['planning', 'in-progress', 'blocked']
   const currentUserRole =
@@ -165,8 +213,32 @@ export function ProjectDetailsPage() {
         {(hasMetadata || preSignOffStatuses.includes(project.status)) && (
           <div className="flex flex-wrap items-center justify-between gap-y-2 text-sm text-muted-foreground">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              {project.migrationWave && (
-                <span>Wave: <strong className="text-foreground">{project.migrationWave}</strong></span>
+              {(assignedWave || project.migrationWave) && (
+                <span className="flex items-center gap-2">
+                  Wave: <strong className="text-foreground">{assignedWave?.name ?? project.migrationWave}</strong>
+                  {isPlatformLead && (
+                    <button
+                      onClick={() => setAssignWaveOpen(true)}
+                      className="text-xs text-primary underline underline-offset-2 hover:opacity-80 transition-opacity"
+                    >
+                      {project.waveId ? 'Change' : 'Assign'}
+                    </button>
+                  )}
+                </span>
+              )}
+              {!assignedWave && !project.migrationWave && isPlatformLead && (
+                <span className="flex items-center gap-2">
+                  Wave: <span className="text-muted-foreground">Unassigned</span>
+                  <button
+                    onClick={() => setAssignWaveOpen(true)}
+                    className="text-xs text-primary underline underline-offset-2 hover:opacity-80 transition-opacity"
+                  >
+                    Assign
+                  </button>
+                </span>
+              )}
+              {project.jiraStoryKey && (
+                <span>Story: <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{project.jiraStoryKey}</code></span>
               )}
               {project.jiraTicket && (
                 <span>Jira: <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{project.jiraTicket}</code></span>
@@ -208,6 +280,8 @@ export function ProjectDetailsPage() {
             onSave={(d) => handleSave('currentInfrastructure', d)}
             projectStatus={project.status}
             isProjectMember={isProjectMember}
+            jiraJobStatus={project.jiraJobStatus}
+            jiraStoryKey={project.jiraStoryKey}
           />
           <DataPersistenceSection
             data={project.dataPersistence}
@@ -240,14 +314,24 @@ export function ProjectDetailsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onConfirm={handleConfirm}
+        onConfirmWithJira={handleConfirmWithJira}
         approvals={project.approvals}
         currentUserRole={currentUserRole}
+        cloudResources={project.currentInfrastructure?.resources ?? []}
       />
 
       <AuditLogDrawer
         projectId={project.id}
         open={auditLogOpen}
         onClose={() => setAuditLogOpen(false)}
+      />
+
+      <AssignWaveDrawer
+        open={assignWaveOpen}
+        onOpenChange={setAssignWaveOpen}
+        waves={waves}
+        currentWaveId={project.waveId}
+        onSave={handleAssignWave}
       />
     </AppShell>
   )

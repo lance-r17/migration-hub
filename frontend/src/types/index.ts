@@ -1,3 +1,6 @@
+import type { JiraSubtaskConfig } from './wave'
+export type { JiraSubtaskConfig }
+
 export type ProjectStatus = 'migrating' | 'signed-off' | 'blocked' | 'planning' | 'in-progress' | 'completed'
 export type ApprovalStatus = 'approved' | 'pending' | 'waiting'
 export type RiskSeverity = 'critical' | 'medium' | 'low'
@@ -57,6 +60,7 @@ export interface CloudResource {
   quantity?: number
   availabilityZones?: string[]
   needMigration?: boolean  // default true; false = excluded from migration scope
+  jiraSubtaskKey?: string  // populated by async Jira job after sign-off
 }
 
 export interface NetworkConfig {
@@ -220,6 +224,11 @@ export interface Project {
   targetArchitecture?: TargetArchitecture
   risks: Risk[]
   approvals: Approval[]
+  // Wave planning
+  waveId?: string              // references Wave.id; takes precedence over migrationWave for display
+  jiraSubtaskConfig?: JiraSubtaskConfig
+  jiraStoryKey?: string        // e.g. "MIG-42", populated by async Jira job
+  jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
 }
 
 // ─── Dashboard / Home ─────────────────────────────────────────────────────────

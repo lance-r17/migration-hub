@@ -7,6 +7,10 @@ import {
   Server,
   RefreshCw,
   ShieldX,
+  Waves,
+  ArrowDownToLine,
+  ExternalLink,
+  GitBranch,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatValue } from '@/utils/diff'
@@ -67,6 +71,30 @@ const EVENT_CONFIG: Record<AuditEventType, {
     label: 'Sync completed',
     iconClass: 'text-emerald-600 dark:text-emerald-400',
     dotClass: 'bg-emerald-500',
+  },
+  wave_assigned: {
+    icon: Waves,
+    label: 'Wave assigned',
+    iconClass: 'text-cyan-600 dark:text-cyan-400',
+    dotClass: 'bg-cyan-500',
+  },
+  wave_created: {
+    icon: GitBranch,
+    label: 'Wave created',
+    iconClass: 'text-cyan-600 dark:text-cyan-400',
+    dotClass: 'bg-cyan-500',
+  },
+  wave_imported: {
+    icon: ArrowDownToLine,
+    label: 'Wave imported',
+    iconClass: 'text-cyan-600 dark:text-cyan-400',
+    dotClass: 'bg-cyan-500',
+  },
+  jira_story_created: {
+    icon: ExternalLink,
+    label: 'Jira story created',
+    iconClass: 'text-indigo-600 dark:text-indigo-400',
+    dotClass: 'bg-indigo-500',
   },
 }
 

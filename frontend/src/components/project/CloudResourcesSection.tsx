@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Database, Network, RefreshCw, CheckCircle2, AlertOctagon, Clock } from 'lucide-react'
+import { Database, Network, RefreshCw, CheckCircle2, AlertOctagon, Clock, Loader2, CheckCircle } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { cn } from '@/lib/utils'
 import { NetworkConfigurationDrawer } from '@/components/drawers/NetworkConfigurationDrawer'
@@ -13,6 +13,8 @@ interface CurrentInfrastructureSectionProps {
   onSave?: (data: CurrentInfrastructure) => void
   projectStatus?: ProjectStatus
   isProjectMember?: boolean
+  jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
+  jiraStoryKey?: string
 }
 
 function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
@@ -40,7 +42,7 @@ function getStatusVariant(status: string): 'green' | 'blue' | 'default' {
   return 'default'
 }
 
-export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false }: CurrentInfrastructureSectionProps) {
+export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, jiraJobStatus, jiraStoryKey }: CurrentInfrastructureSectionProps) {
   const [networkDrawerOpen, setNetworkDrawerOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
   const [editingResource, setEditingResource] = useState<CloudResource | null>(null)
@@ -63,6 +65,21 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
             </button>
           }
         >
+          {(jiraJobStatus === 'pending' || jiraJobStatus === 'processing') && (
+            <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-300">
+              <Loader2 size={16} className="shrink-0 animate-spin" />
+              <span>Creating Jira story &amp; sub-tasks… This may take up to 30 seconds.</span>
+            </div>
+          )}
+          {jiraJobStatus === 'completed' && jiraStoryKey && (
+            <div className="mb-4 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-300">
+              <CheckCircle size={16} className="shrink-0" />
+              <span>
+                Jira story <code className="font-mono font-semibold">{jiraStoryKey}</code> created.{' '}
+                {new Set(data?.resources.map(r => r.jiraSubtaskKey).filter(Boolean)).size} sub-tasks linked to resources.
+              </span>
+            </div>
+          )}
           {!data || data.resources.length === 0 ? (
             <p className="text-sm text-muted-foreground">No resources documented yet. Run a discovery scan to populate this section.</p>
           ) : (
@@ -70,13 +87,16 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border">
-                    {['Resource Name', 'Category', 'Specs', 'Qty', 'Availability Zones', 'Existing', 'Target', 'Sync'].map(h => (
+                    {['Resource Name', 'Category', 'Specs', 'Qty', 'Availability Zones', 'Existing', 'Target', 'Sync', 'Jira Sub-task'].map(h => (
                       <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {data.resources.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((resource) => (
+                  {data.resources.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((resource) => {
+                    const inScope = resource.needMigration !== false
+                    const isProcessing = jiraJobStatus === 'pending' || jiraJobStatus === 'processing'
+                    return (
                     <tr
                       key={resource.id}
                       className={cn(
@@ -107,9 +127,22 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                       </td>
                       <td className="py-3 pr-4"><StatusChip label={resource.existingStatus} variant={getStatusVariant(resource.existingStatus)} /></td>
                       <td className="py-3 pr-4"><StatusChip label={resource.targetStatus} variant={getStatusVariant(resource.targetStatus)} /></td>
-                      <td className="py-3"><SyncIcon status={resource.syncStatus} /></td>
+                      <td className="py-3 pr-4"><SyncIcon status={resource.syncStatus} /></td>
+                      <td className="py-3">
+                        {resource.jiraSubtaskKey ? (
+                          <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{resource.jiraSubtaskKey}</code>
+                        ) : isProcessing && inScope ? (
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Loader2 size={13} className="animate-spin shrink-0" />
+                            Creating…
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/40">—</span>
+                        )}
+                      </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
               {data.resources.length > PAGE_SIZE && (

@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { HomePage } from './pages/HomePage'
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
 import { LoginPage } from './pages/LoginPage'
+import { WavesPage } from './pages/WavesPage'
 import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -20,6 +21,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
+        <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
       </Routes>
       <Toaster />
     </BrowserRouter>

@@ -6,15 +6,19 @@ import {
   overallStats,
   recentActivity,
   mockAuditEntries,
+  mockWaves,
 } from '@/data/mock'
 import type { Project, User, OverallStats, Activity } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
+import type { Wave, JiraJobRequest } from '@/types/wave'
 
 // Mutable in-memory session store — deep copy of mock data.
 // Writes persist for the lifetime of the browser tab (resets on page refresh).
 // All service functions read/write exclusively through this store.
 
 let _projects: Project[] = structuredClone(mockProjects)
+let _waves: Wave[] = structuredClone(mockWaves)
+let _jiraJobs: JiraJobRequest[] = []
 let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntries)
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
@@ -38,6 +42,46 @@ export const store = {
     if (idx === -1) throw new Error(`Project not found: ${id}`)
     _projects[idx] = { ..._projects[idx], [key]: value }
     return _projects[idx]
+  },
+
+  // ─── Waves ─────────────────────────────────────────────────────────────────
+
+  getWaves(): Wave[] {
+    return _waves
+  },
+
+  getWave(id: string): Wave | undefined {
+    return _waves.find(w => w.id === id)
+  },
+
+  addWave(wave: Wave): Wave {
+    _waves.push(wave)
+    return wave
+  },
+
+  updateWave(id: string, patch: Partial<Wave>): Wave {
+    const idx = _waves.findIndex(w => w.id === id)
+    if (idx === -1) throw new Error(`Wave not found: ${id}`)
+    _waves[idx] = { ..._waves[idx], ...patch }
+    return _waves[idx]
+  },
+
+  // ─── Jira Jobs ─────────────────────────────────────────────────────────────
+
+  getJiraJob(id: string): JiraJobRequest | undefined {
+    return _jiraJobs.find(j => j.id === id)
+  },
+
+  addJiraJob(job: JiraJobRequest): JiraJobRequest {
+    _jiraJobs.push(job)
+    return job
+  },
+
+  updateJiraJob(id: string, patch: Partial<JiraJobRequest>): JiraJobRequest {
+    const idx = _jiraJobs.findIndex(j => j.id === id)
+    if (idx === -1) throw new Error(`JiraJob not found: ${id}`)
+    _jiraJobs[idx] = { ..._jiraJobs[idx], ...patch }
+    return _jiraJobs[idx]
   },
 
   // ─── Users ─────────────────────────────────────────────────────────────────

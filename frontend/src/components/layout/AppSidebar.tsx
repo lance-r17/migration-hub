@@ -16,10 +16,18 @@ import {
   LayoutDashboardIcon,
   Settings2Icon,
   CircleHelpIcon,
+  Waves,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
 import { useCurrentUser } from "@/context/UserContext"
+
+interface NavItem {
+  title: string
+  url: string
+  icon: React.ReactNode
+  requiresRole?: string
+}
 
 const data = {
   navMain: [
@@ -28,12 +36,13 @@ const data = {
       url: "/",
       icon: <LayoutDashboardIcon />,
     },
-    // {
-    //   title: "Projects",
-    //   url: "/",
-    //   icon: <FolderIcon />,
-    // },
-  ],
+    {
+      title: "Waves",
+      url: "/waves",
+      icon: <Waves />,
+      requiresRole: "Platform Migration Lead",
+    },
+  ] satisfies NavItem[],
   navSecondary: [
     {
       title: "Settings",
@@ -70,7 +79,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} pathname={location.pathname} />
+        <NavMain
+          items={data.navMain.filter(item => !item.requiresRole || user?.role === item.requiresRole)}
+          pathname={location.pathname}
+        />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

@@ -20,6 +20,8 @@ const SECTION_LABELS: Partial<Record<keyof Project, string>> = {
   risks:                  'Risks & Blockers',
   approvals:              'Sign-off',
   status:                 'Project Status',
+  waveId:                 'Wave Assignment',
+  jiraSubtaskConfig:      'Jira Configuration',
 }
 
 // Field label maps per section key
@@ -85,6 +87,8 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
     newServicesRequired:   'New Services Required',
   },
   status: { status: 'Status' },
+  waveId: { waveId: 'Wave' },
+  jiraSubtaskConfig: { mode: 'Sub-task Mode' },
 }
 
 // ─── Event classification helpers ────────────────────────────────────────────
@@ -280,6 +284,7 @@ interface ProjectState {
   loading: boolean
   error: string | null
   saveSection: <K extends keyof Project>(key: K, value: Project[K]) => Promise<void>
+  refreshProject: () => Promise<void>
 }
 
 export function useProject(id: string | undefined): ProjectState {
@@ -315,6 +320,20 @@ export function useProject(id: string | undefined): ProjectState {
 
     return () => { cancelled = true }
   }, [id])
+
+  // Poll every 5s while a Jira job is pending or processing
+  useEffect(() => {
+    if (!id || !project) return
+    const status = project.jiraJobStatus
+    if (status !== 'pending' && status !== 'processing') return
+
+    const interval = setInterval(async () => {
+      const updated = await getProject(id)
+      if (updated) setProject(updated)
+    }, 5_000)
+
+    return () => clearInterval(interval)
+  }, [id, project?.jiraJobStatus])
 
   const saveSection = useCallback(async <K extends keyof Project>(
     key: K,
@@ -397,6 +416,19 @@ export function useProject(id: string | undefined): ProjectState {
           'status_changed', 'project', key,
           changes,
         ))
+      } else if (key === 'waveId') {
+        appendAuditEntryMock(buildEntry(
+          entryId, id, actorId, actorName, actorInitials,
+          'wave_assigned', 'wave', key,
+          [{ field: 'waveId', label: 'Wave', oldValue: previous.waveId, newValue: value }],
+        ))
+      } else if (key === 'jiraSubtaskConfig') {
+        const cfg = value as Project['jiraSubtaskConfig']
+        appendAuditEntryMock(buildEntry(
+          entryId, id, actorId, actorName, actorInitials,
+          'jira_story_created', 'project', key,
+          [{ field: 'mode', label: 'Sub-task Mode', oldValue: previous.jiraSubtaskConfig?.mode, newValue: cfg?.mode }],
+        ))
       } else {
         const labelMap = (FIELD_LABEL_MAPS[key] ?? {}) as Record<string, string>
         const changes = diffObjects(previous[key], value, labelMap)
@@ -417,5 +449,11 @@ export function useProject(id: string | undefined): ProjectState {
     }
   }, [id, project, user])
 
-  return { project, loading, error, saveSection }
+  const refreshProject = useCallback(async () => {
+    if (!id) return
+    const updated = await getProject(id)
+    if (updated) setProject(updated)
+  }, [id])
+
+  return { project, loading, error, saveSection, refreshProject }
 }

@@ -1,5 +1,6 @@
 import type { Project, Activity, OverallStats, User, ProjectUsers } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
+import type { Wave } from '@/types/wave'
 
 export const mockUsers: User[] = [
   { id: 'u1',  name: 'Sarah Jenkins', email: 'sarah.jenkins@corp.com',    department: 'Finance & Operations', initials: 'SJ' },
@@ -68,6 +69,7 @@ export const mockProjects: Project[] = [
     progress: 45,
     description: 'Modernizing the legacy SAP environment to Azure Cloud Infrastructure with Zero-Downtime goals.',
     migrationWave: 'Wave 3',
+    waveId: 'wave-1',
     profileOwner: 'Dan Brown, Platform Engineering',
     lastUpdated: '21 MAR 2026',
     team: [
@@ -661,6 +663,47 @@ export const mockProjects: Project[] = [
         riskStatus: 'in progress',
       },
     ],
+  },
+]
+
+// ─── Waves ────────────────────────────────────────────────────────────────────
+
+export const mockWaves: Wave[] = [
+  {
+    id: 'wave-1',
+    name: 'Wave 3 – Q2 2026',
+    startDate: '2026-04-01',
+    cutoverDate: '2026-06-30',
+    description: 'Third migration wave covering ERP and core finance systems.',
+    jiraProjectKey: 'MIG',
+    jiraEpicKey: 'MIG-42',
+    source: 'imported',
+    status: 'planned',
+    createdAt: '2026-01-15T10:00:00.000Z',
+  },
+  {
+    id: 'wave-2',
+    name: 'Wave 4 – Q3 2026',
+    startDate: '2026-07-01',
+    cutoverDate: '2026-09-30',
+    description: 'Fourth wave covering DNS infrastructure and network services.',
+    jiraProjectKey: 'MIG',
+    jiraEpicKey: 'MIG-58',
+    source: 'created',
+    status: 'planned',
+    createdAt: '2026-02-01T09:00:00.000Z',
+  },
+  {
+    id: 'wave-3',
+    name: 'Wave 1 – Q4 2025',
+    startDate: '2025-10-01',
+    cutoverDate: '2025-12-31',
+    description: 'First migration wave — pilot systems and non-critical workloads.',
+    jiraProjectKey: 'MIG',
+    jiraEpicKey: 'MIG-10',
+    source: 'imported',
+    status: 'completed',
+    createdAt: '2025-08-01T08:00:00.000Z',
   },
 ]
 

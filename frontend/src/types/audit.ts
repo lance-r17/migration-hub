@@ -7,6 +7,10 @@ export type AuditEventType =
   | 'risk_deleted'
   | 'resource_updated'
   | 'resource_sync_completed'
+  | 'wave_assigned'
+  | 'wave_created'
+  | 'wave_imported'
+  | 'jira_story_created'
 
 export type AuditEntityType =
   | 'project'
@@ -14,6 +18,7 @@ export type AuditEntityType =
   | 'approval'
   | 'risk'
   | 'cloud_resource'
+  | 'wave'
 
 export interface AuditChange {
   field: string       // technical key
