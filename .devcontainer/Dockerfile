@@ -24,7 +24,9 @@ RUN apt update && apt install -y less \
   wget \
   gnupg \
   ca-certificates \
-  postgresql-client
+  postgresql-client \
+  xvfb \
+  xauth
 
 # Set up non-root user
 USER node

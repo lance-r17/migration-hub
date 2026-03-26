@@ -11,6 +11,7 @@
 | [frontend/services.md](frontend/services.md) | Service layer — all API functions and endpoints |
 | [frontend/components.md](frontend/components.md) | Component inventory with props and usage guidance |
 | [frontend/best-practices.md](frontend/best-practices.md) | Patterns: section saves, drawers, audit logging, RBAC |
+| [frontend/testing.md](frontend/testing.md) | Playwright E2E test suite — structure, auth fixture, running tests, CI |
 | **backend/** | |
 | [backend/overview.md](backend/overview.md) | Backend structure (Python/FastAPI) — placeholder |
 | [backend/api.md](backend/api.md) | REST API endpoint reference derived from frontend services |

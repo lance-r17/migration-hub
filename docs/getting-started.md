@@ -39,6 +39,22 @@ npm run preview    # preview the production build locally
 npm run lint
 ```
 
+### E2E tests
+
+```bash
+# First time: install Chromium browser
+npx playwright install chromium
+
+# Run all tests (headless, spins up Vite automatically)
+npm run test:e2e
+
+# Interactive UI mode (useful for debugging)
+npm run test:e2e:ui
+```
+
+46 tests cover auth, navigation, wave planning, cloud resources, and RBAC.
+See [docs/frontend/testing.md](frontend/testing.md) for the full test reference.
+
 ## Environment variables
 
 Copy the example file:

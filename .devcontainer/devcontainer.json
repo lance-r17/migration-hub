@@ -10,6 +10,13 @@
   },
 	"features": {
 		"ghcr.io/devcontainers/features/python:1": {}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-playwright.playwright"
+			]
+		}
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

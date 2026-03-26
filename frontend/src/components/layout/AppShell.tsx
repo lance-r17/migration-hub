@@ -21,7 +21,7 @@ export function AppShell({ children, title }: AppShellProps) {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader title={title} />
-        <main className="flex flex-1 flex-col gap-4 p-6">
+        <main data-testid="app-shell" className="flex flex-1 flex-col gap-4 p-6">
           {children}
         </main>
       </SidebarInset>
