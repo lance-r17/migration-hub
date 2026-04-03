@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react'
 import { SectionEditDrawer } from './SectionEditDrawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
 import { StringListEditor } from './StringListEditor'
 import type { DataPersistence } from '@/types'
 
@@ -18,7 +25,9 @@ interface Props {
 export function DatabaseStorageDrawer({ open, onOpenChange, data, onSave }: Props) {
   const [draft, setDraft] = useState({
     databaseTypes: [] as string[],
-    totalDataVolume: '', dataGrowthRate: '', replicationTopology: '', backupMethod: '', lastRestoreTest: '',
+    totalDataVolume: '', dataGrowthRate: '', replicationTopology: '', backupMethod: '',
+    backupRequiredDuringMigration: '' as 'true' | 'false' | '',
+    lastRestoreTest: '',
   })
 
   useEffect(() => {
@@ -29,6 +38,9 @@ export function DatabaseStorageDrawer({ open, onOpenChange, data, onSave }: Prop
         dataGrowthRate: data?.dataGrowthRate ?? '',
         replicationTopology: data?.replicationTopology ?? '',
         backupMethod: data?.backupMethod ?? '',
+        backupRequiredDuringMigration: data?.backupRequiredDuringMigration != null
+          ? (data.backupRequiredDuringMigration ? 'true' : 'false')
+          : '',
         lastRestoreTest: data?.lastRestoreTest ?? '',
       })
     }
@@ -42,6 +54,9 @@ export function DatabaseStorageDrawer({ open, onOpenChange, data, onSave }: Prop
       dataGrowthRate: draft.dataGrowthRate || undefined,
       replicationTopology: draft.replicationTopology || undefined,
       backupMethod: draft.backupMethod || undefined,
+      backupRequiredDuringMigration: draft.backupRequiredDuringMigration !== ''
+        ? draft.backupRequiredDuringMigration === 'true'
+        : undefined,
       lastRestoreTest: draft.lastRestoreTest || undefined,
     })
     onOpenChange(false)
@@ -80,8 +95,23 @@ export function DatabaseStorageDrawer({ open, onOpenChange, data, onSave }: Prop
         <Input id="db-backup" value={draft.backupMethod} onChange={(e) => setDraft(d => ({ ...d, backupMethod: e.target.value }))} placeholder="e.g. Daily snapshots" />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="db-restore">Last Restore Test</Label>
-        <Input id="db-restore" value={draft.lastRestoreTest} onChange={(e) => setDraft(d => ({ ...d, lastRestoreTest: e.target.value }))} placeholder="e.g. 2024-01-15" />
+        <Label>Backup Required During Migration</Label>
+        <Select
+          value={draft.backupRequiredDuringMigration}
+          onValueChange={(v) => setDraft(d => ({ ...d, backupRequiredDuringMigration: v as 'true' | 'false' }))}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="true">Yes</SelectItem>
+            <SelectItem value="false">No</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="db-restore">Last Restore Test (BRETT URL)</Label>
+        <Input id="db-restore" value={draft.lastRestoreTest} onChange={(e) => setDraft(d => ({ ...d, lastRestoreTest: e.target.value }))} placeholder="https://brett.corp.com/restore-tests/..." />
       </div>
     </SectionEditDrawer>
   )

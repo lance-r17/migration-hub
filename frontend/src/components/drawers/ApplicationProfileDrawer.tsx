@@ -9,7 +9,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
-import type { ApplicationOverview, ApplicationTier } from '@/types'
+import type { ApplicationOverview, ApplicationTier, MigrationStrategy } from '@/types'
 
 interface Props {
   open: boolean
@@ -32,6 +32,8 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
     userBaseType: 'Internal' as 'Internal' | 'External' | 'Both',
     userBaseCount: '',
     businessFunction: '',
+    ibsInScope: '' as 'true' | 'false' | '',
+    migrationStrategy: '' as MigrationStrategy | '',
   })
 
   useEffect(() => {
@@ -44,6 +46,8 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
         userBaseType: data?.userBase?.type ?? 'Internal',
         userBaseCount: data?.userBase?.count ?? '',
         businessFunction: data?.businessFunction ?? '',
+        ibsInScope: data?.ibsInScope != null ? (data.ibsInScope ? 'true' : 'false') : '',
+        migrationStrategy: data?.migrationStrategy ?? '',
       })
     }
   }, [open, data])
@@ -57,6 +61,8 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
       applicationTier: (draft.applicationTier as ApplicationTier) || undefined,
       userBase: { type: draft.userBaseType, count: draft.userBaseCount || undefined },
       businessFunction: draft.businessFunction || undefined,
+      ibsInScope: draft.ibsInScope !== '' ? draft.ibsInScope === 'true' : undefined,
+      migrationStrategy: (draft.migrationStrategy as MigrationStrategy) || undefined,
     })
     onOpenChange(false)
   }
@@ -159,6 +165,42 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
           onChange={(e) => setDraft(d => ({ ...d, businessFunction: e.target.value }))}
           placeholder="Describe the business function of this application"
         />
+      </div>
+
+      <p className={sectionLabel}>Migration Classification</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>IBS In Scope *</Label>
+          <Select
+            value={draft.ibsInScope}
+            onValueChange={(v) => setDraft(d => ({ ...d, ibsInScope: v as 'true' | 'false' }))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true">Yes</SelectItem>
+              <SelectItem value="false">No</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Migration Strategy *</Label>
+          <Select
+            value={draft.migrationStrategy}
+            onValueChange={(v) => setDraft(d => ({ ...d, migrationStrategy: v as MigrationStrategy }))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select strategy" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Lift & Shift">Lift &amp; Shift</SelectItem>
+              <SelectItem value="Refactor">Refactor</SelectItem>
+              <SelectItem value="Deboard">Deboard</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </SectionEditDrawer>
   )

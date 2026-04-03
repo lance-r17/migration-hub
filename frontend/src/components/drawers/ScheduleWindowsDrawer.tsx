@@ -62,7 +62,7 @@ export function ScheduleWindowsDrawer({ open, onOpenChange, data, onSave }: Prop
         onChange={(v) => setDraft(d => ({ ...d, blackoutDates: v }))}
       />
       <DateRangeEntryEditor
-        label="Change Freeze Periods"
+        label="Embargo / Change freeze periods"
         values={draft.changeFreezePeriods}
         onChange={(v) => setDraft(d => ({ ...d, changeFreezePeriods: v }))}
       />

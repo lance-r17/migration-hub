@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { ArrowUpRight, ArrowDownLeft, ShieldCheck, Key, KeyRound } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
-import { cn } from '@/lib/utils'
 import { UpstreamDependenciesDrawer } from '@/components/drawers/UpstreamDependenciesDrawer'
 import { DownstreamDependenciesDrawer } from '@/components/drawers/DownstreamDependenciesDrawer'
 import { TLSCertificatesDrawer } from '@/components/drawers/TLSCertificatesDrawer'
@@ -14,18 +13,6 @@ interface DependenciesSectionProps {
   onSave?: (data: Dependencies) => void
 }
 
-function AccessBadge({ access }: { access?: 'Internal' | 'External' }) {
-  if (!access) return <span className="text-muted-foreground/40">—</span>
-  return (
-    <span className={cn(
-      'text-xs font-medium px-1.5 py-0.5 rounded',
-      access === 'Internal' ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground'
-    )}>
-      {access}
-    </span>
-  )
-}
-
 function DependencyTable({ entries }: { entries: DependencyEntry[] }) {
   if (entries.length === 0) {
     return <p className="text-sm text-muted-foreground">None</p>
@@ -35,7 +22,7 @@ function DependencyTable({ entries }: { entries: DependencyEntry[] }) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-border">
-            {['Dependency', 'Protocol', 'Port', 'Access', 'Owner', 'Notes'].map(h => (
+            {['Application Name', 'EIM ID', 'Contact Email', 'Hosting', 'Notes'].map(h => (
               <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -44,10 +31,9 @@ function DependencyTable({ entries }: { entries: DependencyEntry[] }) {
           {entries.map(entry => (
             <tr key={entry.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
               <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">{entry.name}</td>
-              <td className="py-3 pr-4 text-muted-foreground">{entry.protocol ?? '—'}</td>
-              <td className="py-3 pr-4 font-mono text-xs text-muted-foreground">{entry.port ?? '—'}</td>
-              <td className="py-3 pr-4"><AccessBadge access={entry.access} /></td>
-              <td className="py-3 pr-4 text-muted-foreground whitespace-nowrap">{entry.owner ?? '—'}</td>
+              <td className="py-3 pr-4 font-mono text-xs text-muted-foreground">{entry.eimId ?? '—'}</td>
+              <td className="py-3 pr-4 text-muted-foreground">{entry.contactEmail ?? '—'}</td>
+              <td className="py-3 pr-4 text-muted-foreground whitespace-nowrap">{entry.hosting ?? '—'}</td>
               <td className="py-3 text-muted-foreground text-xs">{entry.notes || '—'}</td>
             </tr>
           ))}

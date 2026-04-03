@@ -32,6 +32,8 @@ export interface ProjectUsers {
 
 // ─── Section 1: Application Overview ────────────────────────────────────────
 
+export type MigrationStrategy = 'Lift & Shift' | 'Refactor' | 'Deboard'
+
 export interface ApplicationOverview {
   applicationName: string
   shortName?: string
@@ -45,20 +47,29 @@ export interface ApplicationOverview {
   }
   applicationTier?: ApplicationTier
   eimId?: string
+  ibsInScope?: boolean
+  migrationStrategy?: MigrationStrategy
 }
 
 // ─── Section 2: Current Infrastructure ──────────────────────────────────────
 
+export type ResourceCategory = 'VM' | 'Database' | 'Buckets' | 'Network' | 'Other'
+
+export interface ProductCategoryEntry {
+  product: string
+  category: ResourceCategory
+}
+
 export interface CloudResource {
   id: string
+  resourceId?: string                  // e.g. "i-abc1234"
   name: string
-  category: 'VM' | 'Database' | 'Buckets' | 'Network' | 'Other'
-  existingStatus: string
-  targetStatus: string
+  product?: string                     // e.g. "ecs", "polarDB", "rds", "oss", "sls", "slb", "dns"
+  resourceSet?: string                 // format: xxxx-<eim_id>-<app_name>-(dev|prod)
+  specs?: Record<string, unknown>      // variable JSON schema per product
+  subApplication?: string              // user-editable label for multi-app projects
+  targetResourceId?: string            // resource ID in the target environment
   syncStatus: SyncStatus
-  specs?: string
-  quantity?: number
-  availabilityZones?: string[]
   needMigration?: boolean  // default true; false = excluded from migration scope
   jiraSubtaskKey?: string  // populated by async Jira job after sign-off
 }
@@ -99,7 +110,8 @@ export interface DataPersistence {
   dataGrowthRate?: string
   replicationTopology?: string
   backupMethod?: string
-  lastRestoreTest?: string
+  backupRequiredDuringMigration?: boolean
+  lastRestoreTest?: string             // URL to BRETT restore test report
   dataResidency?: string
   encryptionAtRest?: string
   piiData?: boolean
@@ -111,10 +123,9 @@ export interface DataPersistence {
 export interface DependencyEntry {
   id: string
   name: string
-  protocol?: string
-  port?: string
-  access?: 'Internal' | 'External'
-  owner?: string
+  eimId?: string
+  contactEmail?: string
+  hosting?: string    // e.g. "AliCloud", "On-Premise"
   notes?: string
 }
 
@@ -212,6 +223,7 @@ export interface Project {
   migrationWave?: string
   profileOwner?: string
   jiraTicket?: string
+  jiraBaseUrl?: string              // e.g. "https://your-org.atlassian.net", returned by backend API
   lastUpdated?: string
   // Register sections
   applicationOverview?: ApplicationOverview
@@ -239,6 +251,7 @@ export interface Activity {
   message: string
   time: string
   actor: string
+  projectId?: string
 }
 
 export interface OverallStats {

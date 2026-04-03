@@ -52,7 +52,30 @@ export function DataPersistenceSection({ data, onSave }: DataPersistenceSectionP
               {data.dataGrowthRate && <Row label="Data Growth Rate">{data.dataGrowthRate}</Row>}
               {data.replicationTopology && <Row label="Replication Topology">{data.replicationTopology}</Row>}
               {data.backupMethod && <Row label="Backup Method & Location">{data.backupMethod}</Row>}
-              {data.lastRestoreTest && <Row label="Last Restore Test">{data.lastRestoreTest}</Row>}
+              {data.backupRequiredDuringMigration != null && (
+                <Row label="Backup Required During Migration">
+                  <span className={cn(
+                    'text-xs font-bold px-2 py-0.5 rounded',
+                    data.backupRequiredDuringMigration
+                      ? 'bg-destructive/15 text-destructive'
+                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                  )}>
+                    {data.backupRequiredDuringMigration ? 'Yes' : 'No'}
+                  </span>
+                </Row>
+              )}
+              {data.lastRestoreTest && (
+                <Row label="Last Restore Test">
+                  <a
+                    href={data.lastRestoreTest}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-sm"
+                  >
+                    BRETT link
+                  </a>
+                </Row>
+              )}
             </>
           )}
         </SectionCard>

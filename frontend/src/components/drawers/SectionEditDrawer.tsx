@@ -16,6 +16,7 @@ interface SectionEditDrawerProps {
   title: string
   description?: string
   onSave: () => void
+  saveDisabled?: boolean
   children: ReactNode
 }
 
@@ -25,6 +26,7 @@ export function SectionEditDrawer({
   title,
   description,
   onSave,
+  saveDisabled,
   children,
 }: SectionEditDrawerProps) {
   return (
@@ -45,7 +47,7 @@ export function SectionEditDrawer({
           <SheetClose asChild>
             <Button variant="outline">Cancel</Button>
           </SheetClose>
-          <Button onClick={onSave}>Save Changes</Button>
+          <Button onClick={onSave} disabled={saveDisabled}>Save Changes</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

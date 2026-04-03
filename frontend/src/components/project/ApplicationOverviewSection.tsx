@@ -5,12 +5,33 @@ import { cn } from '@/lib/utils'
 import { ApplicationProfileDrawer } from '@/components/drawers/ApplicationProfileDrawer'
 import { ContactsOwnershipDrawer } from '@/components/drawers/ContactsOwnershipDrawer'
 import { useUsers } from '@/hooks/use-users'
-import type { ApplicationOverview, ApplicationTier } from '@/types'
+import type { ApplicationOverview, ApplicationTier, MigrationStrategy } from '@/types'
 
 interface ApplicationOverviewSectionProps {
   data?: ApplicationOverview
   projectId?: string
   onSave?: (data: ApplicationOverview) => void
+}
+
+function YesNoBadge({ value }: { value: boolean }) {
+  return (
+    <span className={cn(
+      'text-xs font-bold px-2 py-0.5 rounded',
+      value
+        ? 'bg-destructive/15 text-destructive'
+        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+    )}>
+      {value ? 'Yes' : 'No'}
+    </span>
+  )
+}
+
+function StrategyBadge({ strategy }: { strategy: MigrationStrategy }) {
+  return (
+    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-secondary text-secondary-foreground">
+      {strategy}
+    </span>
+  )
 }
 
 function TierBadge({ tier }: { tier: ApplicationTier }) {
@@ -89,6 +110,20 @@ export function ApplicationOverviewSection({ data, projectId, onSave }: Applicat
                       <span className="text-xs text-muted-foreground">{data.userBase.count}</span>
                     )}
                   </span>
+                </div>
+              )}
+
+              {data.ibsInScope != null && (
+                <div>
+                  <Label>IBS In Scope</Label>
+                  <YesNoBadge value={data.ibsInScope} />
+                </div>
+              )}
+
+              {data.migrationStrategy && (
+                <div>
+                  <Label>Migration Strategy</Label>
+                  <StrategyBadge strategy={data.migrationStrategy} />
                 </div>
               )}
 

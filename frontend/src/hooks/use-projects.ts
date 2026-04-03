@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getProjects, getProject, updateProject } from '@/services/projects'
+import { getProjects, getProjectsForUser, getProject, updateProject } from '@/services/projects'
 import { appendAuditEntryMock } from '@/services/auditLog'
 import { diffObjects } from '@/utils/diff'
 import { useCurrentUser } from '@/context/UserContext'
@@ -258,10 +258,18 @@ export function useProjects(): ProjectsState {
     error: null,
   })
 
+  const { user } = useCurrentUser()
+  const isPlatformLead = user?.role === 'Platform Migration Lead'
+
   useEffect(() => {
+    if (!user) return
     let cancelled = false
 
-    getProjects()
+    const fetch = isPlatformLead
+      ? getProjects()
+      : getProjectsForUser(user.id)
+
+    fetch
       .then(projects => {
         if (!cancelled) setState({ projects, loading: false, error: null })
       })
@@ -274,7 +282,7 @@ export function useProjects(): ProjectsState {
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [user?.id, user?.role]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return state
 }

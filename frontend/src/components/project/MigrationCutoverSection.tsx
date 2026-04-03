@@ -66,7 +66,7 @@ export function MigrationConstraintsSection({ data, onSave }: MigrationConstrain
                 </ul>
               </Field>
               {data.changeFreezePeriods?.length && (
-                <Field label="Change Freeze Periods" icon={CalendarX}>
+                <Field label="Embargo / Change freeze periods" icon={CalendarX}>
                   <ul className="list-disc list-inside space-y-1 mt-1">
                     {data.changeFreezePeriods.map((entry, i) => (
                       <li key={i}>

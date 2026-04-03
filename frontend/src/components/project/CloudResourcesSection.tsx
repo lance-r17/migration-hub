@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Database, Network, RefreshCw, CheckCircle2, AlertOctagon, Clock, Loader2, CheckCircle } from 'lucide-react'
+import { Database, Network, RefreshCw, CheckCircle2, AlertOctagon, Clock, Loader2, CheckCircle, Info } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { NetworkConfigurationDrawer } from '@/components/drawers/NetworkConfigurationDrawer'
 import { CloudResourceEditDrawer } from '@/components/drawers/CloudResourceEditDrawer'
+import { useProductCategoryMap } from '@/hooks/use-product-category'
 import type { CloudResource, CurrentInfrastructure, ProjectStatus } from '@/types'
 
 const PAGE_SIZE = 10
@@ -15,6 +17,7 @@ interface CurrentInfrastructureSectionProps {
   isProjectMember?: boolean
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
   jiraStoryKey?: string
+  jiraBaseUrl?: string
 }
 
 function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
@@ -23,29 +26,12 @@ function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
   return <Clock size={18} className="text-secondary-foreground" />
 }
 
-function StatusChip({ label, variant }: { label: string; variant: 'green' | 'blue' | 'default' }) {
-  return (
-    <span className={cn(
-      'px-2 py-0.5 rounded text-xs font-medium',
-      variant === 'green' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-      variant === 'blue' && 'bg-secondary text-secondary-foreground',
-      variant === 'default' && 'bg-muted text-muted-foreground',
-    )}>
-      {label}
-    </span>
-  )
-}
 
-function getStatusVariant(status: string): 'green' | 'blue' | 'default' {
-  if (['Online', 'Live', 'Ready', 'Active'].includes(status)) return 'green'
-  if (['Provisioning', 'In Progress', 'Starting'].includes(status)) return 'blue'
-  return 'default'
-}
-
-export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, jiraJobStatus, jiraStoryKey }: CurrentInfrastructureSectionProps) {
+export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, jiraJobStatus, jiraStoryKey, jiraBaseUrl }: CurrentInfrastructureSectionProps) {
   const [networkDrawerOpen, setNetworkDrawerOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
   const [editingResource, setEditingResource] = useState<CloudResource | null>(null)
+  const { getCategoryForProduct } = useProductCategoryMap()
 
   useEffect(() => { setCurrentPage(0) }, [data])
 
@@ -75,7 +61,13 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
             <div className="mb-4 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-300">
               <CheckCircle size={16} className="shrink-0" />
               <span>
-                Jira story <code className="font-mono font-semibold">{jiraStoryKey}</code> created.{' '}
+                Jira story{' '}
+                {jiraBaseUrl ? (
+                  <a href={`${jiraBaseUrl}/browse/${jiraStoryKey}`} target="_blank" rel="noopener noreferrer" className="font-mono font-semibold hover:underline">{jiraStoryKey}</a>
+                ) : (
+                  <code className="font-mono font-semibold">{jiraStoryKey}</code>
+                )}{' '}
+                created.{' '}
                 {new Set(data?.resources.map(r => r.jiraSubtaskKey).filter(Boolean)).size} sub-tasks linked to resources.
               </span>
             </div>
@@ -87,7 +79,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border">
-                    {['Resource Name', 'Category', 'Specs', 'Qty', 'Availability Zones', 'Existing', 'Target', 'Sync', 'Jira Sub-task'].map(h => (
+                    {['Resource ID', 'Resource Name', 'Product', 'Category', 'Resource Set', 'Sub Application', 'Target Resource ID', 'Sync', 'Jira Sub-task'].map(h => (
                       <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -96,6 +88,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                   {data.resources.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((resource) => {
                     const inScope = resource.needMigration !== false
                     const isProcessing = jiraJobStatus === 'pending' || jiraJobStatus === 'processing'
+                    const specsEntries = resource.specs ? Object.entries(resource.specs) : []
                     return (
                     <tr
                       key={resource.id}
@@ -106,31 +99,51 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                       )}
                       onClick={() => onSave && setEditingResource(resource)}
                     >
-                      <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">{resource.name}</td>
-                      <td className="py-3 pr-4 text-sm text-muted-foreground">{resource.category}</td>
-                      <td className="py-3 pr-4 text-sm">
-                        {resource.specs ? (
-                          <span className="px-2 py-0.5 bg-muted text-muted-foreground text-xs rounded font-mono">{resource.specs}</span>
-                        ) : <span className="text-muted-foreground/40">—</span>}
+                      <td className="py-3 pr-4">
+                        {resource.resourceId
+                          ? <code className="font-mono text-xs text-muted-foreground">{resource.resourceId}</code>
+                          : <span className="text-muted-foreground/40">—</span>}
                       </td>
-                      <td className="py-3 pr-4 text-sm text-foreground font-medium">
-                        {resource.quantity != null ? resource.quantity : <span className="text-muted-foreground/40">—</span>}
+                      <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">
+                        <span className="flex items-center gap-1.5">
+                          {resource.name}
+                          {specsEntries.length > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info size={13} className="text-muted-foreground/60 shrink-0 cursor-default" onClick={e => e.stopPropagation()} />
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="font-mono text-xs max-w-xs">
+                                {specsEntries.map(([k, v]) => (
+                                  <div key={k}>{k}: {String(v)}</div>
+                                ))}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-sm text-muted-foreground">{resource.product ?? <span className="text-muted-foreground/40">—</span>}</td>
+                      <td className="py-3 pr-4 text-sm text-muted-foreground">{getCategoryForProduct(resource.product)}</td>
+                      <td className="py-3 pr-4 text-sm">
+                        {resource.resourceSet
+                          ? <code className="px-1.5 py-0.5 bg-muted text-muted-foreground text-xs rounded font-mono whitespace-nowrap">{resource.resourceSet}</code>
+                          : <span className="text-muted-foreground/40">—</span>}
+                      </td>
+                      <td className="py-3 pr-4 text-sm text-muted-foreground">
+                        {resource.subApplication ?? <span className="text-muted-foreground/40">—</span>}
                       </td>
                       <td className="py-3 pr-4">
-                        {resource.availabilityZones?.length ? (
-                          <div className="flex flex-wrap gap-1">
-                            {resource.availabilityZones.map(az => (
-                              <span key={az} className="px-1.5 py-0.5 bg-secondary/30 text-secondary-foreground text-xs rounded border border-secondary/50 whitespace-nowrap">{az}</span>
-                            ))}
-                          </div>
-                        ) : <span className="text-muted-foreground/40">—</span>}
+                        {resource.targetResourceId
+                          ? <code className="font-mono text-xs text-muted-foreground">{resource.targetResourceId}</code>
+                          : <span className="text-muted-foreground/40">—</span>}
                       </td>
-                      <td className="py-3 pr-4"><StatusChip label={resource.existingStatus} variant={getStatusVariant(resource.existingStatus)} /></td>
-                      <td className="py-3 pr-4"><StatusChip label={resource.targetStatus} variant={getStatusVariant(resource.targetStatus)} /></td>
                       <td className="py-3 pr-4"><SyncIcon status={resource.syncStatus} /></td>
                       <td className="py-3">
                         {resource.jiraSubtaskKey ? (
-                          <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{resource.jiraSubtaskKey}</code>
+                          jiraBaseUrl ? (
+                            <a href={`${jiraBaseUrl}/browse/${resource.jiraSubtaskKey}`} target="_blank" rel="noopener noreferrer" className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline">{resource.jiraSubtaskKey}</a>
+                          ) : (
+                            <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{resource.jiraSubtaskKey}</code>
+                          )
                         ) : isProcessing && inScope ? (
                           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Loader2 size={13} className="animate-spin shrink-0" />

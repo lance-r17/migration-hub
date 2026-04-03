@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Wrench, CreditCard, Cloud, CheckCircle2, Loader2 } from 'lucide-react'
 import { ApprovalTimeline } from './ApprovalTimeline'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { useProductCategoryMap } from '@/hooks/use-product-category'
 import type { Approval, CloudResource } from '@/types'
 import type { JiraSubtaskConfig } from '@/types/wave'
 
@@ -25,11 +26,16 @@ function getSubtaskCount(
   mode: JiraSubtaskConfig['mode'],
   resources: CloudResource[],
   customIds: string[],
+  getCategoryForProduct: (product?: string) => string,
 ): number {
   if (mode === 'resource-level') return resources.length
   if (mode === 'category-level') {
-    const cats = new Set(resources.map(r => r.category))
+    const cats = new Set(resources.map(r => getCategoryForProduct(r.product)))
     return cats.size
+  }
+  if (mode === 'product-level') {
+    const products = new Set(resources.map(r => r.product ?? 'Other'))
+    return products.size
   }
   return customIds.length
 }
@@ -49,6 +55,7 @@ export function SignOffModal({
   const [jiraMode, setJiraMode] = useState<JiraSubtaskConfig['mode']>('resource-level')
   const [customIds, setCustomIds] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const { getCategoryForProduct } = useProductCategoryMap()
 
   useEffect(() => {
     if (!open) {
@@ -66,8 +73,9 @@ export function SignOffModal({
   const matchedRole = roles.find(r => r.label === currentUserRole)
   const isPlatformLead = currentUserRole === 'Platform Migration Lead'
   const inScopeResources = cloudResources.filter(r => r.needMigration !== false)
-  const inScopeCategories = Array.from(new Set(inScopeResources.map(r => r.category)))
-  const subtaskCount = getSubtaskCount(jiraMode, inScopeResources, customIds)
+  const inScopeCategories = Array.from(new Set(inScopeResources.map(r => getCategoryForProduct(r.product))))
+  const inScopeProducts = Array.from(new Set(inScopeResources.map(r => r.product ?? 'Other')))
+  const subtaskCount = getSubtaskCount(jiraMode, inScopeResources, customIds, getCategoryForProduct)
 
   const handleStep1Confirm = () => {
     if (!acknowledged || !currentUserRole) return
@@ -85,6 +93,7 @@ export function SignOffModal({
       mode: jiraMode,
       ...(jiraMode === 'custom' ? { selectedResourceIds: customIds } : {}),
       ...(jiraMode === 'category-level' ? { selectedCategories: inScopeCategories } : {}),
+      ...(jiraMode === 'product-level' ? { selectedProducts: inScopeProducts } : {}),
     }
     try {
       await onConfirmWithJira(currentUserRole, config)
@@ -212,10 +221,11 @@ export function SignOffModal({
                   type="single"
                   value={jiraMode}
                   onValueChange={v => { if (v) setJiraMode(v as JiraSubtaskConfig['mode']) }}
-                  className="w-full grid grid-cols-3 gap-1"
+                  className="w-full grid grid-cols-4 gap-1"
                 >
                   <ToggleGroupItem value="resource-level" className="text-xs">Per Resource</ToggleGroupItem>
                   <ToggleGroupItem value="category-level" className="text-xs">Per Category</ToggleGroupItem>
+                  <ToggleGroupItem value="product-level" className="text-xs">Per Product</ToggleGroupItem>
                   <ToggleGroupItem value="custom" className="text-xs">Custom</ToggleGroupItem>
                 </ToggleGroup>
               </div>
@@ -233,7 +243,7 @@ export function SignOffModal({
                     ) : inScopeResources.map(r => (
                       <div key={r.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
                         <span className="text-foreground font-medium">{r.name}</span>
-                        <span className="text-xs text-muted-foreground bg-muted rounded px-1.5 py-0.5">{r.category}</span>
+                        <span className="text-xs text-muted-foreground bg-muted rounded px-1.5 py-0.5">{getCategoryForProduct(r.product)}</span>
                       </div>
                     ))}
                   </div>
@@ -247,7 +257,22 @@ export function SignOffModal({
                       <div key={cat} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
                         <span className="text-foreground font-medium">{cat}</span>
                         <span className="text-xs text-muted-foreground">
-                          {inScopeResources.filter(r => r.category === cat).length} resource(s)
+                          {inScopeResources.filter(r => getCategoryForProduct(r.product) === cat).length} resource(s)
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {jiraMode === 'product-level' && (
+                  <div className="space-y-1.5">
+                    {inScopeProducts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No cloud resources defined.</p>
+                    ) : inScopeProducts.map(product => (
+                      <div key={product} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                        <span className="text-foreground font-medium">{product}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {inScopeResources.filter(r => (r.product ?? 'Other') === product).length} resource(s)
                         </span>
                       </div>
                     ))}
@@ -267,7 +292,7 @@ export function SignOffModal({
                           className="h-4 w-4 rounded accent-primary"
                         />
                         <span className="text-sm text-foreground font-medium flex-1">{r.name}</span>
-                        <span className="text-xs text-muted-foreground bg-muted rounded px-1.5 py-0.5">{r.category}</span>
+                        <span className="text-xs text-muted-foreground bg-muted rounded px-1.5 py-0.5">{getCategoryForProduct(r.product)}</span>
                       </label>
                     ))}
                   </div>

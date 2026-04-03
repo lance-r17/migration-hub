@@ -1,6 +1,17 @@
-import type { Project, Activity, OverallStats, User, ProjectUsers } from '@/types'
+import type { Project, Activity, OverallStats, User, ProjectUsers, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave } from '@/types/wave'
+
+export const mockProductCategoryMap: ProductCategoryEntry[] = [
+  { product: 'ecs',      category: 'VM' },
+  { product: 'rds',      category: 'Database' },
+  { product: 'polarDB',  category: 'Database' },
+  { product: 'oss',      category: 'Buckets' },
+  { product: 'slb',      category: 'Network' },
+  { product: 'dns',      category: 'Network' },
+  { product: 'sls',      category: 'Other' },
+  { product: 'Other',    category: 'Other' },
+]
 
 export const mockUsers: User[] = [
   { id: 'u1',  name: 'Sarah Jenkins', email: 'sarah.jenkins@corp.com',    department: 'Finance & Operations', initials: 'SJ' },
@@ -25,7 +36,7 @@ export const mockProjectUsers: ProjectUsers[] = [
   { projectId: 'PRJ-2024-ALPHA', userIds: ['u1', 'u2', 'u3', 'u4', 'u5'] },
   // M-11029 — contacts: u6 (BO), u7 (TL / DBA)
   { projectId: 'M-11029', userIds: ['u6', 'u7', 'u8', 'u9'] },
-  // M-77122 — contacts: u9 (BO), u10 (TL)
+  // M-77122 — contacts: u12 (BO), u10 (TL)
   { projectId: 'M-77122', userIds: ['u9', 'u10', 'u11', 'u12'] },
 ]
 
@@ -44,6 +55,7 @@ export const recentActivity: Activity[] = [
     message: 'Core Banking Database migrated successfully',
     time: '2 hours ago',
     actor: 'David Chen',
+    projectId: 'PRJ-2024-ALPHA',
   },
   {
     id: '2',
@@ -51,6 +63,7 @@ export const recentActivity: Activity[] = [
     message: 'New Phase started for "Project Nebula"',
     time: '5 hours ago',
     actor: 'Migration Engine',
+    projectId: 'M-11029',
   },
   {
     id: '3',
@@ -58,6 +71,7 @@ export const recentActivity: Activity[] = [
     message: 'Security scan failed on Elastic IP endpoint',
     time: 'Yesterday',
     actor: 'System Alert',
+    projectId: 'M-77122',
   },
 ]
 
@@ -70,6 +84,7 @@ export const mockProjects: Project[] = [
     description: 'Modernizing the legacy SAP environment to Azure Cloud Infrastructure with Zero-Downtime goals.',
     migrationWave: 'Wave 3',
     waveId: 'wave-1',
+    jiraBaseUrl: 'https://your-org.atlassian.net',
     profileOwner: 'Dan Brown, Platform Engineering',
     lastUpdated: '21 MAR 2026',
     team: [
@@ -79,8 +94,8 @@ export const mockProjects: Project[] = [
       { id: 't4', name: 'Dan Brown', initials: 'DB' },
     ],
     approvals: [
-      { id: 'a1', role: 'Technical Lead', approver: 'Sarah J.', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u-tech-lead' },
-      { id: 'a2', role: 'Business Owner', approver: 'Sarah Jenkins', status: 'approved', timestamp: 'Mar 22, 02:30 PM', icon: 'CreditCard', userId: 'u-biz-owner' },
+      { id: 'a1', role: 'Technical Lead', approver: 'Dan Brown', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u2' },
+      { id: 'a2', role: 'Business Owner', approver: 'Sarah Jenkins', status: 'approved', timestamp: 'Mar 22, 02:30 PM', icon: 'CreditCard', userId: 'u1' },
       { id: 'a3', role: 'Platform Migration Lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
     ],
 
@@ -95,132 +110,163 @@ export const mockProjects: Project[] = [
       userBase: { type: 'Internal', count: '~2,400 users' },
       applicationTier: 'P1',
       eimId: 'EIM-00421',
+      ibsInScope: true,
+      migrationStrategy: 'Lift & Shift',
     },
 
     // Section 2
     currentInfrastructure: {
       resources: [
         {
-          id: 'res1', name: 'ERP App Server', category: 'VM',
-          specs: '4 vCPU, 16 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res1', resourceId: 'i-0a1b2c3d4e', name: 'ERP App Server', product: 'ecs',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'ecs.c6.xlarge', cpu: 4, memory: 16 },
+          subApplication: 'erp-core',
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res2', name: 'Primary Oracle DB', category: 'Database',
-          specs: '8 vCPU, 64 GB RAM', quantity: 2, availabilityZones: ['AZ-A (primary)', 'AZ-B (replica)'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res2', resourceId: 'rm-0b2c3d4e5f', name: 'Primary Oracle DB', product: 'rds',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'rds.mssql.s2.large', cpu: 8, memory: 64, storage_gb: 2000 },
+          subApplication: 'erp-core',
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res3', name: 'Redis Session Cache', category: 'VM',
-          specs: '2 vCPU, 8 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res3', resourceId: 'r-0c3d4e5f6a', name: 'Redis Session Cache', product: 'ecs',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'ecs.c6.large', cpu: 2, memory: 8 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
           needMigration: false,
         },
         {
-          id: 'res4', name: 'Static Assets Bucket', category: 'Buckets',
-          specs: '2 TB, 3,000 IOPS Sync, Daily backup', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res4', resourceId: 'oss-0d4e5f6a7b', name: 'Static Assets Bucket', product: 'oss',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { capacity_tb: 2, iops: 3000, backup: 'daily' },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         // — VMs —
         {
-          id: 'res-a5', name: 'SAP ABAP Application Server', category: 'VM',
-          specs: '8 vCPU, 32 GB RAM', quantity: 3, availabilityZones: ['AZ-A', 'AZ-B', 'AZ-C'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a5', resourceId: 'i-0e5f6a7b8c', name: 'SAP ABAP Application Server', product: 'ecs',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'ecs.c6.2xlarge', cpu: 8, memory: 32 },
+          subApplication: 'erp-core',
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a6', name: 'SAP Web Dispatcher', category: 'VM',
-          specs: '2 vCPU, 8 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a6', resourceId: 'i-0f6a7b8c9d', name: 'SAP Web Dispatcher', product: 'slb',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'ecs.c6.large', cpu: 2, memory: 8 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-a7', name: 'HR Module App Server', category: 'VM',
-          specs: '4 vCPU, 16 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a7', resourceId: 'i-1a7b8c9d0e', name: 'HR Module App Server', product: 'ecs',
+          resourceSet: 'corp-00421-alpha-erp-dev',
+          specs: { instance_type: 'ecs.c6.xlarge', cpu: 4, memory: 16 },
+          subApplication: 'erp-hr',
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a8', name: 'Finance Module App Server', category: 'VM',
-          specs: '4 vCPU, 16 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a8', resourceId: 'i-2b8c9d0e1f', name: 'Finance Module App Server', product: 'ecs',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'ecs.c6.xlarge', cpu: 4, memory: 16 },
+          subApplication: 'erp-finance',
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a9', name: 'Supply Chain API Server', category: 'VM',
-          specs: '4 vCPU, 8 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a9', resourceId: 'i-3c9d0e1f2a', name: 'Supply Chain API Server', product: 'ecs',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'ecs.c6.xlarge', cpu: 4, memory: 8 },
+          subApplication: 'erp-supply-chain',
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-a10', name: 'Batch Processing Server', category: 'VM',
-          specs: '8 vCPU, 32 GB RAM', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a10', resourceId: 'i-4d0e1f2a3b', name: 'Batch Processing Server', product: 'ecs',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'ecs.c6.2xlarge', cpu: 8, memory: 32 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a11', name: 'SFTP File Transfer Server', category: 'VM',
-          specs: '2 vCPU, 4 GB RAM', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a11', resourceId: 'i-5e1f2a3b4c', name: 'SFTP File Transfer Server', product: 'ecs',
+          resourceSet: 'corp-00421-alpha-erp-dev',
+          specs: { instance_type: 'ecs.c6.large', cpu: 2, memory: 4 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
           needMigration: false,
         },
         // — Databases —
         {
-          id: 'res-a12', name: 'Oracle DB Read Replica', category: 'Database',
-          specs: '8 vCPU, 64 GB RAM', quantity: 1, availabilityZones: ['AZ-C'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a12', resourceId: 'rm-6f2a3b4c5d', name: 'Oracle DB Read Replica', product: 'rds',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'rds.mssql.s2.large', cpu: 8, memory: 64 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a13', name: 'Reporting Analytics DB', category: 'Database',
-          specs: '16 vCPU, 128 GB RAM, 10 TB SSD', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a13', resourceId: 'rm-7a3b4c5d6e', name: 'Reporting Analytics DB', product: 'polarDB',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'polar.mysql.x4.large', cpu: 16, memory: 128, storage_gb: 10240 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-a14', name: 'Audit Trail Database', category: 'Database',
-          specs: '4 vCPU, 16 GB RAM, 2 TB SSD', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a14', resourceId: 'rm-8b4c5d6e7f', name: 'Audit Trail Database', product: 'rds',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'rds.mysql.s3.large', cpu: 4, memory: 16, storage_gb: 2048 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a15', name: 'Oracle RAC Node 3', category: 'Database',
-          specs: '8 vCPU, 64 GB RAM', quantity: 1, availabilityZones: ['AZ-C'],
-          existingStatus: 'Not Deployed', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a15', resourceId: 'rm-9c5d6e7f8a', name: 'Oracle RAC Node 3', product: 'rds',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'rds.mssql.s2.large', cpu: 8, memory: 64 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         // — Buckets —
         {
-          id: 'res-a16', name: 'Document Archive Store', category: 'Buckets',
-          specs: '800 GB, Geo-Redundant, Daily lifecycle tiering', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a16', resourceId: 'oss-0d6e7f8a9b', name: 'Document Archive Store', product: 'oss',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { capacity_gb: 800, redundancy: 'geo', lifecycle: 'daily' },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-a17', name: 'Backup Vault (Cold)', category: 'Buckets',
-          specs: '12 TB, Archive tier, 7-year retention', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B', 'AZ-C'],
-          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a17', resourceId: 'oss-1e7f8a9b0c', name: 'Backup Vault (Cold)', product: 'oss',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { capacity_tb: 12, tier: 'archive', retention_years: 7 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a18', name: 'SAP Media Library Bucket', category: 'Buckets',
-          specs: '500 GB, Standard tier', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a18', resourceId: 'oss-2f8a9b0c1d', name: 'SAP Media Library Bucket', product: 'oss',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { capacity_gb: 500, tier: 'standard' },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         // — Network —
         {
-          id: 'res-a19', name: 'F5 BIG-IP Load Balancer', category: 'Network',
-          specs: 'Active/Passive pair, 10 Gbps throughput', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a19', resourceId: 'slb-3a9b0c1d2e', name: 'F5 BIG-IP Load Balancer', product: 'slb',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { mode: 'active-passive', throughput_gbps: 10 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a20', name: 'Perimeter Firewall Cluster', category: 'Network',
-          specs: 'HA pair, 40 Gbps throughput', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a20', resourceId: 'fw-4b0c1d2e3f', name: 'Perimeter Firewall Cluster', product: 'Other',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { mode: 'ha-pair', throughput_gbps: 40 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-a21', name: 'Internal WAF Appliance', category: 'Network',
-          specs: 'OWASP ruleset, 5 Gbps SSL inspection', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Not Deployed', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a21', resourceId: 'waf-5c1d2e3f4a', name: 'Internal WAF Appliance', product: 'Other',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { ruleset: 'OWASP', ssl_inspection_gbps: 5 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-a22', name: 'MPLS Gateway Router', category: 'Network',
-          specs: '10 Gbps dedicated circuit, BGP peering', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-a22', resourceId: 'rt-6d2e3f4a5b', name: 'MPLS Gateway Router', product: 'dns',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { circuit_gbps: 10, protocol: 'BGP' },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         // — Other —
         {
-          id: 'res-a23', name: 'ActiveMQ Message Broker', category: 'Other',
-          specs: '4 vCPU, 8 GB RAM, Master/Slave HA', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-a23', resourceId: 'mq-7e3f4a5b6c', name: 'ActiveMQ Message Broker', product: 'sls',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { instance_type: 'ecs.c6.xlarge', cpu: 4, memory: 8, mode: 'master-slave-ha' },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
       ],
       network: {
@@ -253,7 +299,8 @@ export const mockProjects: Project[] = [
       dataGrowthRate: '+50 GB / month',
       replicationTopology: 'Oracle Data Guard — async replication, AZ-A primary → AZ-B replica. Redis Sentinel with 1 master + 1 replica.',
       backupMethod: 'Oracle RMAN daily full + hourly incremental; stored in AZ-B and offsite tape. Redis AOF + RDB snapshots hourly.',
-      lastRestoreTest: '14 FEB 2026 — full restore validated in UAT within RTO target.',
+      backupRequiredDuringMigration: true,
+      lastRestoreTest: 'https://brett.corp.com/tests/erp-restore-2026-02-14',
       dataResidency: 'All data must remain within EU-West region. GDPR data subject rights procedures in place.',
       encryptionAtRest: 'AES-256 via Oracle TDE. Redis encrypted at OS level (LUKS). Keys managed by CyberArk.',
       piiData: true,
@@ -263,14 +310,14 @@ export const mockProjects: Project[] = [
     // Section 5
     dependencies: {
       upstream: [
-        { id: 'd1', name: 'Auth Service', protocol: 'HTTPS', port: '443', access: 'Internal', owner: 'Identity Team', notes: 'SAML 2.0 SSO provider' },
-        { id: 'd2', name: 'Payment Gateway', protocol: 'HTTPS', port: '443', access: 'External', owner: 'Vendor', notes: 'IP allowlist change required post-migration' },
-        { id: 'd3', name: 'User Directory (LDAP)', protocol: 'LDAP', port: '636', access: 'Internal', owner: 'IT Ops', notes: 'TLS LDAP — server cert tied to current hostname' },
+        { id: 'd1', name: 'Auth Service', eimId: 'EIM-00105', contactEmail: 'identity-team@corp.com', hosting: 'On-Premise', notes: 'SAML 2.0 SSO provider' },
+        { id: 'd2', name: 'Payment Gateway', eimId: 'EIM-00212', contactEmail: 'vendor-support@payments.com', hosting: 'AliCloud', notes: 'IP allowlist change required post-migration' },
+        { id: 'd3', name: 'User Directory (LDAP)', eimId: 'EIM-00089', contactEmail: 'it-ops@corp.com', hosting: 'On-Premise', notes: 'TLS LDAP — server cert tied to current hostname' },
       ],
       downstream: [
-        { id: 'd4', name: 'Invoicing Service', protocol: 'HTTPS', port: '443', access: 'Internal', owner: 'Finance Engineering', notes: '' },
-        { id: 'd5', name: 'BI Reporting Platform', protocol: 'JDBC', port: '1521', access: 'Internal', owner: 'Analytics Team', notes: 'Direct DB connection — hardcoded DB host IP in config' },
-        { id: 'd6', name: 'Audit Log Aggregator', protocol: 'Syslog', port: '514', access: 'Internal', owner: 'Security Ops', notes: '' },
+        { id: 'd4', name: 'Invoicing Service', eimId: 'EIM-00317', contactEmail: 'finance-eng@corp.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd5', name: 'BI Reporting Platform', eimId: 'EIM-00428', contactEmail: 'analytics@corp.com', hosting: 'On-Premise', notes: 'Direct DB connection — hardcoded DB host IP in config' },
+        { id: 'd6', name: 'Audit Log Aggregator', eimId: 'EIM-00531', contactEmail: 'security-ops@corp.com', hosting: 'AliCloud', notes: '' },
       ],
       certificatesSecrets: {
         tlsCertificates: 'erp.corp.com: issued by Internal CA, expires 2026-09-15 (6 months post-migration — flag for renewal). erp-api.corp.com: expires 2026-11-01.',
@@ -350,16 +397,18 @@ export const mockProjects: Project[] = [
     progress: 100,
     description: 'Completed migration of the legacy Node.js OAuth2/JWT authentication service to an AZ-resilient ECS Fargate deployment with Multi-AZ RDS.',
     migrationWave: 'Wave 1',
+    waveId: 'wave-3',
     profileOwner: 'Frank Miller, Platform Security',
     jiraTicket: 'JIRA-1829',
+    jiraBaseUrl: 'https://your-org.atlassian.net',
     lastUpdated: '25 OCT 2025',
     team: [
       { id: 't5', name: 'Eve Davis', initials: 'ED' },
       { id: 't6', name: 'Frank Miller', initials: 'FM' },
     ],
     approvals: [
-      { id: 'a4', role: 'Technical Lead', approver: 'Sarah J.', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u-tech-lead' },
-      { id: 'a5', role: 'Business Owner', approver: 'J. Park', status: 'approved', timestamp: 'Oct 24, 14:30 PM', icon: 'CreditCard', userId: 'u-biz-owner' },
+      { id: 'a4', role: 'Technical Lead', approver: 'Frank Miller', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u7' },
+      { id: 'a5', role: 'Business Owner', approver: 'Eve Davis', status: 'approved', timestamp: 'Oct 24, 14:30 PM', icon: 'CreditCard', userId: 'u6' },
       { id: 'a6', role: 'Platform Migration Lead', approver: 'R. Kim', status: 'approved', timestamp: 'Oct 25, 10:00 AM', icon: 'CloudCheck', userId: 'u-current' },
     ],
 
@@ -372,40 +421,48 @@ export const mockProjects: Project[] = [
       businessFunction: 'Centralised OAuth2 / JWT authentication and session management for internal tooling.',
       businessOwnerId: 'u6',
       technicalLeadId: 'u7',
-      dbaDataOwnerId: 'u7',
+      dbaDataOwnerId: 'u8',
+      ibsInScope: false,
+      migrationStrategy: 'Lift & Shift',
     },
 
     currentInfrastructure: {
       resources: [
         {
-          id: 'res5', name: 'auth-svc App Server', category: 'VM',
-          specs: '2 vCPU, 4 GB RAM', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+          id: 'res5', resourceId: 'i-aa1b2c3d', name: 'auth-svc App Server', product: 'ecs',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { instance_type: 'ecs.c6.large', cpu: 2, memory: 4 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'synced',
         },
         {
-          id: 'res6', name: 'PostgreSQL 14 Session Store', category: 'Database',
-          specs: 'db.t3.medium, 100 GB SSD', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+          id: 'res6', resourceId: 'rm-bb2c3d4e', name: 'PostgreSQL 14 Session Store', product: 'rds',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { instance_type: 'rds.pg.t3.medium', storage_gb: 100 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'synced',
         },
         {
-          id: 'res-m11-3', name: 'OAuth Token Cache', category: 'VM',
-          specs: '2 vCPU, 4 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-m11-3', resourceId: 'i-cc3d4e5f', name: 'OAuth Token Cache', product: 'ecs',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { instance_type: 'ecs.c6.large', cpu: 2, memory: 4 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-m11-4', name: 'Auth Audit Log Store', category: 'Buckets',
-          specs: '200 GB, Standard tier, 3-year retention', quantity: 1, availabilityZones: ['AZ-A'],
-          existingStatus: 'Ready', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res-m11-4', resourceId: 'oss-dd4e5f6a', name: 'Auth Audit Log Store', product: 'oss',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { capacity_gb: 200, tier: 'standard', retention_years: 3 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-m11-5', name: 'Identity Provider DB', category: 'Database',
-          specs: 'db.t3.large, 250 GB SSD', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res-m11-5', resourceId: 'rm-ee5f6a7b', name: 'Identity Provider DB', product: 'rds',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { instance_type: 'rds.pg.t3.large', storage_gb: 250 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-m11-6', name: 'Auth API Gateway', category: 'Network',
-          specs: 'Internal NLB, 1 Gbps', quantity: 1, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Live', syncStatus: 'synced',
+          id: 'res-m11-6', resourceId: 'slb-ff6a7b8c', name: 'Auth API Gateway', product: 'slb',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { type: 'internal-nlb', throughput_gbps: 1 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'synced',
         },
       ],
       network: {
@@ -432,7 +489,8 @@ export const mockProjects: Project[] = [
       dataGrowthRate: '~500 MB/month',
       replicationTopology: 'Single primary, no replicas (pre-migration)',
       backupMethod: 'RDS automated snapshots to S3 — 7-day retention',
-      lastRestoreTest: 'Sep 2025',
+      backupRequiredDuringMigration: false,
+      lastRestoreTest: 'https://brett.corp.com/tests/auth-svc-restore-2025-09-10',
       dataResidency: 'Region: ap-southeast-1',
       encryptionAtRest: 'AES-256 via AWS KMS',
       piiData: true,
@@ -441,11 +499,11 @@ export const mockProjects: Project[] = [
 
     dependencies: {
       upstream: [
-        { id: 'd10', name: 'Corporate LDAP', protocol: 'LDAPS', port: '636', access: 'Internal', owner: 'IT Ops', notes: 'Directory bind for employee authentication' },
+        { id: 'd10', name: 'Corporate LDAP', eimId: 'EIM-00089', contactEmail: 'it-ops@corp.com', hosting: 'On-Premise', notes: 'Directory bind for employee authentication' },
       ],
       downstream: [
-        { id: 'd11', name: 'Internal Dev Portal', protocol: 'HTTPS', port: '443', access: 'Internal', owner: 'Platform Team', notes: '' },
-        { id: 'd12', name: 'CI/CD Pipeline', protocol: 'HTTPS', port: '443', access: 'Internal', owner: 'DevOps', notes: 'Service account tokens issued by auth-svc' },
+        { id: 'd11', name: 'Internal Dev Portal', eimId: 'EIM-00307', contactEmail: 'platform@company.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd12', name: 'CI/CD Pipeline', eimId: 'EIM-00412', contactEmail: 'devops@company.com', hosting: 'AliCloud', notes: 'Service account tokens issued by auth-svc' },
       ],
       certificatesSecrets: {
         tlsCertificates: 'Wildcard cert *.company.com — renewed Feb 2026',
@@ -494,12 +552,13 @@ export const mockProjects: Project[] = [
     name: 'Data Warehouse Sync',
     status: 'planning',
     progress: 12,
+    jiraBaseUrl: 'https://your-org.atlassian.net',
     team: [
       { id: 't7', name: 'Grace Lee', initials: 'GL' },
     ],
     approvals: [
-      { id: 'a7', role: 'Technical Lead', status: 'pending', icon: 'Wrench', userId: 'u-tech-lead' },
-      { id: 'a8', role: 'Business Owner', status: 'pending', icon: 'CreditCard', userId: 'u-biz-owner' },
+      { id: 'a7', role: 'Technical Lead', status: 'pending', icon: 'Wrench' },
+      { id: 'a8', role: 'Business Owner', status: 'pending', icon: 'CreditCard' },
       { id: 'a9', role: 'Platform Migration Lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
     ],
     risks: [],
@@ -511,6 +570,8 @@ export const mockProjects: Project[] = [
     progress: 88,
     description: 'Large-scale DNS infrastructure migration from on-prem BIND clusters to AWS Route 53 with Anycast edge. APAC and US regions live; EU cutover blocked on propagation TTL issue.',
     migrationWave: 'Wave 2',
+    waveId: 'wave-1',
+    jiraBaseUrl: 'https://your-org.atlassian.net',
     profileOwner: 'Henry Wilson, Network Operations',
     lastUpdated: '20 MAR 2026',
     team: [
@@ -518,8 +579,8 @@ export const mockProjects: Project[] = [
       { id: 't9', name: 'Irene Cho', initials: 'IC' },
     ],
     approvals: [
-      { id: 'a10', role: 'Technical Lead', approver: 'H. Wilson', status: 'approved', timestamp: 'Oct 20, 11:00 AM', icon: 'Wrench', userId: 'u-tech-lead' },
-      { id: 'a11', role: 'Business Owner', status: 'waiting', icon: 'CreditCard', userId: 'u-biz-owner' },
+      { id: 'a10', role: 'Technical Lead', approver: 'Irene Cho', status: 'approved', timestamp: 'Oct 20, 11:00 AM', icon: 'Wrench', userId: 'u10' },
+      { id: 'a11', role: 'Business Owner', status: 'waiting', icon: 'CreditCard', userId: 'u12' },
       { id: 'a12', role: 'Platform Migration Lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
     ],
 
@@ -530,26 +591,31 @@ export const mockProjects: Project[] = [
       eimId: 'EIM-0088',
       userBase: { type: 'External', count: '~4M end users globally' },
       businessFunction: 'Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.',
-      businessOwnerId: 'u9',
+      businessOwnerId: 'u12',
       technicalLeadId: 'u10',
+      ibsInScope: true,
+      migrationStrategy: 'Refactor',
     },
 
     currentInfrastructure: {
       resources: [
         {
-          id: 'res7', name: 'DNS Primary Cluster (APAC)', category: 'VM',
-          specs: '8 vCPU, 32 GB RAM', quantity: 3, availabilityZones: ['AZ-A', 'AZ-B', 'AZ-C'],
-          existingStatus: 'Live', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res7', resourceId: 'i-aa7b8c9d', name: 'DNS Primary Cluster (APAC)', product: 'ecs',
+          resourceSet: 'corp-0088-edge-dns-prod',
+          specs: { instance_type: 'ecs.c6.2xlarge', cpu: 8, memory: 32 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res8', name: 'DNS Secondary Cluster (EU)', category: 'VM',
-          specs: '8 vCPU, 32 GB RAM', quantity: 2, availabilityZones: ['AZ-A', 'AZ-B'],
-          existingStatus: 'Online', targetStatus: 'Provisioning', syncStatus: 'out-of-sync',
+          id: 'res8', resourceId: 'i-bb8c9d0e', name: 'DNS Secondary Cluster (EU)', product: 'ecs',
+          resourceSet: 'corp-0088-edge-dns-prod',
+          specs: { instance_type: 'ecs.c6.2xlarge', cpu: 8, memory: 32 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res9', name: 'Anycast Edge Nodes ×12', category: 'VM',
-          specs: '4 vCPU, 8 GB RAM each', quantity: 12, availabilityZones: ['AZ-A', 'AZ-B', 'AZ-C'],
-          existingStatus: 'Starting', targetStatus: 'Provisioning', syncStatus: 'provisioning',
+          id: 'res9', resourceId: 'i-cc9d0e1f', name: 'Anycast Edge Nodes ×12', product: 'dns',
+          resourceSet: 'corp-0088-edge-dns-prod',
+          specs: { instance_type: 'ecs.c6.xlarge', cpu: 4, memory: 8, nodes: 12 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
       ],
       network: {
@@ -580,7 +646,8 @@ export const mockProjects: Project[] = [
       dataGrowthRate: '~5 MB/month',
       replicationTopology: 'Multi-master zone replication across APAC nodes. EU replication lagging — root cause of current blocker.',
       backupMethod: 'Zone file exports to S3 every 6 hours. Route 53 managed zones have no export required.',
-      lastRestoreTest: 'Nov 2025 — zone restore tested in staging successfully',
+      backupRequiredDuringMigration: false,
+      lastRestoreTest: 'https://brett.corp.com/tests/edge-dns-restore-2025-11-15',
       dataResidency: 'Zone data replicated across ap-southeast-1, eu-west-1, us-east-1',
       encryptionAtRest: 'N/A — DNS zone data is public',
       piiData: false,
@@ -589,13 +656,13 @@ export const mockProjects: Project[] = [
 
     dependencies: {
       upstream: [
-        { id: 'd13', name: 'Domain Registrar API', protocol: 'HTTPS', port: '443', access: 'External', owner: 'Network Ops', notes: 'NS delegation changes require 24h advance notice' },
-        { id: 'd14', name: 'DNSSEC Root KSK', protocol: 'DNS/TCP', port: '853', access: 'External', owner: 'IANA', notes: 'KSK rollover scheduled Q2 2026' },
+        { id: 'd13', name: 'Domain Registrar API', eimId: 'EIM-00601', contactEmail: 'network-ops@corp.com', hosting: 'On-Premise', notes: 'NS delegation changes require 24h advance notice' },
+        { id: 'd14', name: 'DNSSEC Root KSK', eimId: 'EIM-00602', contactEmail: 'admin@iana.org', hosting: 'Other', notes: 'KSK rollover scheduled Q2 2026' },
       ],
       downstream: [
-        { id: 'd15', name: 'Public Website CDN', protocol: 'DNS', port: '53', access: 'External', owner: 'CDN Team', notes: '' },
-        { id: 'd16', name: 'API Gateway', protocol: 'DNS', port: '53', access: 'Internal', owner: 'Platform Team', notes: '' },
-        { id: 'd17', name: 'VPN Gateway', protocol: 'DNS', port: '53', access: 'Internal', owner: 'Network Ops', notes: 'Split-horizon DNS required' },
+        { id: 'd15', name: 'Public Website CDN', eimId: 'EIM-00710', contactEmail: 'cdn-team@corp.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd16', name: 'API Gateway', eimId: 'EIM-00315', contactEmail: 'platform@corp.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd17', name: 'VPN Gateway', eimId: 'EIM-00521', contactEmail: 'network-ops@corp.com', hosting: 'On-Premise', notes: 'Split-horizon DNS required' },
       ],
       certificatesSecrets: {
         tlsCertificates: 'DNSSEC KSK and ZSK managed via AWS CloudHSM. KSK rollover scheduled Q2 2026.',
@@ -715,6 +782,44 @@ export const mockCurrentUser: User = {
   role: 'Platform Migration Lead',
   initials: 'HW',
 }
+
+// ─── Dev Personas (dev-only user switcher) ────────────────────────────────────
+
+export const devPersonas: User[] = [
+  {
+    id: 'u-current',
+    name: 'Henry Wilson',
+    email: 'henry.wilson@corp.com',
+    department: 'Platform Engineering',
+    role: 'Platform Migration Lead',
+    initials: 'HW',
+  },
+  {
+    id: 'u3',
+    name: 'Alice Johnson',
+    email: 'alice.johnson@corp.com',
+    department: 'Platform Engineering',
+    team: 'Platform Engineering',
+    role: 'Technical Lead',
+    initials: 'AJ',
+  },
+  {
+    id: 'u12',
+    name: 'Karen Lee',
+    email: 'karen.lee@corp.com',
+    department: 'Compliance & Risk',
+    role: 'Business Owner',
+    initials: 'KL',
+  },
+  {
+    id: 'u2',
+    name: 'Dan Brown',
+    email: 'dan.brown@corp.com',
+    department: 'Platform Engineering',
+    team: 'Platform Engineering',
+    initials: 'DB',
+  },
+]
 
 // ─── Audit Log Seed Data ──────────────────────────────────────────────────────
 

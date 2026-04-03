@@ -21,7 +21,7 @@ interface Props {
 }
 
 function emptyEntry(): DependencyEntry {
-  return { id: crypto.randomUUID(), name: '', protocol: '', port: '', access: 'Internal', owner: '', notes: '' }
+  return { id: crypto.randomUUID(), name: '', eimId: '', contactEmail: '', hosting: '', notes: '' }
 }
 
 function DependencyTableEditor({
@@ -50,34 +50,34 @@ function DependencyTableEditor({
             </button>
           </div>
           <div className="space-y-1.5">
-            <Label>Name *</Label>
-            <Input value={entry.name} onChange={(e) => update(entry.id, 'name', e.target.value)} placeholder="Service name" />
+            <Label>Application Name *</Label>
+            <Input value={entry.name} onChange={(e) => update(entry.id, 'name', e.target.value)} placeholder="Application name" />
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
-              <Label>Protocol</Label>
-              <Input value={entry.protocol ?? ''} onChange={(e) => update(entry.id, 'protocol', e.target.value)} placeholder="HTTPS" />
+              <Label>EIM ID</Label>
+              <Input value={entry.eimId ?? ''} onChange={(e) => update(entry.id, 'eimId', e.target.value)} placeholder="e.g. EIM-1234" />
             </div>
             <div className="space-y-1.5">
-              <Label>Port</Label>
-              <Input value={entry.port ?? ''} onChange={(e) => update(entry.id, 'port', e.target.value)} placeholder="443" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Access</Label>
-              <Select value={entry.access ?? 'Internal'} onValueChange={(v) => update(entry.id, 'access', v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Internal">Internal</SelectItem>
-                  <SelectItem value="External">External</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Contact Email</Label>
+              <Input value={entry.contactEmail ?? ''} onChange={(e) => update(entry.id, 'contactEmail', e.target.value)} placeholder="owner@corp.com" />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Owner</Label>
-            <Input value={entry.owner ?? ''} onChange={(e) => update(entry.id, 'owner', e.target.value)} placeholder="Team or person" />
+            <Label>Hosting</Label>
+            <Select value={entry.hosting ?? ''} onValueChange={(v) => update(entry.id, 'hosting', v)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select hosting" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="AliCloud">AliCloud</SelectItem>
+                <SelectItem value="On-Premise">On-Premise</SelectItem>
+                <SelectItem value="AWS">AWS</SelectItem>
+                <SelectItem value="Azure">Azure</SelectItem>
+                <SelectItem value="GCP">GCP</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Notes</Label>

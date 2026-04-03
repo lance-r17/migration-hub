@@ -14,9 +14,10 @@ export interface Wave {
 }
 
 export interface JiraSubtaskConfig {
-  mode: 'resource-level' | 'category-level' | 'custom'
+  mode: 'resource-level' | 'category-level' | 'product-level' | 'custom'
   selectedResourceIds?: string[]   // used when mode === 'custom'
   selectedCategories?: string[]    // used when mode === 'category-level'
+  selectedProducts?: string[]      // used when mode === 'product-level'
 }
 
 export interface JiraJobRequest {

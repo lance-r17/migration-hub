@@ -14,6 +14,11 @@ export async function getProjects(): Promise<Project[]> {
   return apiClient.get<Project[]>(ENDPOINTS.projects)
 }
 
+export async function getProjectsForUser(userId: string): Promise<Project[]> {
+  if (USE_MOCK) { await delay(); return store.getProjectsForUser(userId) }
+  return apiClient.get<Project[]>(`${ENDPOINTS.projects}?userId=${userId}`)
+}
+
 export async function getProject(id: string): Promise<Project | undefined> {
   // TODO (backend): return apiClient.get<Project>(ENDPOINTS.project(id))
   if (USE_MOCK) { await delay(); return store.getProject(id) }

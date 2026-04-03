@@ -1,6 +1,12 @@
 import { store } from '@/data/store'
-import type { CloudResource } from '@/types'
+import type { CloudResource, ResourceCategory } from '@/types'
 import type { JiraSubtaskConfig, JiraJobRequest } from '@/types/wave'
+
+function getCategoryForProduct(product?: string): ResourceCategory {
+  const map = store.getProductCategoryMap()
+  const entry = map.find(e => e.product === (product ?? 'Other'))
+  return entry?.category ?? 'Other'
+}
 
 // ─── createJiraJob ────────────────────────────────────────────────────────────
 // Simulates the event-driven async Jira job queue:
@@ -55,8 +61,8 @@ export function createJiraJob(
       let counter = storyNum + 1
 
       if (config.mode === 'category-level') {
-        // One sub-task per unique category; all resources in same category share the key
-        const categories = [...new Set(inScope.map(r => r.category))]
+        // One sub-task per unique category; derived from product→category mapping
+        const categories = [...new Set(inScope.map(r => getCategoryForProduct(r.product)))]
         for (const cat of categories) {
           subtaskKeys[cat] = `${projectKey}-${counter++}`
         }
@@ -65,7 +71,26 @@ export function createJiraJob(
         if (project?.currentInfrastructure) {
           const updatedResources = project.currentInfrastructure.resources.map(r =>
             inScope.some(s => s.id === r.id)
-              ? { ...r, jiraSubtaskKey: subtaskKeys[r.category] }
+              ? { ...r, jiraSubtaskKey: subtaskKeys[getCategoryForProduct(r.product)] }
+              : r
+          )
+          store.updateProject(projectId, 'currentInfrastructure', {
+            ...project.currentInfrastructure,
+            resources: updatedResources,
+          })
+        }
+      } else if (config.mode === 'product-level') {
+        // One sub-task per unique product
+        const products = [...new Set(inScope.map(r => r.product ?? 'Other'))]
+        for (const product of products) {
+          subtaskKeys[product] = `${projectKey}-${counter++}`
+        }
+        // Write back to each resource
+        const project = store.getProject(projectId)
+        if (project?.currentInfrastructure) {
+          const updatedResources = project.currentInfrastructure.resources.map(r =>
+            inScope.some(s => s.id === r.id)
+              ? { ...r, jiraSubtaskKey: subtaskKeys[r.product ?? 'Other'] }
               : r
           )
           store.updateProject(projectId, 'currentInfrastructure', {

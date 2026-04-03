@@ -7,8 +7,9 @@ import {
   recentActivity,
   mockAuditEntries,
   mockWaves,
+  mockProductCategoryMap,
 } from '@/data/mock'
-import type { Project, User, OverallStats, Activity } from '@/types'
+import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave, JiraJobRequest } from '@/types/wave'
 
@@ -102,6 +103,13 @@ export const store = {
       .filter((u): u is User => u !== undefined)
   },
 
+  getProjectsForUser(userId: string): Project[] {
+    const assignedIds = _projectUserMap
+      .filter(pu => pu.userIds.includes(userId))
+      .map(pu => pu.projectId)
+    return _projects.filter(p => assignedIds.includes(p.id))
+  },
+
   // ─── Audit Log ─────────────────────────────────────────────────────────────
 
   getAuditLog(projectId: string): AuditLogEntry[] {
@@ -113,6 +121,12 @@ export const store = {
   appendAuditEntry(entry: AuditLogEntry): void {
     if (!_auditLogs[entry.projectId]) _auditLogs[entry.projectId] = []
     _auditLogs[entry.projectId].push(entry)
+  },
+
+  // ─── Product-Category Map ──────────────────────────────────────────────────
+
+  getProductCategoryMap(): ProductCategoryEntry[] {
+    return mockProductCategoryMap
   },
 
   // ─── Dashboard ─────────────────────────────────────────────────────────────

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CheckCircle2, AlertOctagon, Clock } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useProductCategoryMap } from '@/hooks/use-product-category'
 import type { CloudResource, ProjectStatus, SyncStatus } from '@/types'
 
 interface Props {
@@ -44,30 +45,19 @@ function SyncBadge({ status }: { status: SyncStatus }) {
   )
 }
 
-function StatusChip({ label }: { label: string }) {
-  const isActive = ['Online', 'Live', 'Ready', 'Active'].includes(label)
-  const isProvisioning = ['Provisioning', 'In Progress', 'Starting'].includes(label)
-  return (
-    <span className={cn(
-      'px-2 py-0.5 rounded text-xs font-medium',
-      isActive && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-      isProvisioning && 'bg-secondary text-secondary-foreground',
-      !isActive && !isProvisioning && 'bg-muted text-muted-foreground',
-    )}>
-      {label}
-    </span>
-  )
-}
 
 const isSignedOff = (status?: ProjectStatus) =>
   status === 'signed-off' || status === 'completed'
 
 export function CloudResourceEditDrawer({ open, onOpenChange, resources, editingResource, projectStatus, isProjectMember, onSave }: Props) {
   const [needMigration, setNeedMigration] = useState(true)
+  const [subApplication, setSubApplication] = useState('')
+  const { getCategoryForProduct } = useProductCategoryMap()
 
   useEffect(() => {
     if (open && editingResource) {
       setNeedMigration(editingResource.needMigration ?? true)
+      setSubApplication(editingResource.subApplication ?? '')
     }
   }, [open, editingResource])
 
@@ -75,14 +65,14 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
 
   function handleSave() {
     onSave(resources.map(r =>
-      r.id === editingResource!.id ? { ...editingResource!, needMigration } : r
+      r.id === editingResource!.id ? { ...editingResource!, needMigration, subApplication: subApplication || undefined } : r
     ))
     onOpenChange(false)
   }
 
   function handleMarkSyncCompleted() {
     onSave(resources.map(r =>
-      r.id === editingResource!.id ? { ...editingResource!, needMigration, syncStatus: 'synced' } : r
+      r.id === editingResource!.id ? { ...editingResource!, needMigration, subApplication: subApplication || undefined, syncStatus: 'synced' } : r
     ))
     onOpenChange(false)
   }
@@ -99,37 +89,30 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-0">
           {/* Read-only details */}
-          <ReadOnlyRow label="Category">{editingResource.category}</ReadOnlyRow>
-          {editingResource.specs && (
-            <ReadOnlyRow label="Specs">
-              <span className="px-2 py-0.5 bg-muted text-muted-foreground text-xs rounded font-mono">
-                {editingResource.specs}
-              </span>
+          {editingResource.resourceId && (
+            <ReadOnlyRow label="Resource ID">
+              <code className="font-mono text-xs">{editingResource.resourceId}</code>
             </ReadOnlyRow>
           )}
-          {editingResource.quantity != null && (
-            <ReadOnlyRow label="Quantity">{editingResource.quantity}</ReadOnlyRow>
+          {editingResource.product && (
+            <ReadOnlyRow label="Product">{editingResource.product}</ReadOnlyRow>
           )}
-          {editingResource.availabilityZones?.length ? (
-            <ReadOnlyRow label="Availability Zones">
-              <div className="flex flex-wrap gap-1 justify-end">
-                {editingResource.availabilityZones.map(az => (
-                  <span key={az} className="px-1.5 py-0.5 bg-secondary/30 text-secondary-foreground text-xs rounded border border-secondary/50 whitespace-nowrap">{az}</span>
-                ))}
-              </div>
+          <ReadOnlyRow label="Category">{getCategoryForProduct(editingResource.product)}</ReadOnlyRow>
+          {editingResource.resourceSet && (
+            <ReadOnlyRow label="Resource Set">
+              <code className="font-mono text-xs">{editingResource.resourceSet}</code>
             </ReadOnlyRow>
-          ) : null}
-          <ReadOnlyRow label="Existing Status">
-            <StatusChip label={editingResource.existingStatus} />
-          </ReadOnlyRow>
-          <ReadOnlyRow label="Target Status">
-            <StatusChip label={editingResource.targetStatus} />
-          </ReadOnlyRow>
+          )}
+          {editingResource.targetResourceId && (
+            <ReadOnlyRow label="Target Resource ID">
+              <code className="font-mono text-xs">{editingResource.targetResourceId}</code>
+            </ReadOnlyRow>
+          )}
           <ReadOnlyRow label="Sync Status">
             <SyncBadge status={editingResource.syncStatus} />
           </ReadOnlyRow>
 
-          {/* Editable field */}
+          {/* Editable fields */}
           <div className="flex items-center gap-3 py-4 mt-2 border-t border-border">
             <Checkbox
               id="cr-need-migration"
@@ -140,6 +123,16 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
             <Label htmlFor="cr-need-migration" className="cursor-pointer text-sm">
               Needs Migration
             </Label>
+          </div>
+          <div className="space-y-1.5 pb-4">
+            <Label htmlFor="cr-sub-app">Sub Application</Label>
+            <Input
+              id="cr-sub-app"
+              value={subApplication}
+              onChange={(e) => setSubApplication(e.target.value)}
+              placeholder="e.g. billing-service"
+              disabled={!canSave}
+            />
           </div>
         </div>
 

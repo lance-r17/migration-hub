@@ -160,9 +160,14 @@ export function ProjectDetailsPage() {
   const assignedWave = waves.find(w => w.id === project.waveId)
 
   const preSignOffStatuses: ProjectStatus[] = ['planning', 'in-progress', 'blocked']
-  const currentUserRole =
-    project.approvals.find(a => a.userId === user?.id)?.role
-    ?? (user?.role ?? null)
+  const overview = project.applicationOverview
+  const isAssignedTL = !!overview?.technicalLeadId && overview.technicalLeadId === user?.id
+  const isAssignedBO = !!overview?.businessOwnerId && overview.businessOwnerId === user?.id
+  const currentUserRole = isPlatformLead
+    ? 'Platform Migration Lead'
+    : isAssignedTL ? 'Technical Lead'
+    : isAssignedBO ? 'Business Owner'
+    : null
   const canSignOff =
     preSignOffStatuses.includes(project.status) &&
     currentUserRole !== null &&
@@ -238,10 +243,22 @@ export function ProjectDetailsPage() {
                 </span>
               )}
               {project.jiraStoryKey && (
-                <span>Story: <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{project.jiraStoryKey}</code></span>
+                <span>Story:{' '}
+                  {project.jiraBaseUrl ? (
+                    <a href={`${project.jiraBaseUrl}/browse/${project.jiraStoryKey}`} target="_blank" rel="noopener noreferrer" className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline">{project.jiraStoryKey}</a>
+                  ) : (
+                    <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{project.jiraStoryKey}</code>
+                  )}
+                </span>
               )}
               {project.jiraTicket && (
-                <span>Jira: <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{project.jiraTicket}</code></span>
+                <span>Jira:{' '}
+                  {project.jiraBaseUrl ? (
+                    <a href={`${project.jiraBaseUrl}/browse/${project.jiraTicket}`} target="_blank" rel="noopener noreferrer" className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline">{project.jiraTicket}</a>
+                  ) : (
+                    <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{project.jiraTicket}</code>
+                  )}
+                </span>
               )}
               {project.profileOwner && (
                 <span>Profile Owner: <strong className="text-foreground">{project.profileOwner}</strong></span>
@@ -282,6 +299,7 @@ export function ProjectDetailsPage() {
             isProjectMember={isProjectMember}
             jiraJobStatus={project.jiraJobStatus}
             jiraStoryKey={project.jiraStoryKey}
+            jiraBaseUrl={project.jiraBaseUrl}
           />
           <DataPersistenceSection
             data={project.dataPersistence}
