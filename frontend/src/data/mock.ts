@@ -1,6 +1,7 @@
 import type { Project, Activity, OverallStats, User, ProjectUsers, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave } from '@/types/wave'
+import type { SurveyConfig } from '@/types/survey'
 
 export const mockProductCategoryMap: ProductCategoryEntry[] = [
   { product: 'ecs',      category: 'VM' },
@@ -1085,4 +1086,54 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       ],
     },
   ],
+}
+
+export const mockSurveyConfig: SurveyConfig = {
+  isActive: true,
+  questions: [
+    {
+      fieldId: 'appoverview__ibsInScope',
+      questionText: 'Is IBS (Important Business Service) in scope for this migration?',
+      hintText: 'Select Yes if this application is part of the IBS platform.',
+      required: true,
+      order: 1,
+    },
+    {
+      fieldId: 'appoverview__migrationStrategy',
+      questionText: 'What is the planned migration strategy?',
+      hintText: 'Lift & Shift = move as-is, Refactor = re-architect for cloud, Deboard = decommission',
+      required: true,
+      order: 2,
+    },
+    {
+      fieldId: 'data__lastRestoreTest',
+      questionText: 'Provide the URL or reference for the last restore test report.',
+      hintText: "e.g. BRETT report URL, Confluence page, or 'Not yet performed'",
+      required: true,
+      order: 3,
+    },
+    {
+      fieldId: 'availability__rto',
+      questionText: 'What is the Recovery Time Objective (RTO)?',
+      hintText: "The maximum acceptable downtime after a failure. e.g. '4 hours', '30 minutes'",
+      required: true,
+      order: 4,
+    },
+    {
+      fieldId: 'availability__rpo',
+      questionText: 'What is the Recovery Point Objective (RPO)?',
+      hintText: "The maximum acceptable data loss. e.g. '1 hour', '15 minutes', 'Zero (no data loss)'",
+      required: true,
+      order: 5,
+    },
+    {
+      fieldId: 'constraints__migrationWindow',
+      questionText: 'What is the preferred migration window?',
+      hintText: 'Select weekdays and specify start/end times in HKT (UTC+8).',
+      required: true,
+      order: 6,
+    },
+  ],
+  updatedBy: 'system',
+  updatedAt: new Date().toISOString(),
 }

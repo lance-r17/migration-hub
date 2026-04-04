@@ -6,6 +6,8 @@ import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
 import { LoginPage } from './pages/LoginPage'
 import { WavesPage } from './pages/WavesPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SettingsHome } from './pages/SettingsHome'
+import { SurveyBuilderPage } from './pages/SurveyBuilderPage'
 import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -23,7 +25,10 @@ function App() {
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
         <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
+          <Route index element={<SettingsHome />} />
+          <Route path="survey" element={<SurveyBuilderPage />} />
+        </Route>
       </Routes>
       <Toaster />
     </BrowserRouter>

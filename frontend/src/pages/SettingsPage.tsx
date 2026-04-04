@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { Settings2 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
-import { SurveyBuilderSection } from '@/components/settings/SurveyBuilderSection'
 import { useCurrentUser } from '@/context/UserContext'
 
 export function SettingsPage() {
@@ -32,17 +32,8 @@ export function SettingsPage() {
 
   return (
     <AppShell title="Settings">
-      <div className="max-w-screen-xl mx-auto w-full space-y-10">
-        {/* Page header */}
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Settings</h1>
-          <p className="text-muted-foreground mt-1">Platform configuration for Migration Hub.</p>
-        </div>
-
-        {/* Survey builder */}
-        <section>
-          <SurveyBuilderSection />
-        </section>
+      <div className="max-w-screen-xl mx-auto w-full">
+        <Outlet />
       </div>
     </AppShell>
   )

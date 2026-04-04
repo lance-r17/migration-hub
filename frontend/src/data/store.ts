@@ -8,6 +8,7 @@ import {
   mockAuditEntries,
   mockWaves,
   mockProductCategoryMap,
+  mockSurveyConfig,
 } from '@/data/mock'
 import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
@@ -22,7 +23,7 @@ let _projects: Project[] = structuredClone(mockProjects)
 let _waves: Wave[] = structuredClone(mockWaves)
 let _jiraJobs: JiraJobRequest[] = []
 let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntries)
-let _surveyConfig: SurveyConfig | null = null
+let _surveyConfig: SurveyConfig | null = structuredClone(mockSurveyConfig)
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
