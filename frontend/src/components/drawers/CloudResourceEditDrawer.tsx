@@ -18,6 +18,10 @@ interface Props {
   onSave: (resources: CloudResource[]) => void
 }
 
+function formatSpecKey(key: string): string {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
 function ReadOnlyRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex justify-between items-start gap-4 py-2.5 border-b border-border last:border-0">
@@ -82,7 +86,7 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px] sm:max-w-[480px] flex flex-col p-0 gap-0" showCloseButton={false}>
+      <SheetContent side="right" className="w-[600px] sm:!max-w-[600px] flex flex-col p-0 gap-0" showCloseButton={false}>
         <SheetHeader className="border-b px-6 py-4 pr-12">
           <SheetTitle>{editingResource.name}</SheetTitle>
         </SheetHeader>
@@ -111,6 +115,21 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
           <ReadOnlyRow label="Sync Status">
             <SyncBadge status={editingResource.syncStatus} />
           </ReadOnlyRow>
+
+          {editingResource.specs && Object.keys(editingResource.specs).length > 0 && (
+            <>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest pt-3 pb-1">Specs</p>
+              {Object.entries(editingResource.specs).map(([key, val]) => (
+                <ReadOnlyRow key={key} label={formatSpecKey(key)}>
+                  {typeof val === 'boolean'
+                    ? val ? 'Yes' : 'No'
+                    : typeof val === 'object'
+                      ? JSON.stringify(val)
+                      : String(val ?? '—')}
+                </ReadOnlyRow>
+              ))}
+            </>
+          )}
 
           {/* Editable fields */}
           <div className="flex items-center gap-3 py-4 mt-2 border-t border-border">

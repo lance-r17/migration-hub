@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { BadgeCheck, History } from 'lucide-react'
+import { BadgeCheck, History, ClipboardList } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -17,6 +17,8 @@ import { TargetArchitectureSection } from '@/components/project/TargetArchitectu
 import { SignOffModal } from '@/components/modals/SignOffModal'
 import { AuditLogDrawer } from '@/components/drawers/AuditLogDrawer'
 import { AssignWaveDrawer } from '@/components/drawers/AssignWaveDrawer'
+import { SurveyModal } from '@/components/survey/SurveyModal'
+import { useSurveyConfig } from '@/hooks/use-survey'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Breadcrumb,
@@ -40,9 +42,11 @@ export function ProjectDetailsPage() {
   const { user } = useCurrentUser()
   const { project, loading, saveSection, refreshProject } = useProject(id)
   const { waves } = useWaves()
+  const { surveyConfig } = useSurveyConfig()
   const [modalOpen, setModalOpen] = useState(false)
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [assignWaveOpen, setAssignWaveOpen] = useState(false)
+  const [surveyOpen, setSurveyOpen] = useState(false)
 
   // Fire completion toast when jiraJobStatus transitions to 'completed'
   const prevJiraStatus = useRef(project?.jiraJobStatus)
@@ -157,6 +161,7 @@ export function ProjectDetailsPage() {
 
   const isProjectMember = project.team.some(m => m.id === user?.id)
   const isPlatformLead = user?.role === 'Platform Migration Lead'
+  const isSurveyActive = !!(surveyConfig?.isActive && surveyConfig.questions.length > 0)
   const assignedWave = waves.find(w => w.id === project.waveId)
 
   const preSignOffStatuses: ProjectStatus[] = ['planning', 'in-progress', 'blocked']
@@ -201,13 +206,24 @@ export function ProjectDetailsPage() {
           <div className="flex items-center gap-3 mb-1 flex-wrap">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">{project.name}</h1>
             <StatusBadge status={project.status} />
-            <button
-              onClick={() => setAuditLogOpen(true)}
-              className="ml-auto flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <History className="size-4" />
-              Change History
-            </button>
+            <div className="ml-auto flex items-center gap-3">
+              {isSurveyActive && (isProjectMember || isPlatformLead) && (
+                <button
+                  onClick={() => setSurveyOpen(true)}
+                  className="flex items-center gap-1.5 text-sm text-primary hover:opacity-80 transition-opacity font-medium"
+                >
+                  <ClipboardList className="size-4" />
+                  Fill Survey
+                </button>
+              )}
+              <button
+                onClick={() => setAuditLogOpen(true)}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <History className="size-4" />
+                Change History
+              </button>
+            </div>
           </div>
           <p className="text-muted-foreground">
             {project.description ?? 'No description provided.'}
@@ -351,6 +367,16 @@ export function ProjectDetailsPage() {
         currentWaveId={project.waveId}
         onSave={handleAssignWave}
       />
+
+      {surveyConfig && (
+        <SurveyModal
+          open={surveyOpen}
+          onClose={() => setSurveyOpen(false)}
+          surveyConfig={surveyConfig}
+          project={project}
+          onSave={handleSave}
+        />
+      )}
     </AppShell>
   )
 }

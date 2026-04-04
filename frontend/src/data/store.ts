@@ -12,6 +12,7 @@ import {
 import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave, JiraJobRequest } from '@/types/wave'
+import type { SurveyConfig } from '@/types/survey'
 
 // Mutable in-memory session store — deep copy of mock data.
 // Writes persist for the lifetime of the browser tab (resets on page refresh).
@@ -21,6 +22,7 @@ let _projects: Project[] = structuredClone(mockProjects)
 let _waves: Wave[] = structuredClone(mockWaves)
 let _jiraJobs: JiraJobRequest[] = []
 let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntries)
+let _surveyConfig: SurveyConfig | null = null
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
@@ -121,6 +123,17 @@ export const store = {
   appendAuditEntry(entry: AuditLogEntry): void {
     if (!_auditLogs[entry.projectId]) _auditLogs[entry.projectId] = []
     _auditLogs[entry.projectId].push(entry)
+  },
+
+  // ─── Survey Config ─────────────────────────────────────────────────────────
+
+  getSurveyConfig(): SurveyConfig | null {
+    return _surveyConfig
+  },
+
+  setSurveyConfig(config: SurveyConfig): SurveyConfig {
+    _surveyConfig = config
+    return _surveyConfig
   },
 
   // ─── Product-Category Map ──────────────────────────────────────────────────

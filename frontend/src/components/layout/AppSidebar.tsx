@@ -42,13 +42,14 @@ const data = {
       icon: <Waves />,
       requiresRole: "Platform Migration Lead",
     },
-  ] satisfies NavItem[],
-  navSecondary: [
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: <Settings2Icon />,
+      requiresRole: "Platform Migration Lead",
     },
+  ] satisfies NavItem[],
+  navSecondary: [
     {
       title: "Help & Support",
       url: "#",

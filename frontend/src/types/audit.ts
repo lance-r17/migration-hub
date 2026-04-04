@@ -11,6 +11,7 @@ export type AuditEventType =
   | 'wave_created'
   | 'wave_imported'
   | 'jira_story_created'
+  | 'survey_submitted'
 
 export type AuditEntityType =
   | 'project'

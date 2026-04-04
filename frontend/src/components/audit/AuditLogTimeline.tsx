@@ -96,6 +96,12 @@ const EVENT_CONFIG: Record<AuditEventType, {
     iconClass: 'text-indigo-600 dark:text-indigo-400',
     dotClass: 'bg-indigo-500',
   },
+  survey_submitted: {
+    icon: PenLine,
+    label: 'Survey submitted',
+    iconClass: 'text-teal-600 dark:text-teal-400',
+    dotClass: 'bg-teal-500',
+  },
 }
 
 // ─── Date grouping ────────────────────────────────────────────────────────────

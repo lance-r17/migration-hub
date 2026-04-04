@@ -75,7 +75,7 @@ export function RiskEditDrawer({ open, onOpenChange, risks, editingRisk, onSave 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px] sm:max-w-[480px] flex flex-col p-0 gap-0" showCloseButton={false}>
+      <SheetContent side="right" className="w-[600px] sm:!max-w-[600px] flex flex-col p-0 gap-0" showCloseButton={false}>
         <SheetHeader className="border-b px-6 py-4 pr-12">
           <SheetTitle>{isEdit ? 'Edit Risk / Blocker' : 'Add Risk / Blocker'}</SheetTitle>
         </SheetHeader>

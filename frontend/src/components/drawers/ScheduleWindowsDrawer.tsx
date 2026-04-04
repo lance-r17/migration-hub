@@ -3,6 +3,7 @@ import { SectionEditDrawer } from './SectionEditDrawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DateRangeEntryEditor } from './DateRangeEntryEditor'
+import { MigrationWindowPicker } from '@/components/shared/MigrationWindowPicker'
 import type { MigrationConstraints, DateRangeEntry } from '@/types'
 
 interface Props {
@@ -49,8 +50,11 @@ export function ScheduleWindowsDrawer({ open, onOpenChange, data, onSave }: Prop
   return (
     <SectionEditDrawer open={open} onOpenChange={onOpenChange} title="Edit Schedule & Windows" onSave={handleSave}>
       <div className="space-y-1.5">
-        <Label htmlFor="sw-window">Migration Window</Label>
-        <Input id="sw-window" value={draft.migrationWindow} onChange={(e) => setDraft(d => ({ ...d, migrationWindow: e.target.value }))} placeholder="e.g. Sat 02:00–06:00 UTC" />
+        <Label>Migration Window</Label>
+        <MigrationWindowPicker
+          value={draft.migrationWindow || undefined}
+          onChange={(v) => setDraft(d => ({ ...d, migrationWindow: v ?? '' }))}
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="sw-max">Max Cutover Window</Label>

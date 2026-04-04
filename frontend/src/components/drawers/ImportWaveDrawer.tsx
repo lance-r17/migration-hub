@@ -56,7 +56,7 @@ export function ImportWaveDrawer({ open, onOpenChange, onImported }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-[480px] sm:max-w-[480px] flex flex-col p-0 gap-0" showCloseButton={false}>
+      <SheetContent side="right" className="w-[600px] sm:!max-w-[600px] flex flex-col p-0 gap-0" showCloseButton={false}>
         <SheetHeader className="border-b px-6 py-4 pr-12">
           <SheetTitle>Import Wave from Jira</SheetTitle>
           <SheetDescription>Provide an existing Jira epic key to import a wave.</SheetDescription>

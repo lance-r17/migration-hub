@@ -18,7 +18,7 @@ export function useProductCategoryMap() {
   for (const e of entries) map[e.product] = e.category
 
   function getCategoryForProduct(product?: string): ResourceCategory {
-    return (product && map[product]) ?? 'Other'
+    return (product ? (map[product] ?? 'Other') : 'Other')
   }
 
   return { map, loading, getCategoryForProduct }

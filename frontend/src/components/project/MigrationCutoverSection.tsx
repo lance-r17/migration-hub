@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import { CalendarCheck, Clock, Ban, CalendarX, Timer, ArrowLeftRight, RotateCcw, Users, ListChecks } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
+import { MigrationWindowDisplay } from '@/components/shared/MigrationWindowDisplay'
 import { ScheduleWindowsDrawer } from '@/components/drawers/ScheduleWindowsDrawer'
 import { ExecutionStakeholdersDrawer } from '@/components/drawers/ExecutionStakeholdersDrawer'
 import type { MigrationConstraints } from '@/types'
@@ -43,7 +44,7 @@ export function MigrationConstraintsSection({ data, onSave }: MigrationConstrain
           ) : (
             <div className="space-y-5">
               <Field label="Preferred Migration Window" icon={Clock}>
-                {data.migrationWindow}
+                <MigrationWindowDisplay value={data.migrationWindow} />
               </Field>
               {data.maxCutoverWindow && (
                 <Field label="Max Cutover Window" icon={Timer}>

@@ -97,7 +97,7 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-[480px] sm:max-w-[480px] flex flex-col p-0 gap-0" showCloseButton={false}>
+      <SheetContent side="right" className="w-[600px] sm:!max-w-[600px] flex flex-col p-0 gap-0" showCloseButton={false}>
         <SheetHeader className="border-b px-6 py-4 pr-12">
           <SheetTitle>Create Wave</SheetTitle>
           <SheetDescription>A Jira epic will be created for this wave.</SheetDescription>
