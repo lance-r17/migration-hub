@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { ClipboardList } from 'lucide-react'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -29,8 +30,11 @@ export function SurveyBuilderPage() {
       </Breadcrumb>
 
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Survey Builder</h1>
-        <p className="text-muted-foreground mt-1">Configure the survey questions shown to application owners.</p>
+        <div className="flex items-center gap-2 mb-1">
+          <ClipboardList className="size-5 text-muted-foreground" />
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Survey Builder</h1>
+        </div>
+        <p className="text-muted-foreground text-sm">Configure the survey questions shown to application owners.</p>
       </div>
 
       <SurveyBuilderSection />

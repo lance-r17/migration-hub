@@ -5,6 +5,7 @@ import { HomePage } from './pages/HomePage'
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
 import { LoginPage } from './pages/LoginPage'
 import { WavesPage } from './pages/WavesPage'
+import { FinancePage } from './pages/FinancePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SettingsHome } from './pages/SettingsHome'
 import { SurveyBuilderPage } from './pages/SurveyBuilderPage'
@@ -25,6 +26,7 @@ function App() {
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
         <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
+        <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
           <Route index element={<SettingsHome />} />
           <Route path="survey" element={<SurveyBuilderPage />} />

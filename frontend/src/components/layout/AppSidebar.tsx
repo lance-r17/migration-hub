@@ -17,6 +17,7 @@ import {
   Settings2Icon,
   CircleHelpIcon,
   Waves,
+  DollarSign,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
@@ -40,6 +41,12 @@ const data = {
       title: "Waves",
       url: "/waves",
       icon: <Waves />,
+      requiresRole: "Platform Migration Lead",
+    },
+    {
+      title: "Finance",
+      url: "/finance",
+      icon: <DollarSign />,
       requiresRole: "Platform Migration Lead",
     },
     {

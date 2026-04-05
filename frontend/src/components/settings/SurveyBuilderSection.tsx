@@ -185,7 +185,7 @@ export function SurveyBuilderSection() {
             </CardTitle>
             <p className="text-xs text-muted-foreground">Click a field to add it to your survey</p>
           </CardHeader>
-          <CardContent className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+          <div className="px-6 pb-3">
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <Input
@@ -195,6 +195,8 @@ export function SurveyBuilderSection() {
                 className="pl-8 h-8 text-sm"
               />
             </div>
+          </div>
+          <CardContent className="space-y-4 max-h-[600px] overflow-y-auto pr-2 pt-0">
             {Object.keys(filteredFieldsBySection).length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-4">No fields match "{fieldSearch}"</p>
             )}

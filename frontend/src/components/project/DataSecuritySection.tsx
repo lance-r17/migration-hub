@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Database, Lock } from 'lucide-react'
+import { Database, Lock, ExternalLink } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { cn } from '@/lib/utils'
 import { DatabaseStorageDrawer } from '@/components/drawers/DatabaseStorageDrawer'
@@ -66,14 +66,18 @@ export function DataPersistenceSection({ data, onSave }: DataPersistenceSectionP
               )}
               {data.lastRestoreTest && (
                 <Row label="Last Restore Test">
-                  <a
-                    href={data.lastRestoreTest}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline text-sm"
-                  >
-                    BRETT link
-                  </a>
+                  {/^https?:\/\//i.test(data.lastRestoreTest) ? (
+                    <a
+                      href={data.lastRestoreTest}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                    >
+                      View Report <ExternalLink size={12} />
+                    </a>
+                  ) : (
+                    <span className="text-sm">{data.lastRestoreTest}</span>
+                  )}
                 </Row>
               )}
             </>

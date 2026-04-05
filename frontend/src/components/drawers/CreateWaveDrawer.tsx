@@ -54,7 +54,6 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated }: Props) {
       startDate: range?.from ? format(range.from, 'yyyy-MM-dd') : '',
       cutoverDate: range?.to ? format(range.to, 'yyyy-MM-dd') : '',
     }))
-    if (range?.from && range?.to) setCalOpen(false)
   }
 
   const handleClose = () => {

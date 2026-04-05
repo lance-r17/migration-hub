@@ -93,7 +93,7 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     sectionLabel: 'Application Overview',
     inputType: 'boolean',
     defaultQuestion: 'Is IBS (Important Business Service) in scope for this migration?',
-    defaultHint: 'Select Yes if this application is part of the IBS platform.',
+    defaultHint: 'Select Yes if this application contains an Important Business Service (IBS).',
   },
 
   // ─── Current Infrastructure ──────────────────────────────────────────────────

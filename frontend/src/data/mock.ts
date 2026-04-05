@@ -2,6 +2,7 @@ import type { Project, Activity, OverallStats, User, ProjectUsers, ProductCatego
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave } from '@/types/wave'
 import type { SurveyConfig } from '@/types/survey'
+import type { BillingRecord } from '@/types/finance'
 
 export const mockProductCategoryMap: ProductCategoryEntry[] = [
   { product: 'ecs',      category: 'VM' },
@@ -1094,7 +1095,7 @@ export const mockSurveyConfig: SurveyConfig = {
     {
       fieldId: 'appoverview__ibsInScope',
       questionText: 'Is IBS (Important Business Service) in scope for this migration?',
-      hintText: 'Select Yes if this application is part of the IBS platform.',
+      hintText: 'Select Yes if this application contains an Important Business Service (IBS).',
       required: true,
       order: 1,
     },
@@ -1136,4 +1137,54 @@ export const mockSurveyConfig: SurveyConfig = {
   ],
   updatedBy: 'system',
   updatedAt: new Date().toISOString(),
+}
+
+// ─── Billing Mock Data ────────────────────────────────────────────────────────
+// Keyed by YYYY-MM month. Resource sets match mock project currentInfrastructure.
+// Values chosen to illustrate all three ratio bands:
+//   corp-00421-alpha-erp-prod  → green  (ratio < 100%)
+//   corp-00421-alpha-erp-dev   → red    (ratio > 120%)
+//   corp-00203-auth-svc-prod   → amber  (100–120%)
+//   corp-0088-edge-dns-prod    → green  (ratio < 100%)
+
+export const mockBillingExisting: Record<string, BillingRecord[]> = {
+  '2026-01': [
+    { resourceSet: 'corp-00421-alpha-erp-prod', amount: 11800 },
+    { resourceSet: 'corp-00421-alpha-erp-dev',  amount: 3000 },
+    { resourceSet: 'corp-00203-auth-svc-prod',  amount: 4600 },
+    { resourceSet: 'corp-0088-edge-dns-prod',   amount: 9200 },
+  ],
+  '2026-02': [
+    { resourceSet: 'corp-00421-alpha-erp-prod', amount: 12100 },
+    { resourceSet: 'corp-00421-alpha-erp-dev',  amount: 3100 },
+    { resourceSet: 'corp-00203-auth-svc-prod',  amount: 4700 },
+    { resourceSet: 'corp-0088-edge-dns-prod',   amount: 9400 },
+  ],
+  '2026-03': [
+    { resourceSet: 'corp-00421-alpha-erp-prod', amount: 12500 },
+    { resourceSet: 'corp-00421-alpha-erp-dev',  amount: 3200 },
+    { resourceSet: 'corp-00203-auth-svc-prod',  amount: 4800 },
+    { resourceSet: 'corp-0088-edge-dns-prod',   amount: 9600 },
+  ],
+}
+
+export const mockBillingTarget: Record<string, BillingRecord[]> = {
+  '2026-01': [
+    { resourceSet: 'corp-00421-alpha-erp-prod', amount: 10900 },  // 92.4% → green
+    { resourceSet: 'corp-00421-alpha-erp-dev',  amount: 3630 },   // 121.0% → red
+    { resourceSet: 'corp-00203-auth-svc-prod',  amount: 5060 },   // 110.0% → amber
+    { resourceSet: 'corp-0088-edge-dns-prod',   amount: 8300 },   // 90.2% → green
+  ],
+  '2026-02': [
+    { resourceSet: 'corp-00421-alpha-erp-prod', amount: 11100 },  // 91.7% → green
+    { resourceSet: 'corp-00421-alpha-erp-dev',  amount: 3720 },   // 120.0% → amber
+    { resourceSet: 'corp-00203-auth-svc-prod',  amount: 6010 },   // 127.9% → red
+    { resourceSet: 'corp-0088-edge-dns-prod',   amount: 8800 },   // 93.6% → green
+  ],
+  '2026-03': [
+    { resourceSet: 'corp-00421-alpha-erp-prod', amount: 11200 },  // 89.6% → green
+    { resourceSet: 'corp-00421-alpha-erp-dev',  amount: 3870 },   // 120.9% → red
+    { resourceSet: 'corp-00203-auth-svc-prod',  amount: 5280 },   // 110.0% → amber
+    { resourceSet: 'corp-0088-edge-dns-prod',   amount: 8500 },   // 88.5% → green
+  ],
 }

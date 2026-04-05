@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Outlet } from 'react-router-dom'
-import { Settings2 } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useCurrentUser } from '@/context/UserContext'
 
@@ -13,7 +13,9 @@ export function SettingsPage() {
       <AppShell title="Settings">
         <div className="max-w-screen-xl mx-auto w-full">
           <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
-            <Settings2 size={40} className="text-muted-foreground/30 mb-4" />
+            <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
+              <Lock className="size-5 text-muted-foreground" />
+            </div>
             <p className="text-xl font-semibold text-foreground mb-2">Access Restricted</p>
             <p className="text-muted-foreground text-sm mb-6">
               Settings are only available to Platform Migration Leads.

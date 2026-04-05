@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, Settings2 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const SETTINGS_SECTIONS = [
@@ -15,8 +15,11 @@ export function SettingsHome() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Settings</h1>
-        <p className="text-muted-foreground mt-1">Platform configuration for Migration Hub.</p>
+        <div className="flex items-center gap-2 mb-1">
+          <Settings2 className="size-5 text-muted-foreground" />
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Settings</h1>
+        </div>
+        <p className="text-muted-foreground text-sm">Platform configuration for Migration Hub.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

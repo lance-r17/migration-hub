@@ -52,19 +52,23 @@ export function MigrationConstraintsSection({ data, onSave }: MigrationConstrain
                 </Field>
               )}
               <Field label="Blackout Dates" icon={Ban}>
-                <ul className="list-disc list-inside space-y-1 mt-1">
-                  {data.blackoutDates.map((entry, i) => (
-                    <li key={i}>
-                      <span className="font-medium">{entry.name}</span>
-                      {entry.from && (
-                        <span className="text-muted-foreground text-xs ml-1">
-                          ({format(new Date(entry.from), 'MMM d, y')}
-                          {entry.to && ` – ${format(new Date(entry.to), 'MMM d, y')}`})
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                {data.blackoutDates?.length ? (
+                  <ul className="list-disc list-inside space-y-1 mt-1">
+                    {data.blackoutDates.map((entry, i) => (
+                      <li key={i}>
+                        <span className="font-medium">{entry.name}</span>
+                        {entry.from && (
+                          <span className="text-muted-foreground text-xs ml-1">
+                            ({format(new Date(entry.from), 'MMM d, y')}
+                            {entry.to && ` – ${format(new Date(entry.to), 'MMM d, y')}`})
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="text-muted-foreground text-xs">None defined</span>
+                )}
               </Field>
               {data.changeFreezePeriods?.length && (
                 <Field label="Embargo / Change freeze periods" icon={CalendarX}>

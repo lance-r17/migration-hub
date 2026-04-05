@@ -9,11 +9,14 @@ import {
   mockWaves,
   mockProductCategoryMap,
   mockSurveyConfig,
+  mockBillingExisting,
+  mockBillingTarget,
 } from '@/data/mock'
 import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave, JiraJobRequest } from '@/types/wave'
 import type { SurveyConfig } from '@/types/survey'
+import type { BillingRecord } from '@/types/finance'
 
 // Mutable in-memory session store — deep copy of mock data.
 // Writes persist for the lifetime of the browser tab (resets on page refresh).
@@ -21,6 +24,8 @@ import type { SurveyConfig } from '@/types/survey'
 
 let _projects: Project[] = structuredClone(mockProjects)
 let _waves: Wave[] = structuredClone(mockWaves)
+let _billingExisting: Record<string, BillingRecord[]> = structuredClone(mockBillingExisting)
+let _billingTarget: Record<string, BillingRecord[]>   = structuredClone(mockBillingTarget)
 let _jiraJobs: JiraJobRequest[] = []
 let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntries)
 let _surveyConfig: SurveyConfig | null = structuredClone(mockSurveyConfig)
@@ -135,6 +140,22 @@ export const store = {
   setSurveyConfig(config: SurveyConfig): SurveyConfig {
     _surveyConfig = config
     return _surveyConfig
+  },
+
+  // ─── Billing ───────────────────────────────────────────────────────────────
+
+  getBillingMonths(env: 'existing' | 'target'): string[] {
+    const src = env === 'existing' ? _billingExisting : _billingTarget
+    return Object.keys(src).sort().reverse()
+  },
+
+  getBillingRecords(month: string, env: 'existing' | 'target'): BillingRecord[] {
+    return (env === 'existing' ? _billingExisting : _billingTarget)[month] ?? []
+  },
+
+  setBillingRecords(month: string, env: 'existing' | 'target', records: BillingRecord[]): void {
+    if (env === 'existing') _billingExisting[month] = records
+    else _billingTarget[month] = records
   },
 
   // ─── Product-Category Map ──────────────────────────────────────────────────
