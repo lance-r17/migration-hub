@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, ChevronLeft, ChevronRight, CheckCircle2, ClipboardList } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, CheckCircle2, ClipboardList, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSurveyFieldDefs } from '@/hooks/use-survey'
 import { MigrationWindowPicker } from '@/components/shared/MigrationWindowPicker'
 import type { SurveyConfig, SurveyQuestion, SurveyFieldDef } from '@/types/survey'
-import type { Project } from '@/types'
+import type { Project, DependencyEntry } from '@/types'
 
 interface SurveyModalProps {
   open: boolean
@@ -16,7 +16,7 @@ interface SurveyModalProps {
   onSave: <K extends keyof Project>(key: K, value: Project[K]) => Promise<void>
 }
 
-type AnswerValue = string | boolean | string[] | undefined
+type AnswerValue = string | boolean | string[] | DependencyEntry[] | undefined
 
 const textareaClass =
   'w-full bg-transparent border-0 border-b-2 border-input rounded-none px-0 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-primary resize-none transition-colors'
@@ -58,7 +58,7 @@ function getExistingValue(project: Project, sectionKey: keyof Project, fieldPath
   const raw = deepGet(section as unknown as Record<string, unknown>, fieldPath)
   if (raw === null || raw === undefined) return undefined
   if (typeof raw === 'boolean') return raw
-  if (Array.isArray(raw)) return raw as string[]
+  if (Array.isArray(raw)) return raw as string[] | DependencyEntry[]
   return String(raw)
 }
 
@@ -112,6 +112,118 @@ function TagEditor({ value, onChange }: { value: string[], onChange: (v: string[
         className="text-base border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
       />
       <p className="text-xs text-muted-foreground">Press Enter or comma to add each item</p>
+    </div>
+  )
+}
+
+// ─── Dependency-list entry editor ─────────────────────────────────────────────
+
+const HOSTING_OPTIONS = ['AliCloud', 'On-Premise', 'AWS', 'Azure', 'GCP', 'Other'] as const
+
+function DependencyListEditor({
+  value,
+  onChange,
+}: {
+  value: DependencyEntry[]
+  onChange: (v: DependencyEntry[]) => void
+}) {
+  function addEntry() {
+    onChange([
+      ...value,
+      { id: crypto.randomUUID(), name: '', eimId: '', contactEmail: '', hosting: '', notes: '' },
+    ])
+  }
+
+  function updateEntry(id: string, field: keyof DependencyEntry, val: string) {
+    onChange(value.map(e => (e.id === id ? { ...e, [field]: val } : e)))
+  }
+
+  function removeEntry(id: string) {
+    onChange(value.filter(e => e.id !== id))
+  }
+
+  return (
+    <div className="space-y-3">
+      {value.map(entry => (
+        <div key={entry.id} className="border border-border rounded-lg p-3 space-y-2 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Dependency
+            </span>
+            <button
+              type="button"
+              onClick={() => removeEntry(entry.id)}
+              className="text-muted-foreground hover:text-destructive transition-colors"
+              data-dep-input="true"
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          <Input
+            value={entry.name}
+            onChange={e => updateEntry(entry.id, 'name', e.target.value)}
+            placeholder="Application name *"
+            data-dep-input="true"
+            className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              value={entry.eimId ?? ''}
+              onChange={e => updateEntry(entry.id, 'eimId', e.target.value)}
+              placeholder="EIM ID"
+              data-dep-input="true"
+              className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
+            />
+            <Input
+              value={entry.contactEmail ?? ''}
+              onChange={e => updateEntry(entry.id, 'contactEmail', e.target.value)}
+              placeholder="Contact email"
+              data-dep-input="true"
+              className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
+            />
+          </div>
+
+          <Select
+            value={entry.hosting ?? ''}
+            onValueChange={v => updateEntry(entry.id, 'hosting', v)}
+          >
+            <SelectTrigger className="text-sm border-0 border-b-2 rounded-none focus:ring-0 bg-transparent px-0 w-full">
+              <SelectValue placeholder="Hosting platform…" />
+            </SelectTrigger>
+            <SelectContent className="z-[400]">
+              {HOSTING_OPTIONS.map(opt => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Input
+            value={entry.notes ?? ''}
+            onChange={e => updateEntry(entry.id, 'notes', e.target.value)}
+            placeholder="Notes"
+            data-dep-input="true"
+            className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
+          />
+        </div>
+      ))}
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={addEntry}
+        data-dep-input="true"
+      >
+        <Plus size={14} className="mr-1" /> Add Dependency
+      </Button>
+
+      {value.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center">
+          No dependencies added yet — click "Add Dependency" to begin.
+        </p>
+      )}
     </div>
   )
 }
@@ -215,6 +327,13 @@ function QuestionInput({
           onChange={onChange}
         />
       )
+    case 'dependency_list':
+      return (
+        <DependencyListEditor
+          value={(value as DependencyEntry[]) ?? []}
+          onChange={onChange as (v: DependencyEntry[]) => void}
+        />
+      )
     default:
       return null
   }
@@ -284,7 +403,13 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
     if (!currentQuestion) return
     setAnswers(prev => {
       const next = new Map(prev)
-      if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+      const def = getFieldById(currentQuestion.fieldId)
+      const isDependencyList = def?.inputType === 'dependency_list'
+      if (
+        value === undefined ||
+        value === '' ||
+        (!isDependencyList && Array.isArray(value) && value.length === 0)
+      ) {
         next.delete(currentQuestion.fieldId)
       } else {
         next.set(currentQuestion.fieldId, value)
@@ -345,6 +470,7 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'TEXTAREA') return
         if ((e.target as HTMLElement).dataset.tagInput) return
+        if ((e.target as HTMLElement).dataset.depInput) return
         e.preventDefault()
         if (canAdvance) goNext()
       }

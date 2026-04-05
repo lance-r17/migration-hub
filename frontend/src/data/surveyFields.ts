@@ -394,6 +394,27 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     defaultHint: 'e.g. "Uses payment gateway API key (rotate required at cutover). Exposes internal service token for downstream consumers."',
   },
 
+  {
+    id: 'deps__upstream',
+    sectionKey: 'dependencies',
+    fieldPath: 'upstream',
+    label: 'Upstream Dependencies',
+    sectionLabel: 'Dependencies & Certificates',
+    inputType: 'dependency_list',
+    defaultQuestion: 'What applications does this application depend on (upstream)?',
+    defaultHint: 'List applications that this system calls or relies upon. Include app name, EIM ID, contact and hosting platform.',
+  },
+  {
+    id: 'deps__downstream',
+    sectionKey: 'dependencies',
+    fieldPath: 'downstream',
+    label: 'Downstream Dependencies',
+    sectionLabel: 'Dependencies & Certificates',
+    inputType: 'dependency_list',
+    defaultQuestion: 'What applications depend on this application (downstream)?',
+    defaultHint: 'List applications that call or consume this system. Include app name, EIM ID, contact and hosting platform.',
+  },
+
   // ─── Non-Functional Requirements ────────────────────────────────────────────
   {
     id: 'nfrs__peakLoad',

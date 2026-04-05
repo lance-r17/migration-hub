@@ -1,6 +1,6 @@
 import type { Project } from '@/types'
 
-export type SurveyInputType = 'short_text' | 'long_text' | 'select' | 'boolean' | 'string_array' | 'migration_window'
+export type SurveyInputType = 'short_text' | 'long_text' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list'
 
 export interface SurveyFieldDef {
   id: string                      // stable unique ID e.g. "appoverview__applicationName"

@@ -20,6 +20,7 @@ const INPUT_TYPE_LABELS: Record<string, string> = {
   boolean: 'Yes / No',
   string_array: 'List',
   migration_window: 'Migration Window',
+  dependency_list: 'Dependency List',
 }
 
 export function SurveyBuilderSection() {
