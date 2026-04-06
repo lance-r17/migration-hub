@@ -66,10 +66,44 @@ cp .env.example .env.local
 | Variable | Default | Description |
 |---|---|---|
 | `VITE_API_BASE_URL` | _(empty)_ | Base URL for the backend API. Leave empty to run on mock data. |
+| `VITE_EMAIL_SERVER_URL` | _(empty)_ | URL of the local email relay server. Set to `http://localhost:3001` when running the email server. |
 
 **Mock mode (default):** leave `VITE_API_BASE_URL` unset. All data comes from the in-memory store seeded by `src/data/mock.ts`. No database or backend needed.
 
 **Real API mode:** set `VITE_API_BASE_URL=http://localhost:8000` (or wherever the FastAPI server is running).
+
+## Email server (optional)
+
+The email server enables real SMTP email sending from the "Send Test" button in email template previews. It runs independently of the frontend.
+
+### Setup
+
+```bash
+cd email-server
+npm install
+cp .env.example .env   # fill in your SMTP credentials
+```
+
+`.env` settings:
+
+| Variable | Description |
+|---|---|
+| `SMTP_HOST` | SMTP server hostname (e.g. `smtp.gmail.com`) |
+| `SMTP_PORT` | SMTP port — `587` for TLS, `465` for SSL |
+| `SMTP_SECURE` | `true` for port 465 (SSL), `false` for 587 (TLS) |
+| `SMTP_USER` | Sender email address |
+| `SMTP_PASS` | App password or SMTP password |
+| `SMTP_FROM` | Display name + address (e.g. `Migration Hub <you@example.com>`) |
+
+**Gmail quick start:** enable 2-factor auth, generate an App Password at `myaccount.google.com/apppasswords`, and use it as `SMTP_PASS`.
+
+### Run
+
+```bash
+npm run dev   # starts on http://localhost:3001
+```
+
+Then add `VITE_EMAIL_SERVER_URL=http://localhost:3001` to `frontend/.env.local`. The rest of the app remains in mock mode.
 
 ## Login
 

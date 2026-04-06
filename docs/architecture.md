@@ -61,6 +61,10 @@ When `USE_MOCK` is `true`, every service function reads/writes `src/data/store.t
 
 No code changes are needed to switch modes — set `VITE_API_BASE_URL` in `.env.local`.
 
+### Email server exception
+
+`sendTestEmail` in `services/emailService.ts` bypasses the `USE_MOCK` flag entirely when `VITE_EMAIL_SERVER_URL` is set. It calls the local Node.js email relay (`email-server/`) at that URL directly, regardless of whether the rest of the app is in mock mode. This lets real email sending work during frontend-only development without a full backend.
+
 ## Authentication
 
 Auth state is managed by `UserContext` (`src/context/UserContext.tsx`):
@@ -81,6 +85,9 @@ Defined in `frontend/src/App.tsx`:
 | `/` | `HomePage` | `ProtectedRoute` |
 | `/projects/:id` | `ProjectDetailsPage` | `ProtectedRoute` |
 | `/waves` | `WavesPage` | `ProtectedRoute` + role check |
+| `/email` | `EmailTemplatesPage` | `ProtectedRoute` |
+| `/email/:id/edit` | `EmailBuilderPage` | `ProtectedRoute` |
+| `/email/:id/preview` | `EmailPreviewPage` | `ProtectedRoute` |
 
 ## State management
 

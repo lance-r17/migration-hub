@@ -169,6 +169,69 @@ Returns audit log entries for a project, sorted newest-first.
 
 ---
 
+## Email templates
+
+### `GET /api/v1/email-templates`
+
+Returns all email templates.
+
+**Response:** `EmailTemplate[]`
+
+---
+
+### `GET /api/v1/email-templates/:id`
+
+Returns a single email template.
+
+**Response:** `EmailTemplate`
+
+---
+
+### `POST /api/v1/email-templates`
+
+Creates a new blank email template with default style and empty layout.
+
+**Response:** `EmailTemplate` with generated `id` and defaults populated
+
+---
+
+### `PUT /api/v1/email-templates/:id`
+
+Replaces the full email template.
+
+**Request body:** `EmailTemplate`
+
+**Response:** `EmailTemplate`
+
+---
+
+### `DELETE /api/v1/email-templates/:id`
+
+Deletes an email template.
+
+**Response:** `204 No Content`
+
+---
+
+### `POST /api/v1/email-templates/send-test`
+
+Sends a rendered test email to a recipient address. The frontend pre-renders the template HTML and passes it as `htmlContent`.
+
+> **Note:** In local development without the FastAPI backend, this endpoint is handled by the `email-server/` Node.js relay service instead. When the FastAPI backend is implemented, it must match this same contract.
+
+**Request body:**
+```json
+{
+  "recipientEmail": "you@example.com",
+  "subject": "Wave 3 — Migration Ready",
+  "htmlContent": "<html>...</html>"
+}
+```
+
+**Response:** `{ "ok": true }`
+
+---
+
 ## Error responses
 
 All error responses follow the FastAPI default format:

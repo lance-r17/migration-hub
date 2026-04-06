@@ -9,6 +9,9 @@ import { FinancePage } from './pages/FinancePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SettingsHome } from './pages/SettingsHome'
 import { SurveyBuilderPage } from './pages/SurveyBuilderPage'
+import { EmailTemplatesPage } from './pages/EmailTemplatesPage'
+import { EmailBuilderPage } from './pages/EmailBuilderPage'
+import { EmailPreviewPage } from './pages/EmailPreviewPage'
 import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -27,6 +30,10 @@ function App() {
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
         <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
         <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
+        <Route path="/email" element={<ProtectedRoute><EmailTemplatesPage /></ProtectedRoute>} />
+        <Route path="/email/new" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
+        <Route path="/email/:id/edit" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
+        <Route path="/email/:id/preview" element={<ProtectedRoute><EmailPreviewPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
           <Route index element={<SettingsHome />} />
           <Route path="survey" element={<SurveyBuilderPage />} />

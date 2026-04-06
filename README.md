@@ -12,6 +12,7 @@ Organizations migrating cloud resources between availability zones lack a centra
 - **Role-based visibility** — Platform team sees all projects; project members see only their own
 - **Sign-off workflow** — Multi-role approval (Technical Lead, Business Owner, Platform Migration Lead) that auto-triggers Jira issue creation on completion
 - **Wave planning** — Group projects into named migration waves backed by Jira epics; create new waves or import existing ones
+- **Email builder** — Visual email template builder with 9 event-driven notification types, multi-column layouts, rich text editing, and browser-based preview with Send Test capability
 - **Audit trail** — Every field change is logged with actor, timestamp, and before/after values
 - **Mock-first development** — Fully functional without a backend; set one env var to switch to real API
 
@@ -26,6 +27,7 @@ Organizations migrating cloud resources between availability zones lack a centra
 | Notifications | Sonner |
 | Backend (planned) | Python, FastAPI |
 | Database (planned) | PostgreSQL + Alembic |
+| Email server | Node.js, Express, Nodemailer |
 | Integrations | Jira |
 
 ## Repository structure
@@ -35,7 +37,7 @@ migration-hub/
 ├── frontend/               # React SPA (the active application)
 │   ├── src/
 │   │   ├── pages/          # Route-level page components
-│   │   ├── components/     # UI components (layout, project sections, drawers)
+│   │   ├── components/     # UI components (layout, project sections, drawers, email builder)
 │   │   ├── hooks/          # Custom React hooks (data fetching + business logic)
 │   │   ├── services/       # API service layer (mock ↔ real toggle)
 │   │   ├── context/        # React context (auth)
@@ -45,6 +47,9 @@ migration-hub/
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── .env.example
+├── email-server/           # Minimal SMTP relay server (Express + nodemailer)
+│   ├── index.js            # Single POST /api/v1/email-templates/send-test endpoint
+│   └── .env.example        # SMTP configuration template
 ├── agent-os/
 │   ├── product/            # Mission, tech stack, roadmap
 │   └── specs/              # Feature specs (one folder per feature)
@@ -73,14 +78,20 @@ No environment variable setup is needed for local development — the app runs e
 | `/` | Home dashboard | Authenticated |
 | `/projects/:id` | Project details | Authenticated |
 | `/waves` | Wave planning | Platform Migration Lead only |
+| `/email` | Email templates | Authenticated |
+| `/email/:id/edit` | Email builder | Authenticated |
+| `/email/:id/preview` | Email preview | Authenticated |
 
 ## Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
 | `VITE_API_BASE_URL` | _(empty)_ | Base URL of the backend API. Leave empty to use mock data. |
+| `VITE_EMAIL_SERVER_URL` | _(empty)_ | URL of the local email relay server. Set to `http://localhost:3001` to enable real email sending from the Send Test button. |
 
 When `VITE_API_BASE_URL` is empty, all service calls go to the in-memory mock store. Set it to the FastAPI server URL (e.g. `http://localhost:8000`) to switch to the real backend with no code changes.
+
+`VITE_EMAIL_SERVER_URL` is independent — the email server can be used alongside mock mode for the rest of the app. See [docs/getting-started.md](docs/getting-started.md) for email server setup.
 
 ## Documentation
 

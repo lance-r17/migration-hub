@@ -10,7 +10,10 @@ frontend/src/
 │   ├── HomePage.tsx            # Dashboard — stats, project cards, activity feed
 │   ├── ProjectDetailsPage.tsx  # Full project register with all 10 sections
 │   ├── WavesPage.tsx          # Wave planning (Platform Migration Lead only)
-│   └── LoginPage.tsx          # Mock SSO login
+│   ├── LoginPage.tsx          # Mock SSO login
+│   ├── EmailTemplatesPage.tsx  # Email template list + create/delete
+│   ├── EmailBuilderPage.tsx    # Visual email template editor
+│   └── EmailPreviewPage.tsx    # Template preview + Send Test
 ├── components/
 │   ├── layout/                 # App shell, sidebar, header, nav
 │   ├── project/                # Per-section display components
@@ -19,7 +22,13 @@ frontend/src/
 │   ├── home/                   # Home page widget components
 │   ├── shared/                 # Reusable cross-page components
 │   ├── ui/                     # shadcn/ui primitives
-│   └── audit/                  # Audit log timeline
+│   ├── audit/                  # Audit log timeline
+│   └── email-builder/          # Email builder UI
+│       ├── builder/            # Editor layout, canvas, left/right panels
+│       │   ├── canvas/         # Row, column, component, toolbar, rich text editor
+│       │   ├── left-panel/     # Layouts tab, library tab
+│       │   └── right-panel/    # Config, content, style tabs
+│       └── preview/            # BrowserContainer, TemplateRenderer
 ├── hooks/                      # Custom hooks (data + business logic)
 ├── services/                   # API layer (one file per domain)
 ├── context/
@@ -27,10 +36,12 @@ frontend/src/
 ├── types/
 │   ├── index.ts                # Core domain types
 │   ├── audit.ts                # Audit log types
-│   └── wave.ts                 # Wave + Jira job types
+│   ├── wave.ts                 # Wave + Jira job types
+│   └── email.ts                # Email template types (EmailTemplate, EmailComponent, etc.)
 ├── data/
 │   ├── mock.ts                 # Seed data
-│   └── store.ts                # In-memory session store
+│   ├── store.ts                # In-memory session store
+│   └── emailTemplates.ts       # In-memory email template store
 ├── utils/
 │   └── diff.ts                 # Object diff engine for audit logging
 └── lib/
@@ -55,6 +66,9 @@ Defined in `src/App.tsx`:
 /                   → HomePage (ProtectedRoute)
 /projects/:id       → ProjectDetailsPage (ProtectedRoute)
 /waves              → WavesPage (ProtectedRoute)
+/email              → EmailTemplatesPage (ProtectedRoute)
+/email/:id/edit     → EmailBuilderPage (ProtectedRoute)
+/email/:id/preview  → EmailPreviewPage (ProtectedRoute)
 ```
 
 `ProtectedRoute` checks `isAuthenticated` from `useCurrentUser()`. Unauthenticated requests redirect to `/login`. While auth state is loading, `ProtectedRoute` renders nothing (no flash of redirect).
