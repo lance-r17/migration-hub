@@ -3,7 +3,7 @@ import { ClipboardList, ChevronUp, ChevronDown, X, Plus, GripVertical, Search } 
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useSurveyConfig, useSurveyFieldDefs } from '@/hooks/use-survey'
@@ -167,14 +167,14 @@ export function SurveyBuilderSection() {
             Define the questionnaire shown to project teams when filling in their migration profile.
           </p>
         </div>
-        <label className="flex items-center gap-2.5 cursor-pointer select-none">
-          <Checkbox
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm font-medium">Survey active</span>
+          <Switch
             checked={isActive}
-            onCheckedChange={(v) => setIsActive(v === true)}
+            onCheckedChange={setIsActive}
             id="survey-active"
           />
-          <span className="text-sm font-medium">Survey active</span>
-        </label>
+        </div>
       </div>
 
       <div className="grid grid-cols-[300px_1fr] gap-6 items-start">
@@ -314,17 +314,15 @@ export function SurveyBuilderSection() {
                           />
                         </div>
 
-                        {/* Required checkbox */}
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
+                        {/* Required switch */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Required</span>
+                          <Switch
                             id={`required-${q.fieldId}`}
                             checked={q.required}
-                            onCheckedChange={(v: boolean | 'indeterminate') =>
-                              updateQuestion(q.fieldId, { required: v === true })
-                            }
+                            onCheckedChange={(v) => updateQuestion(q.fieldId, { required: v })}
                           />
-                          <span className="text-xs text-muted-foreground">Required</span>
-                        </label>
+                        </div>
                       </div>
 
                       {/* Actions */}
