@@ -9,6 +9,7 @@ import { FinancePage } from './pages/FinancePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SettingsHome } from './pages/SettingsHome'
 import { SurveyBuilderPage } from './pages/SurveyBuilderPage'
+import { EmbargoPage } from './pages/EmbargoPage'
 import { EmailTemplatesPage } from './pages/EmailTemplatesPage'
 import { EmailBuilderPage } from './pages/EmailBuilderPage'
 import { EmailPreviewPage } from './pages/EmailPreviewPage'
@@ -37,6 +38,7 @@ function App() {
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
           <Route index element={<SettingsHome />} />
           <Route path="survey" element={<SurveyBuilderPage />} />
+          <Route path="embargo" element={<EmbargoPage />} />
         </Route>
       </Routes>
       <Toaster />

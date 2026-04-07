@@ -11,12 +11,14 @@ import {
   mockSurveyConfig,
   mockBillingExisting,
   mockBillingTarget,
+  mockEmbargos,
 } from '@/data/mock'
 import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave, JiraJobRequest } from '@/types/wave'
 import type { SurveyConfig } from '@/types/survey'
 import type { BillingRecord } from '@/types/finance'
+import type { EmbargoRecord } from '@/types/embargo'
 
 // Mutable in-memory session store — deep copy of mock data.
 // Writes persist for the lifetime of the browser tab (resets on page refresh).
@@ -29,6 +31,7 @@ let _billingTarget: Record<string, BillingRecord[]>   = structuredClone(mockBill
 let _jiraJobs: JiraJobRequest[] = []
 let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntries)
 let _surveyConfig: SurveyConfig | null = structuredClone(mockSurveyConfig)
+let _embargos: EmbargoRecord[] = structuredClone(mockEmbargos)
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
@@ -140,6 +143,34 @@ export const store = {
   setSurveyConfig(config: SurveyConfig): SurveyConfig {
     _surveyConfig = config
     return _surveyConfig
+  },
+
+  // ─── Embargos ──────────────────────────────────────────────────────────────
+
+  getEmbargos(): EmbargoRecord[] {
+    return _embargos
+  },
+
+  getEmbargo(id: string): EmbargoRecord | undefined {
+    return _embargos.find(e => e.id === id)
+  },
+
+  addEmbargo(embargo: EmbargoRecord): EmbargoRecord {
+    _embargos.push(embargo)
+    return embargo
+  },
+
+  updateEmbargo(id: string, patch: Partial<EmbargoRecord>): EmbargoRecord {
+    const idx = _embargos.findIndex(e => e.id === id)
+    if (idx === -1) throw new Error(`Embargo not found: ${id}`)
+    _embargos[idx] = { ..._embargos[idx], ...patch }
+    return _embargos[idx]
+  },
+
+  deleteEmbargo(id: string): void {
+    const idx = _embargos.findIndex(e => e.id === id)
+    if (idx === -1) throw new Error(`Embargo not found: ${id}`)
+    _embargos.splice(idx, 1)
   },
 
   // ─── Billing ───────────────────────────────────────────────────────────────

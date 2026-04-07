@@ -49,6 +49,7 @@ export interface ApplicationOverview {
   eimId?: string
   ibsInScope?: boolean
   migrationStrategy?: MigrationStrategy
+  serviceLine?: string
 }
 
 // ─── Section 2: Current Infrastructure ──────────────────────────────────────

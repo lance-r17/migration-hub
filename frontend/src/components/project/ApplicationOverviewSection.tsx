@@ -127,6 +127,13 @@ export function ApplicationOverviewSection({ data, projectId, onSave }: Applicat
                 </div>
               )}
 
+              {data.serviceLine && (
+                <div>
+                  <Label>Service Line</Label>
+                  <p className="text-sm text-foreground">{data.serviceLine}</p>
+                </div>
+              )}
+
               {data.businessFunction && (
                 <div className="sm:col-span-2">
                   <Label>Business Function</Label>

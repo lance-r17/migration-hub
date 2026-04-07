@@ -33,6 +33,7 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
     applicationTier:  'App Tier',
     eimId:            'EIM ID',
     userBase:         'User Base',
+    serviceLine:      'Service Line',
   },
   availability: {
     rto:                     'RTO',

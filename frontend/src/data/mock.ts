@@ -3,6 +3,7 @@ import type { AuditLogEntry } from '@/types/audit'
 import type { Wave } from '@/types/wave'
 import type { SurveyConfig } from '@/types/survey'
 import type { BillingRecord } from '@/types/finance'
+import type { EmbargoRecord } from '@/types/embargo'
 
 export const mockProductCategoryMap: ProductCategoryEntry[] = [
   { product: 'ecs',      category: 'VM' },
@@ -114,6 +115,7 @@ export const mockProjects: Project[] = [
       eimId: 'EIM-00421',
       ibsInScope: true,
       migrationStrategy: 'Lift & Shift',
+      serviceLine: 'Finance & Operations',
     },
 
     // Section 2
@@ -597,6 +599,7 @@ export const mockProjects: Project[] = [
       technicalLeadId: 'u10',
       ibsInScope: true,
       migrationStrategy: 'Refactor',
+      serviceLine: 'Network Operations',
     },
 
     currentInfrastructure: {
@@ -773,6 +776,27 @@ export const mockWaves: Wave[] = [
     source: 'imported',
     status: 'completed',
     createdAt: '2025-08-01T08:00:00.000Z',
+  },
+]
+
+// ─── Embargo Periods ──────────────────────────────────────────────────────────
+
+export const mockEmbargos: EmbargoRecord[] = [
+  {
+    id: 'emb-1',
+    name: 'Q2 Finance Freeze',
+    startDate: '2026-03-20',
+    endDate: '2026-04-25',
+    affectedServiceLines: ['Finance & Operations', 'Treasury'],
+    createdAt: '2026-03-01T09:00:00.000Z',
+  },
+  {
+    id: 'emb-2',
+    name: 'Network Change Lockdown',
+    startDate: '2026-04-15',
+    endDate: '2026-05-10',
+    affectedServiceLines: ['Network Operations'],
+    createdAt: '2026-04-01T10:00:00.000Z',
   },
 ]
 

@@ -18,7 +18,9 @@ import { SignOffModal } from '@/components/modals/SignOffModal'
 import { AuditLogDrawer } from '@/components/drawers/AuditLogDrawer'
 import { AssignWaveDrawer } from '@/components/drawers/AssignWaveDrawer'
 import { SurveyModal } from '@/components/survey/SurveyModal'
+import { EmbargoBanner } from '@/components/project/EmbargoBanner'
 import { useSurveyConfig } from '@/hooks/use-survey'
+import { useEmbargos } from '@/hooks/use-embargos'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Breadcrumb,
@@ -43,6 +45,7 @@ export function ProjectDetailsPage() {
   const { project, loading, saveSection, refreshProject } = useProject(id)
   const { waves } = useWaves()
   const { surveyConfig } = useSurveyConfig()
+  const { embargos } = useEmbargos()
   const [modalOpen, setModalOpen] = useState(false)
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [assignWaveOpen, setAssignWaveOpen] = useState(false)
@@ -293,6 +296,12 @@ export function ProjectDetailsPage() {
             )}
           </div>
         )}
+
+        {/* Embargo Banner */}
+        <EmbargoBanner
+          serviceLine={project.applicationOverview?.serviceLine}
+          embargos={embargos}
+        />
 
         {/* Sign-off Workflow Bar */}
         <SignOffWorkflowBar approvals={project.approvals} />

@@ -34,6 +34,7 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
     businessFunction: '',
     ibsInScope: '' as 'true' | 'false' | '',
     migrationStrategy: '' as MigrationStrategy | '',
+    serviceLine: '',
   })
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
         businessFunction: data?.businessFunction ?? '',
         ibsInScope: data?.ibsInScope != null ? (data.ibsInScope ? 'true' : 'false') : '',
         migrationStrategy: data?.migrationStrategy ?? '',
+        serviceLine: data?.serviceLine ?? '',
       })
     }
   }, [open, data])
@@ -63,6 +65,7 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
       businessFunction: draft.businessFunction || undefined,
       ibsInScope: draft.ibsInScope !== '' ? draft.ibsInScope === 'true' : undefined,
       migrationStrategy: (draft.migrationStrategy as MigrationStrategy) || undefined,
+      serviceLine: draft.serviceLine || undefined,
     })
     onOpenChange(false)
   }
@@ -164,6 +167,18 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
           value={draft.businessFunction}
           onChange={(e) => setDraft(d => ({ ...d, businessFunction: e.target.value }))}
           placeholder="Describe the business function of this application"
+        />
+      </div>
+
+      <p className={sectionLabel}>Service Line</p>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="ap-service-line">Service Line</Label>
+        <Input
+          id="ap-service-line"
+          value={draft.serviceLine}
+          onChange={(e) => setDraft(d => ({ ...d, serviceLine: e.target.value }))}
+          placeholder="e.g. Finance & Operations"
         />
       </div>
 
