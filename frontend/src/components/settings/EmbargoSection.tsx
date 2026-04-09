@@ -85,13 +85,13 @@ export function EmbargoSection() {
         </Button>
       </div>
 
-      <div className="rounded-lg border">
+      <div className="rounded-lg border border-border overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Date Range</TableHead>
-              <TableHead>Service Lines</TableHead>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="font-bold text-xs uppercase tracking-wider">Name</TableHead>
+              <TableHead className="font-bold text-xs uppercase tracking-wider">Date Range</TableHead>
+              <TableHead className="font-bold text-xs uppercase tracking-wider">Service Lines</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>

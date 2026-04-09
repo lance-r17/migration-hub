@@ -35,14 +35,21 @@ function StrategyBadge({ strategy }: { strategy: MigrationStrategy }) {
 }
 
 function TierBadge({ tier }: { tier: ApplicationTier }) {
+  const labels: Record<string, string> = {
+    T0: 'T0 - Critical',
+    T1: 'T1 - Important',
+    T2: 'T2 - Standard',
+    T3: 'T3 - Basic',
+  }
   return (
     <span className={cn(
       'text-xs font-bold px-2 py-0.5 rounded',
-      tier === 'P1' && 'bg-destructive/15 text-destructive',
-      tier === 'P2' && 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-      tier === 'P3' && 'bg-muted text-muted-foreground',
+      tier === 'T0' && 'bg-destructive/15 text-destructive',
+      tier === 'T1' && 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+      tier === 'T2' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+      tier === 'T3' && 'bg-muted text-muted-foreground',
     )}>
-      {tier}
+      {labels[tier] ?? tier}
     </span>
   )
 }

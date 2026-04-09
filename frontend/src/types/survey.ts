@@ -1,11 +1,12 @@
 import type { Project } from '@/types'
 
-export type SurveyInputType = 'short_text' | 'long_text' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list'
+export type SurveyInputType = 'short_text' | 'long_text' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select'
 
 export interface SurveyFieldDef {
   id: string                      // stable unique ID e.g. "appoverview__applicationName"
   sectionKey: keyof Project       // e.g. "applicationOverview"
   fieldPath: string               // dot-notation within section e.g. "applicationName" or "network.loadBalancerType"
+  toFieldPath?: string            // second field path for 'date_range' (the "to" date)
   label: string                   // human-readable field label
   sectionLabel: string            // human-readable section label
   inputType: SurveyInputType

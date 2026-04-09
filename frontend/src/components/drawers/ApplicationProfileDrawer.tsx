@@ -119,9 +119,10 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
               <SelectValue placeholder="Select tier" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="P1">P1</SelectItem>
-              <SelectItem value="P2">P2</SelectItem>
-              <SelectItem value="P3">P3</SelectItem>
+              <SelectItem value="T0">T0 - Critical</SelectItem>
+              <SelectItem value="T1">T1 - Important</SelectItem>
+              <SelectItem value="T2">T2 - Standard</SelectItem>
+              <SelectItem value="T3">T3 - Basic</SelectItem>
             </SelectContent>
           </Select>
         </div>

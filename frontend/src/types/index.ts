@@ -6,7 +6,7 @@ export type ApprovalStatus = 'approved' | 'pending' | 'waiting'
 export type RiskSeverity = 'critical' | 'medium' | 'low'
 export type SyncStatus = 'synced' | 'out-of-sync' | 'provisioning'
 export type ActivityType = 'success' | 'info' | 'error'
-export type ApplicationTier = 'P1' | 'P2' | 'P3'
+export type ApplicationTier = 'T0' | 'T1' | 'T2' | 'T3'
 
 export interface TeamMember {
   id: string
@@ -164,7 +164,12 @@ export interface DateRangeEntry {
 }
 
 export interface MigrationConstraints {
-  migrationWindow: string
+  regularMigrationWindow: string
+  preferredMigrationWindow?: ('weekday' | 'weekend')[]
+  earliestStartDate?: string
+  latestEndDate?: string
+  crDurationHours?: number
+  snowCiGroups?: string[]
   blackoutDates: DateRangeEntry[]
   changeFreezePeriods?: DateRangeEntry[]
   maxCutoverWindow?: string

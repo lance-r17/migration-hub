@@ -106,16 +106,16 @@ export function WavesPage() {
         </div>
 
         {/* Table */}
-        <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="rounded-lg border border-border overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Wave</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>Cutover Date</TableHead>
-                <TableHead>Jira Epic</TableHead>
-                <TableHead>Projects</TableHead>
-                <TableHead>Status</TableHead>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Wave</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Start Date</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Cutover Date</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Jira Epic</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Projects</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarCheck, Clock, Ban, CalendarX, Timer, ArrowLeftRight, RotateCcw, Users, ListChecks } from 'lucide-react'
+import { CalendarCheck, Clock, Ban, CalendarX, Timer, ArrowLeftRight, RotateCcw, Users, ListChecks, CalendarRange } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { MigrationWindowDisplay } from '@/components/shared/MigrationWindowDisplay'
 import { ScheduleWindowsDrawer } from '@/components/drawers/ScheduleWindowsDrawer'
@@ -43,9 +43,53 @@ export function MigrationConstraintsSection({ data, onSave }: MigrationConstrain
             <p className="text-sm text-muted-foreground">No migration constraints defined yet.</p>
           ) : (
             <div className="space-y-5">
-              <Field label="Preferred Migration Window" icon={Clock}>
-                <MigrationWindowDisplay value={data.migrationWindow} />
+              <Field label="Regular Maintenance Window" icon={Clock}>
+                <MigrationWindowDisplay value={data.regularMigrationWindow} />
               </Field>
+              {data.preferredMigrationWindow?.length ? (
+                <Field label="Preferred Migration Window" icon={Clock}>
+                  <div className="flex flex-wrap gap-1.5 mt-0.5">
+                    {data.preferredMigrationWindow.map(opt => (
+                      <span key={opt} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                        {opt === 'weekday' ? 'Weekday (Mon–Fri)' : 'Weekend (Sat–Sun)'}
+                      </span>
+                    ))}
+                  </div>
+                </Field>
+              ) : null}
+              {(data.earliestStartDate || data.latestEndDate) && (
+                <Field label="Migration Date Range" icon={CalendarRange}>
+                  <div className="space-y-0.5">
+                    {data.earliestStartDate && (
+                      <div>Earliest: <span className="font-medium">{format(new Date(data.earliestStartDate), 'MMM d, y')}</span></div>
+                    )}
+                    {data.latestEndDate && (
+                      <div>Latest: <span className="font-medium">{format(new Date(data.latestEndDate), 'MMM d, y')}</span></div>
+                    )}
+                  </div>
+                </Field>
+              )}
+              {data.crDurationHours !== undefined && (
+                <Field label="CR Duration" icon={Timer}>
+                  <span>{data.crDurationHours}h</span>
+                  {data.crDurationHours > 24 && (
+                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      Split CR required
+                    </span>
+                  )}
+                </Field>
+              )}
+              {data.snowCiGroups?.length ? (
+                <Field label="SNOW CI Groups" icon={Users}>
+                  <div className="flex flex-wrap gap-1.5 mt-0.5">
+                    {data.snowCiGroups.map((group, i) => (
+                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
+                        {group}
+                      </span>
+                    ))}
+                  </div>
+                </Field>
+              ) : null}
               {data.maxCutoverWindow && (
                 <Field label="Max Cutover Window" icon={Timer}>
                   {data.maxCutoverWindow}

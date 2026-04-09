@@ -111,7 +111,7 @@ export const mockProjects: Project[] = [
       dbaDataOwnerId: 'u5',
       businessFunction: 'Centralised ERP platform covering procurement, finance, HR, and supply chain for ~2,400 internal users. Mission-critical for daily financial close and regulatory reporting.',
       userBase: { type: 'Internal', count: '~2,400 users' },
-      applicationTier: 'P1',
+      applicationTier: 'T0',
       eimId: 'EIM-00421',
       ibsInScope: true,
       migrationStrategy: 'Lift & Shift',
@@ -344,7 +344,12 @@ export const mockProjects: Project[] = [
 
     // Section 7
     migrationConstraints: {
-      migrationWindow: 'Saturday 02:00–06:00 AM EST',
+      regularMigrationWindow: 'Saturday 02:00–06:00 AM EST',
+      preferredMigrationWindow: ['weekend'],
+      earliestStartDate: '2025-03-01',
+      latestEndDate: '2025-06-30',
+      crDurationHours: 6,
+      snowCiGroups: ['erp-infra', 'dba-team', 'network-ops'],
       blackoutDates: [
         { name: 'Q4 Year-end', from: '2024-12-20', to: '2025-01-05' },
         { name: 'Audit window', from: '2024-10-15', to: '2024-10-30' },
@@ -419,7 +424,7 @@ export const mockProjects: Project[] = [
     applicationOverview: {
       applicationName: 'User Auth Legacy',
       shortName: 'auth-svc',
-      applicationTier: 'P3',
+      applicationTier: 'T3',
       eimId: 'EIM-0042',
       userBase: { type: 'Internal', count: '~800 employees' },
       businessFunction: 'Centralised OAuth2 / JWT authentication and session management for internal tooling.',
@@ -528,7 +533,12 @@ export const mockProjects: Project[] = [
     },
 
     migrationConstraints: {
-      migrationWindow: 'Saturdays 02:00–06:00 AEST',
+      regularMigrationWindow: 'Saturdays 02:00–06:00 AEST',
+      preferredMigrationWindow: ['weekend'],
+      earliestStartDate: '2025-04-01',
+      latestEndDate: '2025-07-31',
+      crDurationHours: 2,
+      snowCiGroups: ['auth-svc', 'platform-eng'],
       maxCutoverWindow: '2 hours',
       blackoutDates: [
         { name: 'Christmas', from: '2025-12-25' },
@@ -591,7 +601,7 @@ export const mockProjects: Project[] = [
     applicationOverview: {
       applicationName: 'Global Edge DNS',
       shortName: 'edge-dns',
-      applicationTier: 'P1',
+      applicationTier: 'T0',
       eimId: 'EIM-0088',
       userBase: { type: 'External', count: '~4M end users globally' },
       businessFunction: 'Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.',
@@ -688,7 +698,12 @@ export const mockProjects: Project[] = [
     },
 
     migrationConstraints: {
-      migrationWindow: 'Rolling — region-by-region with no global maintenance window',
+      regularMigrationWindow: 'Rolling — region-by-region with no global maintenance window',
+      preferredMigrationWindow: ['weekday', 'weekend'],
+      earliestStartDate: '2025-09-01',
+      latestEndDate: '2026-02-28',
+      crDurationHours: 1,
+      snowCiGroups: ['network-ops', 'sre', 'dns-team'],
       maxCutoverWindow: '45 minutes per region (TTL drain period)',
       blackoutDates: [
         { name: 'Black Friday', from: '2025-11-29' },
@@ -861,7 +876,7 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionKey: 'applicationOverview',
       sectionLabel: 'Application Overview',
       changes: [
-        { field: 'applicationTier', label: 'App Tier', oldValue: 'P2', newValue: 'P1' },
+        { field: 'applicationTier', label: 'App Tier', oldValue: 'T1', newValue: 'T0' },
         { field: 'eimId', label: 'EIM ID', oldValue: undefined, newValue: 'EIM-00421' },
       ],
     },
@@ -937,7 +952,7 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionKey: 'migrationConstraints',
       sectionLabel: 'Migration Constraints',
       changes: [
-        { field: 'migrationWindow', label: 'Migration Window', oldValue: 'Weekends only', newValue: 'Saturdays 00:00–06:00 UTC' },
+        { field: 'regularMigrationWindow', label: 'Regular Maintenance Window', oldValue: 'Weekends only', newValue: 'Saturdays 00:00–06:00 UTC' },
         { field: 'maxCutoverWindow', label: 'Max Cutover Window', oldValue: undefined, newValue: '4 hours' },
       ],
     },
@@ -970,7 +985,7 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionKey: 'applicationOverview',
       sectionLabel: 'Application Overview',
       changes: [
-        { field: 'applicationTier', label: 'App Tier', oldValue: undefined, newValue: 'P2' },
+        { field: 'applicationTier', label: 'App Tier', oldValue: undefined, newValue: 'T1' },
         { field: 'businessFunction', label: 'Business Function', oldValue: undefined, newValue: 'Network access management and VPN gateway services for 800 internal users.' },
       ],
     },
@@ -1152,8 +1167,8 @@ export const mockSurveyConfig: SurveyConfig = {
       order: 5,
     },
     {
-      fieldId: 'constraints__migrationWindow',
-      questionText: 'What is the preferred migration window?',
+      fieldId: 'constraints__maintenanceWindow',
+      questionText: 'What is the regular maintenance window?',
       hintText: 'Select weekdays and specify start/end times in HKT (UTC+8).',
       required: true,
       order: 6,

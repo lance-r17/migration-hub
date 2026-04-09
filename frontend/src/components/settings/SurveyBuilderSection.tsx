@@ -21,6 +21,9 @@ const INPUT_TYPE_LABELS: Record<string, string> = {
   string_array: 'List',
   migration_window: 'Migration Window',
   dependency_list: 'Dependency List',
+  date: 'Date',
+  date_range: 'Date Range',
+  checkbox_select: 'Checkboxes',
 }
 
 export function SurveyBuilderSection() {

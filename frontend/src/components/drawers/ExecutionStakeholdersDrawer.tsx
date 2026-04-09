@@ -32,7 +32,7 @@ export function ExecutionStakeholdersDrawer({ open, onOpenChange, data, onSave }
   function handleSave() {
     onSave({
       ...data,
-      migrationWindow: data?.migrationWindow ?? '',
+      regularMigrationWindow: data?.regularMigrationWindow ?? '',
       blackoutDates: data?.blackoutDates ?? [],
       cutoverApproach: draft.cutoverApproach,
       rollbackPlan: draft.rollbackPlan,

@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, ChevronLeft, ChevronRight, CheckCircle2, ClipboardList, Plus } from 'lucide-react'
+import { format } from 'date-fns'
+import { X, ChevronLeft, ChevronRight, CheckCircle2, ClipboardList, Plus, CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 import { useSurveyFieldDefs } from '@/hooks/use-survey'
 import { MigrationWindowPicker } from '@/components/shared/MigrationWindowPicker'
 import type { SurveyConfig, SurveyQuestion, SurveyFieldDef } from '@/types/survey'
@@ -16,7 +22,8 @@ interface SurveyModalProps {
   onSave: <K extends keyof Project>(key: K, value: Project[K]) => Promise<void>
 }
 
-type AnswerValue = string | boolean | string[] | DependencyEntry[] | undefined
+type DateRangeValue = { from?: string; to?: string }
+type AnswerValue = string | boolean | string[] | DependencyEntry[] | DateRangeValue | undefined
 
 const textareaClass =
   'w-full bg-transparent border-0 border-b-2 border-input rounded-none px-0 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-primary resize-none transition-colors'
@@ -320,6 +327,30 @@ function QuestionInput({
           onChange={onChange}
         />
       )
+    case 'checkbox_select': {
+      const selected = (value as string[]) ?? []
+      return (
+        <div className="flex flex-col gap-3 pt-2">
+          {def.options?.map(opt => (
+            <div key={opt} className="flex items-center gap-3">
+              <Checkbox
+                id={`checkbox-${opt}`}
+                checked={selected.includes(opt)}
+                onCheckedChange={(checked) => {
+                  const next = checked
+                    ? [...selected, opt]
+                    : selected.filter((v) => v !== opt)
+                  onChange(next)
+                }}
+              />
+              <Label htmlFor={`checkbox-${opt}`} className="cursor-pointer text-sm">
+                {opt}
+              </Label>
+            </div>
+          ))}
+        </div>
+      )
+    }
     case 'migration_window':
       return (
         <MigrationWindowPicker
@@ -334,6 +365,67 @@ function QuestionInput({
           onChange={onChange as (v: DependencyEntry[]) => void}
         />
       )
+    case 'date': {
+      const dateStr = value as string | undefined
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('h-12 w-full max-w-xs justify-start text-left text-base font-normal border-0 border-b-2 rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary', !dateStr && 'text-muted-foreground')}
+            >
+              <CalendarIcon size={16} className="mr-2 shrink-0" />
+              {dateStr ? format(new Date(dateStr), 'MMM d, y') : 'Pick a date…'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 z-[400]" align="start">
+            <Calendar
+              mode="single"
+              selected={dateStr ? new Date(dateStr) : undefined}
+              onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : undefined)}
+            />
+          </PopoverContent>
+        </Popover>
+      )
+    }
+    case 'date_range': {
+      const range = (value as DateRangeValue | undefined) ?? {}
+      const { from, to } = range
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('h-12 w-full max-w-sm justify-start text-left text-base font-normal border-0 border-b-2 rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary', !from && !to && 'text-muted-foreground')}
+            >
+              <CalendarIcon size={16} className="mr-2 shrink-0" />
+              {from && to
+                ? `${format(new Date(from), 'MMM d, y')} → ${format(new Date(to), 'MMM d, y')}`
+                : from
+                ? `From ${format(new Date(from), 'MMM d, y')}`
+                : 'Pick a date range…'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 z-[400]" align="start">
+            <Calendar
+              mode="range"
+              numberOfMonths={2}
+              defaultMonth={from ? new Date(from) : undefined}
+              selected={{
+                from: from ? new Date(from) : undefined,
+                to: to ? new Date(to) : undefined,
+              }}
+              onSelect={(r) => onChange({
+                from: r?.from ? format(r.from, 'yyyy-MM-dd') : undefined,
+                to: r?.to ? format(r.to, 'yyyy-MM-dd') : undefined,
+              })}
+            />
+          </PopoverContent>
+        </Popover>
+      )
+    }
     default:
       return null
   }
@@ -385,8 +477,14 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
     for (const q of orderedQuestions) {
       const def = getFieldById(q.fieldId)
       if (!def) continue
-      const existing = getExistingValue(project, def.sectionKey, def.fieldPath)
-      if (existing !== undefined) prefilled.set(q.fieldId, existing)
+      if (def.inputType === 'date_range') {
+        const from = getExistingValue(project, def.sectionKey, def.fieldPath) as string | undefined
+        const to = def.toFieldPath ? getExistingValue(project, def.sectionKey, def.toFieldPath) as string | undefined : undefined
+        if (from !== undefined || to !== undefined) prefilled.set(q.fieldId, { from, to })
+      } else {
+        const existing = getExistingValue(project, def.sectionKey, def.fieldPath)
+        if (existing !== undefined) prefilled.set(q.fieldId, existing)
+      }
     }
     setAnswers(prefilled)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -405,7 +503,15 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
       const next = new Map(prev)
       const def = getFieldById(currentQuestion.fieldId)
       const isDependencyList = def?.inputType === 'dependency_list'
-      if (
+      const isDateRange = def?.inputType === 'date_range'
+      if (isDateRange) {
+        const range = value as DateRangeValue | undefined
+        if (!range?.from && !range?.to) {
+          next.delete(currentQuestion.fieldId)
+        } else {
+          next.set(currentQuestion.fieldId, value)
+        }
+      } else if (
         value === undefined ||
         value === '' ||
         (!isDependencyList && Array.isArray(value) && value.length === 0)
@@ -429,8 +535,15 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
         if (!def) continue
         const sectionKey = def.sectionKey
         const existing = (project[sectionKey] ?? {}) as unknown as Record<string, unknown>
-        const current = sectionUpdates.get(sectionKey) ?? { ...existing }
-        sectionUpdates.set(sectionKey, deepSet(current, def.fieldPath, value))
+        let current = sectionUpdates.get(sectionKey) ?? { ...existing }
+        if (def.inputType === 'date_range' && def.toFieldPath) {
+          const range = value as DateRangeValue
+          current = deepSet(current, def.fieldPath, range.from)
+          current = deepSet(current, def.toFieldPath, range.to)
+        } else {
+          current = deepSet(current, def.fieldPath, value)
+        }
+        sectionUpdates.set(sectionKey, current)
       }
 
       for (const [sectionKey, merged] of sectionUpdates.entries()) {
