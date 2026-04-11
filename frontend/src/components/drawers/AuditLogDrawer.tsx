@@ -46,7 +46,7 @@ export function AuditLogDrawer({ projectId, open, onClose }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+      <SheetContent side="right" className="w-[600px] sm:!max-w-[600px] flex flex-col gap-0 p-0" showCloseButton={false}>
         <SheetHeader className="flex flex-row items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
             <History className="size-4 text-muted-foreground" />

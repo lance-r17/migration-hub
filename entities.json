@@ -1,0 +1,17 @@
+{
+  "people": [
+    "User"
+  ],
+  "projects": [
+    "Frontend",
+    "Email",
+    "Security",
+    "Hub",
+    "Lock",
+    "Migration",
+    "Plugin",
+    "Feature",
+    "Skills",
+    "Auto"
+  ]
+}

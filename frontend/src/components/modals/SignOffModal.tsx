@@ -224,8 +224,8 @@ export function SignOffModal({
                   className="w-full grid grid-cols-4 gap-1"
                 >
                   <ToggleGroupItem value="resource-level" className="text-xs">Per Resource</ToggleGroupItem>
-                  <ToggleGroupItem value="category-level" className="text-xs">Per Category</ToggleGroupItem>
                   <ToggleGroupItem value="product-level" className="text-xs">Per Product</ToggleGroupItem>
+                  <ToggleGroupItem value="category-level" className="text-xs">Per Category</ToggleGroupItem>
                   <ToggleGroupItem value="custom" className="text-xs">Custom</ToggleGroupItem>
                 </ToggleGroup>
               </div>
@@ -249,23 +249,8 @@ export function SignOffModal({
                   </div>
                 )}
 
-                {jiraMode === 'category-level' && (
-                  <div className="space-y-1.5">
-                    {inScopeCategories.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No cloud resources defined.</p>
-                    ) : inScopeCategories.map(cat => (
-                      <div key={cat} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
-                        <span className="text-foreground font-medium">{cat}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {inScopeResources.filter(r => getCategoryForProduct(r.product) === cat).length} resource(s)
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 {jiraMode === 'product-level' && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                     {inScopeProducts.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No cloud resources defined.</p>
                     ) : inScopeProducts.map(product => (
@@ -273,6 +258,21 @@ export function SignOffModal({
                         <span className="text-foreground font-medium">{product}</span>
                         <span className="text-xs text-muted-foreground">
                           {inScopeResources.filter(r => (r.product ?? 'Other') === product).length} resource(s)
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {jiraMode === 'category-level' && (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {inScopeCategories.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No cloud resources defined.</p>
+                    ) : inScopeCategories.map(cat => (
+                      <div key={cat} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                        <span className="text-foreground font-medium">{cat}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {inScopeResources.filter(r => getCategoryForProduct(r.product) === cat).length} resource(s)
                         </span>
                       </div>
                     ))}

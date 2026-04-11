@@ -1,7 +1,7 @@
 import type { Project, Activity, OverallStats, User, ProjectUsers, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave } from '@/types/wave'
-import type { SurveyConfig } from '@/types/survey'
+import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
 import type { BillingRecord } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
 
@@ -9,6 +9,7 @@ export const mockProductCategoryMap: ProductCategoryEntry[] = [
   { product: 'ecs',      category: 'VM' },
   { product: 'rds',      category: 'Database' },
   { product: 'polarDB',  category: 'Database' },
+  { product: 'redis',    category: 'Database' },
   { product: 'oss',      category: 'Buckets' },
   { product: 'slb',      category: 'Network' },
   { product: 'dns',      category: 'Network' },
@@ -263,6 +264,19 @@ export const mockProjects: Project[] = [
           id: 'res-a22', resourceId: 'rt-6d2e3f4a5b', name: 'MPLS Gateway Router', product: 'dns',
           resourceSet: 'corp-00421-alpha-erp-prod',
           specs: { circuit_gbps: 10, protocol: 'BGP' },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
+        },
+        // — Redis —
+        {
+          id: 'res-a24', resourceId: 'redis-8f4a5b6c7d', name: 'Session Cache (Redis)', product: 'redis',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: {},
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
+        },
+        {
+          id: 'res-a25', resourceId: 'redis-9a5b6c7d8e', name: 'Rate Limiter (Redis)', product: 'redis',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: {},
           targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         // — Other —
@@ -1175,6 +1189,60 @@ export const mockSurveyConfig: SurveyConfig = {
     },
   ],
   updatedBy: 'system',
+  updatedAt: new Date().toISOString(),
+}
+
+// ─── Resource Survey Config ───────────────────────────────────────────────────
+
+export const mockResourceSurveyConfig: ResourceSurveyConfig = {
+  groups: [
+    // Resource-level scoped to product 'redis':
+    // Each redis instance gets its own step — answers saved to each resource's specs individually
+    {
+      id: 'redis__usage_pattern__resource',
+      level: 'resource',
+      product: 'redis',
+      questions: [
+        {
+          id: 'redis__usage_pattern',
+          specsKey: 'usage_pattern',
+          label: 'What is the primary usage pattern for this Redis instance?',
+          hintText: 'e.g. cache-only — used solely for caching ephemeral data',
+          inputType: 'select',
+          options: ['cache-only', 'persistence', 'mixed'],
+          required: true,
+        },
+        {
+          id: 'redis__eviction_policy',
+          specsKey: 'eviction_policy',
+          label: 'What eviction policy does this Redis instance use?',
+          hintText: 'e.g. allkeys-lru',
+          inputType: 'select',
+          options: ['allkeys-lru', 'volatile-lru', 'allkeys-lfu', 'noeviction'],
+          required: false,
+        },
+      ],
+    },
+    // Category-level: one step for all Database resources combined
+    // Answered once — same answer applied to every Database resource's specs
+    {
+      id: 'database__replication_mode__category',
+      level: 'category',
+      category: 'Database',
+      questions: [
+        {
+          id: 'db__replication_mode',
+          specsKey: 'replication_mode',
+          label: 'What replication mode do your database resources use?',
+          hintText: 'e.g. sync — synchronous replication across AZs',
+          inputType: 'select',
+          options: ['sync', 'async', 'none'],
+          required: false,
+        },
+      ],
+    },
+  ],
+  updatedBy: 'admin',
   updatedAt: new Date().toISOString(),
 }
 

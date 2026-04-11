@@ -1,4 +1,4 @@
-import type { Project } from '@/types'
+import type { Project, ResourceCategory } from '@/types'
 
 export type SurveyInputType = 'short_text' | 'long_text' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select'
 
@@ -26,6 +26,50 @@ export interface SurveyQuestion {
 export interface SurveyConfig {
   isActive: boolean
   questions: SurveyQuestion[]
+  updatedBy: string
+  updatedAt: string
+}
+
+// ─── Resource Survey ──────────────────────────────────────────────────────────
+
+// Input types supported for resource-level questions (simpler subset of SurveyInputType)
+export type ResourceSurveyInputType = 'select' | 'short_text' | 'boolean' | 'string_array' | 'checkbox_select'
+
+// A single question whose answer is written to resource.specs[specsKey]
+export interface ResourceQuestionDef {
+  id: string                          // stable unique ID, e.g. "redis__usage_pattern"
+  specsKey: string                    // key written to resource.specs, e.g. "usage_pattern"
+  label: string                       // question text shown to user
+  hintText: string                    // sample answer / guidance
+  inputType: ResourceSurveyInputType
+  options?: string[]                  // for 'select' and 'checkbox_select'
+  required: boolean
+}
+
+// How the group appears in the survey AND how updates are scoped on submit:
+//   'resource'  → one step per matching resource (each resource updated individually)
+//   'product'   → one step for all resources of a product (all updated together)
+//   'category'  → one step for all resources in a category (all updated together)
+export type ResourceQuestionLevel = 'resource' | 'product' | 'category'
+
+// A group of questions. `level` controls both presentation in the survey and update scope.
+// Scope filters determine which resources are targeted (at most one is set):
+//   level:'resource' + product:'redis'    → per-resource step for every redis resource
+//   level:'resource' + resourceId:'x'    → step for that one resource only
+//   level:'product'  + product:'redis'   → one step for all redis resources
+//   level:'category' + category:'Database' → one step for all Database resources
+export interface ResourceQuestionGroup {
+  id: string
+  level: ResourceQuestionLevel
+  product?: string                    // filter by product name
+  category?: ResourceCategory         // filter by resource category
+  resourceId?: string                 // filter by exact resource ID (level:'resource' only)
+  questions: ResourceQuestionDef[]
+}
+
+// Top-level config stored and fetched alongside SurveyConfig
+export interface ResourceSurveyConfig {
+  groups: ResourceQuestionGroup[]
   updatedBy: string
   updatedAt: string
 }

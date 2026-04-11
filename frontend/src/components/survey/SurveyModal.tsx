@@ -1,18 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { format } from 'date-fns'
-import { X, ChevronLeft, ChevronRight, CheckCircle2, ClipboardList, Plus, CalendarIcon } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, ClipboardList, Plus, CalendarIcon, Server, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { useSurveyFieldDefs } from '@/hooks/use-survey'
 import { MigrationWindowPicker } from '@/components/shared/MigrationWindowPicker'
-import type { SurveyConfig, SurveyQuestion, SurveyFieldDef } from '@/types/survey'
-import type { Project, DependencyEntry } from '@/types'
+import type { SurveyConfig, SurveyQuestion, SurveyFieldDef, ResourceSurveyConfig, ResourceQuestionDef } from '@/types/survey'
+import type { Project, DependencyEntry, CloudResource, ResourceCategory } from '@/types'
 
 interface SurveyModalProps {
   open: boolean
@@ -20,10 +18,13 @@ interface SurveyModalProps {
   surveyConfig: SurveyConfig
   project: Project
   onSave: <K extends keyof Project>(key: K, value: Project[K]) => Promise<void>
+  resourceSurveyConfig?: ResourceSurveyConfig
+  getCategoryForProduct?: (product?: string) => ResourceCategory
 }
 
 type DateRangeValue = { from?: string; to?: string }
 type AnswerValue = string | boolean | string[] | DependencyEntry[] | DateRangeValue | undefined
+type ResourceAnswerValue = string | boolean | string[] | undefined
 
 const textareaClass =
   'w-full bg-transparent border-0 border-b-2 border-input rounded-none px-0 py-2 text-base outline-none placeholder:text-muted-foreground focus-visible:border-primary resize-none transition-colors'
@@ -55,8 +56,6 @@ function deepSet(obj: Record<string, unknown>, path: string, value: unknown): Re
   return result
 }
 
-// ─── Pull existing project value for pre-filling ──────────────────────────────
-
 function getExistingValue(project: Project, sectionKey: keyof Project, fieldPath: string): AnswerValue {
   const section = project[sectionKey]
   if (section === null || section === undefined || typeof section !== 'object' || Array.isArray(section)) {
@@ -73,36 +72,23 @@ function getExistingValue(project: Project, sectionKey: keyof Project, fieldPath
 
 function TagEditor({ value, onChange }: { value: string[], onChange: (v: string[]) => void }) {
   const [inputVal, setInputVal] = useState('')
-
   const addTag = (raw: string) => {
     const trimmed = raw.trim()
     if (!trimmed || value.includes(trimmed)) return
     onChange([...value, trimmed])
     setInputVal('')
   }
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault()
-      addTag(inputVal)
-    }
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(inputVal) }
   }
-
   return (
     <div className="space-y-2">
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {value.map(tag => (
-            <span
-              key={tag}
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
-            >
+            <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
               {tag}
-              <button
-                type="button"
-                onClick={() => onChange(value.filter(t => t !== tag))}
-                className="hover:text-destructive transition-colors"
-              >
+              <button type="button" onClick={() => onChange(value.filter(t => t !== tag))} className="hover:text-destructive transition-colors">
                 <X size={12} />
               </button>
             </span>
@@ -127,122 +113,55 @@ function TagEditor({ value, onChange }: { value: string[], onChange: (v: string[
 
 const HOSTING_OPTIONS = ['AliCloud', 'On-Premise', 'AWS', 'Azure', 'GCP', 'Other'] as const
 
-function DependencyListEditor({
-  value,
-  onChange,
-}: {
-  value: DependencyEntry[]
-  onChange: (v: DependencyEntry[]) => void
-}) {
+function DependencyListEditor({ value, onChange }: { value: DependencyEntry[]; onChange: (v: DependencyEntry[]) => void }) {
   function addEntry() {
-    onChange([
-      ...value,
-      { id: crypto.randomUUID(), name: '', eimId: '', contactEmail: '', hosting: '', notes: '' },
-    ])
+    onChange([...value, { id: crypto.randomUUID(), name: '', eimId: '', contactEmail: '', hosting: '', notes: '' }])
   }
-
   function updateEntry(id: string, field: keyof DependencyEntry, val: string) {
     onChange(value.map(e => (e.id === id ? { ...e, [field]: val } : e)))
   }
-
-  function removeEntry(id: string) {
-    onChange(value.filter(e => e.id !== id))
-  }
+  function removeEntry(id: string) { onChange(value.filter(e => e.id !== id)) }
 
   return (
     <div className="space-y-3">
       {value.map(entry => (
         <div key={entry.id} className="border border-border rounded-lg p-3 space-y-2 bg-muted/30">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Dependency
-            </span>
-            <button
-              type="button"
-              onClick={() => removeEntry(entry.id)}
-              className="text-muted-foreground hover:text-destructive transition-colors"
-              data-dep-input="true"
-            >
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Dependency</span>
+            <button type="button" onClick={() => removeEntry(entry.id)} className="text-muted-foreground hover:text-destructive transition-colors" data-dep-input="true">
               <X size={14} />
             </button>
           </div>
-
-          <Input
-            value={entry.name}
-            onChange={e => updateEntry(entry.id, 'name', e.target.value)}
-            placeholder="Application name *"
-            data-dep-input="true"
-            className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
-          />
-
+          <Input value={entry.name} onChange={e => updateEntry(entry.id, 'name', e.target.value)} placeholder="Application name *" data-dep-input="true" className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              value={entry.eimId ?? ''}
-              onChange={e => updateEntry(entry.id, 'eimId', e.target.value)}
-              placeholder="EIM ID"
-              data-dep-input="true"
-              className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
-            />
-            <Input
-              value={entry.contactEmail ?? ''}
-              onChange={e => updateEntry(entry.id, 'contactEmail', e.target.value)}
-              placeholder="Contact email"
-              data-dep-input="true"
-              className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
-            />
+            <Input value={entry.eimId ?? ''} onChange={e => updateEntry(entry.id, 'eimId', e.target.value)} placeholder="EIM ID" data-dep-input="true" className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
+            <Input value={entry.contactEmail ?? ''} onChange={e => updateEntry(entry.id, 'contactEmail', e.target.value)} placeholder="Contact email" data-dep-input="true" className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
           </div>
-
-          <Select
-            value={entry.hosting ?? ''}
-            onValueChange={v => updateEntry(entry.id, 'hosting', v)}
-          >
+          <Select value={entry.hosting ?? ''} onValueChange={v => updateEntry(entry.id, 'hosting', v)}>
             <SelectTrigger className="text-sm border-0 border-b-2 rounded-none focus:ring-0 bg-transparent px-0 w-full">
               <SelectValue placeholder="Hosting platform…" />
             </SelectTrigger>
             <SelectContent className="z-[400]">
-              {HOSTING_OPTIONS.map(opt => (
-                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-              ))}
+              {HOSTING_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
             </SelectContent>
           </Select>
-
-          <Input
-            value={entry.notes ?? ''}
-            onChange={e => updateEntry(entry.id, 'notes', e.target.value)}
-            placeholder="Notes"
-            data-dep-input="true"
-            className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
-          />
+          <Input value={entry.notes ?? ''} onChange={e => updateEntry(entry.id, 'notes', e.target.value)} placeholder="Notes" data-dep-input="true" className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
         </div>
       ))}
-
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full"
-        onClick={addEntry}
-        data-dep-input="true"
-      >
+      <Button type="button" variant="outline" className="w-full" onClick={addEntry} data-dep-input="true">
         <Plus size={14} className="mr-1" /> Add Dependency
       </Button>
-
       {value.length === 0 && (
-        <p className="text-xs text-muted-foreground text-center">
-          No dependencies added yet — click "Add Dependency" to begin.
-        </p>
+        <p className="text-xs text-muted-foreground text-center">No dependencies added yet — click "Add Dependency" to begin.</p>
       )}
     </div>
   )
 }
 
-// ─── Single question input ────────────────────────────────────────────────────
+// ─── Application question input ───────────────────────────────────────────────
 
 function QuestionInput({
-  question,
-  value,
-  onChange,
-  autoFocus,
-  getFieldById,
+  question, value, onChange, autoFocus, getFieldById,
 }: {
   question: SurveyQuestion
   value: AnswerValue
@@ -252,11 +171,8 @@ function QuestionInput({
 }) {
   const def = getFieldById(question.fieldId)
   const inputRef = useRef<HTMLInputElement>(null)
-
   useEffect(() => {
-    if (autoFocus) {
-      setTimeout(() => inputRef.current?.focus(), 50)
-    }
+    if (autoFocus) setTimeout(() => inputRef.current?.focus(), 50)
   }, [autoFocus, question.fieldId])
 
   if (!def) return null
@@ -264,37 +180,42 @@ function QuestionInput({
   switch (def.inputType) {
     case 'short_text':
       return (
-        <Input
-          ref={inputRef}
-          value={(value as string) ?? ''}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
-          placeholder="Type your answer…"
-          className="text-base h-12 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
-        />
+        <Input ref={inputRef} value={(value as string) ?? ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} placeholder="Type your answer…" className="text-base h-12 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
       )
     case 'long_text':
       return (
-        <textarea
-          value={(value as string) ?? ''}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
-          placeholder="Type your answer…"
-          rows={4}
-          className={textareaClass}
-          autoFocus={autoFocus}
-        />
+        <textarea value={(value as string) ?? ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)} placeholder="Type your answer…" rows={4} className={textareaClass} autoFocus={autoFocus} />
       )
     case 'select':
       return (
-        <Select value={(value as string) ?? ''} onValueChange={(v: string) => onChange(v)}>
-          <SelectTrigger className="text-base h-12 border-0 border-b-2 rounded-none focus:ring-0 bg-transparent px-0 w-full max-w-sm">
-            <SelectValue placeholder="Select an option…" />
-          </SelectTrigger>
-          <SelectContent className="z-[400]">
-            {def.options?.map(opt => (
-              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-3 pt-2">
+          {def.options?.map((opt, idx) => {
+            const isSelected = (value as string) === opt
+            const keyLabel = String.fromCharCode(65 + idx)
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => onChange(isSelected ? undefined : opt)}
+                className={
+                  'flex items-center w-full px-4 py-2.5 rounded-md border-2 text-left transition-all duration-200 ' +
+                  (isSelected
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground')
+                }
+              >
+                <span className={
+                  'flex-shrink-0 flex items-center justify-center w-6 h-6 text-xs font-bold mr-4 border rounded-md transition-colors ' +
+                  (isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground')
+                }>
+                  {keyLabel}
+                </span>
+                <span className="text-sm">{opt}</span>
+                {isSelected && <Check size={16} className="ml-auto flex-shrink-0" />}
+              </button>
+            )
+          })}
+        </div>
       )
     case 'boolean':
       return (
@@ -303,17 +224,8 @@ function QuestionInput({
             const choiceVal = choice === 'Yes'
             const isSelected = value === choiceVal
             return (
-              <button
-                key={choice}
-                type="button"
-                onClick={() => onChange(isSelected ? undefined : choiceVal)}
-                className={
-                  'flex-1 max-w-[140px] py-3 rounded-xl border-2 font-semibold text-sm transition-all ' +
-                  (isSelected
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground')
-                }
-              >
+              <button key={choice} type="button" onClick={() => onChange(isSelected ? undefined : choiceVal)}
+                className={'flex-1 max-w-[140px] py-3 rounded-xl border-2 font-semibold text-sm transition-all ' + (isSelected ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground')}>
                 {choice}
               </button>
             )
@@ -321,70 +233,59 @@ function QuestionInput({
         </div>
       )
     case 'string_array':
-      return (
-        <TagEditor
-          value={(value as string[]) ?? []}
-          onChange={onChange}
-        />
-      )
+      return <TagEditor value={(value as string[]) ?? []} onChange={onChange} />
     case 'checkbox_select': {
       const selected = (value as string[]) ?? []
       return (
         <div className="flex flex-col gap-3 pt-2">
-          {def.options?.map(opt => (
-            <div key={opt} className="flex items-center gap-3">
-              <Checkbox
-                id={`checkbox-${opt}`}
-                checked={selected.includes(opt)}
-                onCheckedChange={(checked) => {
-                  const next = checked
-                    ? [...selected, opt]
-                    : selected.filter((v) => v !== opt)
+          {def.options?.map((opt, idx) => {
+            const isSelected = selected.includes(opt)
+            const keyLabel = String.fromCharCode(65 + idx)
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  const next = isSelected ? selected.filter(v => v !== opt) : [...selected, opt]
                   onChange(next)
                 }}
-              />
-              <Label htmlFor={`checkbox-${opt}`} className="cursor-pointer text-sm">
-                {opt}
-              </Label>
-            </div>
-          ))}
+                className={
+                  'flex items-center w-full px-4 py-2.5 rounded-md border-2 text-left transition-all duration-200 ' +
+                  (isSelected
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground')
+                }
+              >
+                <span className={
+                  'flex-shrink-0 flex items-center justify-center w-6 h-6 text-xs font-bold mr-4 border rounded-md transition-colors ' +
+                  (isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground')
+                }>
+                  {keyLabel}
+                </span>
+                <span className="text-sm">{opt}</span>
+                {isSelected && <Check size={16} className="ml-auto flex-shrink-0" />}
+              </button>
+            )
+          })}
         </div>
       )
     }
     case 'migration_window':
-      return (
-        <MigrationWindowPicker
-          value={value as string | undefined}
-          onChange={onChange}
-        />
-      )
+      return <MigrationWindowPicker value={value as string | undefined} onChange={onChange} />
     case 'dependency_list':
-      return (
-        <DependencyListEditor
-          value={(value as DependencyEntry[]) ?? []}
-          onChange={onChange as (v: DependencyEntry[]) => void}
-        />
-      )
+      return <DependencyListEditor value={(value as DependencyEntry[]) ?? []} onChange={onChange as (v: DependencyEntry[]) => void} />
     case 'date': {
       const dateStr = value as string | undefined
       return (
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className={cn('h-12 w-full max-w-xs justify-start text-left text-base font-normal border-0 border-b-2 rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary', !dateStr && 'text-muted-foreground')}
-            >
+            <Button type="button" variant="outline" className={cn('h-12 w-full max-w-xs justify-start text-left text-base font-normal border-0 border-b-2 rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary', !dateStr && 'text-muted-foreground')}>
               <CalendarIcon size={16} className="mr-2 shrink-0" />
               {dateStr ? format(new Date(dateStr), 'MMM d, y') : 'Pick a date…'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 z-[400]" align="start">
-            <Calendar
-              mode="single"
-              selected={dateStr ? new Date(dateStr) : undefined}
-              onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : undefined)}
-            />
+            <Calendar mode="single" selected={dateStr ? new Date(dateStr) : undefined} onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : undefined)} />
           </PopoverContent>
         </Popover>
       )
@@ -395,35 +296,120 @@ function QuestionInput({
       return (
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className={cn('h-12 w-full max-w-sm justify-start text-left text-base font-normal border-0 border-b-2 rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary', !from && !to && 'text-muted-foreground')}
-            >
+            <Button type="button" variant="outline" className={cn('h-12 w-full max-w-sm justify-start text-left text-base font-normal border-0 border-b-2 rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary', !from && !to && 'text-muted-foreground')}>
               <CalendarIcon size={16} className="mr-2 shrink-0" />
-              {from && to
-                ? `${format(new Date(from), 'MMM d, y')} → ${format(new Date(to), 'MMM d, y')}`
-                : from
-                ? `From ${format(new Date(from), 'MMM d, y')}`
-                : 'Pick a date range…'}
+              {from && to ? `${format(new Date(from), 'MMM d, y')} → ${format(new Date(to), 'MMM d, y')}` : from ? `From ${format(new Date(from), 'MMM d, y')}` : 'Pick a date range…'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 z-[400]" align="start">
-            <Calendar
-              mode="range"
-              numberOfMonths={2}
-              defaultMonth={from ? new Date(from) : undefined}
-              selected={{
-                from: from ? new Date(from) : undefined,
-                to: to ? new Date(to) : undefined,
-              }}
-              onSelect={(r) => onChange({
-                from: r?.from ? format(r.from, 'yyyy-MM-dd') : undefined,
-                to: r?.to ? format(r.to, 'yyyy-MM-dd') : undefined,
-              })}
-            />
+            <Calendar mode="range" numberOfMonths={2} defaultMonth={from ? new Date(from) : undefined}
+              selected={{ from: from ? new Date(from) : undefined, to: to ? new Date(to) : undefined }}
+              onSelect={(r) => onChange({ from: r?.from ? format(r.from, 'yyyy-MM-dd') : undefined, to: r?.to ? format(r.to, 'yyyy-MM-dd') : undefined })} />
           </PopoverContent>
         </Popover>
+      )
+    }
+    default:
+      return null
+  }
+}
+
+// ─── Resource question input ──────────────────────────────────────────────────
+
+function ResourceQuestionInput({
+  questionDef, value, onChange,
+}: {
+  questionDef: ResourceQuestionDef
+  value: ResourceAnswerValue
+  onChange: (v: ResourceAnswerValue) => void
+}) {
+  switch (questionDef.inputType) {
+    case 'short_text':
+      return (
+        <Input value={(value as string) ?? ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} placeholder="Type your answer…" className="text-base h-12 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
+      )
+    case 'select':
+      return (
+        <div className="flex flex-col gap-3 pt-2">
+          {questionDef.options?.map((opt, idx) => {
+            const isSelected = (value as string) === opt
+            const keyLabel = String.fromCharCode(65 + idx)
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => onChange(isSelected ? undefined : opt)}
+                className={
+                  'flex items-center w-full px-4 py-2.5 rounded-md border-2 text-left transition-all duration-200 ' +
+                  (isSelected
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground')
+                }
+              >
+                <span className={
+                  'flex-shrink-0 flex items-center justify-center w-6 h-6 text-xs font-bold mr-4 border rounded-md transition-colors ' +
+                  (isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground')
+                }>
+                  {keyLabel}
+                </span>
+                <span className="text-sm">{opt}</span>
+                {isSelected && <Check size={16} className="ml-auto flex-shrink-0" />}
+              </button>
+            )
+          })}
+        </div>
+      )
+    case 'boolean':
+      return (
+        <div className="flex gap-3 pt-2">
+          {(['Yes', 'No'] as const).map(choice => {
+            const choiceVal = choice === 'Yes'
+            const isSelected = value === choiceVal
+            return (
+              <button key={choice} type="button" onClick={() => onChange(isSelected ? undefined : choiceVal)}
+                className={'flex-1 max-w-[140px] py-3 rounded-xl border-2 font-semibold text-sm transition-all ' + (isSelected ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground')}>
+                {choice}
+              </button>
+            )
+          })}
+        </div>
+      )
+    case 'string_array':
+      return <TagEditor value={(value as string[]) ?? []} onChange={onChange as (v: string[]) => void} />
+    case 'checkbox_select': {
+      const selected = (value as string[]) ?? []
+      return (
+        <div className="flex flex-col gap-3 pt-2">
+          {questionDef.options?.map((opt, idx) => {
+            const isSelected = selected.includes(opt)
+            const keyLabel = String.fromCharCode(65 + idx)
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  const next = isSelected ? selected.filter(v => v !== opt) : [...selected, opt]
+                  onChange(next)
+                }}
+                className={
+                  'flex items-center w-full px-4 py-2.5 rounded-md border-2 text-left transition-all duration-200 ' +
+                  (isSelected
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground')
+                }
+              >
+                <span className={
+                  'flex-shrink-0 flex items-center justify-center w-6 h-6 text-xs font-bold mr-4 border rounded-md transition-colors ' +
+                  (isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground')
+                }>
+                  {keyLabel}
+                </span>
+                <span className="text-sm">{opt}</span>
+                {isSelected && <Check size={16} className="ml-auto flex-shrink-0" />}
+              </button>
+            )
+          })}
+        </div>
       )
     }
     default:
@@ -447,25 +433,112 @@ function ensureRequiredArrayFields(
   }
   if (sectionKey === 'dependencies') {
     const existing = project.dependencies
-    return {
-      upstream: existing?.upstream ?? [],
-      downstream: existing?.downstream ?? [],
-      ...data,
-    }
+    return { upstream: existing?.upstream ?? [], downstream: existing?.downstream ?? [], ...data }
   }
   return data
 }
 
+// ─── Resource step computation ────────────────────────────────────────────────
+
+type ResourceStep =
+  | { kind: 'category'; category: ResourceCategory; questions: ResourceQuestionDef[]; matchingResources: CloudResource[] }
+  | { kind: 'product';  product: string;            questions: ResourceQuestionDef[]; matchingResources: CloudResource[] }
+  | { kind: 'resource'; resource: CloudResource;    questions: ResourceQuestionDef[] }
+
+function stepKey(step: ResourceStep): string {
+  if (step.kind === 'category') return `category:${step.category}`
+  if (step.kind === 'product') return `product:${step.product}`
+  return `resource:${step.resource.id}`
+}
+
+function computeResourceSteps(
+  config: ResourceSurveyConfig,
+  resources: CloudResource[],
+  getCategoryForProduct: (product?: string) => ResourceCategory,
+): ResourceStep[] {
+  const steps: ResourceStep[] = []
+
+  // 1. Category-level groups → one step per group (if any project resources match)
+  for (const group of config.groups.filter(g => g.level === 'category')) {
+    const matching = resources.filter(r => getCategoryForProduct(r.product) === group.category)
+    if (matching.length === 0 || group.questions.length === 0) continue
+    steps.push({ kind: 'category', category: group.category!, questions: group.questions, matchingResources: matching })
+  }
+
+  // 2. Product-level groups → one step per group
+  for (const group of config.groups.filter(g => g.level === 'product')) {
+    const matching = resources.filter(r => r.product === group.product)
+    if (matching.length === 0 || group.questions.length === 0) continue
+    steps.push({ kind: 'product', product: group.product!, questions: group.questions, matchingResources: matching })
+  }
+
+  // 3. Resource-level groups → expand to one step per matching resource
+  // Collect all questions per resource ID first (additive merge from multiple groups)
+  const resourceQuestionsMap = new Map<string, ResourceQuestionDef[]>()
+  for (const group of config.groups.filter(g => g.level === 'resource')) {
+    let matchingIds: string[]
+    if (group.resourceId) {
+      matchingIds = resources.find(r => r.id === group.resourceId) ? [group.resourceId] : []
+    } else if (group.product) {
+      matchingIds = resources.filter(r => r.product === group.product).map(r => r.id)
+    } else if (group.category) {
+      matchingIds = resources.filter(r => getCategoryForProduct(r.product) === group.category).map(r => r.id)
+    } else {
+      matchingIds = resources.map(r => r.id)
+    }
+    for (const rid of matchingIds) {
+      const existing = resourceQuestionsMap.get(rid) ?? []
+      resourceQuestionsMap.set(rid, [...existing, ...group.questions])
+    }
+  }
+
+  // One step per resource in project order — deduplicate by specsKey
+  for (const resource of resources) {
+    const questions = resourceQuestionsMap.get(resource.id)
+    if (!questions || questions.length === 0) continue
+    const seen = new Set<string>()
+    const deduped = questions.filter(q => {
+      if (seen.has(q.specsKey)) return false
+      seen.add(q.specsKey)
+      return true
+    })
+    steps.push({ kind: 'resource', resource, questions: deduped })
+  }
+
+  return steps
+}
+
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
-export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: SurveyModalProps) {
+export function SurveyModal({
+  open, onClose, surveyConfig, project, onSave, resourceSurveyConfig, getCategoryForProduct,
+}: SurveyModalProps) {
   const { getFieldById } = useSurveyFieldDefs()
   const orderedQuestions = [...surveyConfig.questions].sort((a, b) => a.order - b.order)
+  const resources = project.currentInfrastructure?.resources ?? []
+
+  // Compute resource steps (stable reference while modal is open)
+  const resourceSteps: ResourceStep[] = (resourceSurveyConfig && getCategoryForProduct)
+    ? computeResourceSteps(resourceSurveyConfig, resources, getCategoryForProduct)
+    : []
+
+  // Transition slide sits between app questions and resource steps
+  const hasTransitionSlide = resourceSteps.length > 0
+  const transitionSlideIndex = orderedQuestions.length
+  const totalSteps = orderedQuestions.length + (hasTransitionSlide ? 1 : 0) + resourceSteps.length
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Map<string, AnswerValue>>(new Map())
+  // Resource answers: stepKey → { specsKey: value }
+  const [resourceAnswers, setResourceAnswers] = useState<Map<string, Record<string, ResourceAnswerValue>>>(new Map())
   const [submitting, setSubmitting] = useState(false)
   const [completed, setCompleted] = useState(false)
+  const [resourceListExpanded, setResourceListExpanded] = useState(false)
+
+  const isMainStep = currentIndex < orderedQuestions.length
+  const isTransitionSlide = hasTransitionSlide && currentIndex === transitionSlideIndex
+  const resourceStepIndex = currentIndex - orderedQuestions.length - (hasTransitionSlide ? 1 : 0)
+  const currentResourceStep = (!isMainStep && !isTransitionSlide) ? resourceSteps[resourceStepIndex] : undefined
 
   // Reset + pre-fill when opened
   useEffect(() => {
@@ -473,6 +546,8 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
     setCurrentIndex(0)
     setCompleted(false)
     setSubmitting(false)
+
+    // Pre-fill app survey answers
     const prefilled = new Map<string, AnswerValue>()
     for (const q of orderedQuestions) {
       const def = getFieldById(q.fieldId)
@@ -487,15 +562,63 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
       }
     }
     setAnswers(prefilled)
+
+    // Pre-fill resource answers from existing specs
+    const prefilledResource = new Map<string, Record<string, ResourceAnswerValue>>()
+    for (const step of resourceSteps) {
+      const key = stepKey(step)
+      const stepAnswers: Record<string, ResourceAnswerValue> = {}
+      if (step.kind === 'resource') {
+        const existing = step.resource.specs ?? {}
+        for (const q of step.questions) {
+          const val = existing[q.specsKey]
+          if (val !== undefined && val !== null) stepAnswers[q.specsKey] = val as ResourceAnswerValue
+        }
+      } else {
+        // Product/category: use first matching resource's specs as best-effort pre-fill
+        const firstResource = step.matchingResources[0]
+        if (firstResource?.specs) {
+          for (const q of step.questions) {
+            const val = firstResource.specs[q.specsKey]
+            if (val !== undefined && val !== null) stepAnswers[q.specsKey] = val as ResourceAnswerValue
+          }
+        }
+      }
+      if (Object.keys(stepAnswers).length > 0) prefilledResource.set(key, stepAnswers)
+    }
+    setResourceAnswers(prefilledResource)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const currentQuestion = orderedQuestions[currentIndex]
+  // Collapse resource list whenever the step changes
+  useEffect(() => { setResourceListExpanded(false) }, [currentIndex])
+
+  // ─── App question state ─────────────────────────────────────────────────────
+
+  const currentQuestion = isMainStep ? orderedQuestions[currentIndex] : undefined
   const currentAnswer = currentQuestion ? answers.get(currentQuestion.fieldId) : undefined
-  const isAnswered = currentAnswer !== undefined && currentAnswer !== '' &&
+  const isAppAnswered = currentAnswer !== undefined && currentAnswer !== '' &&
     !(Array.isArray(currentAnswer) && currentAnswer.length === 0)
-  const canAdvance = !currentQuestion?.required || isAnswered
-  const isLast = currentIndex === orderedQuestions.length - 1
+  const appCanAdvance = !currentQuestion?.required || isAppAnswered
+
+  // ─── Resource step state ────────────────────────────────────────────────────
+
+  const currentResourceStepAnswers = currentResourceStep
+    ? (resourceAnswers.get(stepKey(currentResourceStep)) ?? {})
+    : {}
+
+  const resourceStepCanAdvance = currentResourceStep
+    ? currentResourceStep.questions.every(q => {
+        if (!q.required) return true
+        const val = currentResourceStepAnswers[q.specsKey]
+        return val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 0)
+      })
+    : true
+
+  const canAdvance = isMainStep ? appCanAdvance : isTransitionSlide ? true : resourceStepCanAdvance
+  const isLast = currentIndex === totalSteps - 1
+
+  // ─── Answer setters ─────────────────────────────────────────────────────────
 
   const setAnswer = (value: AnswerValue) => {
     if (!currentQuestion) return
@@ -506,16 +629,9 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
       const isDateRange = def?.inputType === 'date_range'
       if (isDateRange) {
         const range = value as DateRangeValue | undefined
-        if (!range?.from && !range?.to) {
-          next.delete(currentQuestion.fieldId)
-        } else {
-          next.set(currentQuestion.fieldId, value)
-        }
-      } else if (
-        value === undefined ||
-        value === '' ||
-        (!isDependencyList && Array.isArray(value) && value.length === 0)
-      ) {
+        if (!range?.from && !range?.to) next.delete(currentQuestion.fieldId)
+        else next.set(currentQuestion.fieldId, value)
+      } else if (value === undefined || value === '' || (!isDependencyList && Array.isArray(value) && value.length === 0)) {
         next.delete(currentQuestion.fieldId)
       } else {
         next.set(currentQuestion.fieldId, value)
@@ -524,12 +640,31 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
     })
   }
 
+  const setResourceAnswer = (specsKey: string, value: ResourceAnswerValue) => {
+    if (!currentResourceStep) return
+    const key = stepKey(currentResourceStep)
+    setResourceAnswers(prev => {
+      const next = new Map(prev)
+      const existing = next.get(key) ?? {}
+      if (value === undefined || value === '') {
+        const updated = { ...existing }
+        delete updated[specsKey]
+        if (Object.keys(updated).length === 0) next.delete(key)
+        else next.set(key, updated)
+      } else {
+        next.set(key, { ...existing, [specsKey]: value })
+      }
+      return next
+    })
+  }
+
+  // ─── Submit ─────────────────────────────────────────────────────────────────
+
   const handleSubmit = useCallback(async () => {
     setSubmitting(true)
     try {
-      // Group answers by sectionKey, deep-merge into existing section data
+      // Save app survey answers → project sections
       const sectionUpdates = new Map<keyof Project, Record<string, unknown>>()
-
       for (const [fieldId, value] of answers.entries()) {
         const def = getFieldById(fieldId)
         if (!def) continue
@@ -545,39 +680,69 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
         }
         sectionUpdates.set(sectionKey, current)
       }
-
       for (const [sectionKey, merged] of sectionUpdates.entries()) {
         const safeMerged = ensureRequiredArrayFields(sectionKey, merged, project)
         await onSave(sectionKey, safeMerged as unknown as Project[typeof sectionKey])
+      }
+
+      // Save resource survey answers → resource.specs
+      if (resourceAnswers.size > 0) {
+        const specsUpdates: { resourceId: string; specs: Record<string, unknown> }[] = []
+        for (const [key, answers] of resourceAnswers.entries()) {
+          if (Object.keys(answers).length === 0) continue
+          if (key.startsWith('category:')) {
+            const cat = key.slice('category:'.length) as ResourceCategory
+            const matching = resources.filter(r => getCategoryForProduct?.(r.product) === cat)
+            matching.forEach(r => specsUpdates.push({ resourceId: r.id, specs: answers as Record<string, unknown> }))
+          } else if (key.startsWith('product:')) {
+            const prod = key.slice('product:'.length)
+            const matching = resources.filter(r => r.product === prod)
+            matching.forEach(r => specsUpdates.push({ resourceId: r.id, specs: answers as Record<string, unknown> }))
+          } else if (key.startsWith('resource:')) {
+            const rid = key.slice('resource:'.length)
+            specsUpdates.push({ resourceId: rid, specs: answers as Record<string, unknown> })
+          }
+        }
+
+        if (specsUpdates.length > 0) {
+          // Merge updates per resourceId (multiple steps may contribute different keys)
+          const mergedSpecs = new Map<string, Record<string, unknown>>()
+          for (const { resourceId, specs } of specsUpdates) {
+            mergedSpecs.set(resourceId, { ...(mergedSpecs.get(resourceId) ?? {}), ...specs })
+          }
+          // Route through onSave so saveSection → classifyResourceEvents → audit log fires
+          const updatedResources = resources.map(r => {
+            const patch = mergedSpecs.get(r.id)
+            return patch ? { ...r, specs: { ...(r.specs ?? {}), ...patch } } : r
+          })
+          await onSave('currentInfrastructure', {
+            ...(project.currentInfrastructure ?? {}),
+            resources: updatedResources,
+          } as Project['currentInfrastructure'])
+        }
       }
 
       setCompleted(true)
     } finally {
       setSubmitting(false)
     }
-  }, [answers, project, onSave])
+  }, [answers, resourceAnswers, project, onSave, resources, getCategoryForProduct])
 
   const goNext = useCallback(() => {
-    if (isLast) {
-      void handleSubmit()
-    } else {
-      setCurrentIndex(i => i + 1)
-    }
+    if (isLast) void handleSubmit()
+    else setCurrentIndex(i => i + 1)
   }, [isLast, handleSubmit])
 
   const goBack = () => setCurrentIndex(i => Math.max(0, i - 1))
 
   const skip = () => {
-    if (isLast) {
-      void handleSubmit()
-    } else {
-      setCurrentIndex(i => i + 1)
-    }
+    if (isLast) void handleSubmit()
+    else setCurrentIndex(i => i + 1)
   }
 
-  // Keyboard: Enter to advance
+  // Keyboard: Enter to advance (only on app question steps and transition slide)
   useEffect(() => {
-    if (!open || completed || submitting) return
+    if (!open || completed || submitting || (!isMainStep && !isTransitionSlide)) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         const tag = (e.target as HTMLElement).tagName
@@ -590,22 +755,19 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, completed, submitting, canAdvance, goNext])
+  }, [open, completed, submitting, canAdvance, goNext, isMainStep])
 
   if (!open) return null
 
-  const progress = orderedQuestions.length > 0
-    ? Math.round(((currentIndex + (completed ? 1 : 0)) / orderedQuestions.length) * 100)
+  const progress = totalSteps > 0
+    ? Math.round(((currentIndex + (completed ? 1 : 0)) / totalSteps) * 100)
     : 100
 
   return (
     <div className="fixed inset-0 z-[300] flex flex-col bg-background">
       {/* Progress bar */}
       <div className="h-1 bg-muted w-full shrink-0">
-        <div
-          className="h-full bg-primary transition-all duration-300"
-          style={{ width: `${progress}%` }}
-        />
+        <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
       </div>
 
       {/* Header */}
@@ -615,15 +777,12 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
           <span className="font-semibold text-sm">{project.name} — Survey</span>
         </div>
         <div className="flex items-center gap-4">
-          {!completed && (
+          {!completed && !isTransitionSlide && (
             <span className="text-sm text-muted-foreground">
-              {currentIndex + 1} / {orderedQuestions.length}
+              {currentIndex + 1} / {totalSteps}
             </span>
           )}
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -642,14 +801,12 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
                 Your answers have been saved to the project record. You can always update them by
                 editing the individual sections or running the survey again.
               </p>
-              <Button onClick={onClose} size="lg" className="mt-4 px-10">
-                Close
-              </Button>
+              <Button onClick={onClose} size="lg" className="mt-4 px-10">Close</Button>
             </div>
+
           ) : currentQuestion ? (
-            /* Question screen */
+            /* App question screen */
             <div className="space-y-8">
-              {/* Section badge */}
               {(() => {
                 const def = getFieldById(currentQuestion.fieldId)
                 if (!def) return null
@@ -659,30 +816,136 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
                   </span>
                 )
               })()}
-
-              {/* Question text */}
               <div className="space-y-2">
                 <h2 className="text-2xl font-semibold leading-snug">
                   {currentQuestion.questionText}
-                  {currentQuestion.required && (
-                    <span className="text-destructive ml-1 text-sm align-super">*</span>
-                  )}
+                  {currentQuestion.required && <span className="text-destructive ml-1 text-sm align-super">*</span>}
                 </h2>
                 {currentQuestion.hintText && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {currentQuestion.hintText}
-                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{currentQuestion.hintText}</p>
+                )}
+              </div>
+              <QuestionInput question={currentQuestion} value={currentAnswer} onChange={setAnswer} autoFocus getFieldById={getFieldById} />
+            </div>
+
+          ) : isTransitionSlide ? (
+            /* Transition slide — shown once between app questions and resource steps */
+            <div className="text-center space-y-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mx-auto">
+                <Server size={32} className="text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold">Cloud Resource Questions</h2>
+                <p className="text-muted-foreground leading-relaxed max-w-md mx-auto">
+                  You've completed the application survey. We now have a few questions
+                  about your specific cloud resources.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted text-sm text-muted-foreground">
+                <Server size={13} />
+                {(() => {
+                  const uniqueResources = new Set(resourceSteps.flatMap(s =>
+                    s.kind === 'resource' ? [s.resource.id] : s.matchingResources.map(r => r.id)
+                  ))
+                  return `${uniqueResources.size} resource${uniqueResources.size !== 1 ? 's' : ''} · ${resourceSteps.length} step${resourceSteps.length !== 1 ? 's' : ''}`
+                })()}
+              </div>
+            </div>
+
+          ) : currentResourceStep ? (
+            /* Resource step screen */
+            <div className="space-y-8">
+              {/* Resource step badge */}
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                  <Server size={11} />
+                  {currentResourceStep.kind === 'resource'
+                    ? 'Resource Questions'
+                    : currentResourceStep.kind === 'product'
+                    ? `Product: ${currentResourceStep.product}`
+                    : `Category: ${currentResourceStep.category}`}
+                </span>
+                {currentResourceStep.kind !== 'resource' && (
+                  <span className="text-xs text-muted-foreground">
+                    Applies to {currentResourceStep.matchingResources.length} resource{currentResourceStep.matchingResources.length !== 1 ? 's' : ''}
+                  </span>
                 )}
               </div>
 
-              {/* Input */}
-              <QuestionInput
-                question={currentQuestion}
-                value={currentAnswer}
-                onChange={setAnswer}
-                autoFocus
-                getFieldById={getFieldById}
-              />
+              {/* Collapsible affected resources panel (category/product steps only) */}
+              {currentResourceStep.kind !== 'resource' && (
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+                    onClick={() => setResourceListExpanded(v => !v)}
+                  >
+                    <span>Affected resources ({currentResourceStep.matchingResources.length})</span>
+                    {resourceListExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                  {resourceListExpanded && (
+                    <div className="divide-y divide-border">
+                      {currentResourceStep.matchingResources.map(r => {
+                        const specEntries = Object.entries(r.specs ?? {}).slice(0, 5)
+                        return (
+                          <div key={r.id} className="px-3 py-2 flex flex-col gap-1 bg-muted/20">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-xs font-medium">{r.name}</span>
+                              <span className="text-xs text-muted-foreground font-mono">{r.resourceId ?? r.id}</span>
+                            </div>
+                            {specEntries.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {specEntries.map(([k, v]) => (
+                                  <span key={k} className="inline-flex items-center gap-1 text-xs bg-muted px-1.5 py-0.5 rounded">
+                                    <span className="text-muted-foreground">{k}:</span>
+                                    <span>{String(v)}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">no specs</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Resource name for resource-level steps */}
+              {currentResourceStep.kind === 'resource' && (
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-semibold leading-snug">
+                    {currentResourceStep.resource.name}
+                  </h2>
+                  {currentResourceStep.resource.product && (
+                    <p className="text-sm text-muted-foreground">
+                      {currentResourceStep.resource.product.toUpperCase()} · {currentResourceStep.resource.resourceId ?? currentResourceStep.resource.id}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Questions for this step */}
+              <div className="space-y-8">
+                {currentResourceStep.questions.map(q => (
+                  <div key={q.id} className="space-y-3">
+                    <div className="space-y-1">
+                      <p className="text-lg font-semibold leading-snug">
+                        {q.label}
+                        {q.required && <span className="text-destructive ml-1 text-sm align-super">*</span>}
+                      </p>
+                      {q.hintText && <p className="text-sm text-muted-foreground">{q.hintText}</p>}
+                    </div>
+                    <ResourceQuestionInput
+                      questionDef={q}
+                      value={currentResourceStepAnswers[q.specsKey] as ResourceAnswerValue}
+                      onChange={(v) => setResourceAnswer(q.specsKey, v)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -692,38 +955,19 @@ export function SurveyModal({ open, onClose, surveyConfig, project, onSave }: Su
       {/* Footer navigation */}
       {!completed && (
         <div className="flex items-center justify-between px-6 py-4 border-t shrink-0">
-          <Button
-            variant="ghost"
-            onClick={goBack}
-            disabled={currentIndex === 0}
-            className="gap-1.5"
-          >
-            <ChevronLeft size={16} />
-            Back
+          <Button variant="ghost" onClick={goBack} disabled={currentIndex === 0} className="gap-1.5">
+            <ChevronLeft size={16} /> Back
           </Button>
 
           <div className="flex items-center gap-2">
-            {currentQuestion && !currentQuestion.required && (
-              <Button
-                variant="ghost"
-                onClick={skip}
-                className="text-muted-foreground text-sm"
-              >
+            {/* Skip button: only for optional app questions */}
+            {isMainStep && currentQuestion && !currentQuestion.required && (
+              <Button variant="ghost" onClick={skip} className="text-muted-foreground text-sm">
                 Skip
               </Button>
             )}
-            <Button
-              onClick={goNext}
-              disabled={!canAdvance || submitting}
-              className="gap-1.5 min-w-[100px]"
-            >
-              {submitting ? (
-                'Saving…'
-              ) : isLast ? (
-                'Submit'
-              ) : (
-                <>Next <ChevronRight size={16} /></>
-              )}
+            <Button onClick={goNext} disabled={!canAdvance || submitting} className="gap-1.5 min-w-[100px]">
+              {submitting ? 'Saving…' : isLast ? 'Submit' : <>Next <ChevronRight size={16} /></>}
             </Button>
           </div>
         </div>

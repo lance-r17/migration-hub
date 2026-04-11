@@ -9,6 +9,7 @@ import {
   mockWaves,
   mockProductCategoryMap,
   mockSurveyConfig,
+  mockResourceSurveyConfig,
   mockBillingExisting,
   mockBillingTarget,
   mockEmbargos,
@@ -16,7 +17,7 @@ import {
 import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave, JiraJobRequest } from '@/types/wave'
-import type { SurveyConfig } from '@/types/survey'
+import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
 import type { BillingRecord } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
 
@@ -31,6 +32,7 @@ let _billingTarget: Record<string, BillingRecord[]>   = structuredClone(mockBill
 let _jiraJobs: JiraJobRequest[] = []
 let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntries)
 let _surveyConfig: SurveyConfig | null = structuredClone(mockSurveyConfig)
+let _resourceSurveyConfig: ResourceSurveyConfig = structuredClone(mockResourceSurveyConfig)
 let _embargos: EmbargoRecord[] = structuredClone(mockEmbargos)
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
@@ -143,6 +145,37 @@ export const store = {
   setSurveyConfig(config: SurveyConfig): SurveyConfig {
     _surveyConfig = config
     return _surveyConfig
+  },
+
+  // ─── Resource Survey Config ────────────────────────────────────────────────
+
+  getResourceSurveyConfig(): ResourceSurveyConfig {
+    return _resourceSurveyConfig
+  },
+
+  setResourceSurveyConfig(config: ResourceSurveyConfig): ResourceSurveyConfig {
+    _resourceSurveyConfig = config
+    return _resourceSurveyConfig
+  },
+
+  batchUpdateResourceSpecs(
+    projectId: string,
+    updates: { resourceId: string; specs: Record<string, unknown> }[]
+  ): Project {
+    const project = this.getProject(projectId)
+    if (!project) throw new Error(`Project not found: ${projectId}`)
+    const resources = [...(project.currentInfrastructure?.resources ?? [])]
+    for (const { resourceId, specs } of updates) {
+      const idx = resources.findIndex(r => r.id === resourceId)
+      if (idx !== -1) {
+        resources[idx] = {
+          ...resources[idx]!,
+          specs: { ...(resources[idx]!.specs ?? {}), ...specs },
+        }
+      }
+    }
+    const updatedInfra = { ...(project.currentInfrastructure ?? {}), resources }
+    return this.updateProject(projectId, 'currentInfrastructure', updatedInfra as Project['currentInfrastructure'])
   },
 
   // ─── Embargos ──────────────────────────────────────────────────────────────

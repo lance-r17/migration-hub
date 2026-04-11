@@ -1,0 +1,35 @@
+wing: migration_hub
+rooms:
+- name: frontend
+  description: Files from frontend/
+  keywords:
+  - frontend
+  - frontend
+- name: agent_os
+  description: Files from agent-os/
+  keywords:
+  - agent_os
+  - agent-os
+- name: email_server
+  description: Files from email-server/
+  keywords:
+  - email_server
+  - email-server
+- name: documentation
+  description: Files from docs/
+  keywords:
+  - documentation
+  - docs
+- name: planning
+  description: Files from specs/
+  keywords:
+  - planning
+  - specs
+- name: backend
+  description: Files from backend/
+  keywords:
+  - backend
+  - backend
+- name: general
+  description: Files that don't fit other rooms
+  keywords: []

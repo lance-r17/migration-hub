@@ -19,7 +19,8 @@ import { AuditLogDrawer } from '@/components/drawers/AuditLogDrawer'
 import { AssignWaveDrawer } from '@/components/drawers/AssignWaveDrawer'
 import { SurveyModal } from '@/components/survey/SurveyModal'
 import { EmbargoBanner } from '@/components/project/EmbargoBanner'
-import { useSurveyConfig } from '@/hooks/use-survey'
+import { useSurveyConfig, useResourceSurveyConfig } from '@/hooks/use-survey'
+import { useProductCategoryMap } from '@/hooks/use-product-category'
 import { useEmbargos } from '@/hooks/use-embargos'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -45,6 +46,8 @@ export function ProjectDetailsPage() {
   const { project, loading, saveSection, refreshProject } = useProject(id)
   const { waves } = useWaves()
   const { surveyConfig } = useSurveyConfig()
+  const { resourceSurveyConfig } = useResourceSurveyConfig()
+  const { getCategoryForProduct } = useProductCategoryMap()
   const { embargos } = useEmbargos()
   const [modalOpen, setModalOpen] = useState(false)
   const [auditLogOpen, setAuditLogOpen] = useState(false)
@@ -384,6 +387,8 @@ export function ProjectDetailsPage() {
           surveyConfig={surveyConfig}
           project={project}
           onSave={handleSave}
+          resourceSurveyConfig={resourceSurveyConfig ?? undefined}
+          getCategoryForProduct={getCategoryForProduct}
         />
       )}
     </AppShell>

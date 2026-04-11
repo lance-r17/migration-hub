@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getSurveyConfig, saveSurveyConfig, getSurveyFieldDefs } from '@/services/surveyService'
-import type { SurveyConfig, SurveyFieldDef } from '@/types/survey'
+import { getSurveyConfig, saveSurveyConfig, getSurveyFieldDefs, getResourceSurveyConfig, saveResourceSurveyConfig } from '@/services/surveyService'
+import type { SurveyConfig, SurveyFieldDef, ResourceSurveyConfig } from '@/types/survey'
 
 export function useSurveyConfig() {
   const [surveyConfig, setSurveyConfig] = useState<SurveyConfig | null>(null)
@@ -59,4 +59,31 @@ export function useSurveyFieldDefs() {
   }, [fieldDefs])
 
   return { fieldDefs, loading, getFieldById, getFieldsBySection }
+}
+
+export function useResourceSurveyConfig() {
+  const [resourceSurveyConfig, setResourceSurveyConfig] = useState<ResourceSurveyConfig | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    getResourceSurveyConfig().then(cfg => {
+      if (!cancelled) { setResourceSurveyConfig(cfg); setLoading(false) }
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  const save = useCallback(async (config: ResourceSurveyConfig) => {
+    setSaving(true)
+    try {
+      const saved = await saveResourceSurveyConfig(config)
+      setResourceSurveyConfig(saved)
+      return saved
+    } finally {
+      setSaving(false)
+    }
+  }, [])
+
+  return { resourceSurveyConfig, loading, saving, save }
 }
