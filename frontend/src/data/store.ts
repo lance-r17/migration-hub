@@ -18,7 +18,7 @@ import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave, JiraJobRequest } from '@/types/wave'
 import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
-import type { BillingRecord } from '@/types/finance'
+import type { BillingRecord, BillingThresholdConfig } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
 
 // Mutable in-memory session store — deep copy of mock data.
@@ -34,6 +34,7 @@ let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntri
 let _surveyConfig: SurveyConfig | null = structuredClone(mockSurveyConfig)
 let _resourceSurveyConfig: ResourceSurveyConfig = structuredClone(mockResourceSurveyConfig)
 let _embargos: EmbargoRecord[] = structuredClone(mockEmbargos)
+let _billingThresholdConfig: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120 }
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
@@ -220,6 +221,15 @@ export const store = {
   setBillingRecords(month: string, env: 'existing' | 'target', records: BillingRecord[]): void {
     if (env === 'existing') _billingExisting[month] = records
     else _billingTarget[month] = records
+  },
+
+  getBillingThresholdConfig(): BillingThresholdConfig {
+    return _billingThresholdConfig
+  },
+
+  setBillingThresholdConfig(config: BillingThresholdConfig): BillingThresholdConfig {
+    _billingThresholdConfig = { ...config }
+    return _billingThresholdConfig
   },
 
   // ─── Product-Category Map ──────────────────────────────────────────────────

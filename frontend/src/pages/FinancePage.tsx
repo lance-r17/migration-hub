@@ -28,8 +28,15 @@ import {
   getBillingRecords,
   uploadBillingRecords,
 } from '@/services/billing'
+import { getBillingThresholdConfig } from '@/services/billingConfig'
 import { cn } from '@/lib/utils'
-import type { BillingRecord } from '@/types/finance'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import type { BillingRecord, BillingThresholdConfig } from '@/types/finance'
 import type { Project } from '@/types'
 
 // ─── CSV Parsing ──────────────────────────────────────────────────────────────
@@ -52,14 +59,14 @@ function parseCSV(text: string): BillingRecord[] {
 
 // ─── Ratio Badge ─────────────────────────────────────────────────────────────
 
-function RatioBadge({ ratio }: { ratio: number | null }) {
+function RatioBadge({ ratio, thresholds }: { ratio: number | null; thresholds: BillingThresholdConfig }) {
   if (ratio === null) return <span className="text-muted-foreground/40">—</span>
 
   const pct = `${ratio.toFixed(1)}%`
   const className =
-    ratio < 100
+    ratio < thresholds.healthyAtRiskThreshold
       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-      : ratio <= 120
+      : ratio <= thresholds.atRiskOverThreshold
       ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
       : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
 
@@ -92,18 +99,22 @@ function formatMonth(yyyyMM: string): string {
 
 type RatioStatus = 'under' | 'at-risk' | 'over' | 'no-data'
 
-function getStatus(ratio: number | null): RatioStatus {
+function getStatus(ratio: number | null, thresholds: BillingThresholdConfig): RatioStatus {
   if (ratio === null) return 'no-data'
-  if (ratio < 100)   return 'under'
-  if (ratio <= 120)  return 'at-risk'
+  if (ratio < thresholds.healthyAtRiskThreshold)   return 'under'
+  if (ratio <= thresholds.atRiskOverThreshold)     return 'at-risk'
   return 'over'
 }
 
-const RATIO_STATUS_CONFIG: Record<RatioStatus, { label: string; activeClass: string }> = {
-  'under':   { label: 'Healthy', activeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700' },
-  'at-risk': { label: 'At Risk', activeClass: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700' },
-  'over':    { label: 'Over',    activeClass: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700' },
-  'no-data': { label: 'No Data', activeClass: 'bg-muted text-muted-foreground border-border' },
+const RATIO_STATUS_CONFIG: Record<RatioStatus, {
+  label: string
+  activeClass: string
+  tooltipFn: (t: BillingThresholdConfig) => string
+}> = {
+  'under':   { label: 'Healthy', activeClass: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700', tooltipFn: (t) => `Ratio < ${t.healthyAtRiskThreshold}%` },
+  'at-risk': { label: 'At Risk', activeClass: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700',             tooltipFn: (t) => `${t.healthyAtRiskThreshold}% ≤ Ratio ≤ ${t.atRiskOverThreshold}%` },
+  'over':    { label: 'Over',    activeClass: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700',                           tooltipFn: (t) => `Ratio > ${t.atRiskOverThreshold}%` },
+  'no-data': { label: 'No Data', activeClass: 'bg-muted text-muted-foreground border-border',                                                                               tooltipFn: () => 'No data for one or both environments' },
 }
 
 // ─── Upload Card ─────────────────────────────────────────────────────────────
@@ -227,6 +238,8 @@ export function FinancePage() {
   const [nameFilter, setNameFilter]     = useState('')
   const [statusFilter, setStatusFilter] = useState<Set<RatioStatus>>(new Set())
 
+  const [thresholds, setThresholds] = useState<BillingThresholdConfig>({ healthyAtRiskThreshold: 100, atRiskOverThreshold: 120 })
+
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedResourceSet, setSelectedResourceSet] = useState<string>('')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
@@ -250,6 +263,11 @@ export function FinancePage() {
   }, [selectedMonth])
 
   useEffect(() => { void refreshMonths() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load billing thresholds ─────────────────────────────────────────────────
+  useEffect(() => {
+    getBillingThresholdConfig().then(setThresholds).catch(() => { /* keep defaults */ })
+  }, [])
 
   // ── Fetch records for the selected month ────────────────────────────────────
   useEffect(() => {
@@ -327,14 +345,14 @@ export function FinancePage() {
           return { resourceSet: rs, projectId: project.id, existingAmount, targetAmount, ratio }
         })
         .filter(r => nameFilter === '' || r.resourceSet.toLowerCase().includes(nameFilter.toLowerCase()))
-        .filter(r => statusFilter.size === 0 || statusFilter.has(getStatus(r.ratio)))
+        .filter(r => statusFilter.size === 0 || statusFilter.has(getStatus(r.ratio, thresholds)))
 
       if (rows.length > 0) {
         groups.push({ projectId: project.id, projectName: project.name, rows })
       }
     }
     return groups
-  }, [projects, existingRecords, targetRecords, nameFilter, statusFilter])
+  }, [projects, existingRecords, targetRecords, nameFilter, statusFilter, thresholds])
 
   // ── Row click → open comparison drawer ─────────────────────────────────────
   const handleRowClick = (row: ComparisonRow) => {
@@ -450,31 +468,37 @@ export function FinancePage() {
               </div>
               <div className="h-5 w-px bg-border mx-2" />
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Ratio:</span>
-              <div className="flex items-center gap-1.5">
-                {(Object.entries(RATIO_STATUS_CONFIG) as [RatioStatus, typeof RATIO_STATUS_CONFIG[RatioStatus]][]).map(([status, cfg]) => {
-                  const active = statusFilter.has(status)
-                  return (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        setStatusFilter(prev => {
-                          const next = new Set(prev)
-                          active ? next.delete(status) : next.add(status)
-                          return next
-                        })
-                      }}
-                      className={cn(
-                        'inline-flex items-center px-2 py-0.5 rounded border text-xs font-semibold transition-colors',
-                        active
-                          ? cn(cfg.activeClass, 'ring-1 ring-offset-1 ring-current')
-                          : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted',
-                      )}
-                    >
-                      {cfg.label}
-                    </button>
-                  )
-                })}
-              </div>
+              <TooltipProvider>
+                <div className="flex items-center gap-1.5">
+                  {(Object.entries(RATIO_STATUS_CONFIG) as [RatioStatus, typeof RATIO_STATUS_CONFIG[RatioStatus]][]).map(([status, cfg]) => {
+                    const active = statusFilter.has(status)
+                    return (
+                      <Tooltip key={status}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => {
+                              setStatusFilter(prev => {
+                                const next = new Set(prev)
+                                active ? next.delete(status) : next.add(status)
+                                return next
+                              })
+                            }}
+                            className={cn(
+                              'inline-flex items-center px-2 py-0.5 rounded border text-xs font-semibold transition-colors',
+                              active
+                                ? cn(cfg.activeClass, 'ring-1 ring-offset-1 ring-current')
+                                : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted',
+                            )}
+                          >
+                            {cfg.label}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>{cfg.tooltipFn(thresholds)}</TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+                </div>
+              </TooltipProvider>
               {(nameFilter !== '' || statusFilter.size > 0) && (
                 <button
                   onClick={() => { setNameFilter(''); setStatusFilter(new Set()) }}
@@ -534,7 +558,7 @@ export function FinancePage() {
                                   : <span className="text-muted-foreground/40">—</span>}
                               </TableCell>
                               <TableCell className="text-center">
-                                <RatioBadge ratio={row.ratio} />
+                                <RatioBadge ratio={row.ratio} thresholds={thresholds} />
                               </TableCell>
                             </TableRow>
                           ))}

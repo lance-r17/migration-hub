@@ -11,3 +11,6 @@ if [ -d "$BACKUP_DIR" ]; then
 else
   echo "No ~/.claude backup found in workspace — skipping restore."
 fi
+
+echo "Installing mempalace..."
+python3 -m pip install mempalace --break-system-packages

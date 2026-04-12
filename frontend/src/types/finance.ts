@@ -8,3 +8,8 @@ export interface BillingUpload {
   env: 'existing' | 'target'
   records: BillingRecord[]
 }
+
+export interface BillingThresholdConfig {
+  healthyAtRiskThreshold: number  // ratio below this = "Healthy"; default 100
+  atRiskOverThreshold: number     // ratio above this = "Over"; default 120
+}

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ClipboardList, Settings2, ShieldAlert } from 'lucide-react'
+import { ClipboardList, DollarSign, Settings2, ShieldAlert } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const SETTINGS_SECTIONS = [
@@ -14,6 +14,12 @@ const SETTINGS_SECTIONS = [
     description: 'Define change freeze windows that restrict migration activities for specific service lines.',
     icon: <ShieldAlert size={20} className="text-primary" />,
     href: '/settings/embargo',
+  },
+  {
+    title: 'Billing Configuration',
+    description: 'Adjust the ratio thresholds that classify resource sets as Healthy, At Risk, or Over budget.',
+    icon: <DollarSign size={20} className="text-primary" />,
+    href: '/settings/billing',
   },
 ]
 
