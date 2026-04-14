@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { Zap, ShieldAlert } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
-import { cn } from '@/lib/utils'
 import { RecoveryTargetsDrawer } from '@/components/drawers/RecoveryTargetsDrawer'
-import { AZResilienceDrawer } from '@/components/drawers/AZResilienceDrawer'
 import type { AvailabilityResilience } from '@/types'
 
 interface AvailabilityResilienceSectionProps {
@@ -21,7 +19,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export function AvailabilityResilienceSection({ data, onSave }: AvailabilityResilienceSectionProps) {
-  const [editingCard, setEditingCard] = useState<'recovery' | 'az' | null>(null)
+  const [editingCard, setEditingCard] = useState<'recovery' | null>(null)
 
   return (
     <div>
@@ -41,20 +39,6 @@ export function AvailabilityResilienceSection({ data, onSave }: AvailabilityResi
             <div>
               <Row label="RTO">{data.rto}</Row>
               <Row label="RPO">{data.rpo}</Row>
-              <Row label="Availability SLA">{data.availabilitySla}</Row>
-              {data.currentAzPattern && <Row label="Current AZ Pattern">{data.currentAzPattern}</Row>}
-              {data.azAwareToday != null && (
-                <Row label="AZ-Aware Today?">
-                  <span className={cn(
-                    'text-xs font-bold px-2 py-0.5 rounded',
-                    data.azAwareToday
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                  )}>
-                    {data.azAwareToday ? 'Yes' : 'No'}
-                  </span>
-                </Row>
-              )}
             </div>
           )}
         </SectionCard>
@@ -65,18 +49,12 @@ export function AvailabilityResilienceSection({ data, onSave }: AvailabilityResi
           title="AZ Resilience"
           iconBg="bg-secondary"
           iconColor="text-secondary-foreground"
-          onEdit={onSave ? () => setEditingCard('az') : undefined}
+          onEdit={onSave ? () => setEditingCard('recovery') : undefined}
         >
           {!data ? (
             <p className="text-sm text-muted-foreground">No availability information added yet.</p>
           ) : (
             <div className="space-y-4">
-              {data.azFailureBehaviour && (
-                <div className="pb-4 border-b border-border">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">AZ Failure Behaviour</p>
-                  <p className="text-sm text-foreground leading-relaxed">{data.azFailureBehaviour}</p>
-                </div>
-              )}
               {data.azReadiness3Az && (
                 <div className="pb-4 border-b border-border">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">3AZ Readiness</p>
@@ -93,34 +71,18 @@ export function AvailabilityResilienceSection({ data, onSave }: AvailabilityResi
                   </div>
                 </div>
               )}
-              {data.currentTopologyDescription && (
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">Current 2AZ Topology</p>
-                  <div className="p-3 bg-muted/50 rounded text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                    {data.currentTopologyDescription}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </SectionCard>
       </div>
 
       {onSave && (
-        <>
-          <RecoveryTargetsDrawer
-            open={editingCard === 'recovery'}
-            onOpenChange={(o) => !o && setEditingCard(null)}
-            data={data}
-            onSave={(updated) => { onSave(updated); setEditingCard(null) }}
-          />
-          <AZResilienceDrawer
-            open={editingCard === 'az'}
-            onOpenChange={(o) => !o && setEditingCard(null)}
-            data={data}
-            onSave={(updated) => { onSave(updated); setEditingCard(null) }}
-          />
-        </>
+        <RecoveryTargetsDrawer
+          open={editingCard === 'recovery'}
+          onOpenChange={(o) => !o && setEditingCard(null)}
+          data={data}
+          onSave={(updated) => { onSave(updated); setEditingCard(null) }}
+        />
       )}
     </div>
   )

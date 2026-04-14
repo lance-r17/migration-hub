@@ -287,27 +287,14 @@ export const mockProjects: Project[] = [
           targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
       ],
-      network: {
-        loadBalancerType: 'L7 — F5 BIG-IP (Active/Passive)',
-        vipDnsNames: ['erp.corp.com', 'erp-api.corp.com', '10.20.1.50 (VIP)'],
-        firewallZones: ['DMZ → App tier', 'App tier → DB tier', 'DB tier → Backup zone'],
-        bandwidthRequirements: 'Peak 1.2 Gbps ingress, 400 Mbps egress',
-        hardcodedIps: true,
-        privateConnectivity: 'MPLS dedicated link to legacy mainframe (10 Gbps); must be replicated in target environment.',
-      },
     },
 
     // Section 3
     availability: {
       rto: '4 hours',
       rpo: '1 hour',
-      availabilitySla: '99.99%',
-      currentAzPattern: 'Active-Passive — AZ-A primary, AZ-B standby',
-      azAwareToday: false,
-      azFailureBehaviour: 'Manual failover required. On AZ-A failure, DBA team promotes AZ-B replica and ops team updates DNS VIP. Estimated manual recovery: 45–90 min.',
       azReadiness3Az: 'Oracle RAC quorum is configured for 2 nodes only. Adding a third AZ requires re-architecting quorum to 3-node before migration. Redis Sentinel also assumes 2 nodes.',
       healthCheckEndpoints: ['/health', '/api/status', '/actuator/health'],
-      currentTopologyDescription: 'AZ-A: 2× App servers (active), Oracle DB primary, Redis master, F5 active LB.\nAZ-B: 2× App servers (standby), Oracle DB replica (async), Redis replica, F5 passive LB.',
     },
 
     // Section 4
@@ -315,13 +302,10 @@ export const mockProjects: Project[] = [
       databaseTypes: ['Oracle DB 19c', 'Redis 7'],
       totalDataVolume: '~4.2 TB across all databases',
       dataGrowthRate: '+50 GB / month',
-      replicationTopology: 'Oracle Data Guard — async replication, AZ-A primary → AZ-B replica. Redis Sentinel with 1 master + 1 replica.',
-      backupMethod: 'Oracle RMAN daily full + hourly incremental; stored in AZ-B and offsite tape. Redis AOF + RDB snapshots hourly.',
       backupRequiredDuringMigration: true,
       lastRestoreTest: 'https://brett.corp.com/tests/erp-restore-2026-02-14',
       dataResidency: 'All data must remain within EU-West region. GDPR data subject rights procedures in place.',
       encryptionAtRest: 'AES-256 via Oracle TDE. Redis encrypted at OS level (LUKS). Keys managed by CyberArk.',
-      piiData: true,
       statefulComponents: ['Oracle DB 19c (primary + replica)', 'Redis 7 session store', 'Shared NFS file store (legacy attachments, 800 GB)'],
     },
 
@@ -337,22 +321,12 @@ export const mockProjects: Project[] = [
         { id: 'd5', name: 'BI Reporting Platform', eimId: 'EIM-00428', contactEmail: 'analytics@corp.com', hosting: 'On-Premise', notes: 'Direct DB connection — hardcoded DB host IP in config' },
         { id: 'd6', name: 'Audit Log Aggregator', eimId: 'EIM-00531', contactEmail: 'security-ops@corp.com', hosting: 'AliCloud', notes: '' },
       ],
-      certificatesSecrets: {
-        tlsCertificates: 'erp.corp.com: issued by Internal CA, expires 2026-09-15 (6 months post-migration — flag for renewal). erp-api.corp.com: expires 2026-11-01.',
-        secretsManagement: 'CyberArk — all DB credentials, API keys, and service account passwords managed centrally. Application fetches at startup via CyberArk SDK.',
-        apiKeys: 'Payment Gateway API key is IP-restricted to current AZ-A egress IP (10.20.1.10). Must be updated with new egress IP post-migration.',
-      },
     },
 
     // Section 6
     nfrs: {
       peakLoad: '15,000 TPS, 50k concurrent users; Peak 10:00 AM – 2:00 PM EST.',
       autoscaling: 'Horizontal Pod Autoscaling (HPA) via K8s based on CPU/RAM.',
-      seasonalPatterns: 'Black Friday spikes; Freeze window: Nov 15 – Dec 15.',
-      latencySensitivity: 'Sub-5ms core banking API; AZ round-trip sensitive.',
-      monitoring: 'Datadog & Prometheus; Alerting tied to static IPs — must be reconfigured.',
-      logAggregation: 'Splunk; forwarders need new subnet reconfiguration post-migration.',
-      compliance: ['SOC2', 'GDPR', 'PCI-DSS L1'],
       licensing: 'Oracle DB per-socket; new instance type requires licensing reassessment with Oracle CSM.',
     },
 
@@ -364,25 +338,14 @@ export const mockProjects: Project[] = [
       latestEndDate: '2025-06-30',
       crDurationHours: 6,
       snowCiGroups: ['erp-infra', 'dba-team', 'network-ops'],
-      blackoutDates: [
-        { name: 'Q4 Year-end', from: '2024-12-20', to: '2025-01-05' },
-        { name: 'Audit window', from: '2024-10-15', to: '2024-10-30' },
-      ],
       changeFreezePeriods: [
         { name: 'Org-wide change freeze', from: '2024-12-01', to: '2024-12-19' },
         { name: 'PCI audit prep', from: '2024-09-15', to: '2024-09-30' },
       ],
-      maxCutoverWindow: '4 hours',
-      cutoverApproach: 'Blue-Green deployment with Canary release strategy (10% traffic shift, then full cut).',
-      rollbackPlan: 'DNS VIP switch-back to legacy on-prem F5. Estimated rollback time: 15 minutes. Runbook: Confluence/RUNBOOK-ERP-001.',
-      stakeholderComms: 'Notify: Ops, Customer Support, Finance Leadership, DBA Team. Lead time: 5 business days minimum.',
-      preMigrationTesting: 'Full UAT environment validation, Security/Compliance sign-off, performance baseline comparison, and DBA-approved DB restore test required before cutover approval.',
     },
 
     // Section 8
     targetArchitecture: {
-      summary: 'Implementing Hub-and-Spoke topology with Azure VNet Peering. All traffic routed through NVA for security inspection.',
-      constraints: '- Must maintain connectivity to mainframe during 3-day cutover window.\n- No data can leave the EU-West region.',
       reArchitectureNeeded: true,
       topology3Az: 'AZ-1: 2× App active, Oracle primary. AZ-2: 2× App active, Oracle replica. AZ-3: App standby, Oracle replica (3-node RAC). Traffic balanced across AZ-1 and AZ-2 via Azure Application Gateway.',
       replicationChanges: 'Oracle RAC must be extended from 2-node to 3-node quorum before migration. Redis Sentinel upgraded to 3-node cluster (1 master, 2 replicas). Estimated effort: 3 weeks (DBA team).',
@@ -488,35 +451,22 @@ export const mockProjects: Project[] = [
           targetResourceId: 'tgt-placeholder', syncStatus: 'synced',
         },
       ],
-      network: {
-        loadBalancerType: 'Internal ALB',
-        hardcodedIps: false,
-        bandwidthRequirements: '< 100 Mbps',
-      },
     },
 
     availability: {
       rto: '2 hours',
       rpo: '30 minutes',
-      availabilitySla: '99.5%',
-      currentAzPattern: 'Single-AZ (AZ-A)',
-      azAwareToday: false,
-      azFailureBehaviour: 'Full service outage on AZ failure. Failover handled by redeployment.',
       azReadiness3Az: 'Stateless app layer is 3AZ-ready. Session DB requires replication changes.',
-      currentTopologyDescription: 'Single Node.js instance behind an internal ALB. PostgreSQL on a single RDS instance in AZ-A.',
     },
 
     dataPersistence: {
       databaseTypes: ['PostgreSQL 14'],
       totalDataVolume: '12 GB',
       dataGrowthRate: '~500 MB/month',
-      replicationTopology: 'Single primary, no replicas (pre-migration)',
-      backupMethod: 'RDS automated snapshots to S3 — 7-day retention',
       backupRequiredDuringMigration: false,
       lastRestoreTest: 'https://brett.corp.com/tests/auth-svc-restore-2025-09-10',
       dataResidency: 'Region: ap-southeast-1',
       encryptionAtRest: 'AES-256 via AWS KMS',
-      piiData: true,
       statefulComponents: ['PostgreSQL session store'],
     },
 
@@ -528,21 +478,11 @@ export const mockProjects: Project[] = [
         { id: 'd11', name: 'Internal Dev Portal', eimId: 'EIM-00307', contactEmail: 'platform@company.com', hosting: 'AliCloud', notes: '' },
         { id: 'd12', name: 'CI/CD Pipeline', eimId: 'EIM-00412', contactEmail: 'devops@company.com', hosting: 'AliCloud', notes: 'Service account tokens issued by auth-svc' },
       ],
-      certificatesSecrets: {
-        tlsCertificates: 'Wildcard cert *.company.com — renewed Feb 2026',
-        secretsManagement: 'AWS Secrets Manager',
-        apiKeys: 'JWT signing keys rotated quarterly via Secrets Manager',
-      },
     },
 
     nfrs: {
       peakLoad: '~120 req/s during business hours',
       autoscaling: 'Not configured — single instance pre-migration; ECS service auto-scaling enabled post-migration.',
-      seasonalPatterns: 'Low variance. Slight spike during onboarding cycles (Jan, Sep).',
-      latencySensitivity: '< 200ms p99 for token validation',
-      monitoring: 'CloudWatch metrics + Datadog APM',
-      logAggregation: 'CloudWatch Logs → Splunk',
-      compliance: ['ISO 27001', 'SOC 2'],
       licensing: 'Node.js OSS — no licensing concerns',
     },
 
@@ -553,20 +493,9 @@ export const mockProjects: Project[] = [
       latestEndDate: '2025-07-31',
       crDurationHours: 2,
       snowCiGroups: ['auth-svc', 'platform-eng'],
-      maxCutoverWindow: '2 hours',
-      blackoutDates: [
-        { name: 'Christmas', from: '2025-12-25' },
-        { name: "New Year's Day", from: '2026-01-01' },
-      ],
-      cutoverApproach: 'Blue-green deployment with DNS flip. Old environment kept warm for 48h post-cutover.',
-      rollbackPlan: 'DNS revert to blue environment within 10 minutes.',
-      stakeholderComms: 'IT Ops notified 48h in advance. Maintenance window posted on internal status page.',
-      preMigrationTesting: 'Load test at 150% peak traffic on staging. JWT validation latency verified < 200ms.',
     },
 
     targetArchitecture: {
-      summary: 'Deployed auth-svc across 3 AZs via ECS Fargate. RDS PostgreSQL promoted to Multi-AZ. JWT signing key management migrated to AWS Secrets Manager with automatic rotation.',
-      constraints: 'Must maintain backwards compatibility with existing OAuth2 token format. No client-side changes permitted.',
       reArchitectureNeeded: false,
       topology3Az: 'ECS Fargate service with tasks distributed across AZ-A, AZ-B, AZ-C behind an internal ALB.',
       replicationChanges: 'RDS promoted to Multi-AZ standby replica in AZ-B.',
@@ -647,39 +576,23 @@ export const mockProjects: Project[] = [
           targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
       ],
-      network: {
-        loadBalancerType: 'Anycast routing',
-        bandwidthRequirements: '~2 Gbps peak DNS query traffic',
-        hardcodedIps: true,
-        privateConnectivity: 'Dedicated interconnects to upstream registrars (Level3, Akamai)',
-        vipDnsNames: ['dns1.company.com', 'dns2.company.com', 'ns1.edge.company.com'],
-        firewallZones: ['DMZ-EXTERNAL', 'DNS-MANAGEMENT'],
-      },
     },
 
     availability: {
       rto: '15 minutes',
       rpo: '0 (stateless)',
-      availabilitySla: '99.999%',
-      currentAzPattern: 'Active-Active across 3 AZs per region',
-      azAwareToday: true,
-      azFailureBehaviour: 'Anycast routing automatically bypasses failed AZ. Query traffic rerouted within < 5 seconds.',
       azReadiness3Az: 'Fully 3AZ-capable in APAC. EU region still migrating secondary cluster.',
       healthCheckEndpoints: ['health.dns1.company.com/status', 'health.dns2.company.com/status'],
-      currentTopologyDescription: '12 anycast edge PoPs globally. APAC primary cluster on-prem transitioning to cloud-native Route 53 Resolver. EU secondary cluster still on-prem hardware.',
     },
 
     dataPersistence: {
       databaseTypes: ['Route 53 Hosted Zones', 'Custom zone DB (PostgreSQL 13)'],
       totalDataVolume: '~800 MB zone data',
       dataGrowthRate: '~5 MB/month',
-      replicationTopology: 'Multi-master zone replication across APAC nodes. EU replication lagging — root cause of current blocker.',
-      backupMethod: 'Zone file exports to S3 every 6 hours. Route 53 managed zones have no export required.',
       backupRequiredDuringMigration: false,
       lastRestoreTest: 'https://brett.corp.com/tests/edge-dns-restore-2025-11-15',
       dataResidency: 'Zone data replicated across ap-southeast-1, eu-west-1, us-east-1',
       encryptionAtRest: 'N/A — DNS zone data is public',
-      piiData: false,
       statefulComponents: ['PostgreSQL zone authority DB', 'DNSSEC key store'],
     },
 
@@ -693,21 +606,11 @@ export const mockProjects: Project[] = [
         { id: 'd16', name: 'API Gateway', eimId: 'EIM-00315', contactEmail: 'platform@corp.com', hosting: 'AliCloud', notes: '' },
         { id: 'd17', name: 'VPN Gateway', eimId: 'EIM-00521', contactEmail: 'network-ops@corp.com', hosting: 'On-Premise', notes: 'Split-horizon DNS required' },
       ],
-      certificatesSecrets: {
-        tlsCertificates: 'DNSSEC KSK and ZSK managed via AWS CloudHSM. KSK rollover scheduled Q2 2026.',
-        secretsManagement: 'Registrar API credentials in AWS Secrets Manager',
-        apiKeys: 'Route 53 API keys scoped per region — rotated every 90 days',
-      },
     },
 
     nfrs: {
       peakLoad: '~850,000 queries/sec globally',
       autoscaling: 'Route 53 scales automatically. Edge nodes auto-scale via instance groups.',
-      seasonalPatterns: 'Traffic spikes during major product launches and Black Friday (~3× baseline).',
-      latencySensitivity: '< 10ms p99 globally for cached responses. < 50ms for authoritative resolution.',
-      monitoring: 'Route 53 Health Checks + Datadog DNS monitoring + PagerDuty on-call',
-      logAggregation: 'DNS query logs → CloudWatch Logs → S3 archival',
-      compliance: ['ISO 27001', 'ICANN Compliance', 'GDPR (query log retention)'],
       licensing: 'Route 53 pay-per-query. Custom zone DB on PostgreSQL OSS.',
     },
 
@@ -718,25 +621,13 @@ export const mockProjects: Project[] = [
       latestEndDate: '2026-02-28',
       crDurationHours: 1,
       snowCiGroups: ['network-ops', 'sre', 'dns-team'],
-      maxCutoverWindow: '45 minutes per region (TTL drain period)',
-      blackoutDates: [
-        { name: 'Black Friday', from: '2025-11-29' },
-        { name: 'Christmas', from: '2025-12-25' },
-        { name: "New Year's Day", from: '2026-01-01' },
-      ],
       changeFreezePeriods: [
         { name: 'Shopping season', from: '2025-11-25', to: '2025-12-01' },
         { name: 'Holiday freeze', from: '2025-12-20', to: '2026-01-05' },
       ],
-      cutoverApproach: 'TTL pre-lowering to 60s, region-by-region NS record delegation swap. Each region validated before proceeding to next.',
-      rollbackPlan: 'Re-delegate NS records to legacy nameservers. TTL already lowered so propagation takes < 2 minutes.',
-      stakeholderComms: 'Network Ops, SRE, and CDN provider notified per-region. External status page updated for each cutover window.',
-      preMigrationTesting: 'Full query validation suite run against shadow Route 53 zones. Propagation tested from 15 global vantage points.',
     },
 
     targetArchitecture: {
-      summary: 'Full migration from on-prem BIND clusters to AWS Route 53 with Anycast edge via CloudFront. DNSSEC maintained end-to-end. EU secondary cluster cutover blocked pending propagation TTL issue resolution.',
-      constraints: 'Zero tolerance for DNS resolution failures. DNSSEC chain of trust must not break at any point during migration. Registrar delegation changes require 24h advance notice.',
       reArchitectureNeeded: true,
       topology3Az: 'Route 53 is inherently multi-AZ. CloudFront edge PoPs cover all 3 AZs per region automatically.',
       replicationChanges: 'Replaced BIND zone transfers with Route 53 API-driven zone management. EU region still on BIND — pending final cutover.',
@@ -967,7 +858,6 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionLabel: 'Migration Constraints',
       changes: [
         { field: 'regularMigrationWindow', label: 'Regular Maintenance Window', oldValue: 'Weekends only', newValue: 'Saturdays 00:00–06:00 UTC' },
-        { field: 'maxCutoverWindow', label: 'Max Cutover Window', oldValue: undefined, newValue: '4 hours' },
       ],
     },
     {
@@ -1048,20 +938,6 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
         { field: 'severity', label: 'Severity', oldValue: undefined, newValue: 'medium' },
       ],
     },
-    {
-      id: 'al-b5',
-      projectId: 'M-11029',
-      timestamp: '2026-03-23T08:30:00.000Z',
-      actor: { id: 'u6', name: 'Eve Davis', initials: 'ED' },
-      eventType: 'section_updated',
-      entityType: 'section',
-      sectionKey: 'nfrs',
-      sectionLabel: 'Non-Functional Requirements',
-      changes: [
-        { field: 'compliance', label: 'Compliance', oldValue: [], newValue: ['ISO 27001', 'SOC 2'] },
-        { field: 'monitoring', label: 'Monitoring', oldValue: 'Basic CloudWatch', newValue: 'Datadog with PagerDuty integration' },
-      ],
-    },
   ],
 
   'M-77122': [
@@ -1076,7 +952,6 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionLabel: 'Data & Persistence',
       changes: [
         { field: 'totalDataVolume', label: 'Total Data Volume', oldValue: undefined, newValue: '8 TB' },
-        { field: 'piiData', label: 'PII Data', oldValue: false, newValue: true },
         { field: 'dataResidency', label: 'Data Residency', oldValue: undefined, newValue: 'EU-West only' },
       ],
     },
@@ -1108,7 +983,6 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionLabel: 'Target Architecture',
       changes: [
         { field: 'reArchitectureNeeded', label: 'Re-Architecture Needed', oldValue: false, newValue: true },
-        { field: 'summary', label: 'Summary', oldValue: 'Lift and shift', newValue: 'Refactor to microservices with event-driven data pipeline' },
       ],
     },
     {
@@ -1124,19 +998,6 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionLabel: 'Current Infrastructure',
       changes: [
         { field: 'syncStatus', label: 'Sync Status', oldValue: 'out-of-sync', newValue: 'synced' },
-      ],
-    },
-    {
-      id: 'al-c5',
-      projectId: 'M-77122',
-      timestamp: '2026-03-23T07:45:00.000Z',
-      actor: { id: 'u12', name: 'Karen Lee', initials: 'KL' },
-      eventType: 'section_updated',
-      entityType: 'section',
-      sectionKey: 'nfrs',
-      sectionLabel: 'Non-Functional Requirements',
-      changes: [
-        { field: 'compliance', label: 'Compliance', oldValue: ['ISO 27001'], newValue: ['ISO 27001', 'GDPR', 'SOC 2 Type II'] },
       ],
     },
   ],

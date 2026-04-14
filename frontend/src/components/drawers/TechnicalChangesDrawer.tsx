@@ -17,12 +17,14 @@ interface Props {
 
 export function TechnicalChangesDrawer({ open, onOpenChange, data, onSave }: Props) {
   const [draft, setDraft] = useState({
+    reArchitectureNeeded: undefined as boolean | undefined,
     topology3Az: '', replicationChanges: '', dnsIpChanges: '', newServicesRequired: [] as string[], architectureDiagram: '',
   })
 
   useEffect(() => {
     if (open) {
       setDraft({
+        reArchitectureNeeded: data?.reArchitectureNeeded,
         topology3Az: data?.topology3Az ?? '',
         replicationChanges: data?.replicationChanges ?? '',
         dnsIpChanges: data?.dnsIpChanges ?? '',
@@ -35,8 +37,7 @@ export function TechnicalChangesDrawer({ open, onOpenChange, data, onSave }: Pro
   function handleSave() {
     onSave({
       ...data,
-      summary: data?.summary ?? '',
-      constraints: data?.constraints ?? '',
+      reArchitectureNeeded: draft.reArchitectureNeeded,
       topology3Az: draft.topology3Az || undefined,
       replicationChanges: draft.replicationChanges || undefined,
       dnsIpChanges: draft.dnsIpChanges || undefined,
@@ -48,6 +49,32 @@ export function TechnicalChangesDrawer({ open, onOpenChange, data, onSave }: Pro
 
   return (
     <SectionEditDrawer open={open} onOpenChange={onOpenChange} title="Edit Technical Changes" onSave={handleSave}>
+      <div className="space-y-1.5">
+        <Label>Re-Architecture Needed?</Label>
+        <div className="flex gap-6">
+          {([true, false] as const).map((val) => (
+            <label key={String(val)} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="reArchitectureNeeded"
+                checked={draft.reArchitectureNeeded === val}
+                onChange={() => setDraft(d => ({ ...d, reArchitectureNeeded: val }))}
+                className="accent-primary"
+              />
+              {val ? 'Yes' : 'No'}
+            </label>
+          ))}
+          {draft.reArchitectureNeeded !== undefined && (
+            <button
+              type="button"
+              onClick={() => setDraft(d => ({ ...d, reArchitectureNeeded: undefined }))}
+              className="text-xs text-muted-foreground hover:text-foreground underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
       <div className="space-y-1.5">
         <Label htmlFor="tc-topo">3-AZ Topology</Label>
         <textarea id="tc-topo" className={textareaClass} value={draft.topology3Az} onChange={(e) => setDraft(d => ({ ...d, topology3Az: e.target.value }))} placeholder="Describe 3-AZ topology changes" />

@@ -29,8 +29,6 @@ export function ScheduleWindowsDrawer({ open, onOpenChange, data, onSave }: Prop
     latestEndDate: '',
     crDurationHours: '',
     snowCiGroups: [] as string[],
-    maxCutoverWindow: '',
-    blackoutDates: [] as DateRangeEntry[],
     changeFreezePeriods: [] as DateRangeEntry[],
   })
 
@@ -43,8 +41,6 @@ export function ScheduleWindowsDrawer({ open, onOpenChange, data, onSave }: Prop
         latestEndDate: data?.latestEndDate ?? '',
         crDurationHours: data?.crDurationHours?.toString() ?? '',
         snowCiGroups: data?.snowCiGroups ?? [],
-        maxCutoverWindow: data?.maxCutoverWindow ?? '',
-        blackoutDates: data?.blackoutDates ?? [],
         changeFreezePeriods: data?.changeFreezePeriods ?? [],
       })
     }
@@ -59,13 +55,7 @@ export function ScheduleWindowsDrawer({ open, onOpenChange, data, onSave }: Prop
       latestEndDate: draft.latestEndDate || undefined,
       crDurationHours: draft.crDurationHours !== '' ? Number(draft.crDurationHours) : undefined,
       snowCiGroups: draft.snowCiGroups.length ? draft.snowCiGroups : undefined,
-      blackoutDates: draft.blackoutDates,
-      maxCutoverWindow: draft.maxCutoverWindow || undefined,
       changeFreezePeriods: draft.changeFreezePeriods.length ? draft.changeFreezePeriods : undefined,
-      cutoverApproach: data?.cutoverApproach ?? '',
-      rollbackPlan: data?.rollbackPlan ?? '',
-      stakeholderComms: data?.stakeholderComms ?? '',
-      preMigrationTesting: data?.preMigrationTesting ?? '',
     })
     onOpenChange(false)
   }
@@ -162,15 +152,6 @@ export function ScheduleWindowsDrawer({ open, onOpenChange, data, onSave }: Prop
         placeholder="Add a CI group"
       />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="sw-max">Max Cutover Window</Label>
-        <Input id="sw-max" value={draft.maxCutoverWindow} onChange={(e) => setDraft(d => ({ ...d, maxCutoverWindow: e.target.value }))} placeholder="e.g. 4 hours" />
-      </div>
-      <DateRangeEntryEditor
-        label="Blackout Dates"
-        values={draft.blackoutDates}
-        onChange={(v) => setDraft(d => ({ ...d, blackoutDates: v }))}
-      />
       <DateRangeEntryEditor
         label="Embargo / Change freeze periods"
         values={draft.changeFreezePeriods}

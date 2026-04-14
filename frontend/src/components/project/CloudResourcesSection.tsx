@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Database, Network, RefreshCw, CheckCircle2, AlertOctagon, Clock, Loader2, CheckCircle, Info } from 'lucide-react'
+import { Database, RefreshCw, CheckCircle2, AlertOctagon, Clock, Loader2, CheckCircle, Info } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { NetworkConfigurationDrawer } from '@/components/drawers/NetworkConfigurationDrawer'
 import { CloudResourceEditDrawer } from '@/components/drawers/CloudResourceEditDrawer'
 import { useProductCategoryMap } from '@/hooks/use-product-category'
 import type { CloudResource, CurrentInfrastructure, ProjectStatus } from '@/types'
@@ -28,7 +27,6 @@ function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
 
 
 export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, jiraJobStatus, jiraStoryKey, jiraBaseUrl }: CurrentInfrastructureSectionProps) {
-  const [networkDrawerOpen, setNetworkDrawerOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
   const [editingResource, setEditingResource] = useState<CloudResource | null>(null)
   const { getCategoryForProduct } = useProductCategoryMap()
@@ -185,80 +183,8 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
           )}
         </SectionCard>
 
-        {/* Card B: Network Configuration — edit button enabled */}
-        <SectionCard
-          icon={Network}
-          title="Network Configuration"
-          iconBg="bg-secondary"
-          iconColor="text-secondary-foreground"
-          onEdit={onSave ? () => setNetworkDrawerOpen(true) : undefined}
-        >
-          {!data?.network ? (
-            <p className="text-sm text-muted-foreground">No network configuration documented yet.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-0">
-              {data.network.loadBalancerType && (
-                <div className="flex justify-between items-start gap-4 py-2.5 border-b border-border">
-                  <span className="text-sm text-muted-foreground shrink-0">Load Balancer Type</span>
-                  <span className="text-sm font-medium text-foreground text-right">{data.network.loadBalancerType}</span>
-                </div>
-              )}
-              {data.network.bandwidthRequirements && (
-                <div className="flex justify-between items-start gap-4 py-2.5 border-b border-border">
-                  <span className="text-sm text-muted-foreground shrink-0">Bandwidth</span>
-                  <span className="text-sm font-medium text-foreground text-right">{data.network.bandwidthRequirements}</span>
-                </div>
-              )}
-              {data.network.hardcodedIps != null && (
-                <div className="flex justify-between items-start gap-4 py-2.5 border-b border-border">
-                  <span className="text-sm text-muted-foreground shrink-0">Hardcoded IPs?</span>
-                  <span className={cn(
-                    'text-xs font-bold px-2 py-0.5 rounded',
-                    data.network.hardcodedIps ? 'bg-destructive/15 text-destructive' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                  )}>
-                    {data.network.hardcodedIps ? 'Yes' : 'No'}
-                  </span>
-                </div>
-              )}
-              {data.network.privateConnectivity && (
-                <div className="flex justify-between items-start gap-4 py-2.5 border-b border-border">
-                  <span className="text-sm text-muted-foreground shrink-0">Private Connectivity</span>
-                  <span className="text-sm font-medium text-foreground text-right max-w-xs">{data.network.privateConnectivity}</span>
-                </div>
-              )}
-              {data.network.vipDnsNames?.length && (
-                <div className="flex justify-between items-start gap-4 py-2.5 border-b border-border md:col-span-2">
-                  <span className="text-sm text-muted-foreground shrink-0">VIP / DNS Names</span>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    {data.network.vipDnsNames.map(v => (
-                      <span key={v} className="px-1.5 py-0.5 bg-muted text-xs font-mono rounded">{v}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {data.network.firewallZones?.length && (
-                <div className="flex justify-between items-start gap-4 py-2.5 md:col-span-2">
-                  <span className="text-sm text-muted-foreground shrink-0">Firewall Zones</span>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    {data.network.firewallZones.map(z => (
-                      <span key={z} className="px-1.5 py-0.5 bg-muted text-xs rounded">{z}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </SectionCard>
       </div>
 
-      {onSave && (
-        <NetworkConfigurationDrawer
-          open={networkDrawerOpen}
-          onOpenChange={(o) => !o && setNetworkDrawerOpen(false)}
-          data={data}
-          onSave={(updated) => { onSave(updated); setNetworkDrawerOpen(false) }}
-        />
-      )}
       {onSave && (
         <CloudResourceEditDrawer
           open={!!editingResource}

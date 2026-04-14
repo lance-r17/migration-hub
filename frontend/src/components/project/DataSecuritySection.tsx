@@ -50,8 +50,6 @@ export function DataPersistenceSection({ data, onSave }: DataPersistenceSectionP
               )}
               {data.totalDataVolume && <Row label="Total Data Volume">{data.totalDataVolume}</Row>}
               {data.dataGrowthRate && <Row label="Data Growth Rate">{data.dataGrowthRate}</Row>}
-              {data.replicationTopology && <Row label="Replication Topology">{data.replicationTopology}</Row>}
-              {data.backupMethod && <Row label="Backup Method & Location">{data.backupMethod}</Row>}
               {data.backupRequiredDuringMigration != null && (
                 <Row label="Backup Required During Migration">
                   <span className={cn(
@@ -98,18 +96,6 @@ export function DataPersistenceSection({ data, onSave }: DataPersistenceSectionP
             <>
               {data.dataResidency && <Row label="Data Residency">{data.dataResidency}</Row>}
               {data.encryptionAtRest && <Row label="Encryption at Rest">{data.encryptionAtRest}</Row>}
-              {data.piiData != null && (
-                <Row label="PII / Sensitive Data?">
-                  <span className={cn(
-                    'text-xs font-bold px-2 py-0.5 rounded',
-                    data.piiData
-                      ? 'bg-destructive/15 text-destructive'
-                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                  )}>
-                    {data.piiData ? 'Yes' : 'No'}
-                  </span>
-                </Row>
-              )}
               {data.statefulComponents?.length && (
                 <Row label="Stateful Components">
                   <div className="flex flex-wrap gap-1 mt-0.5">

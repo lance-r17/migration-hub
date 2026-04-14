@@ -75,18 +75,8 @@ export interface CloudResource {
   jiraSubtaskKey?: string  // populated by async Jira job after sign-off
 }
 
-export interface NetworkConfig {
-  loadBalancerType?: string
-  vipDnsNames?: string[]
-  firewallZones?: string[]
-  bandwidthRequirements?: string
-  hardcodedIps?: boolean
-  privateConnectivity?: string
-}
-
 export interface CurrentInfrastructure {
   resources: CloudResource[]
-  network?: NetworkConfig
 }
 
 // ─── Section 3: Availability & Resilience ────────────────────────────────────
@@ -94,13 +84,8 @@ export interface CurrentInfrastructure {
 export interface AvailabilityResilience {
   rto: string
   rpo: string
-  availabilitySla: string
-  currentAzPattern?: string
-  azAwareToday?: boolean
-  azFailureBehaviour?: string
   azReadiness3Az?: string
   healthCheckEndpoints?: string[]
-  currentTopologyDescription?: string
 }
 
 // ─── Section 4: Data & Persistence ──────────────────────────────────────────
@@ -109,13 +94,10 @@ export interface DataPersistence {
   databaseTypes: string[]
   totalDataVolume?: string
   dataGrowthRate?: string
-  replicationTopology?: string
-  backupMethod?: string
   backupRequiredDuringMigration?: boolean
   lastRestoreTest?: string             // URL to BRETT restore test report
   dataResidency?: string
   encryptionAtRest?: string
-  piiData?: boolean
   statefulComponents?: string[]
 }
 
@@ -130,16 +112,9 @@ export interface DependencyEntry {
   notes?: string
 }
 
-export interface CertificatesSecrets {
-  tlsCertificates?: string
-  secretsManagement?: string
-  apiKeys?: string
-}
-
 export interface Dependencies {
   upstream: DependencyEntry[]
   downstream: DependencyEntry[]
-  certificatesSecrets?: CertificatesSecrets
 }
 
 // ─── Section 6: Non-Functional Requirements ──────────────────────────────────
@@ -147,11 +122,6 @@ export interface Dependencies {
 export interface NonFunctionalRequirements {
   peakLoad: string
   autoscaling: string
-  seasonalPatterns: string
-  latencySensitivity: string
-  monitoring: string
-  logAggregation: string
-  compliance: string[]
   licensing: string
 }
 
@@ -170,20 +140,12 @@ export interface MigrationConstraints {
   latestEndDate?: string
   crDurationHours?: number
   snowCiGroups?: string[]
-  blackoutDates: DateRangeEntry[]
   changeFreezePeriods?: DateRangeEntry[]
-  maxCutoverWindow?: string
-  cutoverApproach: string
-  rollbackPlan: string
-  stakeholderComms: string
-  preMigrationTesting: string
 }
 
 // ─── Section 8: Target Architecture ─────────────────────────────────────────
 
 export interface TargetArchitecture {
-  summary: string
-  constraints: string
   reArchitectureNeeded?: boolean
   topology3Az?: string
   replicationChanges?: string

@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react'
 import { SectionEditDrawer } from './SectionEditDrawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
+import { StringListEditor } from './StringListEditor'
 import type { AvailabilityResilience } from '@/types'
+
+const textareaClass =
+  'min-h-[80px] w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-y dark:bg-input/30'
 
 interface Props {
   open: boolean
@@ -13,18 +16,15 @@ interface Props {
 }
 
 export function RecoveryTargetsDrawer({ open, onOpenChange, data, onSave }: Props) {
-  const [draft, setDraft] = useState({
-    rto: '', rpo: '', availabilitySla: '', currentAzPattern: '', azAwareToday: false,
-  })
+  const [draft, setDraft] = useState({ rto: '', rpo: '', azReadiness3Az: '', healthCheckEndpoints: [] as string[] })
 
   useEffect(() => {
     if (open) {
       setDraft({
         rto: data?.rto ?? '',
         rpo: data?.rpo ?? '',
-        availabilitySla: data?.availabilitySla ?? '',
-        currentAzPattern: data?.currentAzPattern ?? '',
-        azAwareToday: data?.azAwareToday ?? false,
+        azReadiness3Az: data?.azReadiness3Az ?? '',
+        healthCheckEndpoints: data?.healthCheckEndpoints ?? [],
       })
     }
   }, [open, data])
@@ -34,15 +34,14 @@ export function RecoveryTargetsDrawer({ open, onOpenChange, data, onSave }: Prop
       ...data,
       rto: draft.rto,
       rpo: draft.rpo,
-      availabilitySla: draft.availabilitySla,
-      currentAzPattern: draft.currentAzPattern || undefined,
-      azAwareToday: draft.azAwareToday,
+      azReadiness3Az: draft.azReadiness3Az || undefined,
+      healthCheckEndpoints: draft.healthCheckEndpoints.length ? draft.healthCheckEndpoints : undefined,
     })
     onOpenChange(false)
   }
 
   return (
-    <SectionEditDrawer open={open} onOpenChange={onOpenChange} title="Edit Recovery Targets" onSave={handleSave}>
+    <SectionEditDrawer open={open} onOpenChange={onOpenChange} title="Edit Availability & Resilience" onSave={handleSave}>
       <div className="space-y-1.5">
         <Label htmlFor="rt-rto">RTO (Recovery Time Objective)</Label>
         <Input id="rt-rto" value={draft.rto} onChange={(e) => setDraft(d => ({ ...d, rto: e.target.value }))} placeholder="e.g. 4 hours" />
@@ -52,21 +51,15 @@ export function RecoveryTargetsDrawer({ open, onOpenChange, data, onSave }: Prop
         <Input id="rt-rpo" value={draft.rpo} onChange={(e) => setDraft(d => ({ ...d, rpo: e.target.value }))} placeholder="e.g. 1 hour" />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="rt-sla">Availability SLA</Label>
-        <Input id="rt-sla" value={draft.availabilitySla} onChange={(e) => setDraft(d => ({ ...d, availabilitySla: e.target.value }))} placeholder="e.g. 99.9%" />
+        <Label htmlFor="rt-az">3AZ Readiness</Label>
+        <textarea id="rt-az" className={textareaClass} value={draft.azReadiness3Az} onChange={(e) => setDraft(d => ({ ...d, azReadiness3Az: e.target.value }))} placeholder="Describe 3-AZ readiness status" />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="rt-az">Current AZ Pattern</Label>
-        <Input id="rt-az" value={draft.currentAzPattern} onChange={(e) => setDraft(d => ({ ...d, currentAzPattern: e.target.value }))} placeholder="e.g. Single AZ" />
-      </div>
-      <div className="flex items-center gap-2 pt-1">
-        <Checkbox
-          id="rt-az-aware"
-          checked={draft.azAwareToday}
-          onCheckedChange={(checked) => setDraft(d => ({ ...d, azAwareToday: !!checked }))}
-        />
-        <Label htmlFor="rt-az-aware" className="cursor-pointer">AZ-Aware Today</Label>
-      </div>
+      <StringListEditor
+        label="Health Check Endpoints"
+        values={draft.healthCheckEndpoints}
+        onChange={(v) => setDraft(d => ({ ...d, healthCheckEndpoints: v }))}
+        placeholder="e.g. /health, /readiness"
+      />
     </SectionEditDrawer>
   )
 }

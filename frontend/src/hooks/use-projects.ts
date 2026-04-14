@@ -38,34 +38,21 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
   availability: {
     rto:                     'RTO',
     rpo:                     'RPO',
-    availabilitySla:         'Availability SLA',
-    currentAzPattern:        'Current AZ Pattern',
-    azAwareToday:            'AZ Aware Today',
-    azFailureBehaviour:      'AZ Failure Behaviour',
     azReadiness3Az:          '3-AZ Readiness',
     healthCheckEndpoints:    'Health Check Endpoints',
-    currentTopologyDescription: 'Topology Description',
   },
   dataPersistence: {
     databaseTypes:        'Database Types',
     totalDataVolume:      'Total Data Volume',
     dataGrowthRate:       'Data Growth Rate',
-    replicationTopology:  'Replication Topology',
-    backupMethod:         'Backup Method',
     lastRestoreTest:      'Last Restore Test',
     dataResidency:        'Data Residency',
     encryptionAtRest:     'Encryption At Rest',
-    piiData:              'PII Data',
     statefulComponents:   'Stateful Components',
   },
   nfrs: {
     peakLoad:            'Peak Load',
     autoscaling:         'Autoscaling',
-    seasonalPatterns:    'Seasonal Patterns',
-    latencySensitivity:  'Latency Sensitivity',
-    monitoring:          'Monitoring',
-    logAggregation:      'Log Aggregation',
-    compliance:          'Compliance',
     licensing:           'Licensing',
   },
   migrationConstraints: {
@@ -75,17 +62,9 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
     latestEndDate:            'Latest End Date',
     crDurationHours:          'CR Duration (hours)',
     snowCiGroups:             'SNOW CI Groups',
-    blackoutDates:            'Blackout Dates',
     changeFreezePeriods:      'Change Freeze Periods',
-    maxCutoverWindow:         'Max Cutover Window',
-    cutoverApproach:          'Cutover Approach',
-    rollbackPlan:             'Rollback Plan',
-    stakeholderComms:         'Stakeholder Comms',
-    preMigrationTesting:      'Pre-Migration Testing',
   },
   targetArchitecture: {
-    summary:               'Summary',
-    constraints:           'Constraints',
     reArchitectureNeeded:  'Re-Architecture Needed',
     topology3Az:           '3-AZ Topology',
     replicationChanges:    'Replication Changes',
@@ -403,19 +382,6 @@ export function useProject(id: string | undefined): ProjectState {
             `${entryId}-${ev.entityId}`, id, actorId, actorName, actorInitials,
             ev.eventType, 'cloud_resource', key,
             ev.changes, { entityId: ev.entityId, entityLabel: ev.entityLabel },
-          ))
-        }
-        // Also diff network config if changed
-        const netChanges = diffObjects(
-          previous.currentInfrastructure?.network,
-          (value as Project['currentInfrastructure'])?.network,
-          { loadBalancerType: 'Load Balancer', vipDnsNames: 'VIP DNS Names', firewallZones: 'Firewall Zones', bandwidthRequirements: 'Bandwidth', hardcodedIps: 'Hardcoded IPs', privateConnectivity: 'Private Connectivity' },
-        )
-        if (netChanges.length > 0) {
-          appendAuditEntryMock(buildEntry(
-            `${entryId}-net`, id, actorId, actorName, actorInitials,
-            'resource_updated', 'cloud_resource', key,
-            netChanges, { entityLabel: 'Network Configuration' },
           ))
         }
       } else if (key === 'status') {

@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { Blocks, Layers, ExternalLink } from 'lucide-react'
+import { Layers, ExternalLink } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { cn } from '@/lib/utils'
-import { ArchitectureOverviewDrawer } from '@/components/drawers/ArchitectureOverviewDrawer'
 import { TechnicalChangesDrawer } from '@/components/drawers/TechnicalChangesDrawer'
 import type { TargetArchitecture } from '@/types'
 
@@ -12,19 +11,18 @@ interface TargetArchitectureSectionProps {
 }
 
 export function TargetArchitectureSection({ data, onSave }: TargetArchitectureSectionProps) {
-  const [editingCard, setEditingCard] = useState<'overview' | 'changes' | null>(null)
+  const [editingCard, setEditingCard] = useState<'changes' | null>(null)
 
   return (
     <div>
       <h2 className="mt-8 mb-4 text-2xl font-bold">Target Architecture</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card A: Architecture Overview */}
+      <div className="grid grid-cols-1 gap-6">
         <SectionCard
-          icon={Blocks}
-          title="Architecture Overview"
+          icon={Layers}
+          title="Technical Changes"
           iconBg="bg-secondary"
           iconColor="text-secondary-foreground"
-          onEdit={onSave ? () => setEditingCard('overview') : undefined}
+          onEdit={onSave ? () => setEditingCard('changes') : undefined}
         >
           {!data ? (
             <p className="text-sm text-muted-foreground">No target architecture notes added yet.</p>
@@ -43,34 +41,6 @@ export function TargetArchitectureSection({ data, onSave }: TargetArchitectureSe
                   </span>
                 </div>
               )}
-              <div className="pb-4 border-b border-border last:border-0 last:pb-0">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">Architecture Summary</p>
-                <div className="p-3 bg-muted/50 rounded text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                  {data.summary}
-                </div>
-              </div>
-              <div className="pb-4 border-b border-border last:border-0 last:pb-0">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">Migration Constraints</p>
-                <div className="p-3 bg-muted/50 rounded text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                  {data.constraints}
-                </div>
-              </div>
-            </div>
-          )}
-        </SectionCard>
-
-        {/* Card B: Technical Changes */}
-        <SectionCard
-          icon={Layers}
-          title="Technical Changes"
-          iconBg="bg-secondary"
-          iconColor="text-secondary-foreground"
-          onEdit={onSave ? () => setEditingCard('changes') : undefined}
-        >
-          {!data ? (
-            <p className="text-sm text-muted-foreground">No target architecture notes added yet.</p>
-          ) : (
-            <div className="space-y-4">
               {data.topology3Az && (
                 <div className="pb-4 border-b border-border last:border-0 last:pb-0">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">3AZ Target Topology</p>
@@ -118,20 +88,12 @@ export function TargetArchitectureSection({ data, onSave }: TargetArchitectureSe
       </div>
 
       {onSave && (
-        <>
-          <ArchitectureOverviewDrawer
-            open={editingCard === 'overview'}
-            onOpenChange={(o) => !o && setEditingCard(null)}
-            data={data}
-            onSave={(updated) => { onSave(updated); setEditingCard(null) }}
-          />
-          <TechnicalChangesDrawer
-            open={editingCard === 'changes'}
-            onOpenChange={(o) => !o && setEditingCard(null)}
-            data={data}
-            onSave={(updated) => { onSave(updated); setEditingCard(null) }}
-          />
-        </>
+        <TechnicalChangesDrawer
+          open={editingCard === 'changes'}
+          onOpenChange={(o) => !o && setEditingCard(null)}
+          data={data}
+          onSave={(updated) => { onSave(updated); setEditingCard(null) }}
+        />
       )}
     </div>
   )

@@ -12,9 +12,6 @@ import {
 import { StringListEditor } from './StringListEditor'
 import type { DataPersistence } from '@/types'
 
-const textareaClass =
-  'min-h-[80px] w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-y dark:bg-input/30'
-
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -25,7 +22,7 @@ interface Props {
 export function DatabaseStorageDrawer({ open, onOpenChange, data, onSave }: Props) {
   const [draft, setDraft] = useState({
     databaseTypes: [] as string[],
-    totalDataVolume: '', dataGrowthRate: '', replicationTopology: '', backupMethod: '',
+    totalDataVolume: '', dataGrowthRate: '',
     backupRequiredDuringMigration: '' as 'true' | 'false' | '',
     lastRestoreTest: '',
   })
@@ -36,8 +33,6 @@ export function DatabaseStorageDrawer({ open, onOpenChange, data, onSave }: Prop
         databaseTypes: data?.databaseTypes ?? [],
         totalDataVolume: data?.totalDataVolume ?? '',
         dataGrowthRate: data?.dataGrowthRate ?? '',
-        replicationTopology: data?.replicationTopology ?? '',
-        backupMethod: data?.backupMethod ?? '',
         backupRequiredDuringMigration: data?.backupRequiredDuringMigration != null
           ? (data.backupRequiredDuringMigration ? 'true' : 'false')
           : '',
@@ -52,8 +47,6 @@ export function DatabaseStorageDrawer({ open, onOpenChange, data, onSave }: Prop
       databaseTypes: draft.databaseTypes,
       totalDataVolume: draft.totalDataVolume || undefined,
       dataGrowthRate: draft.dataGrowthRate || undefined,
-      replicationTopology: draft.replicationTopology || undefined,
-      backupMethod: draft.backupMethod || undefined,
       backupRequiredDuringMigration: draft.backupRequiredDuringMigration !== ''
         ? draft.backupRequiredDuringMigration === 'true'
         : undefined,
@@ -79,20 +72,6 @@ export function DatabaseStorageDrawer({ open, onOpenChange, data, onSave }: Prop
           <Label htmlFor="db-growth">Data Growth Rate</Label>
           <Input id="db-growth" value={draft.dataGrowthRate} onChange={(e) => setDraft(d => ({ ...d, dataGrowthRate: e.target.value }))} placeholder="e.g. 10% / month" />
         </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="db-repl">Replication Topology</Label>
-        <textarea
-          id="db-repl"
-          className={textareaClass}
-          value={draft.replicationTopology}
-          onChange={(e) => setDraft(d => ({ ...d, replicationTopology: e.target.value }))}
-          placeholder="Describe replication setup"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="db-backup">Backup Method</Label>
-        <Input id="db-backup" value={draft.backupMethod} onChange={(e) => setDraft(d => ({ ...d, backupMethod: e.target.value }))} placeholder="e.g. Daily snapshots" />
       </div>
       <div className="space-y-1.5">
         <Label>Backup Required During Migration</Label>
