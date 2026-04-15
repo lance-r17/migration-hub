@@ -5,9 +5,9 @@
 - Node.js 20+ and npm
 - Git
 
-For full-stack development (when the backend exists):
-- Python 3.11+
-- PostgreSQL 15+
+For backend development:
+- Python 3.12+
+- Docker and Docker Compose (recommended for PostgreSQL) or PostgreSQL 16+ installed locally
 
 ## Frontend (current)
 
@@ -113,20 +113,66 @@ In mock mode, any credentials work. The login form accepts an email and password
 
 A `.devcontainer/` configuration is included. If you open the repo in VS Code with the Dev Containers extension (or in GitHub Codespaces), the environment is set up automatically.
 
-## Full stack (when backend is available)
+## Backend
 
-> The backend does not exist yet. This section describes the intended setup.
+The backend is a Python FastAPI application in `backend/`. The easiest way to run it is with Docker Compose (handles PostgreSQL automatically).
+
+### Using Docker Compose (recommended)
 
 ```bash
-# Terminal 1 — backend
+cd backend
+docker compose up -d db        # start postgres:16-alpine on :5432
+alembic upgrade head           # create 13 tables
+python scripts/seed.py         # load seed data (projects, users, waves, etc.)
+uvicorn app.main:app --reload  # FastAPI on :8000
+```
+
+To run both the database and backend together:
+
+```bash
+docker compose up              # db + backend on :8000
+```
+
+### Manual setup (without Docker)
+
+```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]" && pip install psycopg2-binary
+cp .env.example .env           # edit DATABASE_URL to point at your local postgres
 alembic upgrade head
-uvicorn app.main:app --reload --port 8000
+python scripts/seed.py
+uvicorn app.main:app --reload  # http://localhost:8000
+```
 
-# Terminal 2 — frontend
+### Backend environment variables
+
+Copy `.env.example` to `.env` and adjust as needed:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgresql+asyncpg://hub:hub_dev_secret@localhost/migration_hub` | PostgreSQL connection string |
+| `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed CORS origins |
+| `CURRENT_USER_ID` | `u-current` | User returned by `GET /users/me` (no auth yet) |
+| `JIRA_BASE_URL` | _(empty)_ | Jira instance URL (optional for Jira job testing) |
+| `JIRA_API_TOKEN` | _(empty)_ | Jira API token |
+| `JIRA_USER_EMAIL` | _(empty)_ | Email for Jira API auth |
+| `ENVIRONMENT` | `development` | `development` or `production` |
+
+### Connect the frontend to the backend
+
+```bash
 cd frontend
 echo "VITE_API_BASE_URL=http://localhost:8000" > .env.local
-npm run dev
+npm run dev   # all service calls now hit the real API
+```
+
+OpenAPI docs are available at `http://localhost:8000/docs` while the backend is running.
+
+### Seed script
+
+`python scripts/seed.py` inserts all mock data (projects, users, waves, billing records, survey config, embargos). It skips if data already exists. Use `--force` to clear and re-seed:
+
+```bash
+python scripts/seed.py --force
 ```

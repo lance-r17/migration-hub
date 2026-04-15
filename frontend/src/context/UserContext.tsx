@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { getCurrentUser } from '@/services/users'
+import { oidcManager } from '@/auth/oidcManager'
 import type { User } from '@/types'
 
 const AUTH_KEY = 'auth'
@@ -58,6 +59,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setDefaultUserId(null)
     setIsAuthenticated(false)
     sessionStorage.removeItem(AUTH_KEY)
+    // Clear OIDC session without redirecting (silent local logout)
+    oidcManager?.removeUser()
   }, [])
 
   // Dev-only: switches the active user without touching sessionStorage.

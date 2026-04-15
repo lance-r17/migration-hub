@@ -25,8 +25,8 @@ Organizations migrating cloud resources between availability zones lack a centra
 | Styling | Tailwind CSS v4, shadcn/ui (Radix UI) |
 | Animation | Motion |
 | Notifications | Sonner |
-| Backend (planned) | Python, FastAPI |
-| Database (planned) | PostgreSQL + Alembic |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0 (async) |
+| Database | PostgreSQL 16, Alembic migrations |
 | Email server | Node.js, Express, Nodemailer |
 | Integrations | Jira |
 
@@ -34,7 +34,7 @@ Organizations migrating cloud resources between availability zones lack a centra
 
 ```
 migration-hub/
-├── frontend/               # React SPA (the active application)
+├── frontend/               # React SPA
 │   ├── src/
 │   │   ├── pages/          # Route-level page components
 │   │   ├── components/     # UI components (layout, project sections, drawers, email builder)
@@ -47,6 +47,20 @@ migration-hub/
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── .env.example
+├── backend/                # Python FastAPI backend
+│   ├── app/
+│   │   ├── models/         # SQLAlchemy ORM models (13 tables)
+│   │   ├── schemas/        # Pydantic v2 request/response schemas
+│   │   ├── routers/        # FastAPI route handlers (11 router files)
+│   │   ├── services/       # Business logic layer
+│   │   └── data/           # Static constants (survey field defs)
+│   ├── alembic/            # Database migration scripts
+│   ├── scripts/
+│   │   ├── seed.py         # Database seeder
+│   │   └── seed_data/      # JSON seed files per domain
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   └── pyproject.toml
 ├── email-server/           # Minimal SMTP relay server (Express + nodemailer)
 │   ├── index.js            # Single POST /api/v1/email-templates/send-test endpoint
 │   └── .env.example        # SMTP configuration template
@@ -60,7 +74,7 @@ migration-hub/
 
 See [docs/getting-started.md](docs/getting-started.md) for full setup instructions.
 
-**Quick start (frontend only):**
+**Quick start (frontend only — mock data):**
 
 ```bash
 cd frontend
@@ -68,7 +82,21 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-No environment variable setup is needed for local development — the app runs entirely on mock data by default.
+**Quick start (full stack):**
+
+```bash
+# Terminal 1 — database + backend
+cd backend
+docker compose up -d db        # PostgreSQL on :5432
+alembic upgrade head
+python scripts/seed.py
+uvicorn app.main:app --reload  # FastAPI on :8000
+
+# Terminal 2 — frontend
+cd frontend
+echo "VITE_API_BASE_URL=http://localhost:8000" > .env.local
+npm run dev                    # http://localhost:5173
+```
 
 ## Routes
 
@@ -84,14 +112,28 @@ No environment variable setup is needed for local development — the app runs e
 
 ## Environment variables
 
+### Frontend (`frontend/.env.local`)
+
 | Variable | Default | Description |
 |---|---|---|
 | `VITE_API_BASE_URL` | _(empty)_ | Base URL of the backend API. Leave empty to use mock data. |
 | `VITE_EMAIL_SERVER_URL` | _(empty)_ | URL of the local email relay server. Set to `http://localhost:3001` to enable real email sending from the Send Test button. |
 
-When `VITE_API_BASE_URL` is empty, all service calls go to the in-memory mock store. Set it to the FastAPI server URL (e.g. `http://localhost:8000`) to switch to the real backend with no code changes.
+When `VITE_API_BASE_URL` is empty, all service calls go to the in-memory mock store. Set it to `http://localhost:8000` to switch to the real backend with no code changes.
 
-`VITE_EMAIL_SERVER_URL` is independent — the email server can be used alongside mock mode for the rest of the app. See [docs/getting-started.md](docs/getting-started.md) for email server setup.
+### Backend (`backend/.env`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgresql+asyncpg://hub:hub_dev_secret@localhost/migration_hub` | PostgreSQL connection string |
+| `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed origins |
+| `CURRENT_USER_ID` | `u-current` | User ID returned by `GET /users/me` (no auth system yet) |
+| `JIRA_BASE_URL` | _(empty)_ | Jira instance URL |
+| `JIRA_API_TOKEN` | _(empty)_ | Jira API token |
+| `JIRA_USER_EMAIL` | _(empty)_ | Email for Jira API auth |
+| `ENVIRONMENT` | `development` | `development` or `production` |
+
+See [docs/getting-started.md](docs/getting-started.md) for full setup including the email server.
 
 ## Documentation
 

@@ -1,0 +1,18 @@
+[
+  {"id": "u1",  "name": "Sarah Jenkins", "email": "sarah.jenkins@corp.com",   "department": "Finance & Operations", "team": null, "initials": "SJ", "role": null},
+  {"id": "u2",  "name": "Dan Brown",     "email": "dan.brown@corp.com",        "department": "Platform Engineering", "team": "Platform Engineering", "initials": "DB", "role": null},
+  {"id": "u3",  "name": "Alice Johnson", "email": "alice.johnson@corp.com",    "department": "Platform Engineering", "team": "Platform Engineering", "initials": "AJ", "role": null},
+  {"id": "u4",  "name": "Bob Smith",     "email": "bob.smith@corp.com",        "department": "DevOps",               "team": "DevOps",               "initials": "BS", "role": null},
+  {"id": "u5",  "name": "Carol White",   "email": "carol.white@corp.com",      "department": "Data Engineering",     "team": "Data Engineering",     "initials": "CW", "role": null},
+  {"id": "u6",  "name": "Eve Davis",     "email": "eve.davis@company.com",     "department": "IT Operations",        "team": "IT Ops",               "initials": "ED", "role": null},
+  {"id": "u7",  "name": "Frank Miller",  "email": "frank.miller@company.com",  "department": "Platform Security",    "team": "Platform Security",    "initials": "FM", "role": null},
+  {"id": "u8",  "name": "Grace Lee",     "email": "grace.lee@corp.com",        "department": "Data Engineering",     "team": "Data Engineering",     "initials": "GL", "role": null},
+  {"id": "u9",  "name": "Henry Wilson",  "email": "henry.wilson@company.com",  "department": "Network Operations",   "team": "Network Ops",          "initials": "HW", "role": null},
+  {"id": "u10", "name": "Irene Cho",     "email": "irene.cho@company.com",     "department": "Network Engineering",  "team": "Network Engineering",  "initials": "IC", "role": null},
+  {"id": "u11", "name": "James Park",    "email": "james.park@corp.com",       "department": "Product Management",   "team": null,                   "initials": "JP", "role": null},
+  {"id": "u12", "name": "Karen Lee",     "email": "karen.lee@corp.com",        "department": "Compliance & Risk",    "team": null,                   "initials": "KL", "role": null},
+  {"id": "u13", "name": "Liam Turner",   "email": "liam.turner@corp.com",      "department": "Cloud Architecture",   "team": null,                   "initials": "LT", "role": null},
+  {"id": "u14", "name": "Monica Shah",   "email": "monica.shah@corp.com",      "department": "Site Reliability",     "team": "SRE",                  "initials": "MS", "role": null},
+  {"id": "u15", "name": "Nathan Cross",  "email": "nathan.cross@corp.com",     "department": "Application Security", "team": null,                   "initials": "NC", "role": null},
+  {"id": "u-current", "name": "Henry Wilson", "email": "henry.wilson@corp.com", "department": "Platform Engineering", "team": null, "initials": "HW", "role": "Platform Migration Lead"}
+]

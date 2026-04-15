@@ -1,0 +1,55 @@
+# dex OIDC provider configuration for local development
+# Simulates Azure AD enterprise SSO until real OIDC is ready.
+#
+# Mock users (all use password: Dev1234!):
+#   henry.wilson@corp.com  — Henry Wilson (Platform Migration Lead)
+#   alice.johnson@corp.com — Alice Johnson (Technical Lead)
+#   karen.lee@corp.com     — Karen Lee (Business Owner)
+#   dan.brown@corp.com     — Dan Brown (viewer)
+
+issuer: http://localhost:5556/dex
+
+storage:
+  type: sqlite3
+  config:
+    file: /var/dex/dex.db
+
+web:
+  http: 0.0.0.0:5556
+  allowedOrigins:
+    - http://localhost:5173
+
+oauth2:
+  skipApprovalScreen: true
+  responseTypes:
+    - code
+
+staticClients:
+  - id: migration-hub
+    public: true
+    name: Migration Hub
+    redirectURIs:
+      - http://localhost:5173/callback
+
+enablePasswordDB: true
+
+staticPasswords:
+  - email: henry.wilson@corp.com
+    hash: "$2b$12$/EOXXI26oUp1O1KRC.xiIu6FCOoUxBTSiWWBdi7piHVrkIczUbt46"
+    username: "Henry Wilson"
+    userID: "u-current"
+
+  - email: alice.johnson@corp.com
+    hash: "$2b$12$/EOXXI26oUp1O1KRC.xiIu6FCOoUxBTSiWWBdi7piHVrkIczUbt46"
+    username: "Alice Johnson"
+    userID: "u3"
+
+  - email: karen.lee@corp.com
+    hash: "$2b$12$/EOXXI26oUp1O1KRC.xiIu6FCOoUxBTSiWWBdi7piHVrkIczUbt46"
+    username: "Karen Lee"
+    userID: "u12"
+
+  - email: dan.brown@corp.com
+    hash: "$2b$12$/EOXXI26oUp1O1KRC.xiIu6FCOoUxBTSiWWBdi7piHVrkIczUbt46"
+    username: "Dan Brown"
+    userID: "u2"

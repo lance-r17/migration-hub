@@ -1,0 +1,42 @@
+{
+  "existing": {
+    "2026-01": [
+      {"resource_set": "corp-00421-alpha-erp-prod", "amount": 11800},
+      {"resource_set": "corp-00421-alpha-erp-dev",  "amount": 3000},
+      {"resource_set": "corp-00203-auth-svc-prod",  "amount": 4600},
+      {"resource_set": "corp-0088-edge-dns-prod",   "amount": 9200}
+    ],
+    "2026-02": [
+      {"resource_set": "corp-00421-alpha-erp-prod", "amount": 12100},
+      {"resource_set": "corp-00421-alpha-erp-dev",  "amount": 3100},
+      {"resource_set": "corp-00203-auth-svc-prod",  "amount": 4700},
+      {"resource_set": "corp-0088-edge-dns-prod",   "amount": 9400}
+    ],
+    "2026-03": [
+      {"resource_set": "corp-00421-alpha-erp-prod", "amount": 12500},
+      {"resource_set": "corp-00421-alpha-erp-dev",  "amount": 3200},
+      {"resource_set": "corp-00203-auth-svc-prod",  "amount": 4800},
+      {"resource_set": "corp-0088-edge-dns-prod",   "amount": 9600}
+    ]
+  },
+  "target": {
+    "2026-01": [
+      {"resource_set": "corp-00421-alpha-erp-prod", "amount": 10900},
+      {"resource_set": "corp-00421-alpha-erp-dev",  "amount": 3630},
+      {"resource_set": "corp-00203-auth-svc-prod",  "amount": 5060},
+      {"resource_set": "corp-0088-edge-dns-prod",   "amount": 8300}
+    ],
+    "2026-02": [
+      {"resource_set": "corp-00421-alpha-erp-prod", "amount": 11100},
+      {"resource_set": "corp-00421-alpha-erp-dev",  "amount": 3720},
+      {"resource_set": "corp-00203-auth-svc-prod",  "amount": 6010},
+      {"resource_set": "corp-0088-edge-dns-prod",   "amount": 8800}
+    ],
+    "2026-03": [
+      {"resource_set": "corp-00421-alpha-erp-prod", "amount": 11200},
+      {"resource_set": "corp-00421-alpha-erp-dev",  "amount": 3870},
+      {"resource_set": "corp-00203-auth-svc-prod",  "amount": 5280},
+      {"resource_set": "corp-0088-edge-dns-prod",   "amount": 8500}
+    ]
+  }
+}

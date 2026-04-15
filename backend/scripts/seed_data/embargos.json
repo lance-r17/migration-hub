@@ -1,0 +1,18 @@
+[
+  {
+    "id": "emb-1",
+    "name": "Q2 Finance Freeze",
+    "start_date": "2026-03-20",
+    "end_date": "2026-04-25",
+    "affected_service_lines": ["Finance & Operations", "Treasury"],
+    "created_at": "2026-03-01T09:00:00Z"
+  },
+  {
+    "id": "emb-2",
+    "name": "Network Change Lockdown",
+    "start_date": "2026-04-15",
+    "end_date": "2026-05-10",
+    "affected_service_lines": ["Network Operations"],
+    "created_at": "2026-04-01T10:00:00Z"
+  }
+]

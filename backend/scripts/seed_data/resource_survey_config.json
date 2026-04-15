@@ -1,0 +1,47 @@
+{
+  "groups": [
+    {
+      "id": "redis__usage_pattern__resource",
+      "level": "resource",
+      "product": "redis",
+      "questions": [
+        {
+          "id": "redis__usage_pattern",
+          "specsKey": "usage_pattern",
+          "label": "What is the primary usage pattern for this Redis instance?",
+          "hintText": "e.g. cache-only — used solely for caching ephemeral data",
+          "inputType": "select",
+          "options": ["cache-only", "persistence", "mixed"],
+          "required": true
+        },
+        {
+          "id": "redis__eviction_policy",
+          "specsKey": "eviction_policy",
+          "label": "What eviction policy does this Redis instance use?",
+          "hintText": "e.g. allkeys-lru",
+          "inputType": "select",
+          "options": ["allkeys-lru", "volatile-lru", "allkeys-lfu", "noeviction"],
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "database__replication_mode__category",
+      "level": "category",
+      "category": "Database",
+      "questions": [
+        {
+          "id": "db__replication_mode",
+          "specsKey": "replication_mode",
+          "label": "What replication mode do your database resources use?",
+          "hintText": "e.g. sync — synchronous replication across AZs",
+          "inputType": "select",
+          "options": ["sync", "async", "none"],
+          "required": false
+        }
+      ]
+    }
+  ],
+  "updatedBy": "system",
+  "updatedAt": "2026-04-14T00:00:00Z"
+}

@@ -50,7 +50,11 @@ export async function createEmailTemplate(): Promise<EmailTemplate> {
     upsertTemplate(blank)
     return blank
   }
-  const res = await fetch('/api/v1/email-templates', { method: 'POST' })
+  const res = await fetch('/api/v1/email-templates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
   return res.json()
 }
 

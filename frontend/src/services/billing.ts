@@ -8,6 +8,25 @@ const ENDPOINTS = {
   upload: '/api/v1/billing',
 }
 
+// ─── Raw API shape ────────────────────────────────────────────────────────────
+
+interface BillingRecordApi {
+  month: string
+  env: string
+  resource_set: string
+  amount: number
+}
+
+function fromApi(r: BillingRecordApi): BillingRecord {
+  return { resourceSet: r.resource_set, amount: r.amount }
+}
+
+function toApiRecords(records: BillingRecord[]): { resource_set: string; amount: number }[] {
+  return records.map(r => ({ resource_set: r.resourceSet, amount: r.amount }))
+}
+
+// ─── Service functions ────────────────────────────────────────────────────────
+
 export async function getAvailableBillingMonths(env: 'existing' | 'target'): Promise<string[]> {
   if (USE_MOCK) { await delay(); return store.getBillingMonths(env) }
   return apiClient.get<string[]>(ENDPOINTS.months(env))
@@ -15,7 +34,8 @@ export async function getAvailableBillingMonths(env: 'existing' | 'target'): Pro
 
 export async function getBillingRecords(month: string, env: 'existing' | 'target'): Promise<BillingRecord[]> {
   if (USE_MOCK) { await delay(); return store.getBillingRecords(month, env) }
-  return apiClient.get<BillingRecord[]>(ENDPOINTS.records(month, env))
+  const raw = await apiClient.get<BillingRecordApi[]>(ENDPOINTS.records(month, env))
+  return raw.map(fromApi)
 }
 
 export async function uploadBillingRecords(upload: BillingUpload): Promise<void> {
@@ -24,5 +44,9 @@ export async function uploadBillingRecords(upload: BillingUpload): Promise<void>
     store.setBillingRecords(upload.month, upload.env, upload.records)
     return
   }
-  await apiClient.post<void>(ENDPOINTS.upload, upload)
+  await apiClient.post<void>(ENDPOINTS.upload, {
+    month: upload.month,
+    env: upload.env,
+    records: toApiRecords(upload.records),
+  })
 }

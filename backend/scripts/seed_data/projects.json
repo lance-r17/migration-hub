@@ -1,0 +1,239 @@
+[
+  {
+    "id": "PRJ-2024-ALPHA",
+    "name": "Alpha Core ERP Migration",
+    "status": "in-progress",
+    "progress": 45,
+    "description": "Modernizing the legacy SAP environment to Azure Cloud Infrastructure with Zero-Downtime goals.",
+    "migration_wave": "Wave 3",
+    "wave_id": "wave-1",
+    "jira_base_url": "https://your-org.atlassian.net",
+    "profile_owner": "Dan Brown, Platform Engineering",
+    "last_updated": "21 MAR 2026",
+    "team": [
+      {"id": "t1", "name": "Alice Johnson", "initials": "AJ"},
+      {"id": "t2", "name": "Bob Smith", "initials": "BS"},
+      {"id": "t3", "name": "Carol White", "initials": "CW"},
+      {"id": "t4", "name": "Dan Brown", "initials": "DB"}
+    ],
+    "application_overview": {
+      "applicationName": "Alpha Core ERP",
+      "shortName": "ALPHA-ERP",
+      "businessOwnerId": "u1",
+      "technicalLeadId": "u2",
+      "dbaDataOwnerId": "u5",
+      "businessFunction": "Centralised ERP platform covering procurement, finance, HR, and supply chain for ~2,400 internal users. Mission-critical for daily financial close and regulatory reporting.",
+      "userBase": {"type": "Internal", "count": "~2,400 users"},
+      "applicationTier": "T0",
+      "eimId": "EIM-00421",
+      "ibsInScope": true,
+      "migrationStrategy": "Lift & Shift",
+      "serviceLine": "Finance & Operations"
+    },
+    "availability": {
+      "rto": "4 hours",
+      "rpo": "1 hour",
+      "azReadiness3Az": "Oracle RAC quorum is configured for 2 nodes only. Adding a third AZ requires re-architecting quorum to 3-node before migration. Redis Sentinel also assumes 2 nodes.",
+      "healthCheckEndpoints": ["/health", "/api/status", "/actuator/health"]
+    },
+    "data_persistence": {
+      "databaseTypes": ["Oracle DB 19c", "Redis 7"],
+      "totalDataVolume": "~4.2 TB across all databases",
+      "dataGrowthRate": "+50 GB / month",
+      "backupRequiredDuringMigration": true,
+      "lastRestoreTest": "https://brett.corp.com/tests/erp-restore-2026-02-14",
+      "dataResidency": "All data must remain within EU-West region. GDPR data subject rights procedures in place.",
+      "encryptionAtRest": "AES-256 via Oracle TDE. Redis encrypted at OS level (LUKS). Keys managed by CyberArk.",
+      "statefulComponents": ["Oracle DB 19c (primary + replica)", "Redis 7 session store", "Shared NFS file store (legacy attachments, 800 GB)"]
+    },
+    "dependencies": {
+      "upstream": [
+        {"id": "d1", "name": "Auth Service", "eimId": "EIM-00105", "contactEmail": "identity-team@corp.com", "hosting": "On-Premise", "notes": "SAML 2.0 SSO provider"},
+        {"id": "d2", "name": "Payment Gateway", "eimId": "EIM-00212", "contactEmail": "vendor-support@payments.com", "hosting": "AliCloud", "notes": "IP allowlist change required post-migration"},
+        {"id": "d3", "name": "User Directory (LDAP)", "eimId": "EIM-00089", "contactEmail": "it-ops@corp.com", "hosting": "On-Premise", "notes": "TLS LDAP — server cert tied to current hostname"}
+      ],
+      "downstream": [
+        {"id": "d4", "name": "Invoicing Service", "eimId": "EIM-00317", "contactEmail": "finance-eng@corp.com", "hosting": "AliCloud", "notes": ""},
+        {"id": "d5", "name": "BI Reporting Platform", "eimId": "EIM-00428", "contactEmail": "analytics@corp.com", "hosting": "On-Premise", "notes": "Direct DB connection — hardcoded DB host IP in config"},
+        {"id": "d6", "name": "Audit Log Aggregator", "eimId": "EIM-00531", "contactEmail": "security-ops@corp.com", "hosting": "AliCloud", "notes": ""}
+      ]
+    },
+    "nfrs": {
+      "peakLoad": "15,000 TPS, 50k concurrent users; Peak 10:00 AM – 2:00 PM EST.",
+      "autoscaling": "Horizontal Pod Autoscaling (HPA) via K8s based on CPU/RAM.",
+      "licensing": "Oracle DB per-socket; new instance type requires licensing reassessment with Oracle CSM."
+    },
+    "migration_constraints": {
+      "regularMigrationWindow": "Saturday 02:00–06:00 AM EST",
+      "preferredMigrationWindow": ["weekend"],
+      "earliestStartDate": "2025-03-01",
+      "latestEndDate": "2025-06-30",
+      "crDurationHours": 6,
+      "snowCiGroups": ["erp-infra", "dba-team", "network-ops"],
+      "changeFreezePeriods": [
+        {"name": "Org-wide change freeze", "from": "2024-12-01", "to": "2024-12-19"},
+        {"name": "PCI audit prep", "from": "2024-09-15", "to": "2024-09-30"}
+      ]
+    },
+    "target_architecture": {
+      "reArchitectureNeeded": true,
+      "topology3Az": "AZ-1: 2× App active, Oracle primary. AZ-2: 2× App active, Oracle replica. AZ-3: App standby, Oracle replica (3-node RAC). Traffic balanced across AZ-1 and AZ-2 via Azure Application Gateway.",
+      "replicationChanges": "Oracle RAC must be extended from 2-node to 3-node quorum before migration. Redis Sentinel upgraded to 3-node cluster (1 master, 2 replicas). Estimated effort: 3 weeks (DBA team).",
+      "dnsIpChanges": "erp.corp.com and erp-api.corp.com will point to new Azure Application Gateway IPs. All downstream consumers using hardcoded IPs (BI platform) must update config.",
+      "newServicesRequired": ["Azure Application Gateway (L7 LB)", "Azure Private DNS Zone", "Azure Key Vault (replace on-prem CyberArk dependency)", "Azure Monitor + Log Analytics workspace"],
+      "architectureDiagram": "https://confluence.corp.com/display/ARCH/ERP-3AZ-Target-Architecture"
+    },
+    "approvals": [
+      {"id": "a1", "role": "Technical Lead", "approver": "Dan Brown", "status": "approved", "timestamp": "Oct 24, 09:12 AM", "icon": "Wrench", "user_id": "u2"},
+      {"id": "a2", "role": "Business Owner", "approver": "Sarah Jenkins", "status": "approved", "timestamp": "Mar 22, 02:30 PM", "icon": "CreditCard", "user_id": "u1"},
+      {"id": "a3", "role": "Platform Migration Lead", "approver": null, "status": "pending", "timestamp": null, "icon": "CloudCheck", "user_id": "u-current"}
+    ],
+    "risks": [
+      {"id": "r1", "title": "Latency issues in DR region", "description": "App servers in East-US are exceeding 50ms to DB — AZ round-trip sensitivity may cause SLA breach in 3AZ config.", "severity": "critical", "mitigation": "Network topology review scheduled with NetEng. Evaluate proximity placement groups in target AZs.", "owner": "Dan Brown", "risk_status": "open"},
+      {"id": "r2", "title": "SSL Certificate Expiry", "description": "Certs for dev environment expire in 14 days. Prod cert (erp.corp.com) expires 6 months post-migration — borderline.", "severity": "medium", "mitigation": "Renew dev certs immediately. Schedule prod cert renewal as part of migration prep. Confirm Internal CA lead time.", "owner": "Alice Johnson", "risk_status": "resolved"}
+    ],
+    "resources": [
+      {"id": "res1", "resource_id": "i-0a1b2c3d4e", "name": "ERP App Server", "product": "ecs", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"instance_type": "ecs.c6.xlarge", "cpu": 4, "memory": 16}, "sub_application": "erp-core", "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res2", "resource_id": "rm-0b2c3d4e5f", "name": "Primary Oracle DB", "product": "rds", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"instance_type": "rds.mssql.s2.large", "cpu": 8, "memory": 64, "storage_gb": 2000}, "sub_application": "erp-core", "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res3", "resource_id": "r-0c3d4e5f6a", "name": "Redis Session Cache", "product": "ecs", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"instance_type": "ecs.c6.large", "cpu": 2, "memory": 8}, "target_resource_id": "tgt-placeholder", "sync_status": "provisioning", "need_migration": false},
+      {"id": "res4", "resource_id": "oss-0d4e5f6a7b", "name": "Static Assets Bucket", "product": "oss", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"capacity_tb": 2, "iops": 3000, "backup": "daily"}, "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res-a5", "resource_id": "i-0e5f6a7b8c", "name": "SAP ABAP Application Server", "product": "ecs", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"instance_type": "ecs.c6.2xlarge", "cpu": 8, "memory": 32}, "sub_application": "erp-core", "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res-a12", "resource_id": "rm-6f2a3b4c5d", "name": "Oracle DB Read Replica", "product": "rds", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"instance_type": "rds.mssql.s2.large", "cpu": 8, "memory": 64}, "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res-a13", "resource_id": "rm-7a3b4c5d6e", "name": "Reporting Analytics DB", "product": "polarDB", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"instance_type": "polar.mysql.x4.large", "cpu": 16, "memory": 128, "storage_gb": 10240}, "target_resource_id": "tgt-placeholder", "sync_status": "provisioning", "need_migration": true},
+      {"id": "res-a19", "resource_id": "slb-3a9b0c1d2e", "name": "F5 BIG-IP Load Balancer", "product": "slb", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"mode": "active-passive", "throughput_gbps": 10}, "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res-a24", "resource_id": "redis-8f4a5b6c7d", "name": "Session Cache (Redis)", "product": "redis", "resource_set": "corp-00421-alpha-erp-prod", "specs": {}, "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res-a23", "resource_id": "mq-7e3f4a5b6c", "name": "ActiveMQ Message Broker", "product": "sls", "resource_set": "corp-00421-alpha-erp-prod", "specs": {"instance_type": "ecs.c6.xlarge", "cpu": 4, "memory": 8, "mode": "master-slave-ha"}, "target_resource_id": "tgt-placeholder", "sync_status": "provisioning", "need_migration": true}
+    ],
+    "project_users": ["u1", "u2", "u3", "u4", "u5"]
+  },
+  {
+    "id": "M-11029",
+    "name": "User Auth Legacy",
+    "status": "signed-off",
+    "progress": 100,
+    "description": "Completed migration of the legacy Node.js OAuth2/JWT authentication service to an AZ-resilient ECS Fargate deployment with Multi-AZ RDS.",
+    "migration_wave": "Wave 1",
+    "wave_id": "wave-3",
+    "profile_owner": "Frank Miller, Platform Security",
+    "jira_ticket": "JIRA-1829",
+    "jira_base_url": "https://your-org.atlassian.net",
+    "last_updated": "25 OCT 2025",
+    "team": [
+      {"id": "t5", "name": "Eve Davis", "initials": "ED"},
+      {"id": "t6", "name": "Frank Miller", "initials": "FM"}
+    ],
+    "application_overview": {
+      "applicationName": "User Auth Legacy",
+      "shortName": "auth-svc",
+      "applicationTier": "T3",
+      "eimId": "EIM-0042",
+      "userBase": {"type": "Internal", "count": "~800 employees"},
+      "businessFunction": "Centralised OAuth2 / JWT authentication and session management for internal tooling.",
+      "businessOwnerId": "u6",
+      "technicalLeadId": "u7",
+      "dbaDataOwnerId": "u8",
+      "ibsInScope": false,
+      "migrationStrategy": "Lift & Shift"
+    },
+    "availability": {"rto": "2 hours", "rpo": "30 minutes", "azReadiness3Az": "Stateless app layer is 3AZ-ready. Session DB requires replication changes."},
+    "data_persistence": {"databaseTypes": ["PostgreSQL 14"], "totalDataVolume": "12 GB", "dataGrowthRate": "~500 MB/month", "backupRequiredDuringMigration": false, "lastRestoreTest": "https://brett.corp.com/tests/auth-svc-restore-2025-09-10", "dataResidency": "Region: ap-southeast-1", "encryptionAtRest": "AES-256 via AWS KMS", "statefulComponents": ["PostgreSQL session store"]},
+    "dependencies": {
+      "upstream": [{"id": "d10", "name": "Corporate LDAP", "eimId": "EIM-00089", "contactEmail": "it-ops@corp.com", "hosting": "On-Premise", "notes": "Directory bind for employee authentication"}],
+      "downstream": [
+        {"id": "d11", "name": "Internal Dev Portal", "eimId": "EIM-00307", "contactEmail": "platform@company.com", "hosting": "AliCloud", "notes": ""},
+        {"id": "d12", "name": "CI/CD Pipeline", "eimId": "EIM-00412", "contactEmail": "devops@company.com", "hosting": "AliCloud", "notes": "Service account tokens issued by auth-svc"}
+      ]
+    },
+    "nfrs": {"peakLoad": "~120 req/s during business hours", "autoscaling": "Not configured — single instance pre-migration; ECS service auto-scaling enabled post-migration.", "licensing": "Node.js OSS — no licensing concerns"},
+    "migration_constraints": {"regularMigrationWindow": "Saturdays 02:00–06:00 AEST", "preferredMigrationWindow": ["weekend"], "earliestStartDate": "2025-04-01", "latestEndDate": "2025-07-31", "crDurationHours": 2, "snowCiGroups": ["auth-svc", "platform-eng"]},
+    "target_architecture": {"reArchitectureNeeded": false, "topology3Az": "ECS Fargate service with tasks distributed across AZ-A, AZ-B, AZ-C behind an internal ALB.", "replicationChanges": "RDS promoted to Multi-AZ standby replica in AZ-B.", "dnsIpChanges": "auth.internal.company.com updated to new ALB DNS name."},
+    "approvals": [
+      {"id": "a4", "role": "Technical Lead", "approver": "Frank Miller", "status": "approved", "timestamp": "Oct 24, 09:12 AM", "icon": "Wrench", "user_id": "u7"},
+      {"id": "a5", "role": "Business Owner", "approver": "Eve Davis", "status": "approved", "timestamp": "Oct 24, 14:30 PM", "icon": "CreditCard", "user_id": "u6"},
+      {"id": "a6", "role": "Platform Migration Lead", "approver": "R. Kim", "status": "approved", "timestamp": "Oct 25, 10:00 AM", "icon": "CloudCheck", "user_id": "u-current"}
+    ],
+    "risks": [],
+    "resources": [
+      {"id": "res5", "resource_id": "i-aa1b2c3d", "name": "auth-svc App Server", "product": "ecs", "resource_set": "corp-00203-auth-svc-prod", "specs": {"instance_type": "ecs.c6.large", "cpu": 2, "memory": 4}, "target_resource_id": "tgt-placeholder", "sync_status": "synced", "need_migration": true},
+      {"id": "res6", "resource_id": "rm-bb2c3d4e", "name": "PostgreSQL 14 Session Store", "product": "rds", "resource_set": "corp-00203-auth-svc-prod", "specs": {"instance_type": "rds.pg.t3.medium", "storage_gb": 100}, "target_resource_id": "tgt-placeholder", "sync_status": "synced", "need_migration": true},
+      {"id": "res-m11-6", "resource_id": "slb-ff6a7b8c", "name": "Auth API Gateway", "product": "slb", "resource_set": "corp-00203-auth-svc-prod", "specs": {"type": "internal-nlb", "throughput_gbps": 1}, "target_resource_id": "tgt-placeholder", "sync_status": "synced", "need_migration": true}
+    ],
+    "project_users": ["u6", "u7", "u8", "u9"]
+  },
+  {
+    "id": "M-88271",
+    "name": "Data Warehouse Sync",
+    "status": "planning",
+    "progress": 12,
+    "jira_base_url": "https://your-org.atlassian.net",
+    "team": [{"id": "t7", "name": "Grace Lee", "initials": "GL"}],
+    "approvals": [
+      {"id": "a7", "role": "Technical Lead", "approver": null, "status": "pending", "timestamp": null, "icon": "Wrench", "user_id": null},
+      {"id": "a8", "role": "Business Owner", "approver": null, "status": "pending", "timestamp": null, "icon": "CreditCard", "user_id": null},
+      {"id": "a9", "role": "Platform Migration Lead", "approver": null, "status": "pending", "timestamp": null, "icon": "CloudCheck", "user_id": "u-current"}
+    ],
+    "risks": [],
+    "resources": [],
+    "project_users": ["u8", "u11"]
+  },
+  {
+    "id": "M-77122",
+    "name": "Global Edge DNS",
+    "status": "blocked",
+    "progress": 88,
+    "description": "Large-scale DNS infrastructure migration from on-prem BIND clusters to AWS Route 53 with Anycast edge. APAC and US regions live; EU cutover blocked on propagation TTL issue.",
+    "migration_wave": "Wave 2",
+    "wave_id": "wave-1",
+    "jira_base_url": "https://your-org.atlassian.net",
+    "profile_owner": "Henry Wilson, Network Operations",
+    "last_updated": "20 MAR 2026",
+    "team": [
+      {"id": "t8", "name": "Henry Wilson", "initials": "HW"},
+      {"id": "t9", "name": "Irene Cho", "initials": "IC"}
+    ],
+    "application_overview": {
+      "applicationName": "Global Edge DNS",
+      "shortName": "edge-dns",
+      "applicationTier": "T0",
+      "eimId": "EIM-0088",
+      "userBase": {"type": "External", "count": "~4M end users globally"},
+      "businessFunction": "Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.",
+      "businessOwnerId": "u12",
+      "technicalLeadId": "u10",
+      "ibsInScope": true,
+      "migrationStrategy": "Refactor",
+      "serviceLine": "Network Operations"
+    },
+    "availability": {"rto": "15 minutes", "rpo": "0 (stateless)", "azReadiness3Az": "Fully 3AZ-capable in APAC. EU region still migrating secondary cluster.", "healthCheckEndpoints": ["health.dns1.company.com/status", "health.dns2.company.com/status"]},
+    "data_persistence": {"databaseTypes": ["Route 53 Hosted Zones", "Custom zone DB (PostgreSQL 13)"], "totalDataVolume": "~800 MB zone data", "dataGrowthRate": "~5 MB/month", "backupRequiredDuringMigration": false, "lastRestoreTest": "https://brett.corp.com/tests/edge-dns-restore-2025-11-15", "dataResidency": "Zone data replicated across ap-southeast-1, eu-west-1, us-east-1", "encryptionAtRest": "N/A — DNS zone data is public", "statefulComponents": ["PostgreSQL zone authority DB", "DNSSEC key store"]},
+    "dependencies": {
+      "upstream": [
+        {"id": "d13", "name": "Domain Registrar API", "eimId": "EIM-00601", "contactEmail": "network-ops@corp.com", "hosting": "On-Premise", "notes": "NS delegation changes require 24h advance notice"},
+        {"id": "d14", "name": "DNSSEC Root KSK", "eimId": "EIM-00602", "contactEmail": "admin@iana.org", "hosting": "Other", "notes": "KSK rollover scheduled Q2 2026"}
+      ],
+      "downstream": [
+        {"id": "d15", "name": "Public Website CDN", "eimId": "EIM-00710", "contactEmail": "cdn-team@corp.com", "hosting": "AliCloud", "notes": ""},
+        {"id": "d16", "name": "API Gateway", "eimId": "EIM-00315", "contactEmail": "platform@corp.com", "hosting": "AliCloud", "notes": ""},
+        {"id": "d17", "name": "VPN Gateway", "eimId": "EIM-00521", "contactEmail": "network-ops@corp.com", "hosting": "On-Premise", "notes": "Split-horizon DNS required"}
+      ]
+    },
+    "nfrs": {"peakLoad": "~850,000 queries/sec globally", "autoscaling": "Route 53 scales automatically. Edge nodes auto-scale via instance groups.", "licensing": "Route 53 pay-per-query. Custom zone DB on PostgreSQL OSS."},
+    "migration_constraints": {"regularMigrationWindow": "Rolling — region-by-region with no global maintenance window", "preferredMigrationWindow": ["weekday", "weekend"], "earliestStartDate": "2025-09-01", "latestEndDate": "2026-02-28", "crDurationHours": 1, "snowCiGroups": ["network-ops", "sre", "dns-team"], "changeFreezePeriods": [{"name": "Shopping season", "from": "2025-11-25", "to": "2025-12-01"}, {"name": "Holiday freeze", "from": "2025-12-20", "to": "2026-01-05"}]},
+    "target_architecture": {"reArchitectureNeeded": true, "topology3Az": "Route 53 is inherently multi-AZ. CloudFront edge PoPs cover all 3 AZs per region automatically.", "replicationChanges": "Replaced BIND zone transfers with Route 53 API-driven zone management. EU region still on BIND — pending final cutover.", "dnsIpChanges": "NS records for company.com updated to Route 53 nameservers in APAC and US. EU NS delegation still pointing to legacy BIND cluster.", "newServicesRequired": ["AWS Route 53", "AWS CloudHSM (DNSSEC)", "CloudFront (edge resolution)"]},
+    "approvals": [
+      {"id": "a10", "role": "Technical Lead", "approver": "Irene Cho", "status": "approved", "timestamp": "Oct 20, 11:00 AM", "icon": "Wrench", "user_id": "u10"},
+      {"id": "a11", "role": "Business Owner", "approver": null, "status": "waiting", "timestamp": null, "icon": "CreditCard", "user_id": "u12"},
+      {"id": "a12", "role": "Platform Migration Lead", "approver": null, "status": "pending", "timestamp": null, "icon": "CloudCheck", "user_id": "u-current"}
+    ],
+    "risks": [
+      {"id": "r3", "title": "DNS propagation delay", "description": "Global DNS changes taking longer than expected to propagate. EU region TTL pre-lowering did not complete on schedule, delaying the NS delegation swap.", "severity": "critical", "mitigation": "Reduce TTL to 60s 48 hours before cutover. Monitor propagation from 15 global vantage points using dnschecker.org and internal tooling.", "owner": "Henry Wilson", "risk_status": "open"},
+      {"id": "r4", "title": "EU BIND Cluster Hardware EOL", "description": "The on-prem BIND hardware in the EU region reaches end-of-life in June 2026. If EU cutover is not completed before then, a hardware refresh will be required to maintain support.", "severity": "medium", "mitigation": "Escalated EU cutover as P1 blocker. Target completion by April 2026.", "owner": "Henry Wilson", "risk_status": "in progress"}
+    ],
+    "resources": [
+      {"id": "res7", "resource_id": "i-aa7b8c9d", "name": "DNS Primary Cluster (APAC)", "product": "ecs", "resource_set": "corp-0088-edge-dns-prod", "specs": {"instance_type": "ecs.c6.2xlarge", "cpu": 8, "memory": 32}, "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res8", "resource_id": "i-bb8c9d0e", "name": "DNS Secondary Cluster (EU)", "product": "ecs", "resource_set": "corp-0088-edge-dns-prod", "specs": {"instance_type": "ecs.c6.2xlarge", "cpu": 8, "memory": 32}, "target_resource_id": "tgt-placeholder", "sync_status": "out-of-sync", "need_migration": true},
+      {"id": "res9", "resource_id": "i-cc9d0e1f", "name": "Anycast Edge Nodes x12", "product": "dns", "resource_set": "corp-0088-edge-dns-prod", "specs": {"instance_type": "ecs.c6.xlarge", "cpu": 4, "memory": 8, "nodes": 12}, "target_resource_id": "tgt-placeholder", "sync_status": "provisioning", "need_migration": true}
+    ],
+    "project_users": ["u9", "u10", "u11", "u12"]
+  }
+]

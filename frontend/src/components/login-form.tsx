@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { login as loginService } from "@/services/users"
 import { useCurrentUser } from "@/context/UserContext"
+import { oidcManager } from "@/auth/oidcManager"
 import { toast } from "sonner"
 
 export function LoginForm({
@@ -23,6 +24,10 @@ export function LoginForm({
   const navigate = useNavigate()
 
   async function handleLogin() {
+    if (oidcManager) {
+      await oidcManager.signinRedirect()
+      return
+    }
     setLoading(true)
     try {
       const user = await loginService("", "")

@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: migration_hub
+      POSTGRES_USER: hub
+      POSTGRES_PASSWORD: hub_dev_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "hub"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hub:hub_dev_secret@db/migration_hub
+      CORS_ORIGINS: http://localhost:5173
+      CURRENT_USER_ID: u-current
+      ENVIRONMENT: development
+      OIDC_ISSUER: http://dex:5556/dex
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  dex:
+    image: dexidp/dex:latest
+    command: dex serve /etc/dex/config.yaml
+    volumes:
+      - ../mock-oidc/config.yaml:/etc/dex/config.yaml:ro
+      - dex_data:/var/dex
+    ports:
+      - "5556:5556"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  dex_data:

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "wave-1",
+    "name": "Wave 3 – Q2 2026",
+    "start_date": "2026-04-01",
+    "cutover_date": "2026-06-30",
+    "description": "Third migration wave covering ERP and core finance systems.",
+    "jira_project_key": "MIG",
+    "jira_epic_key": "MIG-42",
+    "source": "imported",
+    "status": "planned",
+    "created_at": "2026-01-15T10:00:00Z"
+  },
+  {
+    "id": "wave-2",
+    "name": "Wave 4 – Q3 2026",
+    "start_date": "2026-07-01",
+    "cutover_date": "2026-09-30",
+    "description": "Fourth wave covering DNS infrastructure and network services.",
+    "jira_project_key": "MIG",
+    "jira_epic_key": "MIG-58",
+    "source": "created",
+    "status": "planned",
+    "created_at": "2026-02-01T09:00:00Z"
+  },
+  {
+    "id": "wave-3",
+    "name": "Wave 1 – Q4 2025",
+    "start_date": "2025-10-01",
+    "cutover_date": "2025-12-31",
+    "description": "First migration wave — pilot systems and non-critical workloads.",
+    "jira_project_key": "MIG",
+    "jira_epic_key": "MIG-10",
+    "source": "imported",
+    "status": "completed",
+    "created_at": "2025-08-01T08:00:00Z"
+  }
+]

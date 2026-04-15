@@ -2,7 +2,7 @@
 
 ## Overview
 
-Migration Hub is a monorepo with a React SPA frontend and a planned Python/FastAPI backend. Today the frontend runs entirely on a client-side mock store; the service layer is designed to switch to real HTTP calls by setting one environment variable.
+Migration Hub is a monorepo with a React SPA frontend and a Python/FastAPI backend. The frontend can run on a client-side mock store (default, no backend needed) or against the real API by setting one environment variable.
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -112,8 +112,18 @@ Sign-off by the Platform Migration Lead triggers `createJiraJob()` in `src/servi
 
 `useProject` polls `getProject(id)` every 5 seconds while `jiraJobStatus` is `'pending'` or `'processing'`, then stops.
 
-## Planned backend (Phase 2)
+## Backend
 
-The FastAPI backend will expose `/api/v1/...` endpoints that mirror what the frontend services already call. Alembic manages schema migrations. Background jobs (Jira issue creation, resource scanning) will run as async FastAPI background tasks or a separate worker process.
+The FastAPI backend lives in `backend/` and exposes all `/api/v1/...` endpoints the frontend calls.
 
-See [backend/overview.md](backend/overview.md) and [backend/api.md](backend/api.md) for the expected contract.
+**Stack:** Python 3.12, FastAPI (async), SQLAlchemy 2.0 (async, `asyncpg` driver), Alembic, PostgreSQL 16.
+
+**Key structural points:**
+- 13 SQLAlchemy models — project sections stored as JSONB columns; cloud resources, risks, approvals, and audit entries are separate normalized tables with FK to `projects`
+- Project PKs are TEXT (preserves frontend IDs like `PRJ-2024-ALPHA`)
+- `config_store` singleton table (key→JSONB) holds survey config, resource survey config, and billing thresholds
+- Audit entries are written as a transaction side-effect on every project write — never by the frontend
+- Jira job processing uses FastAPI `BackgroundTasks`; stale `processing` jobs are reset to `failed` on startup
+- `GET /api/v1/users/me` returns the user identified by `CURRENT_USER_ID` env var — no JWT auth yet
+
+See [backend/overview.md](backend/overview.md), [backend/api.md](backend/api.md), and [backend/database.md](backend/database.md) for full details.

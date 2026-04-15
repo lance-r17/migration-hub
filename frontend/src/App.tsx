@@ -14,6 +14,7 @@ import { BillingSettingsPage } from './pages/BillingSettingsPage'
 import { EmailTemplatesPage } from './pages/EmailTemplatesPage'
 import { EmailBuilderPage } from './pages/EmailBuilderPage'
 import { EmailPreviewPage } from './pages/EmailPreviewPage'
+import { CallbackPage } from './pages/CallbackPage'
 import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/callback" element={<CallbackPage />} />
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
         <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />

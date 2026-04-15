@@ -1,8 +1,6 @@
 # REST API Reference
 
-This document lists all endpoints that the frontend service layer calls. It serves as the contract the backend must implement.
-
-All endpoints are prefixed with `/api/v1`. All request and response bodies are JSON. See [../shared/data-model.md](../shared/data-model.md) for full type definitions.
+All endpoints are prefixed with `/api/v1`. All request and response bodies are JSON. See [../shared/data-model.md](../shared/data-model.md) for full type definitions. OpenAPI docs are available at `http://localhost:8000/docs` while the backend is running.
 
 ---
 
@@ -19,6 +17,8 @@ Authenticates a user.
 
 **Response:** `User`
 
+> No password validation in the current implementation — any credentials for a known email return the matching user. JWT/OAuth wiring is a future task.
+
 ---
 
 ## Users
@@ -33,17 +33,9 @@ Returns all users. Used to populate people-picker dropdowns.
 
 ### `GET /api/v1/users/me`
 
-Returns the currently authenticated user (session/token-based).
+Returns the currently authenticated user. Determined by the `CURRENT_USER_ID` environment variable (no session/token auth yet).
 
 **Response:** `User`
-
----
-
-### `GET /api/v1/projects/:id/users`
-
-Returns users associated with a specific project (team members).
-
-**Response:** `User[]`
 
 ---
 
@@ -51,32 +43,97 @@ Returns users associated with a specific project (team members).
 
 ### `GET /api/v1/projects`
 
-Returns all projects visible to the authenticated user. Platform team sees all; project members see only their own.
+Returns all projects visible to the authenticated user.
 
 **Response:** `Project[]`
 
 ---
 
-### `GET /api/v1/projects/:id`
+### `POST /api/v1/projects`
 
-Returns a single project by ID.
+Creates a new project.
+
+**Request body:** `ProjectCreate` — at minimum `{ "id": "string", "name": "string" }`
 
 **Response:** `Project`
 
 ---
 
-### `PUT /api/v1/projects/:id/sections/:key`
+### `GET /api/v1/projects/:id`
 
-Updates one section key on a project. The `:key` segment is a `keyof Project` (e.g. `applicationOverview`, `risks`, `approvals`, `waveId`).
+Returns a single project by ID, with all sections, cloud resources, risks, and approvals.
 
-**Request body:** The new value for the section (type depends on `:key`)
+**Response:** `Project`
 
-**Response:** The full updated `Project`
+---
 
-**Side effects (backend must implement):**
-- Append an `AuditLogEntry` row in the same transaction
-- If `:key` is `approvals` and all approvals are now `approved`, auto-transition `Project.status` to `'signed-off'`
-- If `:key` is `jiraSubtaskConfig`, enqueue a background Jira job
+### `PATCH /api/v1/projects/:id`
+
+Updates top-level project fields (status, progress, waveId, jiraTicket, etc.).
+
+**Request body:** partial `Project` (only included fields are updated)
+
+**Response:** `Project`
+
+---
+
+### `PATCH /api/v1/projects/:id/sections/:key`
+
+Replaces one section on a project. `:key` is a camelCase section name (e.g. `applicationOverview`, `risks`, `approvals`, `currentInfrastructure`).
+
+**Request body:** `{ "value": <section payload> }`
+
+**Response:** `Project`
+
+**Side effects:**
+- Appends an `AuditLogEntry` row in the same transaction
+- If `:key` is `approvals` and all approvals are now `approved`, auto-transitions `Project.status` to `'signed-off'`
+- If `:key` is `jiraSubtaskConfig`, enqueues a background Jira job
+
+**Section key routing:**
+
+| `:key` | Storage |
+|---|---|
+| `applicationOverview` | JSONB column on `projects` |
+| `availability` | JSONB column on `projects` |
+| `dataPersistence` | JSONB column on `projects` |
+| `dependencies` | JSONB column on `projects` |
+| `nfrs` | JSONB column on `projects` |
+| `migrationConstraints` | JSONB column on `projects` |
+| `targetArchitecture` | JSONB column on `projects` |
+| `team` | JSONB column on `projects` |
+| `jiraSubtaskConfig` | JSONB column on `projects` |
+| `currentInfrastructure` | Delegates to `cloud_resources` table (replace-all) |
+| `risks` | Delegates to `risks` table (replace-all) |
+| `approvals` | Delegates to `approvals` table (replace-all) |
+
+---
+
+### `GET /api/v1/projects/:id/audit-log`
+
+Returns audit log entries for a project, sorted newest-first.
+
+**Response:**
+```json
+{
+  "entries": "AuditLogEntry[]",
+  "total": 42,
+  "page": 1,
+  "limit": 50
+}
+```
+
+---
+
+## Cloud Resources
+
+### `POST /api/v1/projects/:id/resources/specs`
+
+Batch-updates the `specs` field for multiple cloud resources. Used by the resource questionnaire to write spec data per resource.
+
+**Request body:** `{ "updates": [{ "resourceId": "string", "specs": {} }] }`
+
+**Response:** `{ "updated": number }`
 
 ---
 
@@ -100,7 +157,7 @@ Returns a single wave by ID.
 
 ### `POST /api/v1/waves`
 
-Creates a new wave and the corresponding Jira epic.
+Creates a new wave.
 
 **Request body:**
 ```json
@@ -114,13 +171,23 @@ Creates a new wave and the corresponding Jira epic.
 }
 ```
 
-**Response:** `Wave` with `jiraEpicKey` and `jiraProjectKey` populated
+**Response:** `Wave`
+
+---
+
+### `PATCH /api/v1/waves/:id`
+
+Updates wave fields.
+
+**Request body:** partial `Wave`
+
+**Response:** `Wave`
 
 ---
 
 ### `POST /api/v1/waves/import`
 
-Imports an existing Jira epic as a migration wave. Fetches epic metadata from Jira.
+Imports an existing Jira epic as a migration wave.
 
 **Request body:**
 ```json
@@ -135,7 +202,7 @@ Imports an existing Jira epic as a migration wave. Fetches epic metadata from Ji
 
 ### `GET /api/v1/dashboard/stats`
 
-Returns aggregate migration statistics.
+Returns aggregate migration statistics across all projects.
 
 **Response:** `OverallStats`
 
@@ -143,47 +210,168 @@ Returns aggregate migration statistics.
 
 ### `GET /api/v1/dashboard/activity`
 
-Returns recent activity entries.
+Returns recent audit activity.
 
 **Response:** `Activity[]`
 
 ---
 
-## Audit log
+## Embargos
 
-### `GET /api/v1/projects/:id/audit-log`
+### `GET /api/v1/embargos`
 
-Returns audit log entries for a project, sorted newest-first.
+Returns all embargo records.
 
-**Response:**
-```json
-{
-  "entries": "AuditLogEntry[]",
-  "total": 42,
-  "page": 1,
-  "limit": 50
-}
-```
-
-> Note: The frontend service unwraps `entries` from the paginated envelope. The array returned to hooks is `AuditLogEntry[]`.
+**Response:** `EmbargoRecord[]`
 
 ---
 
-## Email templates
+### `POST /api/v1/embargos`
+
+Creates a new embargo record.
+
+**Request body:** `EmbargoCreate`
+
+**Response:** `EmbargoRecord`
+
+---
+
+### `PUT /api/v1/embargos/:id`
+
+Replaces an embargo record.
+
+**Request body:** `EmbargoRecord`
+
+**Response:** `EmbargoRecord`
+
+---
+
+### `DELETE /api/v1/embargos/:id`
+
+Deletes an embargo record.
+
+**Response:** `204 No Content`
+
+---
+
+## Billing
+
+### `GET /api/v1/billing/months?env=existing|target`
+
+Returns the list of months that have billing data for the given environment.
+
+**Response:** `string[]` — e.g. `["2026-01", "2026-02"]`
+
+---
+
+### `GET /api/v1/billing?month=2026-01&env=existing`
+
+Returns billing records for a specific month and environment.
+
+**Response:** `BillingRecord[]`
+
+---
+
+### `POST /api/v1/billing`
+
+Upserts billing records for a month+environment pair. Replaces all existing records for that pair in a single transaction.
+
+**Request body:**
+```json
+{
+  "month": "2026-01",
+  "env": "existing",
+  "records": "BillingRecord[]"
+}
+```
+
+**Response:** `{ "inserted": number }`
+
+---
+
+## Survey / Settings
+
+### `GET /api/v1/settings/survey`
+
+Returns the current survey configuration.
+
+**Response:** `SurveyConfig`
+
+---
+
+### `PUT /api/v1/settings/survey`
+
+Replaces the survey configuration.
+
+**Request body:** `SurveyConfig`
+
+**Response:** `SurveyConfig`
+
+---
+
+### `GET /api/v1/settings/survey/field-defs`
+
+Returns the static field definitions used to render the survey form. These only change with releases — no database backing.
+
+**Response:** `SurveyFieldDef[]`
+
+---
+
+### `GET /api/v1/settings/resource-survey`
+
+Returns the resource survey configuration.
+
+**Response:** `ResourceSurveyConfig`
+
+---
+
+### `PUT /api/v1/settings/resource-survey`
+
+Replaces the resource survey configuration.
+
+**Request body:** `ResourceSurveyConfig`
+
+**Response:** `ResourceSurveyConfig`
+
+---
+
+## Billing Config
+
+### `GET /api/v1/settings/billing-thresholds`
+
+Returns the billing threshold configuration.
+
+**Response:** `BillingThresholdConfig`
+
+---
+
+### `PUT /api/v1/settings/billing-thresholds`
+
+Replaces the billing threshold configuration.
+
+**Request body:** `BillingThresholdConfig`
+
+**Response:** `BillingThresholdConfig`
+
+---
+
+## Product Categories
+
+### `GET /api/v1/product-category-map`
+
+Returns the static product → category mapping used to group cloud resources.
+
+**Response:** `Record<string, string>`
+
+---
+
+## Email Templates
 
 ### `GET /api/v1/email-templates`
 
 Returns all email templates.
 
 **Response:** `EmailTemplate[]`
-
----
-
-### `GET /api/v1/email-templates/:id`
-
-Returns a single email template.
-
-**Response:** `EmailTemplate`
 
 ---
 
@@ -215,9 +403,7 @@ Deletes an email template.
 
 ### `POST /api/v1/email-templates/send-test`
 
-Sends a rendered test email to a recipient address. The frontend pre-renders the template HTML and passes it as `htmlContent`.
-
-> **Note:** In local development without the FastAPI backend, this endpoint is handled by the `email-server/` Node.js relay service instead. When the FastAPI backend is implemented, it must match this same contract.
+Sends a rendered test email to a recipient address.
 
 **Request body:**
 ```json
@@ -229,6 +415,32 @@ Sends a rendered test email to a recipient address. The frontend pre-renders the
 ```
 
 **Response:** `{ "ok": true }`
+
+> In local development without the FastAPI backend running, the `email-server/` Node.js relay handles this same contract.
+
+---
+
+## Jira Jobs
+
+### `POST /api/v1/jira/jobs`
+
+Creates a Jira job and starts background processing.
+
+**Request body:** `{ "projectId": "string", "config": "JiraSubtaskConfig" }`
+
+**Response:** `202 Accepted` — `JiraJob` with `status: "pending"`
+
+Processing flow: `pending` → `processing` → generates story key + per-resource subtask keys → writes back to `projects` and `cloud_resources` → `completed` (or `failed`).
+
+> **Known gap:** `frontend/src/services/jiraJobs.ts` currently bypasses `apiClient` and calls the mock store directly. These endpoints are defined and functional but the frontend won't use them until that service is refactored.
+
+---
+
+### `GET /api/v1/jira/jobs/:id`
+
+Returns a Jira job by ID.
+
+**Response:** `JiraJob`
 
 ---
 
@@ -246,4 +458,5 @@ All error responses follow the FastAPI default format:
 | `401` | Unauthenticated |
 | `403` | Forbidden (insufficient role/access) |
 | `404` | Resource not found |
+| `422` | Unprocessable entity (Pydantic validation failure) |
 | `500` | Internal server error |

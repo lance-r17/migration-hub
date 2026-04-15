@@ -8,13 +8,26 @@ const ENDPOINTS = {
 }
 
 export async function getOverallStats(): Promise<OverallStats> {
-  // TODO (backend): return apiClient.get<OverallStats>(ENDPOINTS.stats)
   if (USE_MOCK) { await delay(); return store.getOverallStats() }
-  return apiClient.get<OverallStats>(ENDPOINTS.stats)
+  const raw = await apiClient.get<Record<string, unknown>>(ENDPOINTS.stats)
+  return {
+    progress: raw.progress as number,
+    totalAssets: raw.total_assets as number,
+    targetCloud: raw.target_cloud as string,
+    completed: raw.completed as number,
+    inProgress: raw.in_progress as number,
+  }
 }
 
 export async function getRecentActivity(): Promise<Activity[]> {
-  // TODO (backend): return apiClient.get<Activity[]>(ENDPOINTS.activity)
   if (USE_MOCK) { await delay(); return store.getRecentActivity() }
-  return apiClient.get<Activity[]>(ENDPOINTS.activity)
+  const raw = await apiClient.get<Record<string, unknown>[]>(ENDPOINTS.activity)
+  return raw.map((item) => ({
+    id: item.id as string,
+    type: item.type as Activity['type'],
+    message: item.message as string,
+    time: item.time as string,
+    actor: item.actor as string,
+    projectId: item.project_id as string | undefined,
+  }))
 }

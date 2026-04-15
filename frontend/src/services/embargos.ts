@@ -7,9 +7,39 @@ const ENDPOINTS = {
   embargo: (id: string) => `/api/v1/embargos/${id}`,
 }
 
+interface EmbargoApiRecord {
+  id: string
+  name: string
+  start_date: string
+  end_date: string
+  affected_service_lines: string[]
+  created_at: string | null
+}
+
+function fromApi(r: EmbargoApiRecord): EmbargoRecord {
+  return {
+    id: r.id,
+    name: r.name,
+    startDate: r.start_date,
+    endDate: r.end_date,
+    affectedServiceLines: r.affected_service_lines ?? [],
+    createdAt: r.created_at ?? '',
+  }
+}
+
+function toApi(data: Omit<EmbargoRecord, 'id' | 'createdAt'>) {
+  return {
+    name: data.name,
+    start_date: data.startDate,
+    end_date: data.endDate,
+    affected_service_lines: data.affectedServiceLines,
+  }
+}
+
 export async function getEmbargos(): Promise<EmbargoRecord[]> {
   if (USE_MOCK) { await delay(); return store.getEmbargos() }
-  return apiClient.get<EmbargoRecord[]>(ENDPOINTS.embargos)
+  const records = await apiClient.get<EmbargoApiRecord[]>(ENDPOINTS.embargos)
+  return records.map(fromApi)
 }
 
 export async function createEmbargo(
@@ -24,7 +54,8 @@ export async function createEmbargo(
     }
     return store.addEmbargo(embargo)
   }
-  return apiClient.post<EmbargoRecord>(ENDPOINTS.embargos, data)
+  const record = await apiClient.post<EmbargoApiRecord>(ENDPOINTS.embargos, toApi(data))
+  return fromApi(record)
 }
 
 export async function updateEmbargo(
@@ -32,7 +63,8 @@ export async function updateEmbargo(
   patch: Partial<Omit<EmbargoRecord, 'id' | 'createdAt'>>,
 ): Promise<EmbargoRecord> {
   if (USE_MOCK) { await delay(300); return store.updateEmbargo(id, patch) }
-  return apiClient.put<EmbargoRecord>(ENDPOINTS.embargo(id), patch)
+  const record = await apiClient.put<EmbargoApiRecord>(ENDPOINTS.embargo(id), toApi(patch as Omit<EmbargoRecord, 'id' | 'createdAt'>))
+  return fromApi(record)
 }
 
 export async function deleteEmbargo(id: string): Promise<void> {
