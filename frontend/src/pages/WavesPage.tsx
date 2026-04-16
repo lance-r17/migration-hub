@@ -39,7 +39,7 @@ function formatDate(iso: string) {
 
 export function WavesPage() {
   const { user } = useCurrentUser()
-  const { waves, loading } = useWaves()
+  const { waves, loading, createWave, importWave } = useWaves()
   const { projects } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -152,9 +152,20 @@ export function WavesPage() {
                     </TableCell>
                     <TableCell>
                       {wave.jiraEpicKey ? (
-                        <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">
-                          {wave.jiraEpicKey}
-                        </code>
+                        wave.jiraBaseUrl ? (
+                          <a 
+                            href={`${wave.jiraBaseUrl}/browse/${wave.jiraEpicKey}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline inline-flex items-center"
+                          >
+                            {wave.jiraEpicKey}
+                          </a>
+                        ) : (
+                          <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">
+                            {wave.jiraEpicKey}
+                          </code>
+                        )
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
@@ -177,11 +188,13 @@ export function WavesPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={handleCreated}
+        onCreate={createWave}
       />
       <ImportWaveDrawer
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={handleImported}
+        onImport={importWave}
       />
     </AppShell>
   )

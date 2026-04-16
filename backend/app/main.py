@@ -1,23 +1,64 @@
+import asyncio
+import logging
+import sys
 from contextlib import asynccontextmanager
+
+# Attach a StreamHandler directly to the "app" logger so INFO messages reach
+# stdout.  Simply calling setLevel() is not enough: uvicorn only installs
+# handlers on its own "uvicorn.*" loggers (with propagate=False), leaving the
+# root logger with no handler — Python's last-resort fallback silently drops
+# anything below WARNING.  We own this handler, so double-emission is prevented
+# by setting propagate=False on the "app" logger.
+_app_logger = logging.getLogger("app")
+_app_logger.setLevel(logging.INFO)
+if not _app_logger.handlers:
+    _h = logging.StreamHandler(sys.stdout)
+    _h.setFormatter(logging.Formatter("%(levelname)-8s %(name)s: %(message)s"))
+    _app_logger.addHandler(_h)
+_app_logger.propagate = False
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: reset any stale Jira jobs left in 'processing' state
     from app.database import AsyncSessionLocal
-    from app.services.jira_service import reset_stale_jobs
+    from app.services import jira_service
 
+    # Reset stale 'processing' jobs (resume those with progress, fail the rest)
+    logger.info("lifespan startup: resetting stale jobs")
     async with AsyncSessionLocal() as session:
-        await reset_stale_jobs(session)
+        job_ids_to_resume = await jira_service.reset_stale_jobs(session)
         await session.commit()
+    logger.info("lifespan startup: %d stale job(s) queued for resume", len(job_ids_to_resume))
+    for job_id in job_ids_to_resume:
+        asyncio.create_task(jira_service.process_job(job_id))
+
+    # Sweep any 'pending' jobs that survived a crash before dispatch
+    logger.info("lifespan startup: sweeping pending jobs")
+    async with AsyncSessionLocal() as session:
+        dispatched = await jira_service.dispatch_pending_jobs(session)
+        await session.commit()
+    logger.info("lifespan startup: startup sweep dispatched %d job(s)", len(dispatched))
+
+    # Start the periodic monitor (sleeps first, so the startup sweep above runs immediately)
+    logger.info("lifespan startup: starting background job monitor (interval=30s)")
+    monitor_task = asyncio.create_task(jira_service.start_pending_job_monitor())
 
     yield
-    # Shutdown: nothing needed
+
+    # Shutdown: cancel monitor gracefully
+    logger.info("lifespan shutdown: cancelling background job monitor")
+    monitor_task.cancel()
+    try:
+        await monitor_task
+    except asyncio.CancelledError:
+        logger.info("lifespan shutdown: monitor stopped")
 
 
 def create_app() -> FastAPI:
@@ -62,6 +103,7 @@ def create_app() -> FastAPI:
     app.include_router(billing.router, prefix=prefix)
     app.include_router(billing.settings_router, prefix=prefix)
     app.include_router(jira.router, prefix=prefix)
+    app.include_router(jira.admin_router, prefix=prefix)
     app.include_router(product_categories.router, prefix=prefix)
     app.include_router(email_templates.router, prefix=prefix)
 

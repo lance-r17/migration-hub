@@ -3,15 +3,20 @@
 {
 	"name": "migration-hub",
 	"build": {
-    "dockerfile": "Dockerfile",
-    "args": {
-      "TZ": "${localEnv:TZ:America/Los_Angeles}"
-    }
-  },
+		"dockerfile": "Dockerfile",
+		"args": {
+			"TZ": "${localEnv:TZ:America/Los_Angeles}"
+		}
+	},
 	"mounts": [
 		{
 			"source": "migration-hub-home",
 			"target": "/home/node",
+			"type": "volume"
+		},
+		{
+			"source": "migration-hub-tmp",
+			"target": "/tmp",
 			"type": "volume"
 		}
 	],

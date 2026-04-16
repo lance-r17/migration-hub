@@ -11,6 +11,7 @@ from app.models.audit_log import AuditLogEntry
 from app.models.embargo import EmbargoRecord
 from app.models.billing_record import BillingRecord
 from app.models.jira_job import JiraJob
+from app.models.jira_job_log import JiraJobLog
 from app.models.config_store import ConfigStore
 from app.models.email_template import EmailTemplate
 
@@ -28,6 +29,7 @@ __all__ = [
     "EmbargoRecord",
     "BillingRecord",
     "JiraJob",
+    "JiraJobLog",
     "ConfigStore",
     "EmailTemplate",
 ]

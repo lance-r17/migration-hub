@@ -8,14 +8,57 @@ const ENDPOINTS = {
   import: '/api/v1/waves/import',
 }
 
+interface WaveApiRecord {
+  id: string
+  name: string
+  start_date: string
+  cutover_date: string
+  description?: string
+  jira_project_key: string
+  jira_epic_key?: string
+  jira_base_url?: string
+  source: string
+  status: string
+  created_at: string
+}
+
+function fromApi(r: WaveApiRecord): Wave {
+  return {
+    id: r.id,
+    name: r.name,
+    startDate: r.start_date,
+    cutoverDate: r.cutover_date,
+    description: r.description,
+    jiraProjectKey: r.jira_project_key,
+    jiraEpicKey: r.jira_epic_key,
+    jiraBaseUrl: r.jira_base_url,
+    source: r.source as Wave['source'],
+    status: r.status as Wave['status'],
+    createdAt: r.created_at,
+  }
+}
+
+function toApi(data: Omit<Wave, 'id' | 'createdAt' | 'jiraEpicKey' | 'jiraProjectKey'>) {
+  return {
+    name: data.name,
+    start_date: data.startDate,
+    cutover_date: data.cutoverDate,
+    description: data.description,
+    source: data.source,
+    status: data.status,
+  }
+}
+
 export async function getWaves(): Promise<Wave[]> {
   if (USE_MOCK) { await delay(); return store.getWaves() }
-  return apiClient.get<Wave[]>(ENDPOINTS.waves)
+  const records = await apiClient.get<WaveApiRecord[]>(ENDPOINTS.waves)
+  return records.map(fromApi)
 }
 
 export async function getWave(id: string): Promise<Wave | undefined> {
   if (USE_MOCK) { await delay(); return store.getWave(id) }
-  return apiClient.get<Wave>(ENDPOINTS.wave(id))
+  const record = await apiClient.get<WaveApiRecord>(ENDPOINTS.wave(id))
+  return fromApi(record)
 }
 
 export async function createWave(
@@ -35,7 +78,8 @@ export async function createWave(
     }
     return store.addWave(wave)
   }
-  return apiClient.post<Wave>(ENDPOINTS.waves, data)
+  const record = await apiClient.post<WaveApiRecord>(ENDPOINTS.waves, toApi(data))
+  return fromApi(record)
 }
 
 export async function importWave(epicKey: string): Promise<Wave> {
@@ -59,5 +103,6 @@ export async function importWave(epicKey: string): Promise<Wave> {
     }
     return store.addWave(wave)
   }
-  return apiClient.post<Wave>(ENDPOINTS.import, { epicKey })
+  const record = await apiClient.post<WaveApiRecord>(ENDPOINTS.import, { epic_key: epicKey })
+  return fromApi(record)
 }

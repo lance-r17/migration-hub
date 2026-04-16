@@ -8,6 +8,7 @@ export interface Wave {
   description?: string
   jiraProjectKey: string  // e.g. "MIG"
   jiraEpicKey?: string    // e.g. "MIG-42", populated after creation/import
+  jiraBaseUrl?: string
   source: 'created' | 'imported'
   status: WaveStatus
   createdAt: string       // ISO 8601

@@ -16,6 +16,7 @@ from app.schemas.project import (
 )
 from app.schemas.risk import RiskOut
 from app.services import audit_service, project_service, user_service
+from app.config import settings
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -37,7 +38,7 @@ def _project_list_item(p) -> ProjectListItem:
         migration_wave=p.migration_wave,
         profile_owner=p.profile_owner,
         jira_ticket=p.jira_ticket,
-        jira_base_url=p.jira_base_url,
+        jira_base_url=settings.jira_base_url,
         last_updated=p.last_updated,
         wave_id=p.wave_id,
         jira_story_key=p.jira_story_key,
@@ -58,7 +59,7 @@ def _project_detail(p) -> ProjectDetail:
         migration_wave=p.migration_wave,
         profile_owner=p.profile_owner,
         jira_ticket=p.jira_ticket,
-        jira_base_url=p.jira_base_url,
+        jira_base_url=settings.jira_base_url,
         last_updated=p.last_updated,
         wave_id=p.wave_id,
         jira_story_key=p.jira_story_key,

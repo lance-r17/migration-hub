@@ -42,6 +42,17 @@ services:
       - "5556:5556"
     restart: unless-stopped
 
+  pgweb:
+    image: sosedoff/pgweb
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_URL=postgres://hub:hub_dev_secret@db/migration_hub?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:
   dex_data:

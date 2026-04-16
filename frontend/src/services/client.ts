@@ -20,13 +20,28 @@ async function authHeader(): Promise<HeadersInit> {
   return user?.access_token ? { Authorization: `Bearer ${user.access_token}` } : {}
 }
 
+async function handleResponse<T>(res: Response, method: string, path: string): Promise<T> {
+  if (!res.ok) {
+    let msg = `${method} ${path} failed: ${res.status}`
+    try {
+      const errData = await res.json()
+      if (errData?.detail) {
+        msg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail)
+      } else if (errData?.message) {
+        msg = errData.message
+      }
+    } catch (_) {}
+    throw new Error(msg)
+  }
+  return res.json() as Promise<T>
+}
+
 export const apiClient = {
   async get<T>(path: string): Promise<T> {
     const res = await fetch(`${BASE_URL}${path}`, {
       headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     })
-    if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`)
-    return res.json() as Promise<T>
+    return handleResponse<T>(res, 'GET', path)
   },
 
   async put<T>(path: string, body: unknown): Promise<T> {
@@ -35,8 +50,7 @@ export const apiClient = {
       headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(body),
     })
-    if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status}`)
-    return res.json() as Promise<T>
+    return handleResponse<T>(res, 'PUT', path)
   },
 
   async patch<T>(path: string, body: unknown): Promise<T> {
@@ -45,8 +59,7 @@ export const apiClient = {
       headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(body),
     })
-    if (!res.ok) throw new Error(`PATCH ${path} failed: ${res.status}`)
-    return res.json() as Promise<T>
+    return handleResponse<T>(res, 'PATCH', path)
   },
 
   async post<T>(path: string, body: unknown): Promise<T> {
@@ -55,7 +68,6 @@ export const apiClient = {
       headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(body),
     })
-    if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`)
-    return res.json() as Promise<T>
+    return handleResponse<T>(res, 'POST', path)
   },
 }

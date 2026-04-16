@@ -20,6 +20,7 @@ class JiraJob(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    wave_epic_key: Mapped[str | None] = mapped_column(String, nullable=True)
     story_key: Mapped[str | None] = mapped_column(String, nullable=True)
     subtask_keys: Mapped[dict[str, str]] = mapped_column(JSONB, nullable=False, default=dict)
 

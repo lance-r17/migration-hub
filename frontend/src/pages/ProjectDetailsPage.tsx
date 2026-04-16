@@ -35,6 +35,7 @@ import { useProject } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
 import { createJiraJob } from '@/services/jiraJobs'
+import { apiClient } from '@/services/client'
 import type { Project, ProjectStatus } from '@/types'
 import type { JiraSubtaskConfig } from '@/types/wave'
 
@@ -64,6 +65,13 @@ export function ProjectDetailsPage() {
     }
     prevJiraStatus.current = project?.jiraJobStatus
   }, [project?.jiraJobStatus, project?.jiraStoryKey])
+
+  // Poll backend for job completion when status is pending/processing (backend mode only)
+  useEffect(() => {
+    if (project?.jiraJobStatus !== 'pending' && project?.jiraJobStatus !== 'processing') return
+    const interval = setInterval(() => { refreshProject() }, 2_000)
+    return () => clearInterval(interval)
+  }, [project?.jiraJobStatus, refreshProject])
 
   if (loading) {
     return (
@@ -146,7 +154,7 @@ export function ProjectDetailsPage() {
     try {
       await applyApproval(approvedRole)
       await saveSection('jiraSubtaskConfig', config)
-      createJiraJob(
+      await createJiraJob(
         project.id,
         config,
         project.currentInfrastructure?.resources ?? [],
@@ -158,6 +166,15 @@ export function ProjectDetailsPage() {
       })
     } catch {
       toast.error('Failed to submit sign-off. Please try again.')
+    }
+  }
+
+  const handleRetryJiraJob = async () => {
+    try {
+      await apiClient.post(`/api/v1/jira/projects/${project.id}/retry-job`, {})
+      await refreshProject()
+    } catch {
+      toast.error('Failed to retry Jira job. Please try again.')
     }
   }
 
@@ -328,6 +345,7 @@ export function ProjectDetailsPage() {
             jiraJobStatus={project.jiraJobStatus}
             jiraStoryKey={project.jiraStoryKey}
             jiraBaseUrl={project.jiraBaseUrl}
+            onRetryJiraJob={handleRetryJiraJob}
           />
           <DataPersistenceSection
             data={project.dataPersistence}

@@ -9,16 +9,16 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { importWave } from '@/services/waves'
 import type { Wave } from '@/types/wave'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   onImported: (wave: Wave) => void
+  onImport: (epicKey: string) => Promise<Wave>
 }
 
-export function ImportWaveDrawer({ open, onOpenChange, onImported }: Props) {
+export function ImportWaveDrawer({ open, onOpenChange, onImported, onImport }: Props) {
   const [epicKey, setEpicKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,12 +43,12 @@ export function ImportWaveDrawer({ open, onOpenChange, onImported }: Props) {
     setError(null)
     setSaving(true)
     try {
-      const wave = await importWave(trimmed)
+      const wave = await onImport(trimmed)
       onImported(wave)
       setEpicKey('')
       onOpenChange(false)
-    } catch {
-      setError('Failed to import wave. Please check the epic key and try again.')
+    } catch (err: any) {
+      setError(err?.message || 'Failed to import wave. Please check the epic key and try again.')
     } finally {
       setSaving(false)
     }

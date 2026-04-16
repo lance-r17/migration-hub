@@ -17,6 +17,7 @@ interface CurrentInfrastructureSectionProps {
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
   jiraStoryKey?: string
   jiraBaseUrl?: string
+  onRetryJiraJob?: () => void
 }
 
 function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
@@ -26,7 +27,7 @@ function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
 }
 
 
-export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, jiraJobStatus, jiraStoryKey, jiraBaseUrl }: CurrentInfrastructureSectionProps) {
+export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, jiraJobStatus, jiraStoryKey, jiraBaseUrl, onRetryJiraJob }: CurrentInfrastructureSectionProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const [editingResource, setEditingResource] = useState<CloudResource | null>(null)
   const { getCategoryForProduct } = useProductCategoryMap()
@@ -68,6 +69,20 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                 created.{' '}
                 {new Set(data?.resources.map(r => r.jiraSubtaskKey).filter(Boolean)).size} sub-tasks linked to resources.
               </span>
+            </div>
+          )}
+          {jiraJobStatus === 'failed' && (
+            <div className="mb-4 flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive/20">
+              <AlertOctagon size={16} className="shrink-0" />
+              <span>Jira story creation failed.</span>
+              {onRetryJiraJob && (
+                <button
+                  onClick={onRetryJiraJob}
+                  className="ml-auto text-xs font-bold px-3 py-1 rounded border border-destructive/40 hover:bg-destructive/20 transition-colors"
+                >
+                  Retry
+                </button>
+              )}
             </div>
           )}
           {!data || data.resources.length === 0 ? (

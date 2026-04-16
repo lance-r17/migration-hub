@@ -119,3 +119,16 @@ async def get_current_user(
             detail="Authenticated user not found in database",
         )
     return user
+
+
+_ADMIN_ROLES = {"admin", "Platform Migration Lead"}
+
+
+async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency that allows admin and Platform Migration Lead users."""
+    if current_user.role not in _ADMIN_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required",
+        )
+    return current_user

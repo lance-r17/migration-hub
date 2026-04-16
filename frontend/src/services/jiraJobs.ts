@@ -1,6 +1,77 @@
 import { store } from '@/data/store'
+import { USE_MOCK, delay, apiClient } from './client'
 import type { CloudResource, ResourceCategory } from '@/types'
 import type { JiraSubtaskConfig, JiraJobRequest } from '@/types/wave'
+
+export interface JiraJobLog {
+  id: string
+  jobId: string
+  timestamp: string
+  level: 'info' | 'warning' | 'error'
+  message: string
+  meta?: Record<string, unknown> | null
+}
+
+export interface AdminJiraJobRow extends JiraJobRequest {
+  projectName: string
+  logs: JiraJobLog[]
+}
+
+const ENDPOINTS = {
+  jobs: '/api/v1/jira/jobs',
+  job: (id: string) => `/api/v1/jira/jobs/${id}`,
+  jobLogs: (id: string) => `/api/v1/jira/jobs/${id}/logs`,
+  adminJobs: '/api/v1/admin/jira-jobs',
+}
+
+interface JiraJobApiResponse {
+  id: string
+  project_id: string
+  status: string
+  config: JiraSubtaskConfig
+  requested_at: string | null
+  processed_at: string | null
+  story_key: string | null
+  subtask_keys: Record<string, string>
+}
+
+interface JiraJobLogApiResponse {
+  id: string
+  job_id: string
+  timestamp: string
+  level: string
+  message: string
+  meta?: Record<string, unknown> | null
+}
+
+interface AdminJiraJobApiResponse extends JiraJobApiResponse {
+  project_name: string
+  logs: JiraJobLogApiResponse[]
+}
+
+function fromApi(r: JiraJobApiResponse): JiraJobRequest {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    status: r.status as JiraJobRequest['status'],
+    config: r.config,
+    requestedAt: r.requested_at ?? new Date().toISOString(),
+    processedAt: r.processed_at ?? undefined,
+    storyKey: r.story_key ?? undefined,
+    subtaskKeys: r.subtask_keys ?? {},
+  }
+}
+
+function fromApiLog(r: JiraJobLogApiResponse): JiraJobLog {
+  return {
+    id: r.id,
+    jobId: r.job_id,
+    timestamp: r.timestamp,
+    level: r.level as JiraJobLog['level'],
+    message: r.message,
+    meta: r.meta,
+  }
+}
 
 function getCategoryForProduct(product?: string): ResourceCategory {
   const map = store.getProductCategoryMap()
@@ -8,21 +79,41 @@ function getCategoryForProduct(product?: string): ResourceCategory {
   return entry?.category ?? 'Other'
 }
 
+// ─── getJiraJob ───────────────────────────────────────────────────────────────
+export async function getJiraJob(jobId: string): Promise<JiraJobRequest> {
+  if (USE_MOCK) { await delay(); return store.getJiraJob(jobId)! }
+  const raw = await apiClient.get<JiraJobApiResponse>(ENDPOINTS.job(jobId))
+  return fromApi(raw)
+}
+
 // ─── createJiraJob ────────────────────────────────────────────────────────────
-// Simulates the event-driven async Jira job queue:
-//   immediately  → writes job record (status: 'pending'), sets project.jiraJobStatus='pending'
-//   ~5s later    → job + project status → 'processing'
-//   ~30s later   → generates story key + subtask keys, writes them back to resources + project
+// Dual-mode:
+//   USE_MOCK=true  → client-side simulation via setTimeout (pending→processing→completed)
+//   USE_MOCK=false → POST /api/v1/jira/jobs; backend BackgroundTask handles processing
 //
-export function createJiraJob(
+export async function createJiraJob(
   projectId: string,
   config: JiraSubtaskConfig,
   resources: CloudResource[],
   waveEpicKey?: string,
-): JiraJobRequest {
+): Promise<void> {
+  if (!USE_MOCK) {
+    // Await the POST so callers can refresh project state after job is queued.
+    try {
+      await apiClient.post<JiraJobApiResponse>(ENDPOINTS.jobs, {
+        project_id: projectId,
+        config,
+        wave_epic_key: waveEpicKey ?? null,
+      })
+    } catch {
+      // Swallowed — ProjectDetailsPage handles the error path via jiraJobStatus
+    }
+    return
+  }
+
+  // ── Mock simulation ───────────────────────────────────────────────────────
   const jobId = `jira-job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
-  // Write initial job record
   const job: JiraJobRequest = {
     id: jobId,
     projectId,
@@ -33,10 +124,8 @@ export function createJiraJob(
   }
   store.addJiraJob(job)
 
-  // Set project status to pending
   store.updateProject(projectId, 'jiraJobStatus', 'pending')
 
-  // ~5s: transition to processing
   setTimeout(() => {
     try {
       store.updateJiraJob(jobId, { status: 'processing' })
@@ -46,27 +135,22 @@ export function createJiraJob(
     }
   }, 5_000)
 
-  // ~30s: complete — generate keys and write back
   setTimeout(() => {
     try {
       const projectKey = waveEpicKey?.split('-')[0] ?? 'MIG'
       const storyNum = Math.floor(Math.random() * 900) + 100
       const storyKey = `${projectKey}-${storyNum}`
 
-      // Determine in-scope resources
       const inScope = resources.filter(r => r.needMigration !== false)
 
-      // Build subtaskKeys and write back jiraSubtaskKey to each CloudResource
       const subtaskKeys: Record<string, string> = {}
       let counter = storyNum + 1
 
       if (config.mode === 'category-level') {
-        // One sub-task per unique category; derived from product→category mapping
         const categories = [...new Set(inScope.map(r => getCategoryForProduct(r.product)))]
         for (const cat of categories) {
           subtaskKeys[cat] = `${projectKey}-${counter++}`
         }
-        // Write back to each resource
         const project = store.getProject(projectId)
         if (project?.currentInfrastructure) {
           const updatedResources = project.currentInfrastructure.resources.map(r =>
@@ -80,12 +164,10 @@ export function createJiraJob(
           })
         }
       } else if (config.mode === 'product-level') {
-        // One sub-task per unique product
         const products = [...new Set(inScope.map(r => r.product ?? 'Other'))]
         for (const product of products) {
           subtaskKeys[product] = `${projectKey}-${counter++}`
         }
-        // Write back to each resource
         const project = store.getProject(projectId)
         if (project?.currentInfrastructure) {
           const updatedResources = project.currentInfrastructure.resources.map(r =>
@@ -99,7 +181,6 @@ export function createJiraJob(
           })
         }
       } else {
-        // resource-level or custom: one sub-task per resource
         const targetIds = config.mode === 'custom'
           ? (config.selectedResourceIds ?? [])
           : inScope.map(r => r.id)
@@ -108,7 +189,6 @@ export function createJiraJob(
           subtaskKeys[id] = `${projectKey}-${counter++}`
         }
 
-        // Write back to each resource
         const project = store.getProject(projectId)
         if (project?.currentInfrastructure) {
           const updatedResources = project.currentInfrastructure.resources.map(r =>
@@ -121,11 +201,9 @@ export function createJiraJob(
         }
       }
 
-      // Write story key + completed status to project
       store.updateProject(projectId, 'jiraStoryKey', storyKey)
       store.updateProject(projectId, 'jiraJobStatus', 'completed')
 
-      // Update job record
       store.updateJiraJob(jobId, {
         status: 'completed',
         processedAt: new Date().toISOString(),
@@ -137,6 +215,32 @@ export function createJiraJob(
       store.updateProject(projectId, 'jiraJobStatus', 'failed')
     }
   }, 30_000)
+}
 
-  return job
+// ─── retryJiraJob ─────────────────────────────────────────────────────────────
+export async function retryJiraJob(projectId: string): Promise<JiraJobRequest> {
+  if (USE_MOCK) { await delay(); throw new Error('Retry not supported in mock mode') }
+  const raw = await apiClient.post<JiraJobApiResponse>(
+    `/api/v1/jira/projects/${projectId}/retry-job`,
+    {},
+  )
+  return fromApi(raw)
+}
+
+// ─── getJobLogs ───────────────────────────────────────────────────────────────
+export async function getJobLogs(jobId: string): Promise<JiraJobLog[]> {
+  if (USE_MOCK) { await delay(); return [] }
+  const raw = await apiClient.get<JiraJobLogApiResponse[]>(ENDPOINTS.jobLogs(jobId))
+  return raw.map(fromApiLog)
+}
+
+// ─── getAllJobsAdmin ──────────────────────────────────────────────────────────
+export async function getAllJobsAdmin(): Promise<AdminJiraJobRow[]> {
+  if (USE_MOCK) { await delay(); return [] }
+  const raw = await apiClient.get<AdminJiraJobApiResponse[]>(ENDPOINTS.adminJobs)
+  return raw.map(r => ({
+    ...fromApi(r),
+    projectName: r.project_name,
+    logs: r.logs.map(fromApiLog),
+  }))
 }

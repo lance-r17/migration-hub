@@ -21,6 +21,7 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (wave: Wave) => void
+  onCreate?: (data: Omit<Wave, 'id' | 'createdAt' | 'jiraEpicKey'>) => Promise<Wave>
 }
 
 interface Draft {
@@ -39,7 +40,7 @@ function formatRange(start: string, end: string): string {
   return `${from} – ${format(new Date(end), 'MMM d, y')}`
 }
 
-export function CreateWaveDrawer({ open, onOpenChange, onCreated }: Props) {
+export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Props) {
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [calOpen, setCalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -71,7 +72,7 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated }: Props) {
     setError(null)
     setSaving(true)
     try {
-      const wave = await createWave({
+      const wave = await (onCreate ?? createWave)({
         name: draft.name,
         startDate: draft.startDate,
         cutoverDate: draft.cutoverDate,

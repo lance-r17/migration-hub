@@ -25,6 +25,7 @@ SECTION_COLUMN_MAP: dict[str, str | None] = {
     "team": "team",
     "jiraSubtaskConfig": "jira_subtask_config",
     "status": "status",
+    "waveId": "wave_id",
     # Special: delegate to relational tables
     "currentInfrastructure": None,
     "risks": None,
@@ -41,6 +42,7 @@ SECTION_LABELS: dict[str, str] = {
     "targetArchitecture": "Target Architecture",
     "team": "Team",
     "status": "Project Status",
+    "waveId": "Migration Wave",
 }
 
 

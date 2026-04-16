@@ -18,6 +18,7 @@ class WaveOut(BaseModel):
     description: str | None = None
     jira_project_key: str
     jira_epic_key: str | None = None
+    jira_base_url: str | None = None
     source: str
     status: str
     created_at: str | None = None
@@ -35,7 +36,7 @@ class WaveCreate(BaseModel):
     start_date: str
     cutover_date: str
     description: str | None = None
-    jira_project_key: str
+    jira_project_key: str | None = None
     jira_epic_key: str | None = None
     source: str = "created"
     status: str = "planned"

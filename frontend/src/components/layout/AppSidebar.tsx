@@ -19,6 +19,7 @@ import {
   Waves,
   DollarSign,
   Mail,
+  MonitorDot,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
@@ -60,6 +61,12 @@ const data = {
       title: "Settings",
       url: "/settings",
       icon: <Settings2Icon />,
+      requiresRole: "Platform Migration Lead",
+    },
+    {
+      title: "Job Monitor",
+      url: "/admin/jobs",
+      icon: <MonitorDot />,
       requiresRole: "Platform Migration Lead",
     },
   ] satisfies NavItem[],
