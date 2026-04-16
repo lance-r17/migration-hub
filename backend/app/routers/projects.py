@@ -44,6 +44,7 @@ def _project_list_item(p) -> ProjectListItem:
         jira_story_key=p.jira_story_key,
         jira_job_status=p.jira_job_status,
         team=p.team or [],
+        migration_constraints=p.migration_constraints,
         approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
         cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
     )
@@ -112,7 +113,10 @@ async def update_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     actor = await _get_actor(db)
-    project = await project_service.update(db, project, body, actor)
+    try:
+        project = await project_service.update(db, project, body, actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return _project_detail(project)
 
 
@@ -129,7 +133,10 @@ async def update_section(
     if section_key not in project_service.SECTION_COLUMN_MAP:
         raise HTTPException(status_code=400, detail=f"Unknown section key: {section_key}")
     actor = await _get_actor(db)
-    project = await project_service.update_section(db, project, section_key, body.value, actor)
+    try:
+        project = await project_service.update_section(db, project, section_key, body.value, actor)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return _project_detail(project)
 
 

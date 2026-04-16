@@ -154,6 +154,8 @@ async def update(
 ) -> Project:
     changes = []
     for field, value in patch.model_dump(exclude_none=True).items():
+        if field == "wave_id" and value:
+            await _check_wave_completed(session, value)
         old = getattr(project, field, None)
         if old != value:
             changes.append({"field": field, "label": field, "old_value": old, "new_value": value})
@@ -192,6 +194,8 @@ async def update_section(
         elif section_key == "approvals":
             await _replace_approvals(session, project, value, actor)
     else:
+        if section_key == "waveId" and value:
+            await _check_wave_completed(session, value)
         old = getattr(project, column, None)
         setattr(project, column, value)
         changes = _diff_section(old, value)
@@ -323,3 +327,11 @@ async def batch_update_resource_specs(
                     changes=resource_changes,
                 )
     await session.flush()
+
+async def _check_wave_completed(session: AsyncSession, wave_id: str | None) -> None:
+    if not wave_id:
+        return
+    from app.services import wave_service
+    wave = await wave_service.get_by_id(session, wave_id)
+    if wave and wave.status == "completed":
+        raise ValueError(f"Assignment to completed wave '{wave.name}' is blocked.")

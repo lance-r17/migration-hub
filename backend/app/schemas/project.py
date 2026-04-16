@@ -31,6 +31,7 @@ class ProjectListItem(BaseModel):
     jira_story_key: str | None = None
     jira_job_status: str | None = None
     team: list[dict[str, Any]] = []
+    migration_constraints: dict[str, Any] | None = None
     approvals: list[ApprovalOut] = []
     cloud_resources: list[CloudResourceOut] = []
 

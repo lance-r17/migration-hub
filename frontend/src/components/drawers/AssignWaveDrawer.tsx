@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { SectionEditDrawer } from './SectionEditDrawer'
 import {
   Select,
@@ -31,6 +31,14 @@ export function AssignWaveDrawer({ open, onOpenChange, waves, currentWaveId, onS
     if (open) setSelected(currentWaveId ?? '__none__')
   }, [open, currentWaveId])
 
+  const sortedWaves = useMemo(() => {
+    return [...waves].sort((a, b) => {
+      const startCompare = a.startDate.localeCompare(b.startDate)
+      if (startCompare !== 0) return startCompare
+      return a.cutoverDate.localeCompare(b.cutoverDate)
+    })
+  }, [waves])
+
   const selectedWave = waves.find(w => w.id === selected)
 
   const handleSave = () => {
@@ -57,7 +65,7 @@ export function AssignWaveDrawer({ open, onOpenChange, waves, currentWaveId, onS
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">Unassigned</SelectItem>
-              {waves.map(wave => (
+              {sortedWaves.filter(w => w.status !== 'completed').map(wave => (
                 <SelectItem key={wave.id} value={wave.id}>
                   {wave.name}
                 </SelectItem>

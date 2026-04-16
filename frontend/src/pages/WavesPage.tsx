@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Waves, Download, Plus, Lock } from 'lucide-react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { Waves, Download, Plus, Lock, Kanban } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +18,10 @@ import { ImportWaveDrawer } from '@/components/drawers/ImportWaveDrawer'
 import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
+import { WavePlanningModal } from '@/components/waves/WavePlanningModal'
+import { updateProject } from '@/services/projects'
+import { appendAuditEntryMock } from '@/services/auditLog'
+import { USE_MOCK } from '@/services/client'
 import type { Wave, WaveStatus } from '@/types/wave'
 
 function WaveStatusBadge({ status }: { status: WaveStatus }) {
@@ -40,11 +44,62 @@ function formatDate(iso: string) {
 export function WavesPage() {
   const { user } = useCurrentUser()
   const { waves, loading, createWave, importWave } = useWaves()
-  const { projects } = useProjects()
+  const { projects: initialProjects } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [isBoardOpen, setIsBoardOpen] = useState(false)
+  const [showCompleted, setShowCompleted] = useState(true)
+
+  const [liveProjects, setLiveProjects] = useState(initialProjects)
+  
+  useEffect(() => {
+    setLiveProjects(initialProjects)
+  }, [initialProjects])
 
   const isPlatformLead = user?.role === 'Platform Migration Lead'
+  
+  const sortedWaves = useMemo(() => {
+    return [...waves].sort((a, b) => {
+      const startCompare = a.startDate.localeCompare(b.startDate)
+      if (startCompare !== 0) return startCompare
+      return a.cutoverDate.localeCompare(b.cutoverDate)
+    })
+  }, [waves])
+
+  const handleAssign = useCallback(async (projectIds: string[], waveId: string | undefined) => {
+    setLiveProjects(prev => prev.map(p => 
+      projectIds.includes(p.id) ? { ...p, waveId } : p
+    ))
+    
+    try {
+      await Promise.all(projectIds.map(async id => {
+        const p = liveProjects.find(x => x.id === id)
+        await updateProject(id, 'waveId', waveId)
+        
+        if (USE_MOCK && p) {
+           appendAuditEntryMock({
+              id: `al-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              projectId: id,
+              timestamp: new Date().toISOString(),
+              actor: { 
+                id: user?.id ?? 'unknown', 
+                name: user?.name ?? 'Unknown User', 
+                initials: user?.initials ?? '??' 
+              },
+              eventType: 'wave_assigned',
+              entityType: 'wave',
+              sectionKey: 'waveId',
+              sectionLabel: 'Wave Assignment',
+              changes: [{ field: 'waveId', label: 'Wave', oldValue: p.waveId, newValue: waveId }],
+           })
+        }
+      }))
+      toast.success(projectIds.length === 1 ? 'Wave assigned' : `${projectIds.length} projects assigned to wave`)
+    } catch (err) {
+      toast.error('Failed to assign wave. Reverting...')
+      setLiveProjects(initialProjects)
+    }
+  }, [liveProjects, initialProjects, user])
 
   if (!isPlatformLead) {
     return (
@@ -65,7 +120,7 @@ export function WavesPage() {
   }
 
   const projectCountByWave = (waveId: string) =>
-    projects.filter(p => p.waveId === waveId).length
+    liveProjects.filter(p => p.waveId === waveId).length
 
   const handleCreated = (wave: Wave) => {
     toast.success(`Wave created`, {
@@ -81,9 +136,9 @@ export function WavesPage() {
 
   return (
     <AppShell title="Wave Planning">
-      <div className="max-w-screen-xl mx-auto w-full space-y-8">
+      <div className="max-w-screen-xl mx-auto w-full flex flex-col flex-1 min-h-0 space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center justify-between gap-4 flex-wrap shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Waves className="size-5 text-muted-foreground" />
@@ -93,19 +148,25 @@ export function WavesPage() {
               Manage migration waves and their associated Jira epics.
             </p>
           </div>
+
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => setIsBoardOpen(true)} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
+              <Kanban className="size-4 mr-2" />
+              Planning Board
+            </Button>
+            <div className="w-px h-8 bg-border mx-2" />
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
               <Download className="size-4 mr-2" />
               Import Wave
             </Button>
-            <Button onClick={() => setCreateOpen(true)}>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="size-4 mr-2" />
               Create Wave
             </Button>
           </div>
         </div>
 
-        {/* Table */}
+        {/* Waves Table */}
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>
             <TableHeader>
@@ -134,7 +195,7 @@ export function WavesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                waves.map(wave => (
+                sortedWaves.map((wave: Wave) => (
                   <TableRow key={wave.id}>
                     <TableCell>
                       <div>
@@ -195,6 +256,16 @@ export function WavesPage() {
         onOpenChange={setImportOpen}
         onImported={handleImported}
         onImport={importWave}
+      />
+
+      <WavePlanningModal 
+        open={isBoardOpen}
+        onClose={() => setIsBoardOpen(false)}
+        projects={liveProjects}
+        allWaves={sortedWaves}
+        onAssign={handleAssign}
+        showCompleted={showCompleted}
+        onShowCompletedChange={setShowCompleted}
       />
     </AppShell>
   )

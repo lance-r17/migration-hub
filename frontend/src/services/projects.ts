@@ -76,6 +76,7 @@ interface ProjectListItemApi {
   wave_id: string | null
   jira_story_key: string | null
   jira_job_status: string | null
+  migration_constraints: MigrationConstraints | null
   approvals: ApprovalApi[]
   cloud_resources: CloudResourceApi[]
 }
@@ -151,6 +152,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     waveId: raw.wave_id ?? undefined,
     jiraStoryKey: raw.jira_story_key ?? undefined,
     jiraJobStatus: raw.jira_job_status as Project['jiraJobStatus'] ?? undefined,
+    migrationConstraints: raw.migration_constraints ?? undefined,
     risks: [],
     approvals: (raw.approvals ?? []).map(mapApproval),
     currentInfrastructure: raw.cloud_resources?.length
@@ -204,6 +206,8 @@ export async function updateProject<K extends keyof Project>(
   value: Project[K],
 ): Promise<Project> {
   if (USE_MOCK) { await delay(); return store.updateProject(id, key, value) }
-  const raw = await apiClient.patch<ProjectApiResponse>(ENDPOINTS.section(id, String(key)), { value })
+  // Send null if value is undefined to satisfy backend validation
+  const payloadValue = value === undefined ? null : value
+  const raw = await apiClient.patch<ProjectApiResponse>(ENDPOINTS.section(id, String(key)), { value: payloadValue })
   return fromApi(raw)
 }
