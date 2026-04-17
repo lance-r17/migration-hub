@@ -16,6 +16,8 @@ from app.models.cloud_resource import CloudResource
 from app.models.jira_job import JiraJob
 from app.models.jira_job_log import JiraJobLog
 from app.models.project import Project
+from app.models.risk import Risk
+from app.models.wave import Wave
 from app.schemas.jira_job import JiraJobCreate
 
 # In-memory set of job IDs currently dispatched/running.
@@ -47,7 +49,11 @@ async def _log_event(
 
 # ─── Public service functions ─────────────────────────────────────────────────
 
-async def create_job(session: AsyncSession, data: JiraJobCreate) -> JiraJob:
+async def create_job(
+    session: AsyncSession,
+    data: JiraJobCreate,
+    update_project_status: bool = True,
+) -> JiraJob:
     job = JiraJob(
         id=f"jira-job-{uuid.uuid4().hex[:12]}",
         project_id=data.project_id,
@@ -59,17 +65,19 @@ async def create_job(session: AsyncSession, data: JiraJobCreate) -> JiraJob:
     await session.flush()
     await session.refresh(job)
     logger.info(
-        "create_job: created %s (project=%s wave_epic_key=%r mode=%r)",
+        "create_job: created %s (project=%s wave_epic_key=%r type=%r)",
         job.id, job.project_id, job.wave_epic_key,
-        (data.config or {}).get("mode", "resource-level"),
+        (data.config or {}).get("type", "migration"),
     )
 
     # Set project status to "pending" immediately so the frontend banner appears
     # on the next refreshProject() call (before the background task even starts).
-    project = await session.get(Project, data.project_id)
-    if project:
-        project.jira_job_status = "pending"
-        await session.flush()
+    # Operation jobs must NOT update this field — it tracks the migration job only.
+    if update_project_status:
+        project = await session.get(Project, data.project_id)
+        if project:
+            project.jira_job_status = "pending"
+            await session.flush()
 
     return job
 
@@ -103,6 +111,19 @@ async def get_all_jobs_with_projects(session: AsyncSession) -> list[dict]:
         )
         rows.append({"job": job, "project_name": project_name, "logs": list(logs_result.scalars().all())})
     return rows
+
+
+async def get_operation_jobs(session: AsyncSession, project_id: str) -> list[JiraJob]:
+    """Return all operation jobs for a project, newest first."""
+    result = await session.execute(
+        select(JiraJob)
+        .where(
+            JiraJob.project_id == project_id,
+            JiraJob.config["type"].astext == "operation",
+        )
+        .order_by(JiraJob.requested_at.desc())
+    )
+    return list(result.scalars().all())
 
 
 async def reset_stale_jobs(session: AsyncSession) -> list[str]:
@@ -208,7 +229,8 @@ async def retry_job(session: AsyncSession, project_id: str) -> JiraJob | None:
     logger.info("retry_job: resetting %s (was %r) for project %s", job.id, job.status, project_id)
     job.status = "pending"
     project = await session.get(Project, project_id)
-    if project:
+    # Operation jobs must not clobber project.jira_job_status — that field tracks the migration job only.
+    if project and (job.config or {}).get("type") != "operation":
         project.jira_job_status = "pending"
     await _log_event(session, job.id, "info", "Job retried by user")
     await session.flush()
@@ -232,13 +254,18 @@ async def process_job(job_id: str) -> None:
 
                 job.status = "processing"
                 project = await session.get(Project, job.project_id)
-                if project:
+                job_type = (job.config or {}).get("type", "migration")
+                # Operation jobs must not clobber project.jira_job_status — that
+                # field tracks the migration job only.
+                if job_type != "operation" and project:
                     project.jira_job_status = "processing"
                 await _log_event(session, job_id, "info", "Job started processing")
                 await session.commit()
                 logger.info("process_job processing: %s (project=%s)", job_id, job.project_id)
-
-                await _complete_job(session, job, project)
+                if job_type == "operation":
+                    await _complete_operation_job(session, job, project)
+                else:
+                    await _complete_job(session, job, project)
                 await session.commit()
                 logger.info("process_job completed: %s", job_id)
 
@@ -271,6 +298,260 @@ async def process_job(job_id: str) -> None:
     finally:
         _dispatched.discard(job_id)
         logger.info("process_job: cleared from _dispatched: %s", job_id)
+
+
+# ─── ADF description helpers ──────────────────────────────────────────────────
+
+def _adf_text(text: str) -> dict:
+    return {"type": "text", "text": str(text)}
+
+
+def _adf_paragraph(text: str) -> dict:
+    return {"type": "paragraph", "content": [_adf_text(text)]}
+
+
+def _adf_heading(text: str, level: int = 2) -> dict:
+    return {"type": "heading", "attrs": {"level": level}, "content": [_adf_text(text)]}
+
+
+def _adf_rule() -> dict:
+    return {"type": "rule"}
+
+
+def _adf_bullet_list(items: list[str]) -> dict:
+    return {
+        "type": "bulletList",
+        "content": [
+            {"type": "listItem", "content": [_adf_paragraph(item)]}
+            for item in items
+        ],
+    }
+
+
+def _adf_kv_table(rows: list[tuple[str, Any]]) -> dict:
+    def _cell(text: str, header: bool = False) -> dict:
+        return {
+            "type": "tableHeader" if header else "tableCell",
+            "attrs": {},
+            "content": [_adf_paragraph(str(text) if text is not None else "—")],
+        }
+
+    header_row = {"type": "tableRow", "content": [_cell("Field", True), _cell("Value", True)]}
+    body_rows = [
+        {"type": "tableRow", "content": [_cell(k), _cell(str(v) if v not in (None, "", []) else "—")]}
+        for k, v in rows
+    ]
+    return {
+        "type": "table",
+        "attrs": {"isNumberColumnEnabled": False, "layout": "default"},
+        "content": [header_row, *body_rows],
+    }
+
+
+def _adf_resource_table(headers: list[str], rows: list[list[str]]) -> dict:
+    def _cell(text: str, header: bool = False) -> dict:
+        return {
+            "type": "tableHeader" if header else "tableCell",
+            "attrs": {},
+            "content": [_adf_paragraph(str(text) if text else "—")],
+        }
+
+    return {
+        "type": "table",
+        "attrs": {"isNumberColumnEnabled": False, "layout": "default"},
+        "content": [
+            {"type": "tableRow", "content": [_cell(h, True) for h in headers]},
+            *[{"type": "tableRow", "content": [_cell(v) for v in row]} for row in rows],
+        ],
+    }
+
+
+def _build_story_description(
+    project: "Project",
+    resources: list,
+    wave: "Wave | None",
+    risks: list,
+) -> dict:
+    """Build a full ADF document for the migration story."""
+    ao = project.application_overview or {}
+    mc = project.migration_constraints or {}
+    av = project.availability or {}
+    deps = project.dependencies or {}
+    content: list[dict] = []
+
+    # ── Migration Overview ────────────────────────────────────────────────────
+    content.append(_adf_heading("Migration Overview"))
+    preferred_window = ", ".join(mc.get("preferredMigrationWindow") or []) or None
+    snow_groups = ", ".join(mc.get("snowCiGroups") or []) or None
+    content.append(_adf_kv_table([
+        ("Wave", wave.name if wave else None),
+        ("Cutover Date", wave.cutover_date if wave else None),
+        ("Start Date", wave.start_date if wave else None),
+        ("Migration Strategy", ao.get("migrationStrategy")),
+        ("Application Tier", ao.get("applicationTier")),
+        ("EIM ID", ao.get("eimId")),
+        ("IBS In Scope", ("Yes" if ao.get("ibsInScope") else "No") if ao.get("ibsInScope") is not None else None),
+        ("Profile Owner", project.profile_owner),
+        ("Status", project.status),
+    ]))
+    content.append(_adf_rule())
+
+    # ── Migration Constraints ─────────────────────────────────────────────────
+    content.append(_adf_heading("Migration Constraints"))
+    content.append(_adf_kv_table([
+        ("Migration Window", mc.get("regularMigrationWindow")),
+        ("Preferred Window", preferred_window),
+        ("Earliest Start", mc.get("earliestStartDate")),
+        ("Latest End", mc.get("latestEndDate")),
+        ("CR Duration (hrs)", str(mc["crDurationHours"]) if mc.get("crDurationHours") is not None else None),
+        ("SNOW CI Groups", snow_groups),
+    ]))
+    content.append(_adf_rule())
+
+    # ── Availability ──────────────────────────────────────────────────────────
+    content.append(_adf_heading("Availability"))
+    content.append(_adf_kv_table([
+        ("RTO", av.get("rto")),
+        ("RPO", av.get("rpo")),
+    ]))
+    content.append(_adf_rule())
+
+    # ── Resources In Scope ────────────────────────────────────────────────────
+    content.append(_adf_heading(f"Resources In Scope ({len(resources)})"))
+    product_counts: dict[str, int] = {}
+    for r in resources:
+        key = r.product or "Unknown"
+        product_counts[key] = product_counts.get(key, 0) + 1
+    scope_lines = [f"{prod}: {cnt} resource{'s' if cnt > 1 else ''}" for prod, cnt in sorted(product_counts.items())]
+    scope_lines.append(f"Total: {len(resources)}")
+    content.append(_adf_bullet_list(scope_lines))
+
+    # ── Open Risks ────────────────────────────────────────────────────────────
+    open_risks = [r for r in risks if r.risk_status != "resolved"]
+    if open_risks:
+        content.append(_adf_rule())
+        content.append(_adf_heading(f"Open Risks ({len(open_risks)})"))
+        content.append(_adf_bullet_list([f"[{r.severity.upper()}] {r.title}" for r in open_risks]))
+
+    # ── Team ─────────────────────────────────────────────────────────────────
+    team_names = [m.get("name") for m in (project.team or []) if m.get("name")]
+    if team_names:
+        content.append(_adf_rule())
+        content.append(_adf_heading("Team"))
+        content.append(_adf_paragraph(", ".join(team_names)))
+
+    # ── Dependencies ─────────────────────────────────────────────────────────
+    dep_items: list[str] = []
+    for d in (deps.get("upstream") or []):
+        name = d.get("name") or d.get("eimId", "")
+        if name:
+            dep_items.append(f"Upstream: {name}")
+    for d in (deps.get("downstream") or []):
+        name = d.get("name") or d.get("eimId", "")
+        if name:
+            dep_items.append(f"Downstream: {name}")
+    if dep_items:
+        content.append(_adf_rule())
+        content.append(_adf_heading("Dependencies"))
+        content.append(_adf_bullet_list(dep_items))
+
+    return {"version": 1, "type": "doc", "content": content}
+
+
+def _build_subtask_description(
+    bucket_key: str,
+    bucket_name: str,
+    resources: list,
+    project: "Project",
+    wave: "Wave | None",
+) -> dict:
+    """Build a full ADF document for a resource subtask."""
+    mc = project.migration_constraints or {}
+    snow_groups = ", ".join(mc.get("snowCiGroups") or []) or None
+    content: list[dict] = []
+
+    # ── Resource Details ──────────────────────────────────────────────────────
+    if len(resources) == 1:
+        r = resources[0]
+        content.append(_adf_heading("Resource Details"))
+        content.append(_adf_kv_table([
+            ("Name", r.name),
+            ("Source ID", r.resource_id),
+            ("Target ID", r.target_resource_id),
+            ("Product", r.product),
+            ("Resource Set", r.resource_set),
+            ("Sub Application", r.sub_application),
+        ]))
+        if r.specs:
+            content.append(_adf_heading("Specs", level=3))
+            content.append(_adf_kv_table(list(r.specs.items())))
+    else:
+        content.append(_adf_heading(f"Resources ({len(resources)})"))
+        rows = [
+            [r.name, r.product or "", r.resource_id or "", r.target_resource_id or ""]
+            for r in resources
+        ]
+        content.append(_adf_resource_table(["Name", "Product", "Source ID", "Target ID"], rows))
+
+    # ── Migration Context ─────────────────────────────────────────────────────
+    content.append(_adf_rule())
+    content.append(_adf_heading("Migration Context"))
+    content.append(_adf_kv_table([
+        ("Wave", wave.name if wave else None),
+        ("Cutover Date", wave.cutover_date if wave else None),
+        ("CR Duration (hrs)", str(mc["crDurationHours"]) if mc.get("crDurationHours") is not None else None),
+        ("SNOW CI Groups", snow_groups),
+        ("Migration Window", mc.get("regularMigrationWindow")),
+    ]))
+
+    return {"version": 1, "type": "doc", "content": content}
+
+
+def _build_cr_description(
+    project: "Project",
+    wave: "Wave | None",
+    linked_resources: list,
+) -> dict:
+    """Build a full ADF document for a CR/Operation subtask."""
+    mc = project.migration_constraints or {}
+    snow_groups = ", ".join(mc.get("snowCiGroups") or []) or None
+    preferred_window = ", ".join(mc.get("preferredMigrationWindow") or []) or None
+    content: list[dict] = []
+
+    # ── Change Request Context ────────────────────────────────────────────────
+    content.append(_adf_heading("Change Request Context"))
+    content.append(_adf_kv_table([
+        ("Wave", wave.name if wave else None),
+        ("Cutover Date", wave.cutover_date if wave else None),
+        ("CR Duration (hrs)", str(mc["crDurationHours"]) if mc.get("crDurationHours") is not None else None),
+        ("SNOW CI Groups", snow_groups),
+        ("Migration Window", mc.get("regularMigrationWindow")),
+        ("Preferred Window", preferred_window),
+    ]))
+
+    # ── Affected Resources ────────────────────────────────────────────────────
+    if linked_resources:
+        content.append(_adf_rule())
+        content.append(_adf_heading(f"Affected Resources ({len(linked_resources)})"))
+        rows = [
+            [r.name, r.product or "", r.resource_id or "", r.jira_subtask_key or ""]
+            for r in linked_resources
+        ]
+        content.append(_adf_resource_table(["Name", "Product", "Source ID", "Subtask Key"], rows))
+
+    # ── Change Freeze Periods ─────────────────────────────────────────────────
+    freeze_periods = mc.get("changeFreezePeriods") or []
+    if freeze_periods:
+        content.append(_adf_rule())
+        content.append(_adf_heading("Change Freeze Periods"))
+        freeze_items = [
+            f"{fp['name']} ({fp.get('from', '')} → {fp.get('to', '')})"
+            if isinstance(fp, dict) else str(fp)
+            for fp in freeze_periods
+        ]
+        content.append(_adf_bullet_list(freeze_items))
+
+    return {"version": 1, "type": "doc", "content": content}
 
 
 async def _complete_job(
@@ -319,24 +600,41 @@ async def _complete_job(
     in_scope = list(result.scalars().all())
     logger.info("_complete_job: %d in-scope resource(s)", len(in_scope))
 
+    # Load wave and risks for description building (before any commits while session is fresh)
+    wave: Wave | None = None
+    if project and project.wave_id:
+        wave = await session.get(Wave, project.wave_id)
+        logger.info("_complete_job: wave=%s", wave.name if wave else "None")
+    risks: list[Risk] = []
+    if project:
+        risks_result = await session.execute(select(Risk).where(Risk.project_id == job.project_id))
+        risks = list(risks_result.scalars().all())
+    logger.info("_complete_job: %d risk(s) loaded", len(risks))
+
     # Build buckets NOW while in_scope objects are freshly loaded (before any commits).
     # Bucket keys are plain strings so they survive session expiry across commits.
+    # bucket_resources maps bucket_key → list of CloudResource for description building.
+    bucket_resources: dict[str, list] = {}
     if mode == "category-level":
         from app.services.product_category_service import get_category_for_product
         buckets: dict[str, str] = {}
         for r in in_scope:
             cat = get_category_for_product(r.product)
             buckets.setdefault(cat, cat)
+            bucket_resources.setdefault(cat, []).append(r)
     elif mode == "product-level":
         buckets = {}
         for r in in_scope:
             prod = r.product or "Other"
             buckets.setdefault(prod, prod)
+            bucket_resources.setdefault(prod, []).append(r)
     else:
         # resource-level or custom: bucket_key = resource ID, display = resource name
         selected_ids = config.get("selectedResourceIds") or [r.id for r in in_scope]
         id_to_name = {r.id: r.name for r in in_scope}
+        id_to_resource = {r.id: r for r in in_scope}
         buckets = {rid: id_to_name.get(rid, rid) for rid in selected_ids}
+        bucket_resources = {rid: [id_to_resource[rid]] for rid in selected_ids if rid in id_to_resource}
 
     logger.info("_complete_job: %d bucket(s) built (mode=%s)", len(buckets), mode)
 
@@ -346,10 +644,12 @@ async def _complete_job(
     if not job.story_key:
         logger.info("_complete_job C1: creating story (use_real_jira=%s)", use_real_jira)
         if use_real_jira:
+            story_desc = _build_story_description(project, in_scope, wave, risks) if project else None
             story_key = await jira_client.create_story(
                 project_key=project_key,
                 summary=f"Migration: {project.name if project else project_key}",
                 parent_epic_key=job.wave_epic_key,  # type: ignore[arg-type]
+                description=story_desc,
             )
         else:
             story_num = random.randint(100, 999)
@@ -381,10 +681,13 @@ async def _complete_job(
 
         logger.info("_complete_job C2: creating subtask for bucket %r (use_real_jira=%s)", bucket_key, use_real_jira)
         if use_real_jira:
+            subtask_resources = bucket_resources.get(bucket_key, [])
+            subtask_desc = _build_subtask_description(bucket_key, bucket_name, subtask_resources, project, wave) if project else None
             sk = await jira_client.create_subtask(
                 project_key=project_key,
                 summary=bucket_name,
                 parent_story_key=story_key,
+                description=subtask_desc,
             )
         else:
             sk = f"{project_key}-{base_num + 1 + len(job.subtask_keys or {})}"
@@ -435,4 +738,108 @@ async def _complete_job(
         f"Job completed: {story_key}, {n_subtasks} subtask(s)",
     )
     logger.info("_complete_job C3 done: job=%s story=%s subtasks=%d", job.id, story_key, n_subtasks)
+    # Final commit is done by process_job() after this function returns
+
+
+async def _complete_operation_job(
+    session: AsyncSession, job: JiraJob, project: Project | None
+) -> None:
+    """
+    Process an operation job: create a Change Request subtask and link it to
+    selected resource subtasks via the configured issue link type.
+
+    Checkpoint:
+      C1 — job.subtask_keys["cr"] set after CR subtask creation (idempotent on retry)
+
+    Mock mode (no jira_base_url or no project.jira_story_key): generates a fake
+    CR key but skips issue link creation — provides usable dev flow.
+    """
+    from app.config import settings
+    from app.services import jira_client
+
+    config = job.config or {}
+    selected_subtask_keys: list[str] = config.get("selected_subtask_keys", [])
+    summary: str = config.get("summary", "Change Request")
+
+    logger.info(
+        "_complete_operation_job enter: job_id=%s project_id=%s summary=%r selected=%s",
+        job.id, job.project_id, summary, selected_subtask_keys,
+    )
+
+    use_real_jira = bool(settings.jira_base_url and project and project.jira_story_key)
+    logger.info("_complete_operation_job use_real_jira=%s", use_real_jira)
+
+    if project and project.jira_story_key:
+        project_key = project.jira_story_key.split("-")[0]
+    else:
+        project_key = settings.jira_project_key
+
+    # Load wave and linked resources for description building
+    wave: Wave | None = None
+    if project and project.wave_id:
+        wave = await session.get(Wave, project.wave_id)
+    linked_resources: list[CloudResource] = []
+    if selected_subtask_keys and project:
+        lr_result = await session.execute(
+            select(CloudResource).where(
+                CloudResource.project_id == job.project_id,
+                CloudResource.jira_subtask_key.in_(selected_subtask_keys),
+            )
+        )
+        linked_resources = list(lr_result.scalars().all())
+        logger.info(
+            "_complete_operation_job: %d linked resource(s) for %d selected key(s)",
+            len(linked_resources), len(selected_subtask_keys),
+        )
+
+    # ── C1: Create the Change Request subtask (idempotent) ────────────────────
+    existing_keys = job.subtask_keys or {}
+    if "cr" not in existing_keys:
+        logger.info("_complete_operation_job C1: creating CR subtask (use_real_jira=%s)", use_real_jira)
+        if use_real_jira:
+            cr_desc = _build_cr_description(project, wave, linked_resources) if project else None
+            cr_key = await jira_client.create_subtask(
+                project_key=project_key,
+                summary=summary,
+                parent_story_key=project.jira_story_key,  # type: ignore[union-attr]
+                description=cr_desc,
+            )
+        else:
+            cr_key = f"{project_key}-{random.randint(200, 999)}"
+
+        job.subtask_keys = {**existing_keys, "cr": cr_key}
+        flag_modified(job, "subtask_keys")
+        await _log_event(session, job.id, "info", f"CR subtask created: {cr_key}")
+        await session.commit()
+        await session.refresh(job)
+        logger.info("_complete_operation_job C1 done: cr_key=%s", cr_key)
+    else:
+        cr_key = existing_keys["cr"]
+        logger.info("_complete_operation_job C1 skipped: cr_key=%s already set", cr_key)
+
+    # ── Create issue links (real Jira only) ───────────────────────────────────
+    if use_real_jira and selected_subtask_keys:
+        link_type = settings.jira_issue_link_type
+        for target_key in selected_subtask_keys:
+            logger.info(
+                "_complete_operation_job link: %s %s %s", cr_key, link_type, target_key
+            )
+            await jira_client.create_issue_link(target_key, cr_key, link_type)
+            await _log_event(
+                session, job.id, "info",
+                f"Linked: {cr_key} {link_type} {target_key}",
+            )
+
+    # ── Mark complete ─────────────────────────────────────────────────────────
+    job.status = "completed"
+    job.processed_at = datetime.now(timezone.utc)
+
+    await _log_event(
+        session, job.id, "info",
+        f"Operation job completed: {cr_key}, linked to {len(selected_subtask_keys)} subtask(s)",
+    )
+    logger.info(
+        "_complete_operation_job done: job=%s cr_key=%s links=%d",
+        job.id, cr_key, len(selected_subtask_keys),
+    )
     # Final commit is done by process_job() after this function returns

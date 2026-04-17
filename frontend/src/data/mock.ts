@@ -6,15 +6,24 @@ import type { BillingRecord } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
 
 export const mockProductCategoryMap: ProductCategoryEntry[] = [
-  { product: 'ecs',      category: 'VM' },
-  { product: 'rds',      category: 'Database' },
-  { product: 'polarDB',  category: 'Database' },
-  { product: 'redis',    category: 'Database' },
-  { product: 'oss',      category: 'Buckets' },
-  { product: 'slb',      category: 'Network' },
-  { product: 'dns',      category: 'Network' },
-  { product: 'sls',      category: 'Other' },
-  { product: 'Other',    category: 'Other' },
+  { product: 'ecs',            product_name: 'Elastic Compute Service',          category: 'computing' },
+  { product: 'ess',            product_name: 'Auto Scaling',                     category: 'computing' },
+  { product: 'cs',             product_name: 'Container Service for Kubernetes', category: 'computing' },
+  { product: 'cr-ee',          product_name: 'Container Registry',               category: 'computing' },
+  { product: 'kms',            product_name: 'Key Management Service',           category: 'security' },
+  { product: 'vpc',            product_name: 'Virtual Private Cloud',            category: 'networking' },
+  { product: 'slb',            product_name: 'Server Load Balancer',             category: 'networking' },
+  { product: 'clouddns',       product_name: 'Cloud DNS',                        category: 'networking' },
+  { product: 'polardb',        product_name: 'PolarDB',                          category: 'database' },
+  { product: 'rds',            product_name: 'RDS',                              category: 'database' },
+  { product: 'r-kvstore',      product_name: 'Redis',                            category: 'database' },
+  { product: 'dds',            product_name: 'MongoDB',                          category: 'database' },
+  { product: 'oss',            product_name: 'Object Storage Service',           category: 'storage' },
+  { product: 'sls',            product_name: 'Simple Log Service',               category: 'storage' },
+  { product: 'rocketmq',       product_name: 'Rocket MQ',                        category: 'middleware' },
+  { product: 'dataworks',      product_name: 'DataWorks',                        category: 'analytics-computing' },
+  { product: 'quickbi-public', product_name: 'QuickBI',                          category: 'analytics-computing' },
+  { product: 'cms',            product_name: 'Cloud Monitor',                    category: 'monitoring' },
 ]
 
 export const mockUsers: User[] = [
@@ -205,7 +214,7 @@ export const mockProjects: Project[] = [
           targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a13', resourceId: 'rm-7a3b4c5d6e', name: 'Reporting Analytics DB', product: 'polarDB',
+          id: 'res-a13', resourceId: 'rm-7a3b4c5d6e', name: 'Reporting Analytics DB', product: 'polardb',
           resourceSet: 'corp-00421-alpha-erp-prod',
           specs: { instance_type: 'polar.mysql.x4.large', cpu: 16, memory: 128, storage_gb: 10240 },
           targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
@@ -249,39 +258,65 @@ export const mockProjects: Project[] = [
           targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a20', resourceId: 'fw-4b0c1d2e3f', name: 'Perimeter Firewall Cluster', product: 'Other',
+          id: 'res-a20', resourceId: 'fw-4b0c1d2e3f', name: 'Perimeter Firewall Cluster', product: 'vpc',
           resourceSet: 'corp-00421-alpha-erp-prod',
           specs: { mode: 'ha-pair', throughput_gbps: 40 },
           targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-a21', resourceId: 'waf-5c1d2e3f4a', name: 'Internal WAF Appliance', product: 'Other',
+          id: 'res-a21', resourceId: 'waf-5c1d2e3f4a', name: 'Internal WAF Appliance', product: 'kms',
           resourceSet: 'corp-00421-alpha-erp-prod',
           specs: { ruleset: 'OWASP', ssl_inspection_gbps: 5 },
           targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
         },
         {
-          id: 'res-a22', resourceId: 'rt-6d2e3f4a5b', name: 'MPLS Gateway Router', product: 'dns',
+          id: 'res-a22', resourceId: 'rt-6d2e3f4a5b', name: 'MPLS Gateway Router', product: 'clouddns',
           resourceSet: 'corp-00421-alpha-erp-prod',
           specs: { circuit_gbps: 10, protocol: 'BGP' },
           targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
+        // — Computing (new) —
+        {
+          id: 'res-a26', resourceId: 'ess-1a2b3c4d5e', name: 'ERP Auto Scaling Group', product: 'ess',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { min_instances: 2, max_instances: 10, cooldown_seconds: 300 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
+        },
+        {
+          id: 'res-a27', resourceId: 'cs-2b3c4d5e6f', name: 'ERP Container Service Cluster', product: 'cs',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { node_count: 4, instance_type: 'ecs.c6.xlarge', k8s_version: '1.28' },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
+        },
+        {
+          id: 'res-a28', resourceId: 'cr-3c4d5e6f7a', name: 'ERP Container Registry', product: 'cr-ee',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { repo_count: 12, geo_replication: true },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
+        },
+        // — Storage (log service) —
+        {
+          id: 'res-a29', resourceId: 'sls-4d5e6f7a8b', name: 'Application Event Log Service', product: 'sls',
+          resourceSet: 'corp-00421-alpha-erp-prod',
+          specs: { retention_days: 90, daily_ingestion_gb: 50 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
+        },
         // — Redis —
         {
-          id: 'res-a24', resourceId: 'redis-8f4a5b6c7d', name: 'Session Cache (Redis)', product: 'redis',
+          id: 'res-a24', resourceId: 'redis-8f4a5b6c7d', name: 'Session Cache (Redis)', product: 'r-kvstore',
           resourceSet: 'corp-00421-alpha-erp-prod',
           specs: {},
           targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res-a25', resourceId: 'redis-9a5b6c7d8e', name: 'Rate Limiter (Redis)', product: 'redis',
+          id: 'res-a25', resourceId: 'redis-9a5b6c7d8e', name: 'Rate Limiter (Redis)', product: 'r-kvstore',
           resourceSet: 'corp-00421-alpha-erp-prod',
           specs: {},
           targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         // — Other —
         {
-          id: 'res-a23', resourceId: 'mq-7e3f4a5b6c', name: 'ActiveMQ Message Broker', product: 'sls',
+          id: 'res-a23', resourceId: 'mq-7e3f4a5b6c', name: 'ActiveMQ Message Broker', product: 'rocketmq',
           resourceSet: 'corp-00421-alpha-erp-prod',
           specs: { instance_type: 'ecs.c6.xlarge', cpu: 4, memory: 8, mode: 'master-slave-ha' },
           targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
@@ -450,6 +485,30 @@ export const mockProjects: Project[] = [
           specs: { type: 'internal-nlb', throughput_gbps: 1 },
           targetResourceId: 'tgt-placeholder', syncStatus: 'synced',
         },
+        {
+          id: 'res-m11-7', resourceId: 'dds-aa1b2c3d4e', name: 'Session Document Store', product: 'dds',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { instance_type: 'dds.mongo.mid', storage_gb: 100, replication: 3 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'synced',
+        },
+        {
+          id: 'res-m11-8', resourceId: 'dw-bb2c3d4e5f', name: 'Auth Data Pipeline', product: 'dataworks',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { workspace: 'auth-analytics', schedule: 'daily' },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
+        },
+        {
+          id: 'res-m11-9', resourceId: 'qbi-cc3d4e5f6a', name: 'Security Analytics Dashboard', product: 'quickbi-public',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { dashboards: 5, users: 30 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
+        },
+        {
+          id: 'res-m11-10', resourceId: 'cms-dd4e5f6a7b', name: 'Auth Service Health Monitor', product: 'cms',
+          resourceSet: 'corp-00203-auth-svc-prod',
+          specs: { alert_groups: 3, check_interval_seconds: 60 },
+          targetResourceId: 'tgt-placeholder', syncStatus: 'synced',
+        },
       ],
     },
 
@@ -570,7 +629,7 @@ export const mockProjects: Project[] = [
           targetResourceId: 'tgt-placeholder', syncStatus: 'out-of-sync',
         },
         {
-          id: 'res9', resourceId: 'i-cc9d0e1f', name: 'Anycast Edge Nodes ×12', product: 'dns',
+          id: 'res9', resourceId: 'i-cc9d0e1f', name: 'Anycast Edge Nodes ×12', product: 'clouddns',
           resourceSet: 'corp-0088-edge-dns-prod',
           specs: { instance_type: 'ecs.c6.xlarge', cpu: 4, memory: 8, nodes: 12 },
           targetResourceId: 'tgt-placeholder', syncStatus: 'provisioning',
@@ -1057,47 +1116,100 @@ export const mockSurveyConfig: SurveyConfig = {
 
 export const mockResourceSurveyConfig: ResourceSurveyConfig = {
   groups: [
-    // Resource-level scoped to product 'redis':
-    // Each redis instance gets its own step — answers saved to each resource's specs individually
     {
-      id: 'redis__usage_pattern__resource',
+      id: 'database__migration__resource',
       level: 'resource',
-      product: 'redis',
+      products: ['rds', 'polardb', 'dds'],
       questions: [
         {
-          id: 'redis__usage_pattern',
-          specsKey: 'usage_pattern',
-          label: 'What is the primary usage pattern for this Redis instance?',
-          hintText: 'e.g. cache-only — used solely for caching ephemeral data',
+          id: 'db__backup_requirement_during_migration',
+          specsKey: 'backup_requirement_during_migration',
+          label: 'Backup requirement during migration?',
+          hintText: 'Where should database backups reside during the migration window?',
           inputType: 'select',
-          options: ['cache-only', 'persistence', 'mixed'],
+          options: ['Keep in existing instance', 'Keep in new instance', 'Both'],
           required: true,
         },
         {
-          id: 'redis__eviction_policy',
-          specsKey: 'eviction_policy',
-          label: 'What eviction policy does this Redis instance use?',
-          hintText: 'e.g. allkeys-lru',
+          id: 'db__migration_type',
+          specsKey: 'migration_type',
+          label: 'Migration type',
+          hintText: 'Standard = single cutover; Incremental = live replication with defined start/end dates',
           inputType: 'select',
-          options: ['allkeys-lru', 'volatile-lru', 'allkeys-lfu', 'noeviction'],
+          options: ['Standard', 'Incremental'],
+          required: true,
+        },
+        {
+          id: 'db__incremental_migration_start_date',
+          specsKey: 'incremental_migration_start_date',
+          label: 'Incremental migration start date',
+          hintText: 'Date when incremental replication begins',
+          inputType: 'date',
           required: false,
+          condition: { specsKey: 'migration_type', value: 'Incremental' },
+        },
+        {
+          id: 'db__incremental_migration_end_date',
+          specsKey: 'incremental_migration_end_date',
+          label: 'Incremental migration end date',
+          hintText: 'Target cutover date when incremental replication completes',
+          inputType: 'date',
+          required: false,
+          condition: { specsKey: 'migration_type', value: 'Incremental' },
         },
       ],
     },
-    // Category-level: one step for all Database resources combined
-    // Answered once — same answer applied to every Database resource's specs
     {
-      id: 'database__replication_mode__category',
-      level: 'category',
-      category: 'Database',
+      id: 'r-kvstore__usage_pattern__resource',
+      level: 'resource',
+      product: 'r-kvstore',
       questions: [
         {
-          id: 'db__replication_mode',
-          specsKey: 'replication_mode',
-          label: 'What replication mode do your database resources use?',
-          hintText: 'e.g. sync — synchronous replication across AZs',
+          id: 'kvstore__usage_pattern',
+          specsKey: 'usage_pattern',
+          label: 'Usage pattern',
+          hintText: 'Cache-only = ephemeral data only; Persistence = AOF/RDB enabled; Mixed = both caching and persistent writes',
           inputType: 'select',
-          options: ['sync', 'async', 'none'],
+          options: ['Cache-only', 'Persistence', 'Mixed'],
+          required: true,
+        },
+      ],
+    },
+    {
+      id: 'oss__hot_cold__resource',
+      level: 'resource',
+      product: 'oss',
+      questions: [
+        {
+          id: 'oss__hot_cold_classification',
+          specsKey: 'hot_cold_classification',
+          label: 'Hot/cold data classification',
+          hintText: 'Hot = frequently accessed (standard tier); Cold = infrequent access or archival',
+          inputType: 'select',
+          options: ['Hot', 'Cold'],
+          required: true,
+        },
+      ],
+    },
+    {
+      id: 'sls__details__resource',
+      level: 'resource',
+      product: 'sls',
+      questions: [
+        {
+          id: 'sls__purpose',
+          specsKey: 'purpose',
+          label: 'Purpose?',
+          hintText: "Describe the major usage scenarios, e.g. 'Application audit logs for compliance' or 'Real-time metrics for monitoring dashboard'",
+          inputType: 'short_text',
+          required: false,
+        },
+        {
+          id: 'sls__downstream_consumer_projects',
+          specsKey: 'downstream_consumer_projects',
+          label: 'Downstream consumer projects',
+          hintText: "List each project consuming this log stream, e.g. 'FinanceApp (BA-001)', 'AuditService (BA-042)'",
+          inputType: 'string_array',
           required: false,
         },
       ],

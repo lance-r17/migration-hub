@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useProductCategoryMap } from '@/hooks/use-product-category'
 import type { CloudResource, Project } from '@/types'
 
 interface ResourceComparisonDrawerProps {
@@ -46,6 +47,7 @@ export function ResourceComparisonDrawer({
   const resources = (project?.currentInfrastructure?.resources ?? []).filter(
     r => r.resourceSet === resourceSet,
   )
+  const { getNameForProduct } = useProductCategoryMap()
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -119,7 +121,7 @@ export function ResourceComparisonDrawer({
                       {resource.product && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span className="w-20 shrink-0 font-medium">Product</span>
-                          <span>{resource.product}</span>
+                          <span>{getNameForProduct(resource.product)}</span>
                         </div>
                       )}
                       {resource.resourceId && (
@@ -151,7 +153,7 @@ export function ResourceComparisonDrawer({
                       {resource.product && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span className="w-20 shrink-0 font-medium">Product</span>
-                          <span>{resource.product}</span>
+                          <span>{getNameForProduct(resource.product)}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">

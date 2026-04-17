@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     jira_project_key: str = "MIG"
     jira_subtask_issue_type: str = "Subtask"
     jira_subtask_issue_type_id: str = ""
+    jira_issue_link_type: str = "Delivers"
     current_user_id: str = "u2"
     environment: str = "development"
     oidc_issuer: str = ""

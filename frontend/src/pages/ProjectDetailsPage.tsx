@@ -17,6 +17,7 @@ import { TargetArchitectureSection } from '@/components/project/TargetArchitectu
 import { SignOffModal } from '@/components/modals/SignOffModal'
 import { AuditLogDrawer } from '@/components/drawers/AuditLogDrawer'
 import { AssignWaveDrawer } from '@/components/drawers/AssignWaveDrawer'
+import { OperationsDrawer } from '@/components/drawers/OperationsDrawer'
 import { SurveyModal } from '@/components/survey/SurveyModal'
 import { EmbargoBanner } from '@/components/project/EmbargoBanner'
 import { useSurveyConfig, useResourceSurveyConfig } from '@/hooks/use-survey'
@@ -54,6 +55,7 @@ export function ProjectDetailsPage() {
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [assignWaveOpen, setAssignWaveOpen] = useState(false)
   const [surveyOpen, setSurveyOpen] = useState(false)
+  const [operationsOpen, setOperationsOpen] = useState(false)
 
   // Fire completion toast when jiraJobStatus transitions to 'completed'
   const prevJiraStatus = useRef(project?.jiraJobStatus)
@@ -342,10 +344,12 @@ export function ProjectDetailsPage() {
             onSave={(d) => handleSave('currentInfrastructure', d)}
             projectStatus={project.status}
             isProjectMember={isProjectMember}
+            isPlatformLead={isPlatformLead}
             jiraJobStatus={project.jiraJobStatus}
             jiraStoryKey={project.jiraStoryKey}
             jiraBaseUrl={project.jiraBaseUrl}
             onRetryJiraJob={handleRetryJiraJob}
+            onOpenOperations={() => setOperationsOpen(true)}
           />
           <DataPersistenceSection
             data={project.dataPersistence}
@@ -396,6 +400,14 @@ export function ProjectDetailsPage() {
         waves={waves}
         currentWaveId={project.waveId}
         onSave={handleAssignWave}
+      />
+
+      <OperationsDrawer
+        open={operationsOpen}
+        onOpenChange={setOperationsOpen}
+        projectId={project.id}
+        resources={project.currentInfrastructure?.resources ?? []}
+        jiraBaseUrl={project.jiraBaseUrl}
       />
 
       {surveyConfig && (

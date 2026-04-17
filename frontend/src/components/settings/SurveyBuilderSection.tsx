@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSurveyConfig, useSurveyFieldDefs, useResourceSurveyConfig } from '@/hooks/use-survey'
 import { useProductCategoryMap } from '@/hooks/use-product-category'
@@ -36,6 +38,7 @@ const RESOURCE_INPUT_TYPES: { value: ResourceSurveyInputType; label: string }[] 
   { value: 'boolean', label: 'Yes / No' },
   { value: 'string_array', label: 'List (tags)' },
   { value: 'checkbox_select', label: 'Checkboxes (multi)' },
+  { value: 'date', label: 'Date' },
 ]
 
 const RESOURCE_CATEGORIES: ResourceCategory[] = ['VM', 'Database', 'Buckets', 'Network', 'Other']
@@ -364,11 +367,15 @@ const LEVEL_LABELS: Record<ResourceQuestionLevel, string> = {
 function groupScopeLabel(group: ResourceQuestionGroup): string {
   if (group.level === 'resource') {
     if (group.resourceId) return `Per-resource · ID: ${group.resourceId}`
+    if (group.products?.length) return `Per-resource · Products: ${group.products.join(', ')}`
     if (group.product) return `Per-resource · Product: ${group.product}`
     if (group.category) return `Per-resource · Category: ${group.category}`
     return 'Per-resource · All resources'
   }
-  if (group.level === 'product') return `Once · Product: ${group.product ?? '—'}`
+  if (group.level === 'product') {
+    if (group.products?.length) return `Once · Products: ${group.products.join(', ')}`
+    return `Once · Product: ${group.product ?? '—'}`
+  }
   if (group.level === 'category') return `Once · Category: ${group.category ?? '—'}`
   return group.level
 }
@@ -376,7 +383,7 @@ function groupScopeLabel(group: ResourceQuestionGroup): string {
 function ResourceQuestionsTab() {
   const { user } = useCurrentUser()
   const { resourceSurveyConfig, loading, saving, save } = useResourceSurveyConfig()
-  const { map: productCategoryMap } = useProductCategoryMap()
+  const { map: productCategoryMap, getNameForProduct } = useProductCategoryMap()
   const knownProducts = Object.keys(productCategoryMap)
 
   const [groups, setGroups] = useState<ResourceQuestionGroup[]>([])
@@ -393,7 +400,7 @@ function ResourceQuestionsTab() {
   // New group form state
   const [showAddGroup, setShowAddGroup] = useState(false)
   const [newLevel, setNewLevel] = useState<ResourceQuestionLevel>('resource')
-  const [newProduct, setNewProduct] = useState('')
+  const [newProducts, setNewProducts] = useState<string[]>([])
   const [newCategory, setNewCategory] = useState<ResourceCategory | ''>('')
   const [newResourceId, setNewResourceId] = useState('')
 
@@ -407,14 +414,14 @@ function ResourceQuestionsTab() {
       id,
       level: newLevel,
       ...(newLevel === 'category' && newCategory ? { category: newCategory as ResourceCategory } : {}),
-      ...(newLevel !== 'category' && newProduct ? { product: newProduct } : {}),
+      ...(newLevel !== 'category' && newProducts.length > 0 ? { products: newProducts } : {}),
       ...(newLevel === 'resource' && newResourceId ? { resourceId: newResourceId } : {}),
       questions: [],
     }
     setGroups(prev => [...prev, group])
     setShowAddGroup(false)
     setNewLevel('resource')
-    setNewProduct('')
+    setNewProducts([])
     setNewCategory('')
     setNewResourceId('')
   }
@@ -552,20 +559,64 @@ function ResourceQuestionsTab() {
               ) : (
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground">Product filter (optional)</label>
-                  <Select
-                    value={newProduct === '' ? '__all__' : newProduct}
-                    onValueChange={(v) => setNewProduct(v === '__all__' ? '' : v)}
-                  >
-                    <SelectTrigger className="text-sm h-9">
-                      <SelectValue placeholder="All products…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All products</SelectItem>
-                      {knownProducts.map(p => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between text-sm h-9 font-normal">
+                        <span className="truncate">
+                          {newProducts.length === 0 ? 'All products…' : newProducts.join(', ')}
+                        </span>
+                        <ChevronDown size={14} className="shrink-0 ml-2 text-muted-foreground" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2 max-h-72 overflow-y-auto">
+                      {(() => {
+                        const byCategory = knownProducts.reduce<Record<string, string[]>>((acc, p) => {
+                          const cat = productCategoryMap[p] ?? 'other'
+                          ;(acc[cat] ??= []).push(p)
+                          return acc
+                        }, {})
+                        return Object.entries(byCategory).map(([cat, products], i) => {
+                          const allSelected = products.every(p => newProducts.includes(p))
+                          const someSelected = !allSelected && products.some(p => newProducts.includes(p))
+                          return (
+                            <div key={cat} className={i > 0 ? 'mt-2 pt-2 border-t border-border' : ''}>
+                              <button
+                                type="button"
+                                className="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-muted"
+                                onClick={() => setNewProducts(prev =>
+                                  allSelected
+                                    ? prev.filter(p => !products.includes(p))
+                                    : [...new Set([...prev, ...products])]
+                                )}
+                              >
+                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{cat}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {allSelected ? 'Deselect all' : someSelected ? 'Select rest' : 'Select all'}
+                                </span>
+                              </button>
+                              {products.map(p => (
+                                <label
+                                  key={p}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                                >
+                                  <Checkbox
+                                    checked={newProducts.includes(p)}
+                                    onCheckedChange={(checked) =>
+                                      setNewProducts(prev =>
+                                        checked ? [...prev, p] : prev.filter(x => x !== p)
+                                      )
+                                    }
+                                  />
+                                  <span className="font-medium">{p}</span>
+                                  <span className="text-muted-foreground truncate">{getNameForProduct(p)}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )
+                        })
+                      })()}
+                    </PopoverContent>
+                  </Popover>
                 </div>
               )}
 

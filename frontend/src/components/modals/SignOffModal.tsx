@@ -55,7 +55,7 @@ export function SignOffModal({
   const [jiraMode, setJiraMode] = useState<JiraSubtaskConfig['mode']>('resource-level')
   const [customIds, setCustomIds] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
-  const { getCategoryForProduct } = useProductCategoryMap()
+  const { getCategoryForProduct, getNameForProduct } = useProductCategoryMap()
 
   useEffect(() => {
     if (!open) {
@@ -255,7 +255,7 @@ export function SignOffModal({
                       <p className="text-sm text-muted-foreground">No cloud resources defined.</p>
                     ) : inScopeProducts.map(product => (
                       <div key={product} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
-                        <span className="text-foreground font-medium">{product}</span>
+                        <span className="text-foreground font-medium">{getNameForProduct(product)}</span>
                         <span className="text-xs text-muted-foreground">
                           {inScopeResources.filter(r => (r.product ?? 'Other') === product).length} resource(s)
                         </span>

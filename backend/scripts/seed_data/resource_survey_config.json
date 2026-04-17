@@ -1,47 +1,104 @@
 {
   "groups": [
     {
-      "id": "redis__usage_pattern__resource",
+      "id": "database__migration__resource",
       "level": "resource",
-      "product": "redis",
+      "products": ["rds", "polardb", "dds"],
       "questions": [
         {
-          "id": "redis__usage_pattern",
-          "specsKey": "usage_pattern",
-          "label": "What is the primary usage pattern for this Redis instance?",
-          "hintText": "e.g. cache-only — used solely for caching ephemeral data",
+          "id": "db__backup_requirement_during_migration",
+          "specsKey": "backup_requirement_during_migration",
+          "label": "Backup requirement during migration?",
+          "hintText": "Where should database backups reside during the migration window?",
           "inputType": "select",
-          "options": ["cache-only", "persistence", "mixed"],
+          "options": ["Keep in existing instance", "Keep in new instance", "Both"],
           "required": true
         },
         {
-          "id": "redis__eviction_policy",
-          "specsKey": "eviction_policy",
-          "label": "What eviction policy does this Redis instance use?",
-          "hintText": "e.g. allkeys-lru",
+          "id": "db__migration_type",
+          "specsKey": "migration_type",
+          "label": "Migration type",
+          "hintText": "Standard = single cutover; Incremental = live replication with defined start/end dates",
           "inputType": "select",
-          "options": ["allkeys-lru", "volatile-lru", "allkeys-lfu", "noeviction"],
-          "required": false
+          "options": ["Standard", "Incremental"],
+          "required": true
+        },
+        {
+          "id": "db__incremental_migration_start_date",
+          "specsKey": "incremental_migration_start_date",
+          "label": "Incremental migration start date",
+          "hintText": "Date when incremental replication begins",
+          "inputType": "date",
+          "required": false,
+          "condition": { "specsKey": "migration_type", "value": "Incremental" }
+        },
+        {
+          "id": "db__incremental_migration_end_date",
+          "specsKey": "incremental_migration_end_date",
+          "label": "Incremental migration end date",
+          "hintText": "Target cutover date when incremental replication completes",
+          "inputType": "date",
+          "required": false,
+          "condition": { "specsKey": "migration_type", "value": "Incremental" }
         }
       ]
     },
     {
-      "id": "database__replication_mode__category",
-      "level": "category",
-      "category": "Database",
+      "id": "r-kvstore__usage_pattern__resource",
+      "level": "resource",
+      "product": "r-kvstore",
       "questions": [
         {
-          "id": "db__replication_mode",
-          "specsKey": "replication_mode",
-          "label": "What replication mode do your database resources use?",
-          "hintText": "e.g. sync — synchronous replication across AZs",
+          "id": "kvstore__usage_pattern",
+          "specsKey": "usage_pattern",
+          "label": "Usage pattern",
+          "hintText": "Cache-only = ephemeral data only; Persistence = AOF/RDB enabled; Mixed = both caching and persistent writes",
           "inputType": "select",
-          "options": ["sync", "async", "none"],
+          "options": ["Cache-only", "Persistence", "Mixed"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "oss__hot_cold__resource",
+      "level": "resource",
+      "product": "oss",
+      "questions": [
+        {
+          "id": "oss__hot_cold_classification",
+          "specsKey": "hot_cold_classification",
+          "label": "Hot/cold data classification",
+          "hintText": "Hot = frequently accessed (standard tier); Cold = infrequent access or archival",
+          "inputType": "select",
+          "options": ["Hot", "Cold"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "sls__details__resource",
+      "level": "resource",
+      "product": "sls",
+      "questions": [
+        {
+          "id": "sls__purpose",
+          "specsKey": "purpose",
+          "label": "Purpose?",
+          "hintText": "Describe the major usage scenarios, e.g. 'Application audit logs for compliance' or 'Real-time metrics for monitoring dashboard'",
+          "inputType": "short_text",
+          "required": false
+        },
+        {
+          "id": "sls__downstream_consumer_projects",
+          "specsKey": "downstream_consumer_projects",
+          "label": "Downstream consumer projects",
+          "hintText": "List each project consuming this log stream, e.g. 'FinanceApp (BA-001)', 'AuditService (BA-042)'",
+          "inputType": "string_array",
           "required": false
         }
       ]
     }
   ],
   "updatedBy": "system",
-  "updatedAt": "2026-04-14T00:00:00Z"
+  "updatedAt": "2026-04-17T00:00:00Z"
 }

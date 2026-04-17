@@ -54,10 +54,11 @@ export interface ApplicationOverview {
 
 // ─── Section 2: Current Infrastructure ──────────────────────────────────────
 
-export type ResourceCategory = 'VM' | 'Database' | 'Buckets' | 'Network' | 'Other'
+export type ResourceCategory = 'computing' | 'security' | 'networking' | 'database' | 'storage' | 'middleware' | 'analytics-computing' | 'monitoring'
 
 export interface ProductCategoryEntry {
   product: string
+  product_name: string
   category: ResourceCategory
 }
 

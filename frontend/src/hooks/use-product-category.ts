@@ -15,11 +15,19 @@ export function useProductCategoryMap() {
   }, [])
 
   const map: Record<string, ResourceCategory> = {}
-  for (const e of entries) map[e.product] = e.category
-
-  function getCategoryForProduct(product?: string): ResourceCategory {
-    return (product ? (map[product] ?? 'Other') : 'Other')
+  const nameMap: Record<string, string> = {}
+  for (const e of entries) {
+    map[e.product] = e.category
+    nameMap[e.product] = e.product_name
   }
 
-  return { map, loading, getCategoryForProduct }
+  function getCategoryForProduct(product?: string): ResourceCategory {
+    return (product ? (map[product] ?? 'computing') : 'computing')
+  }
+
+  function getNameForProduct(product?: string): string {
+    return (product ? (nameMap[product] ?? product) : '—')
+  }
+
+  return { map, loading, getCategoryForProduct, getNameForProduct }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Database, RefreshCw, CheckCircle2, AlertOctagon, Clock, Loader2, CheckCircle, Info } from 'lucide-react'
+import { Database, RefreshCw, CheckCircle2, AlertOctagon, Clock, Loader2, CheckCircle, Info, Wrench } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -14,10 +14,12 @@ interface CurrentInfrastructureSectionProps {
   onSave?: (data: CurrentInfrastructure) => void
   projectStatus?: ProjectStatus
   isProjectMember?: boolean
+  isPlatformLead?: boolean
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
   jiraStoryKey?: string
   jiraBaseUrl?: string
   onRetryJiraJob?: () => void
+  onOpenOperations?: () => void
 }
 
 function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
@@ -27,10 +29,10 @@ function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
 }
 
 
-export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, jiraJobStatus, jiraStoryKey, jiraBaseUrl, onRetryJiraJob }: CurrentInfrastructureSectionProps) {
+export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, isPlatformLead = false, jiraJobStatus, jiraStoryKey, jiraBaseUrl, onRetryJiraJob, onOpenOperations }: CurrentInfrastructureSectionProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const [editingResource, setEditingResource] = useState<CloudResource | null>(null)
-  const { getCategoryForProduct } = useProductCategoryMap()
+  const { getCategoryForProduct, getNameForProduct } = useProductCategoryMap()
 
   useEffect(() => { setCurrentPage(0) }, [data])
 
@@ -45,9 +47,19 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
           iconColor="text-emerald-700 dark:text-emerald-300"
           title="Compute & Resources"
           headerRight={
-            <button className="text-xs font-bold bg-primary/10 text-primary px-4 py-2 rounded flex items-center gap-2 hover:bg-primary/20 transition-colors">
-              <RefreshCw size={14} /> RUN DISCOVERY SCAN
-            </button>
+            <div className="flex items-center gap-2">
+              {isPlatformLead && jiraJobStatus === 'completed' && onOpenOperations && (
+                <button
+                  onClick={onOpenOperations}
+                  className="text-xs font-bold bg-muted text-muted-foreground px-4 py-2 rounded flex items-center gap-2 hover:bg-muted/80 transition-colors"
+                >
+                  <Wrench size={14} /> OPERATIONS
+                </button>
+              )}
+              <button className="text-xs font-bold bg-primary/10 text-primary px-4 py-2 rounded flex items-center gap-2 hover:bg-primary/20 transition-colors">
+                <RefreshCw size={14} /> RUN DISCOVERY SCAN
+              </button>
+            </div>
           }
         >
           {(jiraJobStatus === 'pending' || jiraJobStatus === 'processing') && (
@@ -134,7 +146,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                           )}
                         </span>
                       </td>
-                      <td className="py-3 pr-4 text-sm text-muted-foreground">{resource.product ?? <span className="text-muted-foreground/40">—</span>}</td>
+                      <td className="py-3 pr-4 text-sm text-muted-foreground">{resource.product ? getNameForProduct(resource.product) : <span className="text-muted-foreground/40">—</span>}</td>
                       <td className="py-3 pr-4 text-sm text-muted-foreground">{getCategoryForProduct(resource.product)}</td>
                       <td className="py-3 pr-4 text-sm">
                         {resource.resourceSet

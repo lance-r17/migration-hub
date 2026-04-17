@@ -33,7 +33,7 @@ export interface SurveyConfig {
 // ─── Resource Survey ──────────────────────────────────────────────────────────
 
 // Input types supported for resource-level questions (simpler subset of SurveyInputType)
-export type ResourceSurveyInputType = 'select' | 'short_text' | 'boolean' | 'string_array' | 'checkbox_select'
+export type ResourceSurveyInputType = 'select' | 'short_text' | 'boolean' | 'string_array' | 'checkbox_select' | 'date'
 
 // A single question whose answer is written to resource.specs[specsKey]
 export interface ResourceQuestionDef {
@@ -44,6 +44,7 @@ export interface ResourceQuestionDef {
   inputType: ResourceSurveyInputType
   options?: string[]                  // for 'select' and 'checkbox_select'
   required: boolean
+  condition?: { specsKey: string; value: string }  // show only when answers[specsKey] === value
 }
 
 // How the group appears in the survey AND how updates are scoped on submit:
@@ -61,7 +62,8 @@ export type ResourceQuestionLevel = 'resource' | 'product' | 'category'
 export interface ResourceQuestionGroup {
   id: string
   level: ResourceQuestionLevel
-  product?: string                    // filter by product name
+  product?: string                    // filter by a single product name
+  products?: string[]                 // filter by multiple product names (alternative to product)
   category?: ResourceCategory         // filter by resource category
   resourceId?: string                 // filter by exact resource ID (level:'resource' only)
   questions: ResourceQuestionDef[]

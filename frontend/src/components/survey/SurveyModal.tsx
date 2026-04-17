@@ -374,6 +374,26 @@ function ResourceQuestionInput({
           })}
         </div>
       )
+    case 'date': {
+      const dateVal = (value as string) ?? ''
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-start text-left font-normal h-12">
+              <CalendarIcon size={16} className="mr-2 shrink-0" />
+              {dateVal ? format(new Date(dateVal), 'MMM d, y') : <span className="text-muted-foreground">Pick a date…</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 z-[400]" align="start">
+            <Calendar
+              mode="single"
+              selected={dateVal ? new Date(dateVal) : undefined}
+              onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : undefined)}
+            />
+          </PopoverContent>
+        </Popover>
+      )
+    }
     case 'string_array':
       return <TagEditor value={(value as string[]) ?? []} onChange={onChange as (v: string[]) => void} />
     case 'checkbox_select': {
@@ -479,8 +499,11 @@ function computeResourceSteps(
     let matchingIds: string[]
     if (group.resourceId) {
       matchingIds = resources.find(r => r.id === group.resourceId) ? [group.resourceId] : []
-    } else if (group.product) {
-      matchingIds = resources.filter(r => r.product === group.product).map(r => r.id)
+    } else if (group.product || group.products?.length) {
+      matchingIds = resources.filter(r =>
+        (group.product && r.product === group.product) ||
+        (group.products && group.products.includes(r.product))
+      ).map(r => r.id)
     } else if (group.category) {
       matchingIds = resources.filter(r => getCategoryForProduct(r.product) === group.category).map(r => r.id)
     } else {
@@ -610,6 +633,7 @@ export function SurveyModal({
   const resourceStepCanAdvance = currentResourceStep
     ? currentResourceStep.questions.every(q => {
         if (!q.required) return true
+        if (q.condition && currentResourceStepAnswers[q.condition.specsKey] !== q.condition.value) return true
         const val = currentResourceStepAnswers[q.specsKey]
         return val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 0)
       })
@@ -929,7 +953,9 @@ export function SurveyModal({
 
               {/* Questions for this step */}
               <div className="space-y-8">
-                {currentResourceStep.questions.map(q => (
+                {currentResourceStep.questions.filter(q =>
+                  !q.condition || currentResourceStepAnswers[q.condition.specsKey] === q.condition.value
+                ).map(q => (
                   <div key={q.id} className="space-y-3">
                     <div className="space-y-1">
                       <p className="text-lg font-semibold leading-snug">

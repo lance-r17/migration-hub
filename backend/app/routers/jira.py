@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, require_admin
@@ -75,6 +76,49 @@ async def retry_jira_job(
     background_tasks.add_task(jira_service.process_job, job.id)
     logger.info("retry_jira_job: dispatched %s (project=%s)", job.id, project_id)
     return JiraJobOut.from_orm_job(job)
+
+
+# ─── Operation job endpoints ──────────────────────────────────────────────────
+
+class OperationJobCreate(BaseModel):
+    selected_subtask_keys: list[str]
+    summary: str = "Change Request"
+
+
+@router.post("/projects/{project_id}/operation-jobs", response_model=JiraJobOut, status_code=202)
+async def create_operation_job(
+    project_id: str,
+    body: OperationJobCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Queue a Change Request subtask creation job for a project."""
+    config = {
+        "type": "operation",
+        "selected_subtask_keys": body.selected_subtask_keys,
+        "summary": body.summary,
+    }
+    job_data = JiraJobCreate(project_id=project_id, config=config)
+    # update_project_status=False — operation jobs must not clobber the
+    # migration job's "completed" status on the project row.
+    job = await jira_service.create_job(db, job_data, update_project_status=False)
+    await db.commit()
+    jira_service._dispatched.add(job.id)
+    background_tasks.add_task(jira_service.process_job, job.id)
+    logger.info("create_operation_job: dispatched %s (project=%s)", job.id, project_id)
+    return JiraJobOut.from_orm_job(job)
+
+
+@router.get("/projects/{project_id}/operation-jobs", response_model=list[JiraJobOut])
+async def list_operation_jobs(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Return all operation jobs for a project, newest first."""
+    jobs = await jira_service.get_operation_jobs(db, project_id)
+    return [JiraJobOut.from_orm_job(j) for j in jobs]
 
 
 # ─── Admin endpoints ──────────────────────────────────────────────────────────

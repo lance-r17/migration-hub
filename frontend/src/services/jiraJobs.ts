@@ -234,6 +234,49 @@ export async function getJobLogs(jobId: string): Promise<JiraJobLog[]> {
   return raw.map(fromApiLog)
 }
 
+// ─── Operation jobs ───────────────────────────────────────────────────────────
+
+export interface OperationJobOut {
+  id: string
+  projectId: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  config: { type: 'operation'; selected_subtask_keys: string[]; summary: string }
+  requestedAt: string | null
+  processedAt: string | null
+  crSubtaskKey: string | null
+}
+
+function fromApiOperationJob(r: JiraJobApiResponse): OperationJobOut {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    status: r.status as OperationJobOut['status'],
+    config: r.config as OperationJobOut['config'],
+    requestedAt: r.requested_at,
+    processedAt: r.processed_at,
+    crSubtaskKey: r.subtask_keys?.['cr'] ?? null,
+  }
+}
+
+export async function createOperationJob(
+  projectId: string,
+  selectedSubtaskKeys: string[],
+  summary = 'Change Request',
+): Promise<OperationJobOut> {
+  const raw = await apiClient.post<JiraJobApiResponse>(
+    `/api/v1/jira/projects/${projectId}/operation-jobs`,
+    { selected_subtask_keys: selectedSubtaskKeys, summary },
+  )
+  return fromApiOperationJob(raw)
+}
+
+export async function getOperationJobs(projectId: string): Promise<OperationJobOut[]> {
+  const raw = await apiClient.get<JiraJobApiResponse[]>(
+    `/api/v1/jira/projects/${projectId}/operation-jobs`,
+  )
+  return raw.map(fromApiOperationJob)
+}
+
 // ─── getAllJobsAdmin ──────────────────────────────────────────────────────────
 export async function getAllJobsAdmin(): Promise<AdminJiraJobRow[]> {
   if (USE_MOCK) { await delay(); return [] }

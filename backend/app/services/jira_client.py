@@ -90,7 +90,7 @@ async def create_story(
     project_key: str,
     summary: str,
     parent_epic_key: str,
-    description: str | None = None,
+    description: dict | None = None,
 ) -> str:
     """
     Create a Jira Story linked to a parent Epic via the Jira Cloud REST API v3.
@@ -109,16 +109,7 @@ async def create_story(
     }
 
     if description:
-        fields["description"] = {
-            "version": 1,
-            "type": "doc",
-            "content": [
-                {
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": description}],
-                }
-            ],
-        }
+        fields["description"] = description
 
     url = f"{settings.jira_base_url}/rest/api/3/issue"
     logger.info("jira_client create_story: POST %s", url)
@@ -139,6 +130,7 @@ async def create_subtask(
     project_key: str,
     summary: str,
     parent_story_key: str,
+    description: dict | None = None,
 ) -> str:
     """
     Create a Jira child issue linked to a parent Story via the Jira Cloud REST API v3.
@@ -167,6 +159,9 @@ async def create_subtask(
         "parent": {"key": parent_story_key},
     }
 
+    if description:
+        fields["description"] = description
+
     url = f"{settings.jira_base_url}/rest/api/3/issue"
     logger.info("jira_client create_subtask: POST %s", url)
     async with httpx.AsyncClient(
@@ -180,6 +175,38 @@ async def create_subtask(
         except httpx.HTTPStatusError as exc:
             _raise_with_body(exc)
         return response.json()["key"]
+
+
+async def create_issue_link(outward_key: str, inward_key: str, link_type: str) -> None:
+    """
+    Create a Jira issue link between two issues via the Jira Cloud REST API v3.
+
+    The link reads: outward_key <link_type> inward_key.
+    e.g. "MIG-105 Delivers MIG-102"
+
+    Raises ValueError if Jira is not configured.
+    Raises httpx.HTTPStatusError on Jira API failure.
+    """
+    if not settings.jira_base_url:
+        raise ValueError("Jira not configured")
+
+    url = f"{settings.jira_base_url}/rest/api/3/issueLink"
+    body = {
+        "type": {"name": link_type},
+        "outwardIssue": {"key": outward_key},
+        "inwardIssue": {"key": inward_key},
+    }
+    logger.info("jira_client create_issue_link: POST %s (%s -> %s)", url, outward_key, inward_key)
+    async with httpx.AsyncClient(
+        auth=httpx.BasicAuth(settings.jira_user_email, settings.jira_api_token),
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+    ) as client:
+        response = await client.post(url, json=body)
+        logger.info("jira_client create_issue_link: response status=%d", response.status_code)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            _raise_with_body(exc)
 
 
 async def get_epic(epic_key: str) -> dict:

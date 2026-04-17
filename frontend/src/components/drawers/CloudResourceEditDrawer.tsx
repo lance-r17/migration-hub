@@ -56,7 +56,7 @@ const isSignedOff = (status?: ProjectStatus) =>
 export function CloudResourceEditDrawer({ open, onOpenChange, resources, editingResource, projectStatus, isProjectMember, onSave }: Props) {
   const [needMigration, setNeedMigration] = useState(true)
   const [subApplication, setSubApplication] = useState('')
-  const { getCategoryForProduct } = useProductCategoryMap()
+  const { getCategoryForProduct, getNameForProduct } = useProductCategoryMap()
 
   useEffect(() => {
     if (open && editingResource) {
@@ -99,7 +99,7 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
             </ReadOnlyRow>
           )}
           {editingResource.product && (
-            <ReadOnlyRow label="Product">{editingResource.product}</ReadOnlyRow>
+            <ReadOnlyRow label="Product">{getNameForProduct(editingResource.product)}</ReadOnlyRow>
           )}
           <ReadOnlyRow label="Category">{getCategoryForProduct(editingResource.product)}</ReadOnlyRow>
           {editingResource.resourceSet && (
