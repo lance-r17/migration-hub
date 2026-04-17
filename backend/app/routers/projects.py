@@ -14,6 +14,7 @@ from app.schemas.project import (
     ProjectPatch,
     SectionPatch,
 )
+from app.schemas.user import UserOut
 from app.schemas.risk import RiskOut
 from app.services import audit_service, project_service, user_service
 from app.config import settings
@@ -101,6 +102,14 @@ async def get_project(project_id: str, db: AsyncSession = Depends(get_db)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return _project_detail(project)
+
+
+@router.get("/{project_id}/users", response_model=list[UserOut])
+async def get_project_users(project_id: str, db: AsyncSession = Depends(get_db)):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return await user_service.get_users_for_project(db, project_id)
 
 
 @router.patch("/{project_id}", response_model=ProjectDetail)
