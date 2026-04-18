@@ -545,10 +545,15 @@ export function SurveyModal({
     ? computeResourceSteps(resourceSurveyConfig, resources, getCategoryForProduct)
     : []
 
+  // Survey structure: Welcome (0) -> App Questions -> Transition -> Resource Steps
+  const welcomeSlideIndex = 0
+  const appQuestionsStartIndex = 1
+  const appQuestionsEndIndex = orderedQuestions.length // (inclusive, e.g. if 3 questions: 1, 2, 3)
+
   // Transition slide sits between app questions and resource steps
   const hasTransitionSlide = resourceSteps.length > 0
-  const transitionSlideIndex = orderedQuestions.length
-  const totalSteps = orderedQuestions.length + (hasTransitionSlide ? 1 : 0) + resourceSteps.length
+  const transitionSlideIndex = orderedQuestions.length + 1
+  const totalSteps = 1 + orderedQuestions.length + (hasTransitionSlide ? 1 : 0) + resourceSteps.length
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Map<string, AnswerValue>>(new Map())
@@ -558,10 +563,11 @@ export function SurveyModal({
   const [completed, setCompleted] = useState(false)
   const [resourceListExpanded, setResourceListExpanded] = useState(false)
 
-  const isMainStep = currentIndex < orderedQuestions.length
+  const isWelcomeSlide = currentIndex === welcomeSlideIndex
+  const isMainStep = currentIndex >= appQuestionsStartIndex && currentIndex <= appQuestionsEndIndex
   const isTransitionSlide = hasTransitionSlide && currentIndex === transitionSlideIndex
-  const resourceStepIndex = currentIndex - orderedQuestions.length - (hasTransitionSlide ? 1 : 0)
-  const currentResourceStep = (!isMainStep && !isTransitionSlide) ? resourceSteps[resourceStepIndex] : undefined
+  const resourceStepIndex = currentIndex - (orderedQuestions.length + 1 + (hasTransitionSlide ? 1 : 0))
+  const currentResourceStep = (!isWelcomeSlide && !isMainStep && !isTransitionSlide) ? resourceSteps[resourceStepIndex] : undefined
 
   // Reset + pre-fill when opened
   useEffect(() => {
@@ -618,7 +624,7 @@ export function SurveyModal({
 
   // ─── App question state ─────────────────────────────────────────────────────
 
-  const currentQuestion = isMainStep ? orderedQuestions[currentIndex] : undefined
+  const currentQuestion = isMainStep ? orderedQuestions[currentIndex - 1] : undefined
   const currentAnswer = currentQuestion ? answers.get(currentQuestion.fieldId) : undefined
   const isAppAnswered = currentAnswer !== undefined && currentAnswer !== '' &&
     !(Array.isArray(currentAnswer) && currentAnswer.length === 0)
@@ -639,7 +645,7 @@ export function SurveyModal({
       })
     : true
 
-  const canAdvance = isMainStep ? appCanAdvance : isTransitionSlide ? true : resourceStepCanAdvance
+  const canAdvance = isWelcomeSlide ? true : (isMainStep ? appCanAdvance : isTransitionSlide ? true : resourceStepCanAdvance)
   const isLast = currentIndex === totalSteps - 1
 
   // ─── Answer setters ─────────────────────────────────────────────────────────
@@ -766,7 +772,7 @@ export function SurveyModal({
 
   // Keyboard: Enter to advance (only on app question steps and transition slide)
   useEffect(() => {
-    if (!open || completed || submitting || (!isMainStep && !isTransitionSlide)) return
+    if (!open || completed || submitting || (!isWelcomeSlide && !isMainStep && !isTransitionSlide)) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         const tag = (e.target as HTMLElement).tagName
@@ -801,9 +807,9 @@ export function SurveyModal({
           <span className="font-semibold text-sm">{project.name} — Survey</span>
         </div>
         <div className="flex items-center gap-4">
-          {!completed && !isTransitionSlide && (
+          {!completed && !isWelcomeSlide && !isTransitionSlide && (
             <span className="text-sm text-muted-foreground">
-              {currentIndex + 1} / {totalSteps}
+              {currentIndex} / {totalSteps - 1}
             </span>
           )}
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -814,7 +820,7 @@ export function SurveyModal({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto flex items-center justify-center p-6">
-        <div className="w-full max-w-2xl">
+        <div className={cn('w-full transition-all duration-500', isWelcomeSlide ? 'max-w-5xl' : 'max-w-2xl')}>
 
           {completed ? (
             /* Completion screen */
@@ -826,6 +832,49 @@ export function SurveyModal({
                 editing the individual sections or running the survey again.
               </p>
               <Button onClick={onClose} size="lg" className="mt-4 px-10">Close</Button>
+            </div>
+
+          ) : isWelcomeSlide ? (
+            /* Welcome Slide */
+            <div className="text-center space-y-10 animate-in fade-in zoom-in duration-500">
+              <div className="space-y-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary/10 mx-auto transition-transform hover:scale-105 duration-300">
+                  <ClipboardList size={40} className="text-primary" />
+                </div>
+                <div className="space-y-3">
+                  <h2 className="text-4xl font-bold tracking-tight">
+                    Ready to migrate <span className="text-primary">{project.name}</span>?
+                  </h2>
+                  <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
+                    This survey helps us understand your application's architecture and requirements to create a seamless migration path.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left max-w-5xl mx-auto">
+                <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 space-y-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">1</div>
+                  <h3 className="font-semibold">App Architecture</h3>
+                  <p className="text-xs text-muted-foreground">Versions, platform details, and business criticality.</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 space-y-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">2</div>
+                  <h3 className="font-semibold">Dependencies</h3>
+                  <p className="text-xs text-muted-foreground">Upstream/downstream systems and integrations.</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 space-y-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">3</div>
+                  <h3 className="font-semibold">Infrastructure</h3>
+                  <p className="text-xs text-muted-foreground">Specific configuration for your cloud resources.</p>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 text-sm font-medium text-primary border border-primary/10">
+                  <CalendarIcon size={14} />
+                  Estimated time: ~5-10 minutes
+                </div>
+              </div>
             </div>
 
           ) : currentQuestion ? (
@@ -992,8 +1041,8 @@ export function SurveyModal({
                 Skip
               </Button>
             )}
-            <Button onClick={goNext} disabled={!canAdvance || submitting} className="gap-1.5 min-w-[100px]">
-              {submitting ? 'Saving…' : isLast ? 'Submit' : <>Next <ChevronRight size={16} /></>}
+            <Button onClick={goNext} disabled={!canAdvance || submitting} className="gap-1.5 min-w-[120px] transition-all duration-300">
+              {submitting ? 'Saving…' : isLast ? 'Submit' : isWelcomeSlide ? <>Start Survey <ChevronRight size={16} /></> : <>Next <ChevronRight size={16} /></>}
             </Button>
           </div>
         </div>

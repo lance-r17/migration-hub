@@ -45,12 +45,18 @@ const RESOURCE_CATEGORIES: ResourceCategory[] = ['VM', 'Database', 'Buckets', 'N
 
 // ─── Application Survey tab ───────────────────────────────────────────────────
 
-function ApplicationSurveyTab() {
+interface ApplicationSurveyTabProps {
+  isActive: boolean
+  surveyConfig: SurveyConfig | null
+  loading: boolean
+  saving: boolean
+  save: (config: SurveyConfig) => Promise<SurveyConfig>
+}
+
+function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }: ApplicationSurveyTabProps) {
   const { user } = useCurrentUser()
-  const { surveyConfig, loading, saving, save } = useSurveyConfig()
   const { fieldDefs, loading: fieldsLoading, getFieldById, getFieldsBySection } = useSurveyFieldDefs()
 
-  const [isActive, setIsActive] = useState(false)
   const [questions, setQuestions] = useState<SurveyQuestion[]>([])
   const [fieldSearch, setFieldSearch] = useState('')
   const dragIndexRef = useRef<number | null>(null)
@@ -58,7 +64,6 @@ function ApplicationSurveyTab() {
 
   useEffect(() => {
     if (surveyConfig) {
-      setIsActive(surveyConfig.isActive)
       setQuestions([...surveyConfig.questions].sort((a, b) => a.order - b.order))
     }
   }, [surveyConfig])
@@ -69,16 +74,16 @@ function ApplicationSurveyTab() {
   const query = fieldSearch.trim().toLowerCase()
   const filteredFieldsBySection = query
     ? Object.fromEntries(
-        Object.entries(fieldsBySection)
-          .map(([section, fields]) => [
-            section,
-            fields.filter(f =>
-              f.label.toLowerCase().includes(query) ||
-              f.sectionLabel.toLowerCase().includes(query)
-            ),
-          ])
-          .filter(([, fields]) => (fields as unknown[]).length > 0)
-      )
+      Object.entries(fieldsBySection)
+        .map(([section, fields]) => [
+          section,
+          fields.filter(f =>
+            f.label.toLowerCase().includes(query) ||
+            f.sectionLabel.toLowerCase().includes(query)
+          ),
+        ])
+        .filter(([, fields]) => (fields as unknown[]).length > 0)
+    )
     : fieldsBySection
 
   const addField = (fieldId: string) => {
@@ -107,7 +112,7 @@ function ApplicationSurveyTab() {
       const arr = [...prev]
       const swapIdx = direction === 'up' ? index - 1 : index + 1
       if (swapIdx < 0 || swapIdx >= arr.length) return prev
-      ;[arr[index], arr[swapIdx]] = [arr[swapIdx]!, arr[index]!]
+        ;[arr[index], arr[swapIdx]] = [arr[swapIdx]!, arr[index]!]
       return arr.map((q, i) => ({ ...q, order: i }))
     })
   }
@@ -175,11 +180,6 @@ function ApplicationSurveyTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end gap-2.5">
-        <span className="text-sm font-medium">Survey active</span>
-        <Switch checked={isActive} onCheckedChange={setIsActive} id="survey-active" />
-      </div>
-
       <div className="grid grid-cols-[300px_1fr] gap-6 items-start">
         {/* Left: Field Picker */}
         <Card className="sticky top-6">
@@ -342,7 +342,7 @@ function ApplicationSurveyTab() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t">
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-20 py-4 border-t -mx-6 px-6 flex items-center justify-between mt-8">
         <p className="text-xs text-muted-foreground">
           {isActive
             ? 'Survey is active — project teams will see the "Fill Survey" button.'
@@ -572,7 +572,7 @@ function ResourceQuestionsTab() {
                       {(() => {
                         const byCategory = knownProducts.reduce<Record<string, string[]>>((acc, p) => {
                           const cat = productCategoryMap[p] ?? 'other'
-                          ;(acc[cat] ??= []).push(p)
+                            ; (acc[cat] ??= []).push(p)
                           return acc
                         }, {})
                         return Object.entries(byCategory).map(([cat, products], i) => {
@@ -833,7 +833,7 @@ function ResourceQuestionsTab() {
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-4 border-t">
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-20 py-4 border-t -mx-6 px-6 flex items-center justify-between mt-8">
         <p className="text-xs text-muted-foreground">
           {groups.length} group{groups.length !== 1 ? 's' : ''} ·{' '}
           {groups.reduce((sum, g) => sum + g.questions.length, 0)} total question{groups.reduce((s, g) => s + g.questions.length, 0) !== 1 ? 's' : ''}
@@ -849,29 +849,48 @@ function ResourceQuestionsTab() {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function SurveyBuilderSection() {
+  const { surveyConfig, loading, saving, save } = useSurveyConfig()
+  const [isActive, setIsActive] = useState(false)
+
+  useEffect(() => {
+    if (surveyConfig) {
+      setIsActive(surveyConfig.isActive)
+    }
+  }, [surveyConfig])
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold">Project Survey</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Define the questionnaire shown to project teams when filling in their migration profile.
-        </p>
-      </div>
-
       <Tabs defaultValue="application">
-        <TabsList>
-          <TabsTrigger value="application" className="gap-1.5">
-            <ClipboardList size={14} />
-            Application Survey
-          </TabsTrigger>
-          <TabsTrigger value="resource" className="gap-1.5">
-            <Layers size={14} />
-            Resource Questions
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between border-b pb-1">
+          <TabsList>
+            <TabsTrigger value="application" className="gap-1.5">
+              <ClipboardList size={14} />
+              Application Survey
+            </TabsTrigger>
+            <TabsTrigger value="resource" className="gap-1.5">
+              <Layers size={14} />
+              Resource Questions
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center gap-2.5 pb-2">
+            <span className="text-sm font-medium text-muted-foreground mr-1">Survey active</span>
+            <Switch
+              checked={isActive}
+              onCheckedChange={setIsActive}
+              id="survey-active"
+            />
+          </div>
+        </div>
+
         <TabsContent value="application" className="mt-6">
-          <ApplicationSurveyTab />
+          <ApplicationSurveyTab
+            isActive={isActive}
+            surveyConfig={surveyConfig}
+            loading={loading}
+            saving={saving}
+            save={save}
+          />
         </TabsContent>
         <TabsContent value="resource" className="mt-6">
           <ResourceQuestionsTab />
