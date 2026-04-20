@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import attributes, selectinload
 
 from app.models.approval import Approval
 from app.models.cloud_resource import CloudResource
@@ -327,6 +327,18 @@ async def batch_update_resource_specs(
                     changes=resource_changes,
                 )
     await session.flush()
+
+async def update_planning(
+    session: AsyncSession,
+    project: Project,
+    planning: dict[str, Any],
+) -> Project:
+    project.planning = planning
+    attributes.flag_modified(project, "planning")
+    await session.flush()
+    await session.refresh(project)
+    return project
+
 
 async def _check_wave_completed(session: AsyncSession, wave_id: str | None) -> None:
     if not wave_id:

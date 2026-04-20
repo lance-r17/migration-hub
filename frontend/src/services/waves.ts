@@ -6,6 +6,7 @@ const ENDPOINTS = {
   waves: '/api/v1/waves',
   wave: (id: string) => `/api/v1/waves/${id}`,
   import: '/api/v1/waves/import',
+  sync: (id: string) => `/api/v1/waves/${id}/sync`,
 }
 
 interface WaveApiRecord {
@@ -19,6 +20,8 @@ interface WaveApiRecord {
   jira_base_url?: string
   source: string
   status: string
+  color?: string
+  project_order?: string[]
   created_at: string
 }
 
@@ -34,6 +37,8 @@ function fromApi(r: WaveApiRecord): Wave {
     jiraBaseUrl: r.jira_base_url,
     source: r.source as Wave['source'],
     status: r.status as Wave['status'],
+    color: r.color,
+    projectOrder: r.project_order,
     createdAt: r.created_at,
   }
 }
@@ -46,6 +51,7 @@ function toApi(data: Omit<Wave, 'id' | 'createdAt' | 'jiraEpicKey' | 'jiraProjec
     description: data.description,
     source: data.source,
     status: data.status,
+    color: data.color,
   }
 }
 
@@ -82,7 +88,34 @@ export async function createWave(
   return fromApi(record)
 }
 
-export async function importWave(epicKey: string): Promise<Wave> {
+export async function updateWave(id: string, patch: { color?: string }): Promise<Wave> {
+  if (USE_MOCK) {
+    await delay()
+    return store.updateWave(id, patch)
+  }
+  const record = await apiClient.patch<WaveApiRecord>(ENDPOINTS.wave(id), patch)
+  return fromApi(record)
+}
+
+export async function syncWaveFromJira(id: string): Promise<Wave> {
+  if (USE_MOCK) {
+    await delay(600)
+    return store.getWave(id)!
+  }
+  const record = await apiClient.post<WaveApiRecord>(ENDPOINTS.sync(id), {})
+  return fromApi(record)
+}
+
+export async function updateProjectOrder(waveId: string, projectIds: string[]): Promise<Wave> {
+  if (USE_MOCK) {
+    await delay()
+    return store.updateWave(waveId, { projectOrder: projectIds })
+  }
+  const record = await apiClient.patch<WaveApiRecord>(`/api/v1/waves/${waveId}/project-order`, { project_order: projectIds })
+  return fromApi(record)
+}
+
+export async function importWave(epicKey: string, color?: string): Promise<Wave> {
   if (USE_MOCK) {
     // Simulate fetching epic details from Jira
     await delay(800)
@@ -99,10 +132,11 @@ export async function importWave(epicKey: string): Promise<Wave> {
       jiraEpicKey: epicKey,
       source: 'imported',
       status: 'planned',
+      color,
       createdAt: new Date().toISOString(),
     }
     return store.addWave(wave)
   }
-  const record = await apiClient.post<WaveApiRecord>(ENDPOINTS.import, { epic_key: epicKey })
+  const record = await apiClient.post<WaveApiRecord>(ENDPOINTS.import, { epic_key: epicKey, color })
   return fromApi(record)
 }

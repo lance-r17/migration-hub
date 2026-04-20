@@ -42,7 +42,41 @@ async def update(session: AsyncSession, wave: Wave, patch: WavePatch) -> Wave:
     return wave
 
 
-async def import_from_jira(session: AsyncSession, epic_key: str) -> Wave:
+async def sync_from_jira(session: AsyncSession, wave_id: str) -> Wave:
+    """Sync a wave's dates and status from its linked Jira epic."""
+    wave = await get_by_id(session, wave_id)
+    if not wave:
+        raise LookupError(f"Wave {wave_id} not found")
+    if not wave.jira_epic_key:
+        raise ValueError("Wave has no linked Jira epic")
+
+    from app.services import jira_client
+
+    epic_data = await jira_client.get_epic(wave.jira_epic_key)
+
+    if epic_data.get("start_date"):
+        wave.start_date = epic_data["start_date"]
+    if epic_data.get("cutover_date"):
+        wave.cutover_date = epic_data["cutover_date"]
+    if epic_data.get("name"):
+        wave.name = epic_data["name"]
+    if epic_data.get("description") is not None:
+        wave.description = epic_data["description"] or None
+
+    status_category = (epic_data.get("jira_status_category") or "").lower()
+    if "done" in status_category or "complete" in status_category:
+        wave.status = "completed"
+    elif "progress" in status_category or "active" in status_category:
+        wave.status = "active"
+    else:
+        wave.status = "planned"
+
+    await session.flush()
+    await session.refresh(wave)
+    return wave
+
+
+async def import_from_jira(session: AsyncSession, epic_key: str, color: str | None = None) -> Wave:
     """Import a wave from Jira by epic key."""
     result = await session.execute(select(Wave).filter(Wave.jira_epic_key == epic_key))
     existing_wave = result.scalar_one_or_none()
@@ -64,6 +98,7 @@ async def import_from_jira(session: AsyncSession, epic_key: str) -> Wave:
         jira_epic_key=epic_key,
         source="imported",
         status="planned",
+        color=color,
     )
     session.add(wave)
     await session.flush()

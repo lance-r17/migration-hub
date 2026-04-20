@@ -1,5 +1,18 @@
 export type WaveStatus = 'planned' | 'active' | 'completed'
 
+export const WAVE_COLORS = [
+  '#3B82F6', // blue
+  '#8B5CF6', // violet
+  '#10B981', // emerald
+  '#F59E0B', // amber
+  '#F43F5E', // rose
+  '#06B6D4', // cyan
+  '#F97316', // orange
+  '#6366F1', // indigo
+  '#14B8A6', // teal
+  '#EC4899', // pink
+] as const
+
 export interface Wave {
   id: string
   name: string            // e.g. "Wave 3 – Q2 2026"
@@ -11,6 +24,8 @@ export interface Wave {
   jiraBaseUrl?: string
   source: 'created' | 'imported'
   status: WaveStatus
+  color?: string          // hex color from WAVE_COLORS
+  projectOrder?: string[] // manual project ordering within the wave
   createdAt: string       // ISO 8601
 }
 

@@ -30,6 +30,7 @@ class ProjectListItem(BaseModel):
     wave_id: str | None = None
     jira_story_key: str | None = None
     jira_job_status: str | None = None
+    planning: dict[str, Any] | None = None
     team: list[dict[str, Any]] = []
     migration_constraints: dict[str, Any] | None = None
     approvals: list[ApprovalOut] = []
@@ -52,6 +53,7 @@ class ProjectDetail(BaseModel):
     wave_id: str | None = None
     jira_story_key: str | None = None
     jira_job_status: str | None = None
+    planning: dict[str, Any] | None = None
     jira_subtask_config: dict[str, Any] | None = None
     team: list[dict[str, Any]] = []
     application_overview: dict[str, Any] | None = None
@@ -94,3 +96,7 @@ class ProjectPatch(BaseModel):
 
 class SectionPatch(BaseModel):
     value: Any
+
+
+class PlanningPatch(BaseModel):
+    planning: dict[str, Any]

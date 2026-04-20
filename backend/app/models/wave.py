@@ -1,4 +1,5 @@
 from sqlalchemy import String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -16,5 +17,7 @@ class Wave(Base, TimestampMixin):
     jira_epic_key: Mapped[str | None] = mapped_column(String, nullable=True)
     source: Mapped[str] = mapped_column(String, nullable=False, default="created")
     status: Mapped[str] = mapped_column(String, nullable=False, default="planned")
+    color: Mapped[str | None] = mapped_column(String, nullable=True)
+    project_order: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     projects: Mapped[list["Project"]] = relationship("Project", back_populates="wave")

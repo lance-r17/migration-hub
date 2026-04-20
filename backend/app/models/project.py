@@ -23,6 +23,7 @@ class Project(Base, TimestampMixin):
     wave_id: Mapped[str | None] = mapped_column(String, ForeignKey("waves.id"), nullable=True)
     jira_story_key: Mapped[str | None] = mapped_column(String, nullable=True)
     jira_job_status: Mapped[str | None] = mapped_column(String, nullable=True)
+    planning: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # JSONB section columns
     application_overview: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)

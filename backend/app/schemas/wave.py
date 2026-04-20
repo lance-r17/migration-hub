@@ -21,6 +21,8 @@ class WaveOut(BaseModel):
     jira_base_url: str | None = None
     source: str
     status: str
+    color: str | None = None
+    project_order: list[str] | None = None
     created_at: str | None = None
 
     @classmethod
@@ -40,6 +42,7 @@ class WaveCreate(BaseModel):
     jira_epic_key: str | None = None
     source: str = "created"
     status: str = "planned"
+    color: str | None = None
 
 
 class WavePatch(BaseModel):
@@ -50,7 +53,9 @@ class WavePatch(BaseModel):
     jira_project_key: str | None = None
     jira_epic_key: str | None = None
     status: str | None = None
+    color: str | None = None
 
 
 class WaveImportRequest(BaseModel):
     epic_key: str
+    color: str | None = None

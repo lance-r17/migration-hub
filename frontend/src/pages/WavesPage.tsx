@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Waves, Download, Plus, Lock, Kanban } from 'lucide-react'
+import { Waves, Download, Plus, Lock, GanttChart } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +18,8 @@ import { ImportWaveDrawer } from '@/components/drawers/ImportWaveDrawer'
 import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
-import { WavePlanningModal } from '@/components/waves/WavePlanningModal'
+import { WaveGanttModal } from '@/components/waves/WaveGanttModal'
+import { EditWaveDrawer } from '@/components/drawers/EditWaveDrawer'
 import { updateProject } from '@/services/projects'
 import { appendAuditEntryMock } from '@/services/auditLog'
 import { USE_MOCK } from '@/services/client'
@@ -47,24 +48,35 @@ export function WavesPage() {
   const { projects: initialProjects } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [isBoardOpen, setIsBoardOpen] = useState(false)
-  const [showCompleted, setShowCompleted] = useState(true)
+  const [isGanttOpen, setIsGanttOpen] = useState(false)
+  const [selectedWave, setSelectedWave] = useState<Wave | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
 
+  const [liveWaves, setLiveWaves] = useState(waves)
   const [liveProjects, setLiveProjects] = useState(initialProjects)
   
   useEffect(() => {
     setLiveProjects(initialProjects)
   }, [initialProjects])
 
+  useEffect(() => {
+    setLiveWaves(waves)
+  }, [waves])
+
   const isPlatformLead = user?.role === 'Platform Migration Lead'
   
   const sortedWaves = useMemo(() => {
-    return [...waves].sort((a, b) => {
+    return [...liveWaves].sort((a, b) => {
       const startCompare = a.startDate.localeCompare(b.startDate)
       if (startCompare !== 0) return startCompare
       return a.cutoverDate.localeCompare(b.cutoverDate)
     })
-  }, [waves])
+  }, [liveWaves])
+
+  const handleWaveUpdated = useCallback((updated: Wave) => {
+    setLiveWaves(prev => prev.map(w => w.id === updated.id ? updated : w))
+    setSelectedWave(updated)
+  }, [])
 
   const handleAssign = useCallback(async (projectIds: string[], waveId: string | undefined) => {
     setLiveProjects(prev => prev.map(p => 
@@ -95,7 +107,7 @@ export function WavesPage() {
         }
       }))
       toast.success(projectIds.length === 1 ? 'Wave assigned' : `${projectIds.length} projects assigned to wave`)
-    } catch (err) {
+    } catch {
       toast.error('Failed to assign wave. Reverting...')
       setLiveProjects(initialProjects)
     }
@@ -150,9 +162,9 @@ export function WavesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsBoardOpen(true)} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
-              <Kanban className="size-4 mr-2" />
-              Planning Board
+            <Button variant="outline" size="sm" onClick={() => setIsGanttOpen(true)} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
+              <GanttChart className="size-4 mr-2" />
+              Gantt Chart
             </Button>
             <div className="w-px h-8 bg-border mx-2" />
             <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
@@ -196,13 +208,23 @@ export function WavesPage() {
                 </TableRow>
               ) : (
                 sortedWaves.map((wave: Wave) => (
-                  <TableRow key={wave.id}>
+                  <TableRow
+                    key={wave.id}
+                    className="cursor-pointer hover:bg-muted/40"
+                    onClick={() => { setSelectedWave(wave); setEditOpen(true) }}
+                  >
                     <TableCell>
-                      <div>
-                        <p className="font-medium text-foreground">{wave.name}</p>
-                        {wave.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{wave.description}</p>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="shrink-0 size-3 rounded-full"
+                          style={{ background: wave.color ?? '#3B82F6' }}
+                        />
+                        <div>
+                          <p className="font-medium text-foreground">{wave.name}</p>
+                          {wave.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{wave.description}</p>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -258,14 +280,19 @@ export function WavesPage() {
         onImport={importWave}
       />
 
-      <WavePlanningModal 
-        open={isBoardOpen}
-        onClose={() => setIsBoardOpen(false)}
+      <WaveGanttModal
+        open={isGanttOpen}
+        onClose={() => setIsGanttOpen(false)}
+        waves={sortedWaves}
         projects={liveProjects}
-        allWaves={sortedWaves}
-        onAssign={handleAssign}
-        showCompleted={showCompleted}
-        onShowCompletedChange={setShowCompleted}
+        onAssign={(projectId, waveId) => handleAssign([projectId], waveId)}
+      />
+
+      <EditWaveDrawer
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        wave={selectedWave}
+        onUpdated={handleWaveUpdated}
       />
     </AppShell>
   )

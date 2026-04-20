@@ -10,7 +10,7 @@ interface WavesState {
 
 export function useWaves(): WavesState & {
   createWave: (data: Omit<Wave, 'id' | 'createdAt' | 'jiraEpicKey'>) => Promise<Wave>
-  importWave: (epicKey: string) => Promise<Wave>
+  importWave: (epicKey: string, color?: string) => Promise<Wave>
 } {
   const [state, setState] = useState<WavesState>({
     waves: [],
@@ -40,8 +40,8 @@ export function useWaves(): WavesState & {
     return wave
   }, [])
 
-  const handleImport = useCallback(async (epicKey: string) => {
-    const wave = await importWave(epicKey)
+  const handleImport = useCallback(async (epicKey: string, color?: string) => {
+    const wave = await importWave(epicKey, color)
     setState(prev => ({ ...prev, waves: [...prev.waves, wave] }))
     return wave
   }, [])

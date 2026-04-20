@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run:*)",
       "Bash(npx tsc *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(find *)"
     ]
   }
 }

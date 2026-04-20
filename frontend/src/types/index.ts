@@ -179,6 +179,27 @@ export interface Approval {
   userId?: string
 }
 
+// ─── Wave planning tasks ──────────────────────────────────────────────────────
+
+export type TaskType = 'onboarding' | 'migrate-computing' | 'migrate-database' | 'migrate-storage' | 'migrate-logs' | 'migrate-big-data' | 'custom'
+export type TaskStatus = 'todo' | 'in-progress' | 'done'
+
+export interface PlanningTask {
+  id: string
+  name: string
+  type: TaskType
+  start: string      // ISO date
+  end: string        // ISO date
+  status: TaskStatus
+  deps: string[]     // other PlanningTask ids
+}
+
+export interface ProjectPlanning {
+  startDate: string
+  endDate: string
+  tasks: PlanningTask[]
+}
+
 // ─── Project ─────────────────────────────────────────────────────────────────
 
 export interface Project {
@@ -207,6 +228,7 @@ export interface Project {
   approvals: Approval[]
   // Wave planning
   waveId?: string              // references Wave.id; takes precedence over migrationWave for display
+  planning?: ProjectPlanning   // Gantt-managed planning blob (dates + tasks)
   jiraSubtaskConfig?: JiraSubtaskConfig
   jiraStoryKey?: string        // e.g. "MIG-42", populated by async Jira job
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'

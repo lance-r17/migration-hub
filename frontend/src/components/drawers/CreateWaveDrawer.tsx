@@ -16,6 +16,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { createWave } from '@/services/waves'
 import type { Wave } from '@/types/wave'
+import { WAVE_COLORS } from '@/types/wave'
 
 interface Props {
   open: boolean
@@ -29,9 +30,10 @@ interface Draft {
   startDate: string
   cutoverDate: string
   description: string
+  color: string
 }
 
-const EMPTY: Draft = { name: '', startDate: '', cutoverDate: '', description: '' }
+const EMPTY: Draft = { name: '', startDate: '', cutoverDate: '', description: '', color: WAVE_COLORS[0] }
 
 function formatRange(start: string, end: string): string {
   if (!start) return 'Pick a date range'
@@ -79,6 +81,7 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Pr
         description: draft.description || undefined,
         source: 'created',
         status: 'planned',
+        color: draft.color,
       })
       onCreated(wave)
       setDraft(EMPTY)
@@ -147,6 +150,27 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Pr
                 />
               </PopoverContent>
             </Popover>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Wave Color
+            </label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {WAVE_COLORS.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setDraft(prev => ({ ...prev, color: c }))}
+                  className={cn(
+                    'size-7 rounded-full transition-all',
+                    draft.color === c && 'ring-2 ring-offset-2 ring-foreground'
+                  )}
+                  style={{ background: c }}
+                  title={c}
+                />
+              ))}
+            </div>
           </div>
 
           <div className="space-y-1.5">

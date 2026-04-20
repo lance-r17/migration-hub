@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
+from pydantic import BaseModel
+
 from app.schemas.wave import WaveCreate, WaveImportRequest, WaveOut, WavePatch
 from app.services import jira_client, wave_service
 
@@ -22,6 +24,8 @@ def _wave_out(wave) -> WaveOut:
         jira_base_url=settings.jira_base_url,
         source=wave.source,
         status=wave.status,
+        color=wave.color,
+        project_order=wave.project_order,
         created_at=wave.created_at.isoformat() if wave.created_at else None,
     )
 
@@ -55,7 +59,7 @@ async def create_wave(body: WaveCreate, db: AsyncSession = Depends(get_db)):
 @router.post("/import", response_model=WaveOut, status_code=201)
 async def import_wave(body: WaveImportRequest, db: AsyncSession = Depends(get_db)):
     try:
-        wave = await wave_service.import_from_jira(db, body.epic_key)
+        wave = await wave_service.import_from_jira(db, body.epic_key, body.color)
         return _wave_out(wave)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -76,3 +80,30 @@ async def update_wave(wave_id: str, body: WavePatch, db: AsyncSession = Depends(
         raise HTTPException(status_code=404, detail="Wave not found")
     wave = await wave_service.update(db, wave, body)
     return _wave_out(wave)
+
+
+class ProjectOrderBody(BaseModel):
+    project_order: list[str]
+
+
+@router.patch("/{wave_id}/project-order", response_model=WaveOut)
+async def update_project_order(wave_id: str, body: ProjectOrderBody, db: AsyncSession = Depends(get_db)):
+    wave = await wave_service.get_by_id(db, wave_id)
+    if not wave:
+        raise HTTPException(status_code=404, detail="Wave not found")
+    wave.project_order = body.project_order
+    await db.commit()
+    return _wave_out(wave)
+
+
+@router.post("/{wave_id}/sync", response_model=WaveOut)
+async def sync_wave(wave_id: str, db: AsyncSession = Depends(get_db)):
+    try:
+        wave = await wave_service.sync_from_jira(db, wave_id)
+        return _wave_out(wave)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except httpx.HTTPStatusError:
+        raise HTTPException(status_code=502, detail="Failed to fetch Jira epic")

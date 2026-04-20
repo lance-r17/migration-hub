@@ -8,6 +8,7 @@ from app.schemas.approval import ApprovalOut
 from app.schemas.audit_log import AuditLogEntryOut, AuditLogResponse
 from app.schemas.cloud_resource import CloudResourceOut, ResourceSpecsBatchUpdate
 from app.schemas.project import (
+    PlanningPatch,
     ProjectCreate,
     ProjectDetail,
     ProjectListItem,
@@ -16,7 +17,7 @@ from app.schemas.project import (
 )
 from app.schemas.user import UserOut
 from app.schemas.risk import RiskOut
-from app.services import audit_service, project_service, user_service
+from app.services import audit_service, jira_client, project_service, user_service
 from app.config import settings
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -44,6 +45,7 @@ def _project_list_item(p) -> ProjectListItem:
         wave_id=p.wave_id,
         jira_story_key=p.jira_story_key,
         jira_job_status=p.jira_job_status,
+        planning=p.planning,
         team=p.team or [],
         migration_constraints=p.migration_constraints,
         approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
@@ -66,6 +68,7 @@ def _project_detail(p) -> ProjectDetail:
         wave_id=p.wave_id,
         jira_story_key=p.jira_story_key,
         jira_job_status=p.jira_job_status,
+        planning=p.planning,
         jira_subtask_config=p.jira_subtask_config,
         team=p.team or [],
         application_overview=p.application_overview,
@@ -169,3 +172,23 @@ async def batch_update_resource_specs(
         raise HTTPException(status_code=404, detail="Project not found")
     actor = await _get_actor(db)
     await project_service.batch_update_resource_specs(db, project_id, body.updates, actor)
+
+
+@router.patch("/{project_id}/planning", response_model=ProjectDetail)
+async def update_planning(
+    project_id: str,
+    body: PlanningPatch,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project = await project_service.update_planning(db, project, body.planning)
+    # Best-effort Jira story date sync if a story exists
+    if project.jira_story_key:
+        story_key = project.jira_story_key
+        start = body.planning.get("startDate")
+        end = body.planning.get("endDate")
+        background_tasks.add_task(jira_client.update_issue_dates, story_key, start, end)
+    return _project_detail(project)

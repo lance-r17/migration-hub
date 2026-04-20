@@ -20,6 +20,56 @@ def _raise_with_body(exc: httpx.HTTPStatusError) -> None:
     ) from exc
 
 
+async def _get_target_date_field_ids(client: httpx.AsyncClient) -> dict[str, str | None]:
+    """Return {'start': <field_id>, 'end': <field_id>} for Jira target date custom fields."""
+    try:
+        resp = await client.get(f"{settings.jira_base_url}/rest/api/3/field")
+        resp.raise_for_status()
+        all_fields = resp.json()
+        return {
+            "start": next((f["id"] for f in all_fields if f["name"].lower() == "target start"), None),
+            "end": next((f["id"] for f in all_fields if f["name"].lower() == "target end"), None),
+        }
+    except Exception as e:
+        logger.warning("Failed to fetch Jira target date field IDs: %s", e)
+        return {"start": None, "end": None}
+
+
+async def update_issue_dates(
+    issue_key: str,
+    start_date: str | None,
+    end_date: str | None,
+) -> None:
+    """
+    Set Target Start Date / Target End Date custom fields on a Jira issue.
+    Best-effort — logs warnings on failure, does not raise.
+    """
+    if not settings.jira_base_url:
+        return
+    if not start_date and not end_date:
+        return
+
+    async with httpx.AsyncClient(
+        auth=httpx.BasicAuth(settings.jira_user_email, settings.jira_api_token),
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+    ) as client:
+        ids = await _get_target_date_field_ids(client)
+        fields: dict = {}
+        if start_date and ids.get("start"):
+            fields[ids["start"]] = start_date
+        if end_date and ids.get("end"):
+            fields[ids["end"]] = end_date
+        if not fields:
+            return
+        url = f"{settings.jira_base_url}/rest/api/3/issue/{issue_key}"
+        logger.info("jira_client update_issue_dates: PUT %s", url)
+        try:
+            response = await client.put(url, json={"fields": fields})
+            response.raise_for_status()
+        except Exception as e:
+            logger.warning("Failed to update Jira issue dates for %s: %s", issue_key, e)
+
+
 async def create_epic(
     project_key: str,
     summary: str,
@@ -62,20 +112,11 @@ async def create_epic(
     ) as client:
         # If dates are provided, resolve target start and target end custom field IDs
         if start_date or cutover_date:
-            try:
-                fields_resp = await client.get(f"{settings.jira_base_url}/rest/api/3/field")
-                fields_resp.raise_for_status()
-                all_fields = fields_resp.json()
-                
-                target_start_id = next((f["id"] for f in all_fields if f["name"].lower() == "target start"), None)
-                target_end_id = next((f["id"] for f in all_fields if f["name"].lower() == "target end"), None)
-
-                if start_date and target_start_id:
-                    fields[target_start_id] = start_date
-                if cutover_date and target_end_id:
-                    fields[target_end_id] = cutover_date
-            except Exception as e:
-                logger.warning(f"Failed to fetch or apply target date fields: {e}")
+            ids = await _get_target_date_field_ids(client)
+            if start_date and ids.get("start"):
+                fields[ids["start"]] = start_date
+            if cutover_date and ids.get("end"):
+                fields[ids["end"]] = cutover_date
 
         response = await client.post(url, json={"fields": fields})
         logger.info("jira_client create_epic: response status=%d", response.status_code)
@@ -234,16 +275,9 @@ async def get_epic(epic_key: str) -> dict:
         
         issue = response.json()
         
-        target_start_id = None
-        target_end_id = None
-        try:
-            fields_resp = await client.get(f"{settings.jira_base_url}/rest/api/2/field")
-            fields_resp.raise_for_status()
-            all_fields = fields_resp.json()
-            target_start_id = next((f["id"] for f in all_fields if f["name"].lower() == "target start"), None)
-            target_end_id = next((f["id"] for f in all_fields if f["name"].lower() == "target end"), None)
-        except Exception as e:
-            logger.warning(f"Failed to fetch or apply target date fields: {e}")
+        ids = await _get_target_date_field_ids(client)
+        target_start_id = ids.get("start")
+        target_end_id = ids.get("end")
 
         fields = issue.get("fields", {})
         
@@ -258,10 +292,15 @@ async def get_epic(epic_key: str) -> dict:
         start_date = fields.get(target_start_id) if target_start_id else None
         cutover_date = fields.get(target_end_id) if target_end_id else None
 
+        status_category = (
+            fields.get("status", {}).get("statusCategory", {}).get("name", "") or ""
+        )
+
         return {
             "name": summary,
             "description": description,
             "start_date": start_date,
             "cutover_date": cutover_date,
-            "jira_project_key": fields.get("project", {}).get("key")
+            "jira_project_key": fields.get("project", {}).get("key"),
+            "jira_status_category": status_category,
         }
