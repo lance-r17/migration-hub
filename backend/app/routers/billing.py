@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.schemas.billing import (
+    BillingBreakdownRecordOut,
     BillingRecordOut,
     BillingThresholdConfigOut,
     BillingThresholdConfigUpdate,
@@ -31,6 +32,60 @@ async def get_billing_records(month: str, env: str, db: AsyncSession = Depends(g
 @router.post("", status_code=204)
 async def upload_billing(body: BillingUpload, db: AsyncSession = Depends(get_db)):
     await billing_service.upsert_records(db, body)
+
+
+@router.post("/upload", status_code=204)
+async def upload_billing_xlsx(
+    month: str = Form(...),
+    env: str = Form(...),
+    file: UploadFile = ...,
+    db: AsyncSession = Depends(get_db),
+):
+    if not file.filename or not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=422, detail="File must be an Excel file (.xlsx or .xls)")
+
+    file_bytes = await file.read()
+    try:
+        summary_records, breakdown_records = billing_service.parse_xlsx_report(file_bytes, month, env)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    from app.schemas.billing import BillingRecordIn, BillingUpload as BU
+    upload = BU(
+        month=month,
+        env=env,
+        records=[BillingRecordIn(resource_set=r["resource_set"], amount=r["amount"]) for r in summary_records],
+    )
+    await billing_service.upsert_records(db, upload)
+    await billing_service.upsert_breakdown_records(db, month, env, breakdown_records)
+
+
+@router.delete("/month", status_code=204)
+async def delete_billing_month(
+    month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
+    db: AsyncSession = Depends(get_db),
+):
+    await billing_service.delete_month_records(db, month)
+
+
+@router.get("/breakdown", response_model=list[BillingBreakdownRecordOut])
+async def get_billing_breakdown(
+    month: str,
+    env: str,
+    resource_set: str,
+    db: AsyncSession = Depends(get_db),
+):
+    records = await billing_service.get_breakdown_records(db, month, env, resource_set)
+    return [
+        BillingBreakdownRecordOut(
+            month=r.month,
+            env=r.env,
+            resource_set=r.resource_set,
+            product=r.product,
+            amount=float(r.amount),
+        )
+        for r in records
+    ]
 
 
 @settings_router.get("/billing-thresholds", response_model=BillingThresholdConfigOut)

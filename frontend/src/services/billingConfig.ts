@@ -9,12 +9,14 @@ const ENDPOINT = '/api/v1/settings/billing-thresholds'
 interface BillingThresholdConfigApi {
   healthy_at_risk_threshold: number
   at_risk_over_threshold: number
+  currency: string
 }
 
 function fromApi(raw: BillingThresholdConfigApi): BillingThresholdConfig {
   return {
     healthyAtRiskThreshold: raw.healthy_at_risk_threshold,
     atRiskOverThreshold: raw.at_risk_over_threshold,
+    currency: raw.currency ?? 'CNY',
   }
 }
 
@@ -22,6 +24,7 @@ function toApi(config: BillingThresholdConfig): BillingThresholdConfigApi {
   return {
     healthy_at_risk_threshold: config.healthyAtRiskThreshold,
     at_risk_over_threshold: config.atRiskOverThreshold,
+    currency: config.currency,
   }
 }
 

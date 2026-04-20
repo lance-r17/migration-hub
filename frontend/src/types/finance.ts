@@ -9,7 +9,14 @@ export interface BillingUpload {
   records: BillingRecord[]
 }
 
+export interface BillingBreakdownRecord {
+  resourceSet: string
+  product: string
+  amount: number
+}
+
 export interface BillingThresholdConfig {
   healthyAtRiskThreshold: number  // ratio below this = "Healthy"; default 100
   atRiskOverThreshold: number     // ratio above this = "Over"; default 120
+  currency: string                // ISO 4217 currency code; default "CNY"
 }

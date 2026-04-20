@@ -12,13 +12,14 @@ import {
   mockResourceSurveyConfig,
   mockBillingExisting,
   mockBillingTarget,
+  mockBillingBreakdown,
   mockEmbargos,
 } from '@/data/mock'
 import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave, JiraJobRequest } from '@/types/wave'
 import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
-import type { BillingRecord, BillingThresholdConfig } from '@/types/finance'
+import type { BillingBreakdownRecord, BillingRecord, BillingThresholdConfig } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
 
 // Mutable in-memory session store — deep copy of mock data.
@@ -29,12 +30,15 @@ let _projects: Project[] = structuredClone(mockProjects)
 let _waves: Wave[] = structuredClone(mockWaves)
 let _billingExisting: Record<string, BillingRecord[]> = structuredClone(mockBillingExisting)
 let _billingTarget: Record<string, BillingRecord[]>   = structuredClone(mockBillingTarget)
+let _billingBreakdown: Map<string, BillingBreakdownRecord[]> = new Map(
+  Object.entries(mockBillingBreakdown).map(([k, v]) => [k, structuredClone(v)])
+)
 let _jiraJobs: JiraJobRequest[] = []
 let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntries)
 let _surveyConfig: SurveyConfig | null = structuredClone(mockSurveyConfig)
 let _resourceSurveyConfig: ResourceSurveyConfig = structuredClone(mockResourceSurveyConfig)
 let _embargos: EmbargoRecord[] = structuredClone(mockEmbargos)
-let _billingThresholdConfig: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120 }
+let _billingThresholdConfig: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120, currency: 'CNY' }
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
@@ -221,6 +225,22 @@ export const store = {
   setBillingRecords(month: string, env: 'existing' | 'target', records: BillingRecord[]): void {
     if (env === 'existing') _billingExisting[month] = records
     else _billingTarget[month] = records
+  },
+
+  getBillingBreakdown(month: string, env: 'existing' | 'target', resourceSet: string): BillingBreakdownRecord[] {
+    return _billingBreakdown.get(`${month}|${env}|${resourceSet}`) ?? []
+  },
+
+  setBillingBreakdown(month: string, env: 'existing' | 'target', resourceSet: string, records: BillingBreakdownRecord[]): void {
+    _billingBreakdown.set(`${month}|${env}|${resourceSet}`, records)
+  },
+
+  deleteBillingMonth(month: string): void {
+    delete _billingExisting[month]
+    delete _billingTarget[month]
+    for (const key of _billingBreakdown.keys()) {
+      if (key.startsWith(`${month}|`)) _billingBreakdown.delete(key)
+    }
   },
 
   getBillingThresholdConfig(): BillingThresholdConfig {

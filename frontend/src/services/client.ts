@@ -33,6 +33,7 @@ async function handleResponse<T>(res: Response, method: string, path: string): P
     } catch (_) {}
     throw new Error(msg)
   }
+  if (res.status === 204 || res.headers.get('content-length') === '0') return undefined as T
   return res.json() as Promise<T>
 }
 
@@ -67,6 +68,23 @@ export const apiClient = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(body),
+    })
+    return handleResponse<T>(res, 'POST', path)
+  },
+
+  async delete<T>(path: string): Promise<T> {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: 'DELETE',
+      headers: { ...(await authHeader()) },
+    })
+    return handleResponse<T>(res, 'DELETE', path)
+  },
+
+  async postForm<T>(path: string, form: FormData): Promise<T> {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { ...(await authHeader()) },
+      body: form,
     })
     return handleResponse<T>(res, 'POST', path)
   },

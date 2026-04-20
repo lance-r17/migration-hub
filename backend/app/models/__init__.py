@@ -10,6 +10,7 @@ from app.models.approval import Approval
 from app.models.audit_log import AuditLogEntry
 from app.models.embargo import EmbargoRecord
 from app.models.billing_record import BillingRecord
+from app.models.billing_breakdown_record import BillingBreakdownRecord
 from app.models.jira_job import JiraJob
 from app.models.jira_job_log import JiraJobLog
 from app.models.config_store import ConfigStore
@@ -28,6 +29,7 @@ __all__ = [
     "AuditLogEntry",
     "EmbargoRecord",
     "BillingRecord",
+    "BillingBreakdownRecord",
     "JiraJob",
     "JiraJobLog",
     "ConfigStore",

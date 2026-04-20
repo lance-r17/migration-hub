@@ -14,10 +14,24 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { getBillingThresholdConfig, saveBillingThresholdConfig } from '@/services/billingConfig'
 import type { BillingThresholdConfig } from '@/types/finance'
 
-const DEFAULTS: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120 }
+const DEFAULTS: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120, currency: 'CNY' }
+
+const CURRENCY_OPTIONS = [
+  { value: 'CNY', label: 'CNY — Chinese Yuan (¥)' },
+  { value: 'USD', label: 'USD — US Dollar ($)' },
+  { value: 'EUR', label: 'EUR — Euro (€)' },
+  { value: 'HKD', label: 'HKD — Hong Kong Dollar (HK$)' },
+]
 
 export function BillingSettingsPage() {
   const navigate = useNavigate()
@@ -25,7 +39,7 @@ export function BillingSettingsPage() {
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
   const [config, setConfig]     = useState<BillingThresholdConfig>(DEFAULTS)
-  const [errors, setErrors]     = useState<{ healthy?: string; atRisk?: string }>({})
+  const [errors, setErrors]     = useState<{ healthy?: string; atRisk?: string; currency?: string }>({})
 
   useEffect(() => {
     getBillingThresholdConfig()
@@ -34,14 +48,16 @@ export function BillingSettingsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  function validate(cfg: BillingThresholdConfig): { healthy?: string; atRisk?: string } {
-    const errs: { healthy?: string; atRisk?: string } = {}
+  function validate(cfg: BillingThresholdConfig): { healthy?: string; atRisk?: string; currency?: string } {
+    const errs: { healthy?: string; atRisk?: string; currency?: string } = {}
     if (!Number.isFinite(cfg.healthyAtRiskThreshold) || cfg.healthyAtRiskThreshold <= 0)
       errs.healthy = 'Must be a positive number.'
     if (!Number.isFinite(cfg.atRiskOverThreshold) || cfg.atRiskOverThreshold <= 0)
       errs.atRisk = 'Must be a positive number.'
     if (!errs.healthy && !errs.atRisk && cfg.healthyAtRiskThreshold >= cfg.atRiskOverThreshold)
       errs.atRisk = 'Must be greater than the Healthy / At Risk boundary.'
+    if (!cfg.currency)
+      errs.currency = 'Please select a currency.'
     return errs
   }
 
@@ -52,8 +68,8 @@ export function BillingSettingsPage() {
     setSaving(true)
     try {
       await saveBillingThresholdConfig(config)
-      toast.success('Thresholds saved', {
-        description: `Healthy < ${config.healthyAtRiskThreshold}% · At Risk ${config.healthyAtRiskThreshold}–${config.atRiskOverThreshold}% · Over > ${config.atRiskOverThreshold}%`,
+      toast.success('Billing configuration saved', {
+        description: `Healthy < ${config.healthyAtRiskThreshold}% · At Risk ${config.healthyAtRiskThreshold}–${config.atRiskOverThreshold}% · Over > ${config.atRiskOverThreshold}% · Currency: ${config.currency}`,
       })
     } catch {
       toast.error('Failed to save thresholds')
@@ -130,6 +146,29 @@ export function BillingSettingsPage() {
               />
               {errors.atRisk && (
                 <p className="text-xs text-destructive">{errors.atRisk}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="currency">Billing Currency</Label>
+              <p className="text-xs text-muted-foreground">
+                Currency used to display cost amounts across the Finance page.
+              </p>
+              <Select
+                value={config.currency ?? 'CNY'}
+                onValueChange={val => setConfig(prev => ({ ...prev, currency: val }))}
+              >
+                <SelectTrigger id="currency" className={errors.currency ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCY_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.currency && (
+                <p className="text-xs text-destructive">{errors.currency}</p>
               )}
             </div>
           </div>

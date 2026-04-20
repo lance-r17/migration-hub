@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { DollarSign, Upload, Lock, CheckCircle2, X, Search } from 'lucide-react'
+import { DollarSign, Upload, Lock, CheckCircle2, X, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import {
@@ -17,16 +17,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ResourceComparisonDrawer } from '@/components/drawers/ResourceComparisonDrawer'
+import { BillingBreakdownDrawer } from '@/components/drawers/BillingBreakdownDrawer'
 import { MonthPicker } from '@/components/ui/month-picker'
 import { useCurrentUser } from '@/context/UserContext'
 import { useProjects } from '@/hooks/use-projects'
 import {
   getAvailableBillingMonths,
   getBillingRecords,
-  uploadBillingRecords,
+  uploadBillingXlsx,
+  deleteBillingMonth,
 } from '@/services/billing'
 import { getBillingThresholdConfig } from '@/services/billingConfig'
 import { cn } from '@/lib/utils'
@@ -37,25 +47,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { BillingRecord, BillingThresholdConfig } from '@/types/finance'
-import type { Project } from '@/types'
-
-// ─── CSV Parsing ──────────────────────────────────────────────────────────────
-
-function parseCSV(text: string): BillingRecord[] {
-  const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean)
-  if (lines.length < 2) throw new Error('CSV must have a header row and at least one data row')
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
-  const rsIdx  = headers.indexOf('resource_set')
-  const amtIdx = headers.indexOf('amount')
-  if (rsIdx === -1 || amtIdx === -1)
-    throw new Error('CSV must have "resource_set" and "amount" columns')
-  return lines.slice(1).map((line, i) => {
-    const cols   = line.split(',')
-    const amount = parseFloat(cols[amtIdx]?.trim() ?? '')
-    if (isNaN(amount)) throw new Error(`Row ${i + 2}: invalid amount value`)
-    return { resourceSet: cols[rsIdx]?.trim() ?? '', amount }
-  }).filter(r => r.resourceSet)
-}
 
 // ─── Ratio Badge ─────────────────────────────────────────────────────────────
 
@@ -79,11 +70,11 @@ function RatioBadge({ ratio, thresholds }: { ratio: number | null; thresholds: B
 
 // ─── Format Money ─────────────────────────────────────────────────────────────
 
-function formatMoney(amount: number | null): string {
+function formatMoney(amount: number | null, currency: string): string {
   if (amount === null) return '—'
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount)
@@ -124,7 +115,7 @@ interface UploadCardProps {
   env: 'existing' | 'target'
   uploadedFileName: string | null
   uploading: boolean
-  onUpload: (env: 'existing' | 'target', month: string, records: BillingRecord[]) => Promise<void>
+  onUpload: (env: 'existing' | 'target', month: string, file: File) => Promise<void>
   onClear: (env: 'existing' | 'target') => void
 }
 
@@ -136,15 +127,7 @@ function UploadCard({ label, env, uploadedFileName, uploading, onUpload, onClear
       toast.error('No month selected', { description: 'Select a billing month before uploading.' })
       return
     }
-    try {
-      const text = await file.text()
-      const records = parseCSV(text)
-      await onUpload(env, month, records)
-    } catch (err) {
-      toast.error('Failed to parse CSV', {
-        description: err instanceof Error ? err.message : 'Unknown error',
-      })
-    }
+    await onUpload(env, month, file)
   }
 
   return (
@@ -184,12 +167,12 @@ function UploadCard({ label, env, uploadedFileName, uploading, onUpload, onClear
         )}>
           <Upload size={18} className="text-muted-foreground" />
           <div>
-            <p className="text-xs font-medium text-foreground">Click to upload CSV</p>
-            <p className="text-xs text-muted-foreground mt-0.5">resource_set, amount</p>
+            <p className="text-xs font-medium text-foreground">Click to upload Excel report</p>
+            <p className="text-xs text-muted-foreground mt-0.5">.xlsx — Alibaba Cloud billing export</p>
           </div>
           <input
             type="file"
-            accept=".csv,text/csv"
+            accept=".xlsx,.xls"
             className="sr-only"
             onChange={e => {
               const file = e.target.files?.[0]
@@ -234,15 +217,21 @@ export function FinancePage() {
   const [existingFileName, setExistingFileName] = useState<string | null>(null)
   const [targetFileName, setTargetFileName] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [recordsKey, setRecordsKey] = useState(0)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const [nameFilter, setNameFilter]     = useState('')
   const [statusFilter, setStatusFilter] = useState<Set<RatioStatus>>(new Set())
 
-  const [thresholds, setThresholds] = useState<BillingThresholdConfig>({ healthyAtRiskThreshold: 100, atRiskOverThreshold: 120 })
+  const [thresholds, setThresholds] = useState<BillingThresholdConfig>({
+    healthyAtRiskThreshold: 100,
+    atRiskOverThreshold: 120,
+    currency: 'CNY',
+  })
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedResourceSet, setSelectedResourceSet] = useState<string>('')
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
   const isPlatformLead = user?.role === 'Platform Migration Lead'
 
@@ -264,7 +253,7 @@ export function FinancePage() {
 
   useEffect(() => { void refreshMonths() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Load billing thresholds ─────────────────────────────────────────────────
+  // ── Load billing thresholds (includes currency) ─────────────────────────────
   useEffect(() => {
     getBillingThresholdConfig().then(setThresholds).catch(() => { /* keep defaults */ })
   }, [])
@@ -280,7 +269,7 @@ export function FinancePage() {
       .then(([ex, tg]) => { setExistingRecords(ex); setTargetRecords(tg) })
       .catch(() => toast.error('Failed to load billing records'))
       .finally(() => setLoadingRecords(false))
-  }, [selectedMonth])
+  }, [selectedMonth, recordsKey])
 
   // ── Reset filters when month changes ────────────────────────────────────────
   useEffect(() => {
@@ -289,14 +278,13 @@ export function FinancePage() {
   }, [selectedMonth])
 
   // ── Upload handler ──────────────────────────────────────────────────────────
-  const handleUpload = async (env: 'existing' | 'target', month: string, records: BillingRecord[]) => {
+  const handleUpload = async (env: 'existing' | 'target', month: string, file: File) => {
     setUploading(true)
     try {
-      await uploadBillingRecords({ month, env, records })
-      if (env === 'existing') setExistingFileName(`billing-existing-${month}.csv (${records.length} rows)`)
-      else setTargetFileName(`billing-target-${month}.csv (${records.length} rows)`)
+      await uploadBillingXlsx(file, month, env)
+      if (env === 'existing') setExistingFileName(`${file.name} (${month})`)
+      else setTargetFileName(`${file.name} (${month})`)
 
-      // Refresh months list and switch to the newly uploaded month
       const [existingMonths, targetMonths] = await Promise.all([
         getAvailableBillingMonths('existing'),
         getAvailableBillingMonths('target'),
@@ -304,14 +292,34 @@ export function FinancePage() {
       const union = Array.from(new Set([...existingMonths, ...targetMonths])).sort().reverse()
       setAvailableMonths(union)
       setSelectedMonth(month)
+      setRecordsKey(k => k + 1)
 
-      toast.success('Billing data uploaded', {
-        description: `${records.length} records saved for ${formatMonth(month)} (${env} environment).`,
+      toast.success('Billing report uploaded', {
+        description: `Records saved for ${formatMonth(month)} (${env} environment).`,
       })
-    } catch {
-      toast.error('Upload failed', { description: 'Could not save billing records.' })
+    } catch (err) {
+      toast.error('Upload failed', {
+        description: err instanceof Error ? err.message : 'Could not process billing report.',
+      })
     } finally {
       setUploading(false)
+    }
+  }
+
+  const confirmDeleteMonth = async () => {
+    setDeleting(true)
+    try {
+      await deleteBillingMonth(selectedMonth)
+      await refreshMonths()
+      toast.success('Billing records deleted', {
+        description: `All records for ${formatMonth(selectedMonth)} have been removed.`,
+      })
+    } catch (err) {
+      toast.error('Delete failed', {
+        description: err instanceof Error ? err.message : 'Could not delete billing records.',
+      })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -325,17 +333,18 @@ export function FinancePage() {
     const existingMap = new Map(existingRecords.map(r => [r.resourceSet, r.amount]))
     const targetMap   = new Map(targetRecords.map(r => [r.resourceSet, r.amount]))
 
-    // Collect all unique resourceSets per project from their resources
+    const matchedResourceSets = new Set<string>()
     const groups: ProjectGroup[] = []
+
     for (const project of projects) {
       const resources = project.currentInfrastructure?.resources ?? []
       const resourceSets = Array.from(new Set(resources.map(r => r.resourceSet).filter(Boolean))) as string[]
       if (resourceSets.length === 0) continue
 
-      // Only include projects that have at least one billing record in either env
       const rows: ComparisonRow[] = resourceSets
         .filter(rs => existingMap.has(rs) || targetMap.has(rs))
         .map(rs => {
+          matchedResourceSets.add(rs)
           const existingAmount = existingMap.get(rs) ?? null
           const targetAmount   = targetMap.get(rs) ?? null
           const ratio =
@@ -351,14 +360,35 @@ export function FinancePage() {
         groups.push({ projectId: project.id, projectName: project.name, rows })
       }
     }
+
+    // Collect billing records whose resource set wasn't matched to any project
+    const allBillingResourceSets = Array.from(
+      new Set([...existingMap.keys(), ...targetMap.keys()])
+    ).filter(rs => !matchedResourceSets.has(rs))
+
+    const unassignedRows: ComparisonRow[] = allBillingResourceSets
+      .map(rs => {
+        const existingAmount = existingMap.get(rs) ?? null
+        const targetAmount   = targetMap.get(rs) ?? null
+        const ratio =
+          existingAmount !== null && targetAmount !== null
+            ? (targetAmount / existingAmount) * 100
+            : null
+        return { resourceSet: rs, projectId: '', existingAmount, targetAmount, ratio }
+      })
+      .filter(r => nameFilter === '' || r.resourceSet.toLowerCase().includes(nameFilter.toLowerCase()))
+      .filter(r => statusFilter.size === 0 || statusFilter.has(getStatus(r.ratio, thresholds)))
+
+    if (unassignedRows.length > 0) {
+      groups.push({ projectId: '__unassigned__', projectName: 'No Matching Project', rows: unassignedRows })
+    }
+
     return groups
   }, [projects, existingRecords, targetRecords, nameFilter, statusFilter, thresholds])
 
-  // ── Row click → open comparison drawer ─────────────────────────────────────
+  // ── Row click → open breakdown drawer ──────────────────────────────────────
   const handleRowClick = (row: ComparisonRow) => {
-    const project = projects.find(p => p.id === row.projectId) ?? null
     setSelectedResourceSet(row.resourceSet)
-    setSelectedProject(project)
     setDrawerOpen(true)
   }
 
@@ -402,7 +432,7 @@ export function FinancePage() {
         {/* Upload section */}
         <div>
           <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-3">
-            Upload Monthly Billing Records
+            Upload Monthly Billing Reports
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UploadCard
@@ -433,7 +463,7 @@ export function FinancePage() {
         ) : !hasAnyData ? (
           <div className="rounded-lg border border-dashed border-border p-10 text-center">
             <p className="text-sm text-muted-foreground">
-              Upload billing CSVs above to see the comparison.
+              Upload billing reports above to see the comparison.
             </p>
           </div>
         ) : (
@@ -453,6 +483,14 @@ export function FinancePage() {
                   ))}
                 </SelectContent>
               </Select>
+              <button
+                onClick={() => setDeleteConfirmOpen(true)}
+                disabled={uploading || loadingRecords || deleting}
+                className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                title={`Delete all records for ${formatMonth(selectedMonth)}`}
+              >
+                <Trash2 size={15} />
+              </button>
             </div>
 
             {/* Filters */}
@@ -524,7 +562,12 @@ export function FinancePage() {
               <div className="space-y-8">
                 {projectGroups.map(group => (
                   <div key={group.projectId}>
-                    <h3 className="text-sm font-semibold text-foreground mb-2">{group.projectName}</h3>
+                    <h3 className={cn(
+                      'text-sm font-semibold mb-2',
+                      group.projectId === '__unassigned__'
+                        ? 'text-muted-foreground italic'
+                        : 'text-foreground',
+                    )}>{group.projectName}</h3>
                     <div className="rounded-lg border border-border overflow-hidden">
                       <Table>
                         <TableHeader>
@@ -549,12 +592,12 @@ export function FinancePage() {
                               </TableCell>
                               <TableCell className="text-right font-mono text-sm tabular-nums">
                                 {row.existingAmount !== null
-                                  ? formatMoney(row.existingAmount)
+                                  ? formatMoney(row.existingAmount, thresholds.currency)
                                   : <span className="text-muted-foreground/40">—</span>}
                               </TableCell>
                               <TableCell className="text-right font-mono text-sm tabular-nums">
                                 {row.targetAmount !== null
-                                  ? formatMoney(row.targetAmount)
+                                  ? formatMoney(row.targetAmount, thresholds.currency)
                                   : <span className="text-muted-foreground/40">—</span>}
                               </TableCell>
                               <TableCell className="text-center">
@@ -573,12 +616,37 @@ export function FinancePage() {
         )}
       </div>
 
-      <ResourceComparisonDrawer
+      <BillingBreakdownDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         resourceSet={selectedResourceSet}
-        project={selectedProject}
+        month={selectedMonth}
+        currency={thresholds.currency}
       />
+
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete billing records?</DialogTitle>
+            <DialogDescription>
+              This will remove all existing and target billing data for{' '}
+              <strong>{formatMonth(selectedMonth)}</strong>. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() => { setDeleteConfirmOpen(false); void confirmDeleteMonth() }}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   )
 }

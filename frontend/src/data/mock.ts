@@ -2,7 +2,7 @@ import type { Project, Activity, OverallStats, User, ProjectUsers, ProductCatego
 import type { AuditLogEntry } from '@/types/audit'
 import type { Wave } from '@/types/wave'
 import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
-import type { BillingRecord } from '@/types/finance'
+import type { BillingBreakdownRecord, BillingRecord } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
 
 export const mockProductCategoryMap: ProductCategoryEntry[] = [
@@ -1266,5 +1266,58 @@ export const mockBillingTarget: Record<string, BillingRecord[]> = {
     { resourceSet: 'corp-00421-alpha-erp-dev',  amount: 3870 },   // 120.9% → red
     { resourceSet: 'corp-00203-auth-svc-prod',  amount: 5280 },   // 110.0% → amber
     { resourceSet: 'corp-0088-edge-dns-prod',   amount: 8500 },   // 88.5% → green
+  ],
+}
+
+// ─── Billing Breakdown Mock Data ──────────────────────────────────────────────
+// Keyed by "YYYY-MM|env|resourceSet". Products match Alibaba Cloud service codes.
+// Amounts per product sum to the lump-sum amounts in mockBillingExisting/Target.
+
+export const mockBillingBreakdown: Record<string, BillingBreakdownRecord[]> = {
+  // ── corp-00421-alpha-erp-prod ─────────────────────────────────────────────
+  '2026-03|existing|corp-00421-alpha-erp-prod': [
+    { resourceSet: 'corp-00421-alpha-erp-prod', product: 'ecs',      amount: 7500 },
+    { resourceSet: 'corp-00421-alpha-erp-prod', product: 'rds',      amount: 3100 },
+    { resourceSet: 'corp-00421-alpha-erp-prod', product: 'oss',      amount: 1200 },
+    { resourceSet: 'corp-00421-alpha-erp-prod', product: 'sls',      amount:  700 },
+  ],
+  '2026-03|target|corp-00421-alpha-erp-prod': [
+    { resourceSet: 'corp-00421-alpha-erp-prod', product: 'ecs',      amount: 6600 },
+    { resourceSet: 'corp-00421-alpha-erp-prod', product: 'rds',      amount: 2900 },
+    { resourceSet: 'corp-00421-alpha-erp-prod', product: 'oss',      amount: 1100 },
+    { resourceSet: 'corp-00421-alpha-erp-prod', product: 'sls',      amount:  600 },
+  ],
+  // ── corp-00421-alpha-erp-dev ──────────────────────────────────────────────
+  '2026-03|existing|corp-00421-alpha-erp-dev': [
+    { resourceSet: 'corp-00421-alpha-erp-dev', product: 'ecs',       amount: 2200 },
+    { resourceSet: 'corp-00421-alpha-erp-dev', product: 'rds',       amount:  700 },
+    { resourceSet: 'corp-00421-alpha-erp-dev', product: 'oss',       amount:  300 },
+  ],
+  '2026-03|target|corp-00421-alpha-erp-dev': [
+    { resourceSet: 'corp-00421-alpha-erp-dev', product: 'ecs',       amount: 2700 },
+    { resourceSet: 'corp-00421-alpha-erp-dev', product: 'rds',       amount:  840 },
+    { resourceSet: 'corp-00421-alpha-erp-dev', product: 'oss',       amount:  330 },
+  ],
+  // ── corp-00203-auth-svc-prod ──────────────────────────────────────────────
+  '2026-03|existing|corp-00203-auth-svc-prod': [
+    { resourceSet: 'corp-00203-auth-svc-prod', product: 'ecs',       amount: 2400 },
+    { resourceSet: 'corp-00203-auth-svc-prod', product: 'r-kvstore',  amount: 1600 },
+    { resourceSet: 'corp-00203-auth-svc-prod', product: 'sls',        amount:  800 },
+  ],
+  '2026-03|target|corp-00203-auth-svc-prod': [
+    { resourceSet: 'corp-00203-auth-svc-prod', product: 'ecs',       amount: 2640 },
+    { resourceSet: 'corp-00203-auth-svc-prod', product: 'r-kvstore',  amount: 1760 },
+    { resourceSet: 'corp-00203-auth-svc-prod', product: 'sls',        amount:  880 },
+  ],
+  // ── corp-0088-edge-dns-prod ───────────────────────────────────────────────
+  '2026-03|existing|corp-0088-edge-dns-prod': [
+    { resourceSet: 'corp-0088-edge-dns-prod', product: 'ecs',        amount: 6800 },
+    { resourceSet: 'corp-0088-edge-dns-prod', product: 'dns',        amount: 1600 },
+    { resourceSet: 'corp-0088-edge-dns-prod', product: 'sls',        amount: 1200 },
+  ],
+  '2026-03|target|corp-0088-edge-dns-prod': [
+    { resourceSet: 'corp-0088-edge-dns-prod', product: 'ecs',        amount: 5950 },
+    { resourceSet: 'corp-0088-edge-dns-prod', product: 'dns',        amount: 1500 },
+    { resourceSet: 'corp-0088-edge-dns-prod', product: 'sls',        amount: 1050 },
   ],
 }
