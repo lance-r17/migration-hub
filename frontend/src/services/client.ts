@@ -20,8 +20,17 @@ async function authHeader(): Promise<HeadersInit> {
   return user?.access_token ? { Authorization: `Bearer ${user.access_token}` } : {}
 }
 
+let onUnauthorized: (() => void) | null = null
+
+export function setOnUnauthorized(cb: (() => void) | null) {
+  onUnauthorized = cb
+}
+
 async function handleResponse<T>(res: Response, method: string, path: string): Promise<T> {
   if (!res.ok) {
+    if (res.status === 401) {
+      onUnauthorized?.()
+    }
     let msg = `${method} ${path} failed: ${res.status}`
     try {
       const errData = await res.json()

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react'
 import { getCurrentUser } from '@/services/users'
 import { oidcManager } from '@/auth/oidcManager'
+import { setOnUnauthorized } from '@/services/client'
 import type { User } from '@/types'
 
 const AUTH_KEY = 'auth'
@@ -39,12 +40,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       return
     }
-    getCurrentUser()
-      .then((u) => {
-        setUser(u)
-        setDefaultUserId(u.id)
-      })
-      .finally(() => setLoading(false))
+
+    Promise.resolve(oidcManager?.getUser()).then((oidcUser) => {
+      if (oidcUser?.expired) {
+        logout()
+        window.location.assign('/login')
+        return
+      }
+
+      getCurrentUser()
+        .then((u) => {
+          setUser(u)
+          setDefaultUserId(u.id)
+        })
+        .catch(() => {
+          logout()
+          window.location.assign('/login')
+        })
+        .finally(() => setLoading(false))
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback((loggedInUser: User) => {
@@ -62,6 +76,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Clear OIDC session without redirecting (silent local logout)
     oidcManager?.removeUser()
   }, [])
+
+  // Global 401 handler: any API call returning 401 logs the user out and
+  // redirects to the login page.
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      logout()
+      window.location.assign('/login')
+    })
+    return () => setOnUnauthorized(null)
+  }, [logout])
 
   // Dev-only: switches the active user without touching sessionStorage.
   // Page refresh reverts to the real logged-in user.

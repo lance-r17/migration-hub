@@ -63,4 +63,45 @@ test.describe('Authentication', () => {
 
     await expect(page).toHaveURL(/\/login/)
   })
+
+  test('stale sessionStorage flag with 401 on load redirects to /login', async ({ page }) => {
+    await page.route('**/api/v1/users/me', async (route) => {
+      await route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: 'Not authenticated' }),
+      })
+    })
+    await page.addInitScript(() => {
+      sessionStorage.setItem('auth', 'true')
+    })
+    await page.goto('/')
+    await expect(page).toHaveURL(/\/login/)
+  })
+
+  test('in-app API 401 redirects to /login', async ({ page }) => {
+    await page.route('**/api/v1/users/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        body: JSON.stringify({
+          id: 'u1',
+          name: 'Test User',
+          email: 'test@example.com',
+          department: 'Engineering',
+          initials: 'TU',
+          role: 'admin',
+        }),
+      })
+    })
+    await page.route('**/api/v1/waves', async (route) => {
+      await route.fulfill({
+        status: 401,
+        body: JSON.stringify({ detail: 'Not authenticated' }),
+      })
+    })
+    await page.addInitScript(() => {
+      sessionStorage.setItem('auth', 'true')
+    })
+    await page.goto('/waves')
+    await expect(page).toHaveURL(/\/login/)
+  })
 })

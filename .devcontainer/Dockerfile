@@ -34,4 +34,5 @@ USER node
 # Install Claude
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
-RUN npm install -g @musistudio/claude-code-router
+# Install kimi
+RUN curl -L code.kimi.com/install.sh | bash
