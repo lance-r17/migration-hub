@@ -67,6 +67,9 @@ cp .env.example .env.local
 |---|---|---|
 | `VITE_API_BASE_URL` | _(empty)_ | Base URL for the backend API. Leave empty to run on mock data. |
 | `VITE_EMAIL_SERVER_URL` | _(empty)_ | URL of the local email relay server. Set to `http://localhost:3001` when running the email server. |
+| `VITE_OIDC_ISSUER` | _(empty)_ | OIDC issuer URL. Leave empty for mock auth (default). See [SSO configuration](shared/sso-configuration.md). |
+| `VITE_OIDC_CLIENT_ID` | _(empty)_ | OIDC application client ID. Required when `VITE_OIDC_ISSUER` is set. |
+| `VITE_OIDC_REDIRECT_URI` | _(empty)_ | Post-login callback URL. Defaults to `{origin}/callback` when not set. |
 
 **Mock mode (default):** leave `VITE_API_BASE_URL` unset. All data comes from the in-memory store seeded by `src/data/mock.ts`. No database or backend needed.
 
@@ -157,6 +160,8 @@ Copy `.env.example` to `.env` and adjust as needed:
 | `JIRA_BASE_URL` | _(empty)_ | Jira instance URL (optional for Jira job testing) |
 | `JIRA_API_TOKEN` | _(empty)_ | Jira API token |
 | `JIRA_USER_EMAIL` | _(empty)_ | Email for Jira API auth |
+| `OIDC_ISSUER` | _(empty)_ | OIDC issuer URL. Leave empty for mock auth. See [SSO configuration](shared/sso-configuration.md). |
+| `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in JWTs. Must be set to your client ID for Azure AD. |
 | `ENVIRONMENT` | `development` | `development` or `production` |
 
 ### Connect the frontend to the backend

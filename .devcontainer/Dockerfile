@@ -35,4 +35,5 @@ USER node
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Install kimi
-RUN curl -L code.kimi.com/install.sh | bash
+# RUN curl -fsSL https://code.kimi.com/install.sh | bash
+

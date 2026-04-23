@@ -19,3 +19,4 @@
 | **shared/** | |
 | [shared/data-model.md](shared/data-model.md) | Core domain types shared between frontend and backend |
 | [shared/jira-integration.md](shared/jira-integration.md) | Jira integration — epic/story/subtask flow, job queue |
+| [shared/sso-configuration.md](shared/sso-configuration.md) | SSO / OIDC configuration — Azure AD, generic providers, env vars, user provisioning |

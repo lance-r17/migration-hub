@@ -31,9 +31,9 @@ _bearer = HTTPBearer(auto_error=False)
 _jwks_cache: dict[str, dict] = {}
 
 
-async def _fetch_jwks(issuer: str) -> dict:
+async def _fetch_jwks(issuer: str, *, force_refresh: bool = False) -> dict:
     """Fetch JSON Web Key Set from the OIDC provider's /keys endpoint."""
-    if issuer in _jwks_cache:
+    if not force_refresh and issuer in _jwks_cache:
         return _jwks_cache[issuer]
     jwks_uri = f"{issuer}/keys"
     try:
@@ -74,11 +74,24 @@ async def get_current_user(
         )
 
     token = credentials.credentials
+    # Verify signature only — skips at_hash validation, which is a frontend
+    # concern (oidc-client-ts handles it) not a resource-server concern.
+    jwks = await _fetch_jwks(settings.oidc_issuer)
     try:
-        jwks = await _fetch_jwks(settings.oidc_issuer)
-        # Verify signature only — skips at_hash validation, which is a frontend
-        # concern (oidc-client-ts handles it) not a resource-server concern.
         jose_jws.verify(token, jwks, algorithms=["RS256"])
+    except Exception:
+        # Keys may have rotated (e.g., provider restart); retry with fresh JWKS once.
+        try:
+            jwks = await _fetch_jwks(settings.oidc_issuer, force_refresh=True)
+            jose_jws.verify(token, jwks, algorithms=["RS256"])
+        except Exception as exc:
+            logger.warning("Token signature verification failed: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    try:
         payload = jwt.get_unverified_claims(token)
     except Exception as exc:
         logger.warning("Token signature verification failed: %s", exc)
