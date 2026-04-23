@@ -122,7 +122,7 @@ export const mockProjects: Project[] = [
       businessFunction: 'Centralised ERP platform covering procurement, finance, HR, and supply chain for ~2,400 internal users. Mission-critical for daily financial close and regulatory reporting.',
       userBase: { type: 'Internal', count: '~2,400 users' },
       applicationTier: 'T0',
-      eimId: 'EIM-00421',
+      baId: 'EIM-00421',
       ibsInScope: true,
       migrationStrategy: 'Lift & Shift',
       serviceLine: 'Finance & Operations',
@@ -347,14 +347,14 @@ export const mockProjects: Project[] = [
     // Section 5
     dependencies: {
       upstream: [
-        { id: 'd1', name: 'Auth Service', eimId: 'EIM-00105', contactEmail: 'identity-team@corp.com', hosting: 'On-Premise', notes: 'SAML 2.0 SSO provider' },
-        { id: 'd2', name: 'Payment Gateway', eimId: 'EIM-00212', contactEmail: 'vendor-support@payments.com', hosting: 'AliCloud', notes: 'IP allowlist change required post-migration' },
-        { id: 'd3', name: 'User Directory (LDAP)', eimId: 'EIM-00089', contactEmail: 'it-ops@corp.com', hosting: 'On-Premise', notes: 'TLS LDAP — server cert tied to current hostname' },
+        { id: 'd1', name: 'Auth Service', baId: 'EIM-00105', contactEmail: 'identity-team@corp.com', hosting: 'On-Premise', notes: 'SAML 2.0 SSO provider' },
+        { id: 'd2', name: 'Payment Gateway', baId: 'EIM-00212', contactEmail: 'vendor-support@payments.com', hosting: 'AliCloud', notes: 'IP allowlist change required post-migration' },
+        { id: 'd3', name: 'User Directory (LDAP)', baId: 'EIM-00089', contactEmail: 'it-ops@corp.com', hosting: 'On-Premise', notes: 'TLS LDAP — server cert tied to current hostname' },
       ],
       downstream: [
-        { id: 'd4', name: 'Invoicing Service', eimId: 'EIM-00317', contactEmail: 'finance-eng@corp.com', hosting: 'AliCloud', notes: '' },
-        { id: 'd5', name: 'BI Reporting Platform', eimId: 'EIM-00428', contactEmail: 'analytics@corp.com', hosting: 'On-Premise', notes: 'Direct DB connection — hardcoded DB host IP in config' },
-        { id: 'd6', name: 'Audit Log Aggregator', eimId: 'EIM-00531', contactEmail: 'security-ops@corp.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd4', name: 'Invoicing Service', baId: 'EIM-00317', contactEmail: 'finance-eng@corp.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd5', name: 'BI Reporting Platform', baId: 'EIM-00428', contactEmail: 'analytics@corp.com', hosting: 'On-Premise', notes: 'Direct DB connection — hardcoded DB host IP in config' },
+        { id: 'd6', name: 'Audit Log Aggregator', baId: 'EIM-00531', contactEmail: 'security-ops@corp.com', hosting: 'AliCloud', notes: '' },
       ],
     },
 
@@ -383,7 +383,6 @@ export const mockProjects: Project[] = [
     targetArchitecture: {
       reArchitectureNeeded: true,
       topology3Az: 'AZ-1: 2× App active, Oracle primary. AZ-2: 2× App active, Oracle replica. AZ-3: App standby, Oracle replica (3-node RAC). Traffic balanced across AZ-1 and AZ-2 via Azure Application Gateway.',
-      replicationChanges: 'Oracle RAC must be extended from 2-node to 3-node quorum before migration. Redis Sentinel upgraded to 3-node cluster (1 master, 2 replicas). Estimated effort: 3 weeks (DBA team).',
       dnsIpChanges: 'erp.corp.com and erp-api.corp.com will point to new Azure Application Gateway IPs. All downstream consumers using hardcoded IPs (BI platform) must update config.',
       newServicesRequired: ['Azure Application Gateway (L7 LB)', 'Azure Private DNS Zone', 'Azure Key Vault (replace on-prem CyberArk dependency)', 'Azure Monitor + Log Analytics workspace'],
       architectureDiagram: 'https://confluence.corp.com/display/ARCH/ERP-3AZ-Target-Architecture',
@@ -437,7 +436,7 @@ export const mockProjects: Project[] = [
       applicationName: 'User Auth Legacy',
       shortName: 'auth-svc',
       applicationTier: 'T3',
-      eimId: 'EIM-0042',
+      baId: 'EIM-0042',
       userBase: { type: 'Internal', count: '~800 employees' },
       businessFunction: 'Centralised OAuth2 / JWT authentication and session management for internal tooling.',
       businessOwnerId: 'u6',
@@ -531,11 +530,11 @@ export const mockProjects: Project[] = [
 
     dependencies: {
       upstream: [
-        { id: 'd10', name: 'Corporate LDAP', eimId: 'EIM-00089', contactEmail: 'it-ops@corp.com', hosting: 'On-Premise', notes: 'Directory bind for employee authentication' },
+        { id: 'd10', name: 'Corporate LDAP', baId: 'EIM-00089', contactEmail: 'it-ops@corp.com', hosting: 'On-Premise', notes: 'Directory bind for employee authentication' },
       ],
       downstream: [
-        { id: 'd11', name: 'Internal Dev Portal', eimId: 'EIM-00307', contactEmail: 'platform@company.com', hosting: 'AliCloud', notes: '' },
-        { id: 'd12', name: 'CI/CD Pipeline', eimId: 'EIM-00412', contactEmail: 'devops@company.com', hosting: 'AliCloud', notes: 'Service account tokens issued by auth-svc' },
+        { id: 'd11', name: 'Internal Dev Portal', baId: 'EIM-00307', contactEmail: 'platform@company.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd12', name: 'CI/CD Pipeline', baId: 'EIM-00412', contactEmail: 'devops@company.com', hosting: 'AliCloud', notes: 'Service account tokens issued by auth-svc' },
       ],
     },
 
@@ -557,7 +556,6 @@ export const mockProjects: Project[] = [
     targetArchitecture: {
       reArchitectureNeeded: false,
       topology3Az: 'ECS Fargate service with tasks distributed across AZ-A, AZ-B, AZ-C behind an internal ALB.',
-      replicationChanges: 'RDS promoted to Multi-AZ standby replica in AZ-B.',
       dnsIpChanges: 'auth.internal.company.com updated to new ALB DNS name.',
     },
 
@@ -604,7 +602,7 @@ export const mockProjects: Project[] = [
       applicationName: 'Global Edge DNS',
       shortName: 'edge-dns',
       applicationTier: 'T0',
-      eimId: 'EIM-0088',
+      baId: 'EIM-0088',
       userBase: { type: 'External', count: '~4M end users globally' },
       businessFunction: 'Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.',
       businessOwnerId: 'u12',
@@ -657,13 +655,13 @@ export const mockProjects: Project[] = [
 
     dependencies: {
       upstream: [
-        { id: 'd13', name: 'Domain Registrar API', eimId: 'EIM-00601', contactEmail: 'network-ops@corp.com', hosting: 'On-Premise', notes: 'NS delegation changes require 24h advance notice' },
-        { id: 'd14', name: 'DNSSEC Root KSK', eimId: 'EIM-00602', contactEmail: 'admin@iana.org', hosting: 'Other', notes: 'KSK rollover scheduled Q2 2026' },
+        { id: 'd13', name: 'Domain Registrar API', baId: 'EIM-00601', contactEmail: 'network-ops@corp.com', hosting: 'On-Premise', notes: 'NS delegation changes require 24h advance notice' },
+        { id: 'd14', name: 'DNSSEC Root KSK', baId: 'EIM-00602', contactEmail: 'admin@iana.org', hosting: 'Other', notes: 'KSK rollover scheduled Q2 2026' },
       ],
       downstream: [
-        { id: 'd15', name: 'Public Website CDN', eimId: 'EIM-00710', contactEmail: 'cdn-team@corp.com', hosting: 'AliCloud', notes: '' },
-        { id: 'd16', name: 'API Gateway', eimId: 'EIM-00315', contactEmail: 'platform@corp.com', hosting: 'AliCloud', notes: '' },
-        { id: 'd17', name: 'VPN Gateway', eimId: 'EIM-00521', contactEmail: 'network-ops@corp.com', hosting: 'On-Premise', notes: 'Split-horizon DNS required' },
+        { id: 'd15', name: 'Public Website CDN', baId: 'EIM-00710', contactEmail: 'cdn-team@corp.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd16', name: 'API Gateway', baId: 'EIM-00315', contactEmail: 'platform@corp.com', hosting: 'AliCloud', notes: '' },
+        { id: 'd17', name: 'VPN Gateway', baId: 'EIM-00521', contactEmail: 'network-ops@corp.com', hosting: 'On-Premise', notes: 'Split-horizon DNS required' },
       ],
     },
 
@@ -689,7 +687,6 @@ export const mockProjects: Project[] = [
     targetArchitecture: {
       reArchitectureNeeded: true,
       topology3Az: 'Route 53 is inherently multi-AZ. CloudFront edge PoPs cover all 3 AZs per region automatically.',
-      replicationChanges: 'Replaced BIND zone transfers with Route 53 API-driven zone management. EU region still on BIND — pending final cutover.',
       dnsIpChanges: 'NS records for company.com updated to Route 53 nameservers in APAC and US. EU NS delegation still pointing to legacy BIND cluster.',
       newServicesRequired: ['AWS Route 53', 'AWS CloudHSM (DNSSEC)', 'CloudFront (edge resolution)'],
     },
@@ -841,7 +838,7 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionLabel: 'Application Overview',
       changes: [
         { field: 'applicationTier', label: 'App Tier', oldValue: 'T1', newValue: 'T0' },
-        { field: 'eimId', label: 'EIM ID', oldValue: undefined, newValue: 'EIM-00421' },
+        { field: 'baId', label: 'BA ID', oldValue: undefined, newValue: 'EIM-00421' },
       ],
     },
     {

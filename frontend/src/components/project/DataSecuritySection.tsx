@@ -94,7 +94,7 @@ export function DataPersistenceSection({ data, onSave }: DataPersistenceSectionP
             <p className="text-sm text-muted-foreground">No data persistence information added yet.</p>
           ) : (
             <>
-              {data.dataResidency && <Row label="Data Residency">{data.dataResidency}</Row>}
+              {data.dataResidency && <Row label="Data Residency Requirements">{data.dataResidency}</Row>}
               {data.encryptionAtRest && <Row label="Encryption at Rest">{data.encryptionAtRest}</Row>}
               {data.statefulComponents?.length && (
                 <Row label="Stateful Components">

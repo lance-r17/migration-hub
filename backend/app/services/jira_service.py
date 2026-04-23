@@ -389,7 +389,7 @@ def _build_story_description(
         ("Start Date", wave.start_date if wave else None),
         ("Migration Strategy", ao.get("migrationStrategy")),
         ("Application Tier", ao.get("applicationTier")),
-        ("EIM ID", ao.get("eimId")),
+        ("BA ID", ao.get("baId")),
         ("IBS In Scope", ("Yes" if ao.get("ibsInScope") else "No") if ao.get("ibsInScope") is not None else None),
         ("Profile Owner", project.profile_owner),
         ("Status", project.status),
@@ -443,11 +443,11 @@ def _build_story_description(
     # ── Dependencies ─────────────────────────────────────────────────────────
     dep_items: list[str] = []
     for d in (deps.get("upstream") or []):
-        name = d.get("name") or d.get("eimId", "")
+        name = d.get("name") or d.get("baId", "")
         if name:
             dep_items.append(f"Upstream: {name}")
     for d in (deps.get("downstream") or []):
-        name = d.get("name") or d.get("eimId", "")
+        name = d.get("name") or d.get("baId", "")
         if name:
             dep_items.append(f"Downstream: {name}")
     if dep_items:

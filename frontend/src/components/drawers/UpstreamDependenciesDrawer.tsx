@@ -21,7 +21,7 @@ interface Props {
 }
 
 function emptyEntry(): DependencyEntry {
-  return { id: crypto.randomUUID(), name: '', eimId: '', contactEmail: '', hosting: '', notes: '' }
+  return { id: crypto.randomUUID(), name: '', baId: '', contactEmail: '', hosting: '', notes: '' }
 }
 
 function DependencyTableEditor({
@@ -55,8 +55,8 @@ function DependencyTableEditor({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
-              <Label>EIM ID</Label>
-              <Input value={entry.eimId ?? ''} onChange={(e) => update(entry.id, 'eimId', e.target.value)} placeholder="e.g. EIM-1234" />
+              <Label>BA ID</Label>
+              <Input value={entry.baId ?? ''} onChange={(e) => update(entry.id, 'baId', e.target.value)} placeholder="e.g. BA-1234" />
             </div>
             <div className="space-y-1.5">
               <Label>Contact Email</Label>

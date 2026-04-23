@@ -160,7 +160,7 @@ export function ProjectPreviewDrawer({ projectId, open, onOpenChange }: Props) {
                 <FieldRow label="Short Name" value={project.applicationOverview?.shortName} />
                 <FieldRow label="Business Function" value={project.applicationOverview?.businessFunction} />
                 <FieldRow label="App Tier" value={project.applicationOverview?.applicationTier} />
-                <FieldRow label="EIM ID" value={project.applicationOverview?.eimId} />
+                <FieldRow label="BA ID" value={project.applicationOverview?.baId} />
                 <FieldRow
                   label="User Base"
                   value={

@@ -25,7 +25,7 @@
       "businessFunction": "Centralised ERP platform covering procurement, finance, HR, and supply chain for ~2,400 internal users. Mission-critical for daily financial close and regulatory reporting.",
       "userBase": {"type": "Internal", "count": "~2,400 users"},
       "applicationTier": "T0",
-      "eimId": "EIM-00421",
+      "baId": "EIM-00421",
       "ibsInScope": true,
       "migrationStrategy": "Lift & Shift",
       "serviceLine": "Finance & Operations"
@@ -48,14 +48,14 @@
     },
     "dependencies": {
       "upstream": [
-        {"id": "d1", "name": "Auth Service", "eimId": "EIM-00105", "contactEmail": "identity-team@corp.com", "hosting": "On-Premise", "notes": "SAML 2.0 SSO provider"},
-        {"id": "d2", "name": "Payment Gateway", "eimId": "EIM-00212", "contactEmail": "vendor-support@payments.com", "hosting": "AliCloud", "notes": "IP allowlist change required post-migration"},
-        {"id": "d3", "name": "User Directory (LDAP)", "eimId": "EIM-00089", "contactEmail": "it-ops@corp.com", "hosting": "On-Premise", "notes": "TLS LDAP — server cert tied to current hostname"}
+        {"id": "d1", "name": "Auth Service", "baId": "EIM-00105", "contactEmail": "identity-team@corp.com", "hosting": "On-Premise", "notes": "SAML 2.0 SSO provider"},
+        {"id": "d2", "name": "Payment Gateway", "baId": "EIM-00212", "contactEmail": "vendor-support@payments.com", "hosting": "AliCloud", "notes": "IP allowlist change required post-migration"},
+        {"id": "d3", "name": "User Directory (LDAP)", "baId": "EIM-00089", "contactEmail": "it-ops@corp.com", "hosting": "On-Premise", "notes": "TLS LDAP — server cert tied to current hostname"}
       ],
       "downstream": [
-        {"id": "d4", "name": "Invoicing Service", "eimId": "EIM-00317", "contactEmail": "finance-eng@corp.com", "hosting": "AliCloud", "notes": ""},
-        {"id": "d5", "name": "BI Reporting Platform", "eimId": "EIM-00428", "contactEmail": "analytics@corp.com", "hosting": "On-Premise", "notes": "Direct DB connection — hardcoded DB host IP in config"},
-        {"id": "d6", "name": "Audit Log Aggregator", "eimId": "EIM-00531", "contactEmail": "security-ops@corp.com", "hosting": "AliCloud", "notes": ""}
+        {"id": "d4", "name": "Invoicing Service", "baId": "EIM-00317", "contactEmail": "finance-eng@corp.com", "hosting": "AliCloud", "notes": ""},
+        {"id": "d5", "name": "BI Reporting Platform", "baId": "EIM-00428", "contactEmail": "analytics@corp.com", "hosting": "On-Premise", "notes": "Direct DB connection — hardcoded DB host IP in config"},
+        {"id": "d6", "name": "Audit Log Aggregator", "baId": "EIM-00531", "contactEmail": "security-ops@corp.com", "hosting": "AliCloud", "notes": ""}
       ]
     },
     "nfrs": {
@@ -78,7 +78,6 @@
     "target_architecture": {
       "reArchitectureNeeded": true,
       "topology3Az": "AZ-1: 2× App active, Oracle primary. AZ-2: 2× App active, Oracle replica. AZ-3: App standby, Oracle replica (3-node RAC). Traffic balanced across AZ-1 and AZ-2 via Azure Application Gateway.",
-      "replicationChanges": "Oracle RAC must be extended from 2-node to 3-node quorum before migration. Redis Sentinel upgraded to 3-node cluster (1 master, 2 replicas). Estimated effort: 3 weeks (DBA team).",
       "dnsIpChanges": "erp.corp.com and erp-api.corp.com will point to new Azure Application Gateway IPs. All downstream consumers using hardcoded IPs (BI platform) must update config.",
       "newServicesRequired": ["Azure Application Gateway (L7 LB)", "Azure Private DNS Zone", "Azure Key Vault (replace on-prem CyberArk dependency)", "Azure Monitor + Log Analytics workspace"],
       "architectureDiagram": "https://confluence.corp.com/display/ARCH/ERP-3AZ-Target-Architecture"
@@ -132,7 +131,7 @@
       "applicationName": "User Auth Legacy",
       "shortName": "auth-svc",
       "applicationTier": "T3",
-      "eimId": "EIM-0042",
+      "baId": "EIM-0042",
       "userBase": {"type": "Internal", "count": "~800 employees"},
       "businessFunction": "Centralised OAuth2 / JWT authentication and session management for internal tooling.",
       "businessOwnerId": "u6",
@@ -144,15 +143,15 @@
     "availability": {"rto": "2 hours", "rpo": "30 minutes", "azReadiness3Az": "Stateless app layer is 3AZ-ready. Session DB requires replication changes."},
     "data_persistence": {"databaseTypes": ["PostgreSQL 14"], "totalDataVolume": "12 GB", "dataGrowthRate": "~500 MB/month", "backupRequiredDuringMigration": false, "lastRestoreTest": "https://brett.corp.com/tests/auth-svc-restore-2025-09-10", "dataResidency": "Region: ap-southeast-1", "encryptionAtRest": "AES-256 via AWS KMS", "statefulComponents": ["PostgreSQL session store"]},
     "dependencies": {
-      "upstream": [{"id": "d10", "name": "Corporate LDAP", "eimId": "EIM-00089", "contactEmail": "it-ops@corp.com", "hosting": "On-Premise", "notes": "Directory bind for employee authentication"}],
+      "upstream": [{"id": "d10", "name": "Corporate LDAP", "baId": "EIM-00089", "contactEmail": "it-ops@corp.com", "hosting": "On-Premise", "notes": "Directory bind for employee authentication"}],
       "downstream": [
-        {"id": "d11", "name": "Internal Dev Portal", "eimId": "EIM-00307", "contactEmail": "platform@company.com", "hosting": "AliCloud", "notes": ""},
-        {"id": "d12", "name": "CI/CD Pipeline", "eimId": "EIM-00412", "contactEmail": "devops@company.com", "hosting": "AliCloud", "notes": "Service account tokens issued by auth-svc"}
+        {"id": "d11", "name": "Internal Dev Portal", "baId": "EIM-00307", "contactEmail": "platform@company.com", "hosting": "AliCloud", "notes": ""},
+        {"id": "d12", "name": "CI/CD Pipeline", "baId": "EIM-00412", "contactEmail": "devops@company.com", "hosting": "AliCloud", "notes": "Service account tokens issued by auth-svc"}
       ]
     },
     "nfrs": {"peakLoad": "~120 req/s during business hours", "autoscaling": "Not configured — single instance pre-migration; ECS service auto-scaling enabled post-migration.", "licensing": "Node.js OSS — no licensing concerns"},
     "migration_constraints": {"regularMigrationWindow": "Saturdays 02:00–06:00 AEST", "preferredMigrationWindow": ["weekend"], "earliestStartDate": "2025-04-01", "latestEndDate": "2025-07-31", "crDurationHours": 2, "snowCiGroups": ["auth-svc", "platform-eng"]},
-    "target_architecture": {"reArchitectureNeeded": false, "topology3Az": "ECS Fargate service with tasks distributed across AZ-A, AZ-B, AZ-C behind an internal ALB.", "replicationChanges": "RDS promoted to Multi-AZ standby replica in AZ-B.", "dnsIpChanges": "auth.internal.company.com updated to new ALB DNS name."},
+    "target_architecture": {"reArchitectureNeeded": false, "topology3Az": "ECS Fargate service with tasks distributed across AZ-A, AZ-B, AZ-C behind an internal ALB.", "dnsIpChanges": "auth.internal.company.com updated to new ALB DNS name."},
     "approvals": [
       {"id": "a4", "role": "Technical Lead", "approver": "Frank Miller", "status": "approved", "timestamp": "Oct 24, 09:12 AM", "icon": "Wrench", "user_id": "u7"},
       {"id": "a5", "role": "Business Owner", "approver": "Eve Davis", "status": "approved", "timestamp": "Oct 24, 14:30 PM", "icon": "CreditCard", "user_id": "u6"},
@@ -205,7 +204,7 @@
       "applicationName": "Global Edge DNS",
       "shortName": "edge-dns",
       "applicationTier": "T0",
-      "eimId": "EIM-0088",
+      "baId": "EIM-0088",
       "userBase": {"type": "External", "count": "~4M end users globally"},
       "businessFunction": "Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.",
       "businessOwnerId": "u12",
@@ -218,18 +217,18 @@
     "data_persistence": {"databaseTypes": ["Route 53 Hosted Zones", "Custom zone DB (PostgreSQL 13)"], "totalDataVolume": "~800 MB zone data", "dataGrowthRate": "~5 MB/month", "backupRequiredDuringMigration": false, "lastRestoreTest": "https://brett.corp.com/tests/edge-dns-restore-2025-11-15", "dataResidency": "Zone data replicated across ap-southeast-1, eu-west-1, us-east-1", "encryptionAtRest": "N/A — DNS zone data is public", "statefulComponents": ["PostgreSQL zone authority DB", "DNSSEC key store"]},
     "dependencies": {
       "upstream": [
-        {"id": "d13", "name": "Domain Registrar API", "eimId": "EIM-00601", "contactEmail": "network-ops@corp.com", "hosting": "On-Premise", "notes": "NS delegation changes require 24h advance notice"},
-        {"id": "d14", "name": "DNSSEC Root KSK", "eimId": "EIM-00602", "contactEmail": "admin@iana.org", "hosting": "Other", "notes": "KSK rollover scheduled Q2 2026"}
+        {"id": "d13", "name": "Domain Registrar API", "baId": "EIM-00601", "contactEmail": "network-ops@corp.com", "hosting": "On-Premise", "notes": "NS delegation changes require 24h advance notice"},
+        {"id": "d14", "name": "DNSSEC Root KSK", "baId": "EIM-00602", "contactEmail": "admin@iana.org", "hosting": "Other", "notes": "KSK rollover scheduled Q2 2026"}
       ],
       "downstream": [
-        {"id": "d15", "name": "Public Website CDN", "eimId": "EIM-00710", "contactEmail": "cdn-team@corp.com", "hosting": "AliCloud", "notes": ""},
-        {"id": "d16", "name": "API Gateway", "eimId": "EIM-00315", "contactEmail": "platform@corp.com", "hosting": "AliCloud", "notes": ""},
-        {"id": "d17", "name": "VPN Gateway", "eimId": "EIM-00521", "contactEmail": "network-ops@corp.com", "hosting": "On-Premise", "notes": "Split-horizon DNS required"}
+        {"id": "d15", "name": "Public Website CDN", "baId": "EIM-00710", "contactEmail": "cdn-team@corp.com", "hosting": "AliCloud", "notes": ""},
+        {"id": "d16", "name": "API Gateway", "baId": "EIM-00315", "contactEmail": "platform@corp.com", "hosting": "AliCloud", "notes": ""},
+        {"id": "d17", "name": "VPN Gateway", "baId": "EIM-00521", "contactEmail": "network-ops@corp.com", "hosting": "On-Premise", "notes": "Split-horizon DNS required"}
       ]
     },
     "nfrs": {"peakLoad": "~850,000 queries/sec globally", "autoscaling": "Route 53 scales automatically. Edge nodes auto-scale via instance groups.", "licensing": "Route 53 pay-per-query. Custom zone DB on PostgreSQL OSS."},
     "migration_constraints": {"regularMigrationWindow": "Rolling — region-by-region with no global maintenance window", "preferredMigrationWindow": ["weekday", "weekend"], "earliestStartDate": "2025-09-01", "latestEndDate": "2026-02-28", "crDurationHours": 1, "snowCiGroups": ["network-ops", "sre", "dns-team"], "changeFreezePeriods": [{"name": "Shopping season", "from": "2025-11-25", "to": "2025-12-01"}, {"name": "Holiday freeze", "from": "2025-12-20", "to": "2026-01-05"}]},
-    "target_architecture": {"reArchitectureNeeded": true, "topology3Az": "Route 53 is inherently multi-AZ. CloudFront edge PoPs cover all 3 AZs per region automatically.", "replicationChanges": "Replaced BIND zone transfers with Route 53 API-driven zone management. EU region still on BIND — pending final cutover.", "dnsIpChanges": "NS records for company.com updated to Route 53 nameservers in APAC and US. EU NS delegation still pointing to legacy BIND cluster.", "newServicesRequired": ["AWS Route 53", "AWS CloudHSM (DNSSEC)", "CloudFront (edge resolution)"]},
+    "target_architecture": {"reArchitectureNeeded": true, "topology3Az": "Route 53 is inherently multi-AZ. CloudFront edge PoPs cover all 3 AZs per region automatically.", "dnsIpChanges": "NS records for company.com updated to Route 53 nameservers in APAC and US. EU NS delegation still pointing to legacy BIND cluster.", "newServicesRequired": ["AWS Route 53", "AWS CloudHSM (DNSSEC)", "CloudFront (edge resolution)"]},
     "approvals": [
       {"id": "a10", "role": "Technical Lead", "approver": "Irene Cho", "status": "approved", "timestamp": "Oct 20, 11:00 AM", "icon": "Wrench", "user_id": "u10"},
       {"id": "a11", "role": "Business Owner", "approver": null, "status": "waiting", "timestamp": null, "icon": "CreditCard", "user_id": "u12"},

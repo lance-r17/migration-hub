@@ -18,7 +18,7 @@ interface Props {
 export function TechnicalChangesDrawer({ open, onOpenChange, data, onSave }: Props) {
   const [draft, setDraft] = useState({
     reArchitectureNeeded: undefined as boolean | undefined,
-    topology3Az: '', replicationChanges: '', dnsIpChanges: '', newServicesRequired: [] as string[], architectureDiagram: '',
+    topology3Az: '', dnsIpChanges: '', newServicesRequired: [] as string[], architectureDiagram: '',
   })
 
   useEffect(() => {
@@ -26,7 +26,6 @@ export function TechnicalChangesDrawer({ open, onOpenChange, data, onSave }: Pro
       setDraft({
         reArchitectureNeeded: data?.reArchitectureNeeded,
         topology3Az: data?.topology3Az ?? '',
-        replicationChanges: data?.replicationChanges ?? '',
         dnsIpChanges: data?.dnsIpChanges ?? '',
         newServicesRequired: data?.newServicesRequired ?? [],
         architectureDiagram: data?.architectureDiagram ?? '',
@@ -39,7 +38,6 @@ export function TechnicalChangesDrawer({ open, onOpenChange, data, onSave }: Pro
       ...data,
       reArchitectureNeeded: draft.reArchitectureNeeded,
       topology3Az: draft.topology3Az || undefined,
-      replicationChanges: draft.replicationChanges || undefined,
       dnsIpChanges: draft.dnsIpChanges || undefined,
       newServicesRequired: draft.newServicesRequired.length ? draft.newServicesRequired : undefined,
       architectureDiagram: draft.architectureDiagram || undefined,
@@ -78,10 +76,6 @@ export function TechnicalChangesDrawer({ open, onOpenChange, data, onSave }: Pro
       <div className="space-y-1.5">
         <Label htmlFor="tc-topo">3-AZ Topology</Label>
         <textarea id="tc-topo" className={textareaClass} value={draft.topology3Az} onChange={(e) => setDraft(d => ({ ...d, topology3Az: e.target.value }))} placeholder="Describe 3-AZ topology changes" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="tc-repl">Replication Changes</Label>
-        <textarea id="tc-repl" className={textareaClass} value={draft.replicationChanges} onChange={(e) => setDraft(d => ({ ...d, replicationChanges: e.target.value }))} placeholder="Describe replication topology changes" />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="tc-dns">DNS / IP Changes</Label>

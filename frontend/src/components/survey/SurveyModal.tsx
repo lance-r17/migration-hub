@@ -115,7 +115,7 @@ const HOSTING_OPTIONS = ['AliCloud', 'On-Premise', 'AWS', 'Azure', 'GCP', 'Other
 
 function DependencyListEditor({ value, onChange }: { value: DependencyEntry[]; onChange: (v: DependencyEntry[]) => void }) {
   function addEntry() {
-    onChange([...value, { id: crypto.randomUUID(), name: '', eimId: '', contactEmail: '', hosting: '', notes: '' }])
+    onChange([...value, { id: crypto.randomUUID(), name: '', baId: '', contactEmail: '', hosting: '', notes: '' }])
   }
   function updateEntry(id: string, field: keyof DependencyEntry, val: string) {
     onChange(value.map(e => (e.id === id ? { ...e, [field]: val } : e)))
@@ -134,7 +134,7 @@ function DependencyListEditor({ value, onChange }: { value: DependencyEntry[]; o
           </div>
           <Input value={entry.name} onChange={e => updateEntry(entry.id, 'name', e.target.value)} placeholder="Application name *" data-dep-input="true" className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
           <div className="grid grid-cols-2 gap-3">
-            <Input value={entry.eimId ?? ''} onChange={e => updateEntry(entry.id, 'eimId', e.target.value)} placeholder="EIM ID" data-dep-input="true" className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
+            <Input value={entry.baId ?? ''} onChange={e => updateEntry(entry.id, 'baId', e.target.value)} placeholder="BA ID" data-dep-input="true" className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
             <Input value={entry.contactEmail ?? ''} onChange={e => updateEntry(entry.id, 'contactEmail', e.target.value)} placeholder="Contact email" data-dep-input="true" className="text-sm border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0" />
           </div>
           <Select value={entry.hosting ?? ''} onValueChange={v => updateEntry(entry.id, 'hosting', v)}>

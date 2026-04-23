@@ -41,7 +41,7 @@ export function DataGovernanceDrawer({ open, onOpenChange, data, onSave }: Props
   return (
     <SectionEditDrawer open={open} onOpenChange={onOpenChange} title="Edit Data Governance" onSave={handleSave}>
       <div className="space-y-1.5">
-        <Label htmlFor="dg-residency">Data Residency</Label>
+        <Label htmlFor="dg-residency">Data Residency Requirements</Label>
         <Input id="dg-residency" value={draft.dataResidency} onChange={(e) => setDraft(d => ({ ...d, dataResidency: e.target.value }))} placeholder="e.g. EU only" />
       </div>
       <div className="space-y-1.5">

@@ -92,10 +92,10 @@ export function ApplicationOverviewSection({ data, projectId, onSave }: Applicat
                 </p>
               </div>
 
-              {data.eimId && (
+              {data.baId && (
                 <div>
-                  <Label>EIM ID</Label>
-                  <code className="font-mono text-xs bg-muted px-2 py-1 rounded">{data.eimId}</code>
+                  <Label>BA ID</Label>
+                  <code className="font-mono text-xs bg-muted px-2 py-1 rounded">{data.baId}</code>
                 </div>
               )}
 

@@ -46,7 +46,7 @@ export interface ApplicationOverview {
     count?: string
   }
   applicationTier?: ApplicationTier
-  eimId?: string
+  baId?: string
   ibsInScope?: boolean
   migrationStrategy?: MigrationStrategy
   serviceLine?: string
@@ -67,7 +67,7 @@ export interface CloudResource {
   resourceId?: string                  // e.g. "i-abc1234"
   name: string
   product?: string                     // e.g. "ecs", "polarDB", "rds", "oss", "sls", "slb", "dns"
-  resourceSet?: string                 // format: xxxx-<eim_id>-<app_name>-(dev|prod)
+  resourceSet?: string                 // format: xxxx-<ba_id>-<app_name>-(dev|prod)
   specs?: Record<string, unknown>      // variable JSON schema per product
   subApplication?: string              // user-editable label for multi-app projects
   targetResourceId?: string            // resource ID in the target environment
@@ -107,7 +107,7 @@ export interface DataPersistence {
 export interface DependencyEntry {
   id: string
   name: string
-  eimId?: string
+  baId?: string
   contactEmail?: string
   hosting?: string    // e.g. "AliCloud", "On-Premise"
   notes?: string
@@ -149,7 +149,6 @@ export interface MigrationConstraints {
 export interface TargetArchitecture {
   reArchitectureNeeded?: boolean
   topology3Az?: string
-  replicationChanges?: string
   dnsIpChanges?: string
   newServicesRequired?: string[]
   architectureDiagram?: string

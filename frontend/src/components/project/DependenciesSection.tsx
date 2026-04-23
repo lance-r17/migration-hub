@@ -19,7 +19,7 @@ function DependencyTable({ entries }: { entries: DependencyEntry[] }) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-border">
-            {['Application Name', 'EIM ID', 'Contact Email', 'Hosting', 'Notes'].map(h => (
+            {['Application Name', 'BA ID', 'Contact Email', 'Hosting', 'Notes'].map(h => (
               <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -28,7 +28,7 @@ function DependencyTable({ entries }: { entries: DependencyEntry[] }) {
           {entries.map(entry => (
             <tr key={entry.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
               <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">{entry.name}</td>
-              <td className="py-3 pr-4 font-mono text-xs text-muted-foreground">{entry.eimId ?? '—'}</td>
+              <td className="py-3 pr-4 font-mono text-xs text-muted-foreground">{entry.baId ?? '—'}</td>
               <td className="py-3 pr-4 text-muted-foreground">{entry.contactEmail ?? '—'}</td>
               <td className="py-3 pr-4 text-muted-foreground whitespace-nowrap">{entry.hosting ?? '—'}</td>
               <td className="py-3 text-muted-foreground text-xs">{entry.notes || '—'}</td>

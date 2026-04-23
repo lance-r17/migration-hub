@@ -27,7 +27,7 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
   const [draft, setDraft] = useState({
     applicationName: '',
     shortName: '',
-    eimId: '',
+    baId: '',
     applicationTier: '' as ApplicationTier | '',
     userBaseType: 'Internal' as 'Internal' | 'External' | 'Both',
     userBaseCount: '',
@@ -42,7 +42,7 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
       setDraft({
         applicationName: data?.applicationName ?? '',
         shortName: data?.shortName ?? '',
-        eimId: data?.eimId ?? '',
+        baId: data?.baId ?? '',
         applicationTier: data?.applicationTier ?? '',
         userBaseType: data?.userBase?.type ?? 'Internal',
         userBaseCount: data?.userBase?.count ?? '',
@@ -59,7 +59,7 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
       ...data,
       applicationName: draft.applicationName,
       shortName: draft.shortName || undefined,
-      eimId: draft.eimId || undefined,
+      baId: draft.baId || undefined,
       applicationTier: (draft.applicationTier as ApplicationTier) || undefined,
       userBase: { type: draft.userBaseType, count: draft.userBaseCount || undefined },
       businessFunction: draft.businessFunction || undefined,
@@ -101,12 +101,12 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="ap-eim">EIM ID</Label>
+          <Label htmlFor="ap-ba">BA ID</Label>
           <Input
-            id="ap-eim"
-            value={draft.eimId}
-            onChange={(e) => setDraft(d => ({ ...d, eimId: e.target.value }))}
-            placeholder="EIM ID"
+            id="ap-ba"
+            value={draft.baId}
+            onChange={(e) => setDraft(d => ({ ...d, baId: e.target.value }))}
+            placeholder="BA ID"
           />
         </div>
         <div className="space-y-1.5">

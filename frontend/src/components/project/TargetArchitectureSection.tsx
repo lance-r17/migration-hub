@@ -47,12 +47,6 @@ export function TargetArchitectureSection({ data, onSave }: TargetArchitectureSe
                   <p className="text-sm text-foreground leading-relaxed">{data.topology3Az}</p>
                 </div>
               )}
-              {data.replicationChanges && (
-                <div className="pb-4 border-b border-border last:border-0 last:pb-0">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Replication Changes</p>
-                  <p className="text-sm text-foreground leading-relaxed">{data.replicationChanges}</p>
-                </div>
-              )}
               {data.dnsIpChanges && (
                 <div className="pb-4 border-b border-border last:border-0 last:pb-0">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">DNS / IP Changes</p>

@@ -76,14 +76,14 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     defaultHint: 'e.g. "CustPortal", "BillSvc", or "ERP" — used in resource naming and documentation',
   },
   {
-    id: 'appoverview__eimId',
+    id: 'appoverview__baId',
     sectionKey: 'applicationOverview',
-    fieldPath: 'eimId',
-    label: 'EIM ID',
+    fieldPath: 'baId',
+    label: 'BA ID',
     sectionLabel: 'Application Overview',
     inputType: 'short_text',
-    defaultQuestion: 'What is the EIM ID for this application?',
-    defaultHint: 'The Enterprise Information Management identifier. e.g. "EIM-12345"',
+    defaultQuestion: 'What is the BA ID for this application?',
+    defaultHint: 'The Business Architecture identifier. e.g. "BA-12345"',
   },
   {
     id: 'appoverview__ibsInScope',
@@ -202,7 +202,7 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     id: 'data__dataResidency',
     sectionKey: 'dataPersistence',
     fieldPath: 'dataResidency',
-    label: 'Data Residency',
+    label: 'Data Residency Requirements',
     sectionLabel: 'Data & Persistence',
     inputType: 'short_text',
     defaultQuestion: 'What are the data residency or sovereignty requirements?',
@@ -227,7 +227,7 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     sectionLabel: 'Dependencies & Certificates',
     inputType: 'dependency_list',
     defaultQuestion: 'What applications does this application depend on (upstream)?',
-    defaultHint: 'List applications that this system calls or relies upon. Include app name, EIM ID, contact and hosting platform.',
+    defaultHint: 'List applications that this system calls or relies upon. Include app name, BA ID, contact and hosting platform.',
   },
   {
     id: 'deps__downstream',
@@ -237,7 +237,7 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     sectionLabel: 'Dependencies & Certificates',
     inputType: 'dependency_list',
     defaultQuestion: 'What applications depend on this application (downstream)?',
-    defaultHint: 'List applications that call or consume this system. Include app name, EIM ID, contact and hosting platform.',
+    defaultHint: 'List applications that call or consume this system. Include app name, BA ID, contact and hosting platform.',
   },
 
   // ─── Non-Functional Requirements ────────────────────────────────────────────
@@ -355,16 +355,6 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     inputType: 'long_text',
     defaultQuestion: 'Describe the target 3-AZ topology.',
     defaultHint: 'e.g. "SLB → ECS Auto Scaling across AZ-a, AZ-b, AZ-c (min 1 instance per AZ). PolarDB Enterprise cluster with 3-AZ replication."',
-  },
-  {
-    id: 'target__replicationChanges',
-    sectionKey: 'targetArchitecture',
-    fieldPath: 'replicationChanges',
-    label: 'Replication Changes',
-    sectionLabel: 'Target Architecture',
-    inputType: 'long_text',
-    defaultQuestion: 'What replication changes are required in the target architecture?',
-    defaultHint: 'e.g. "Migrate from MySQL primary-replica to PolarDB with 3-AZ synchronous replication. Replication lag target < 100ms."',
   },
   {
     id: 'target__newServicesRequired',
