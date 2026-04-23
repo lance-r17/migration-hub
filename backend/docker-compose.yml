@@ -23,6 +23,14 @@ services:
       CORS_ORIGINS: http://localhost:5173
       CURRENT_USER_ID: u-current
       ENVIRONMENT: development
+      # Uncomment ONE auth mode:
+      # --- Custom OAuth (recommended for new projects) ---
+      # OAUTH_SERVICE_URL: http://mock-oauth:5557
+      # OAUTH_CLIENT_ID: migration-hub
+      # OAUTH_CLIENT_SECRET: mock-secret
+      # SESSION_SECRET_KEY: dev-secret-change-me
+      # SESSION_MAX_AGE_MINUTES: 480
+      # --- Standard OIDC (legacy) ---
       OIDC_ISSUER: http://dex:5556/dex
     ports:
       - "8000:8000"
@@ -40,6 +48,16 @@ services:
       - dex_data:/var/dex
     ports:
       - "5556:5556"
+    restart: unless-stopped
+
+  mock-oauth:
+    build: ../mock-oauth
+    ports:
+      - "5557:5557"
+    environment:
+      MOCK_OAUTH_CLIENT_ID: migration-hub
+      MOCK_OAUTH_CLIENT_SECRET: mock-secret-do-not-use-in-production
+      MOCK_OAUTH_PORT: 5557
     restart: unless-stopped
 
   pgweb:

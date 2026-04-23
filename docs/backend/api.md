@@ -8,7 +8,7 @@ All endpoints are prefixed with `/api/v1`. All request and response bodies are J
 
 ### `POST /api/v1/auth/login`
 
-Authenticates a user.
+Legacy mock login. Authenticates a user by email.
 
 **Request body:**
 ```json
@@ -17,7 +17,42 @@ Authenticates a user.
 
 **Response:** `User`
 
-> No password validation in the current implementation — any credentials for a known email return the matching user. JWT/OAuth wiring is a future task.
+> No password validation — any credentials for a known email return the matching user. Used only in mock auth mode.
+
+---
+
+### `POST /api/v1/auth/sso/exchange`
+
+Custom OAuth code exchange. The frontend calls this after receiving a one-time `code` from the OAuth service callback.
+
+**Request body:**
+```json
+{ "code": "string" }
+```
+
+**Flow:**
+1. Backend POSTs `{client_id, client_secret, code}` to `{OAUTH_SERVICE_URL}/api/v1/oauth/sso/userinfo`
+2. OAuth service returns user details JSON
+3. Backend looks up the user by `email` in the local database
+4. Backend issues a signed JWT session token
+5. Returns `{user: User, token: string}`
+
+**Response:** `SSOExchangeResponse` — `{ user: User, token: string }`
+
+**Errors:**
+- `503` — OAuth service not configured
+- `401` — Invalid/expired code, or user not found in database
+
+---
+
+### `GET /api/v1/auth/sso/login-url`
+
+Returns the fully-formed OAuth service authentication URL. Useful for the frontend to avoid hard-coding endpoint paths.
+
+**Query params:**
+- `redirect_uri` — callback URL (default: `http://localhost:5173/callback`)
+
+**Response:** `{ url: string }`
 
 ---
 
@@ -33,7 +68,11 @@ Returns all users. Used to populate people-picker dropdowns.
 
 ### `GET /api/v1/users/me`
 
-Returns the currently authenticated user. Determined by the `CURRENT_USER_ID` environment variable (no session/token auth yet).
+Returns the currently authenticated user. Resolution depends on the active auth mode:
+
+- **Custom OAuth** — verifies `Authorization: Bearer <backend_jwt>` (HS256), extracts `email` claim, looks up user
+- **Standard OIDC** — verifies `Authorization: Bearer <idp_jwt>` (RS256 via JWKS), extracts `email` claim, looks up user
+- **Mock auth** — returns the user matching `CURRENT_USER_ID`
 
 **Response:** `User`
 

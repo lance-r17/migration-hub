@@ -19,6 +19,8 @@ import { BASE_URL, USE_MOCK, delay, apiClient } from '@/services/client'
 
 All `apiClient` methods throw an `Error` if the response status is not `2xx`.
 
+**Auth header injection:** `authHeader()` checks `sessionStorage` for a backend-issued JWT (custom OAuth mode) first, then falls back to the OIDC `access_token` from `oidc-client-ts` (legacy OIDC mode). Mock auth sends no header.
+
 ---
 
 ## Projects (`services/projects.ts`)
@@ -65,9 +67,28 @@ import { getUsers, getCurrentUser, getProjectUsers, login } from '@/services/use
 | `getUsers` | `() => Promise<User[]>` | `GET /api/v1/users` | Returns all users (for people-pickers) |
 | `getCurrentUser` | `() => Promise<User>` | `GET /api/v1/users/me` | Returns the authenticated user |
 | `getProjectUsers` | `(projectId: string) => Promise<User[]>` | `GET /api/v1/projects/:id/users` | Returns users associated with a project |
-| `login` | `(email: string, password: string) => Promise<User>` | `POST /api/v1/auth/login` | Authenticates and returns the user |
+| `login` | `(email: string, password: string) => Promise<User>` | `POST /api/v1/auth/login` | Legacy mock login — returns the user matching `CURRENT_USER_ID` |
 
 In mock mode, `login` always returns the same mock current user regardless of credentials.
+
+---
+
+## OAuth (`services/oauth.ts`)
+
+```ts
+import { exchangeCodeForSession } from '@/services/oauth'
+```
+
+| Function | Signature | Endpoint | Description |
+|---|---|---|---|
+| `exchangeCodeForSession` | `(code: string) => Promise<SSOExchangeResponse>` | `POST /api/v1/auth/sso/exchange` | Exchanges a one-time OAuth code for a user + backend JWT |
+
+`SSOExchangeResponse` shape:
+```ts
+{ user: User, token: string }
+```
+
+Called by `CallbackPage` after the OAuth service redirects back with `?code=...&state=...`.
 
 ---
 

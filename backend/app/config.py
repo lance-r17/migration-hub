@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     oidc_issuer: str = ""
     oidc_audience: str = "migration-hub"
 
+    # Custom enterprise OAuth service settings
+    oauth_service_url: str = ""
+    oauth_client_id: str = "migration-hub"
+    oauth_client_secret: str = "mock-secret-do-not-use-in-production"
+    session_secret_key: str = "change-me-in-production"
+    session_max_age_minutes: int = 480  # 8 hours
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

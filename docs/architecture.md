@@ -71,9 +71,15 @@ Auth state is managed by `UserContext` (`src/context/UserContext.tsx`):
 
 - On mount it reads `sessionStorage.getItem('auth')` to restore session
 - `login(user)` stores the user in state and writes `'true'` to `sessionStorage`
-- `logout()` clears both
+- `logout()` clears both state and `sessionStorage` (including any `backend_token` or `oauth_state`)
 - `ProtectedRoute` in `App.tsx` redirects unauthenticated requests to `/login`
 - Role-based feature gating happens inside individual pages/components using `user.role`
+
+Three auth modes are supported (controlled by environment variables):
+
+1. **Custom OAuth** (`OAUTH_SERVICE_URL` / `VITE_OAUTH_SERVICE_URL` set) — backend exchanges one-time codes with the OAuth service and issues session JWTs
+2. **Standard OIDC** (`OIDC_ISSUER` / `VITE_OIDC_ISSUER` set) — frontend uses `oidc-client-ts` to exchange codes via PKCE; backend validates IdP JWTs via JWKS
+3. **Mock auth** (neither set) — no IdP; login button always signs in as the seeded dev user
 
 ## Routing
 
@@ -124,6 +130,6 @@ The FastAPI backend lives in `backend/` and exposes all `/api/v1/...` endpoints 
 - `config_store` singleton table (key→JSONB) holds survey config, resource survey config, and billing thresholds
 - Audit entries are written as a transaction side-effect on every project write — never by the frontend
 - Jira job processing uses FastAPI `BackgroundTasks`; stale `processing` jobs are reset to `failed` on startup
-- `GET /api/v1/users/me` returns the user identified by `CURRENT_USER_ID` env var — no JWT auth yet
+- `GET /api/v1/users/me` resolves the user from the active auth mode: backend JWT (custom OAuth), IdP JWT (OIDC), or `CURRENT_USER_ID` fallback (mock auth)
 
 See [backend/overview.md](backend/overview.md), [backend/api.md](backend/api.md), and [backend/database.md](backend/database.md) for full details.

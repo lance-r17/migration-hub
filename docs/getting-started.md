@@ -67,7 +67,10 @@ cp .env.example .env.local
 |---|---|---|
 | `VITE_API_BASE_URL` | _(empty)_ | Base URL for the backend API. Leave empty to run on mock data. |
 | `VITE_EMAIL_SERVER_URL` | _(empty)_ | URL of the local email relay server. Set to `http://localhost:3001` when running the email server. |
-| `VITE_OIDC_ISSUER` | _(empty)_ | OIDC issuer URL. Leave empty for mock auth (default). See [SSO configuration](shared/sso-configuration.md). |
+| `VITE_OAUTH_SERVICE_URL` | _(empty)_ | Custom OAuth service base URL. Leave empty for mock auth (default). See [SSO configuration](shared/sso-configuration.md). |
+| `VITE_OAUTH_CLIENT_ID` | _(empty)_ | OAuth client ID. Required when `VITE_OAUTH_SERVICE_URL` is set. |
+| `VITE_OAUTH_REDIRECT_URI` | _(empty)_ | Post-login callback URL. Defaults to `{origin}/callback` when not set. |
+| `VITE_OIDC_ISSUER` | _(empty)_ | OIDC issuer URL (legacy). See [SSO configuration](shared/sso-configuration.md). |
 | `VITE_OIDC_CLIENT_ID` | _(empty)_ | OIDC application client ID. Required when `VITE_OIDC_ISSUER` is set. |
 | `VITE_OIDC_REDIRECT_URI` | _(empty)_ | Post-login callback URL. Defaults to `{origin}/callback` when not set. |
 
@@ -111,6 +114,8 @@ Then add `VITE_EMAIL_SERVER_URL=http://localhost:3001` to `frontend/.env.local`.
 ## Login
 
 In mock mode, any credentials work. The login form accepts an email and password; they are not validated against real credentials. The mock always returns the same "current user" from `src/data/mock.ts`.
+
+When `VITE_OAUTH_SERVICE_URL` is set, clicking "Login with Enterprise SSO" redirects to the OAuth service. After authentication, the OAuth service redirects back to `/callback` with a one-time code. The frontend exchanges this code with the backend (`POST /api/v1/auth/sso/exchange`), which calls the OAuth service's `/userinfo` endpoint using `client_secret`, looks up the user by email, and issues a backend-signed JWT session token. See [SSO configuration](shared/sso-configuration.md) for full details.
 
 ## Dev container
 
@@ -156,12 +161,17 @@ Copy `.env.example` to `.env` and adjust as needed:
 |---|---|---|
 | `DATABASE_URL` | `postgresql+asyncpg://hub:hub_dev_secret@localhost/migration_hub` | PostgreSQL connection string |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed CORS origins |
-| `CURRENT_USER_ID` | `u-current` | User returned by `GET /users/me` (no auth yet) |
+| `CURRENT_USER_ID` | `u-current` | Fallback user returned by `GET /users/me` when no auth system is configured |
 | `JIRA_BASE_URL` | _(empty)_ | Jira instance URL (optional for Jira job testing) |
 | `JIRA_API_TOKEN` | _(empty)_ | Jira API token |
 | `JIRA_USER_EMAIL` | _(empty)_ | Email for Jira API auth |
-| `OIDC_ISSUER` | _(empty)_ | OIDC issuer URL. Leave empty for mock auth. See [SSO configuration](shared/sso-configuration.md). |
-| `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in JWTs. Must be set to your client ID for Azure AD. |
+| `OAUTH_SERVICE_URL` | _(empty)_ | Custom OAuth service base URL. Leave empty for mock auth. See [SSO configuration](shared/sso-configuration.md). |
+| `OAUTH_CLIENT_ID` | `migration-hub` | Client ID registered with the OAuth service. |
+| `OAUTH_CLIENT_SECRET` | _(empty)_ | Client secret for backend-to-OAuth-service `/userinfo` calls. |
+| `SESSION_SECRET_KEY` | _(empty)_ | Secret key for signing backend session JWTs (HS256). |
+| `SESSION_MAX_AGE_MINUTES` | `480` | Session lifetime in minutes (default 8 hours). |
+| `OIDC_ISSUER` | _(empty)_ | OIDC issuer URL (legacy). See [SSO configuration](shared/sso-configuration.md). |
+| `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in OIDC JWTs. Must be set to your client ID for Azure AD. |
 | `ENVIRONMENT` | `development` | `development` or `production` |
 
 ### Connect the frontend to the backend

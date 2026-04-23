@@ -1,20 +1,31 @@
 """
 Authentication dependency for FastAPI routes.
 
-When OIDC_ISSUER is configured, validates the Bearer JWT and resolves the
-user by email claim. When not configured, falls back to the mock CURRENT_USER_ID
-behaviour so existing dev workflows continue to work without any auth setup.
+Supports three modes (checked in priority order):
+
+1. Custom OAuth mode (OAUTH_SERVICE_URL set):
+   - Validates the Bearer token as a backend-signed JWT (HS256).
+   - Extracts email claim, looks up user in DB.
+
+2. Standard OIDC mode (OIDC_ISSUER set, no OAUTH_SERVICE_URL):
+   - Validates the Bearer token as an OIDC JWT (RS256 via JWKS).
+   - Extracts email claim, looks up user in DB.
+
+3. Mock mode (neither configured):
+   - Returns the CURRENT_USER_ID mock user for zero-config dev.
 """
+
 from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
 
 import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jws as jose_jws
-from jose import jwt
+from jose import jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -30,6 +41,8 @@ _bearer = HTTPBearer(auto_error=False)
 # Refreshed on each process start. For dev use only.
 _jwks_cache: dict[str, dict] = {}
 
+
+# ─── JWKS fetch (OIDC mode) ──────────────────────────────────────────────────
 
 async def _fetch_jwks(issuer: str, *, force_refresh: bool = False) -> dict:
     """Fetch JSON Web Key Set from the OIDC provider's /keys endpoint."""
@@ -50,32 +63,49 @@ async def _fetch_jwks(issuer: str, *, force_refresh: bool = False) -> dict:
     return jwks
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    """
-    Resolve the current authenticated user.
+# ─── Backend JWT verification (Custom OAuth mode) ────────────────────────────
 
-    - OIDC disabled (OIDC_ISSUER not set): returns CURRENT_USER_ID mock user.
-    - OIDC enabled: validates Bearer JWT, extracts email claim, looks up user.
-    """
-    if not settings.oidc_issuer:
-        user = await user_service.get_current(db)
-        if not user:
-            raise HTTPException(status_code=404, detail="Current user not found")
-        return user
 
-    if credentials is None:
+def _verify_backend_jwt(token: str) -> dict:
+    """Verify a backend-signed HS256 JWT. Returns the payload dict."""
+    try:
+        payload = jose_jwt.decode(
+            token,
+            settings.session_secret_key,
+            algorithms=["HS256"],
+            issuer="migration-hub-backend",
+            audience="migration-hub",
+        )
+    except jose_jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
+            detail="Session expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    except jose_jwt.JWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    # Extra safety: validate exp claim explicitly
+    exp = payload.get("exp")
+    if exp is not None and datetime.now(timezone.utc).timestamp() > exp:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = credentials.credentials
-    # Verify signature only — skips at_hash validation, which is a frontend
-    # concern (oidc-client-ts handles it) not a resource-server concern.
+    return payload
+
+
+# ─── OIDC JWT verification (Standard OIDC mode) ──────────────────────────────
+
+
+async def _verify_oidc_jwt(token: str) -> dict:
+    """Verify an OIDC RS256 JWT via JWKS. Returns the payload dict."""
     jwks = await _fetch_jwks(settings.oidc_issuer)
     try:
         jose_jws.verify(token, jwks, algorithms=["RS256"])
@@ -90,16 +120,17 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token",
                 headers={"WWW-Authenticate": "Bearer"},
-            )
+            ) from exc
+
     try:
-        payload = jwt.get_unverified_claims(token)
+        payload = jose_jwt.get_unverified_claims(token)
     except Exception as exc:
-        logger.warning("Token signature verification failed: %s", exc)
+        logger.warning("Unable to parse token claims: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from exc
 
     # Validate standard claims manually
     now = time.time()
@@ -111,28 +142,94 @@ async def get_current_user(
         or settings.oidc_audience not in aud
         or payload.get("exp", 0) < now
     ):
-        logger.warning("Token claims invalid: iss=%s aud=%s exp=%s", payload.get("iss"), payload.get("aud"), payload.get("exp"))
+        logger.warning(
+            "Token claims invalid: iss=%s aud=%s exp=%s",
+            payload.get("iss"),
+            payload.get("aud"),
+            payload.get("exp"),
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token claims",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    email: str | None = payload.get("email")
-    if not email:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token missing email claim",
-        )
+    return payload
 
-    user = await user_service.get_by_email(db, email)
+
+# ─── Main dependency ─────────────────────────────────────────────────────────
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """
+    Resolve the current authenticated user.
+
+    Priority:
+      1. Custom OAuth (OAUTH_SERVICE_URL set)   → verify backend JWT
+      2. Standard OIDC (OIDC_ISSUER set)        → verify OIDC JWT via JWKS
+      3. Mock mode (neither set)                → return CURRENT_USER_ID user
+    """
+    # ── 1. Custom OAuth mode ────────────────────────────────────────────────
+    if settings.oauth_service_url:
+        if credentials is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        payload = _verify_backend_jwt(credentials.credentials)
+        email: str | None = payload.get("email")
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session missing email claim",
+            )
+
+        user = await user_service.get_by_email(db, email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authenticated user not found in database",
+            )
+        return user
+
+    # ── 2. Standard OIDC mode ───────────────────────────────────────────────
+    if settings.oidc_issuer:
+        if credentials is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        payload = await _verify_oidc_jwt(credentials.credentials)
+        email: str | None = payload.get("email")
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token missing email claim",
+            )
+
+        user = await user_service.get_by_email(db, email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authenticated user not found in database",
+            )
+        return user
+
+    # ── 3. Mock mode ────────────────────────────────────────────────────────
+    user = await user_service.get_current(db)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authenticated user not found in database",
-        )
+        raise HTTPException(status_code=404, detail="Current user not found")
     return user
 
+
+# ─── Admin dependency ────────────────────────────────────────────────────────
 
 _ADMIN_ROLES = {"admin", "Platform Migration Lead"}
 

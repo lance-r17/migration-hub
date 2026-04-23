@@ -54,10 +54,17 @@ backend/
 |---|---|---|
 | `DATABASE_URL` | `postgresql+asyncpg://hub:hub_dev_secret@localhost/migration_hub` | PostgreSQL connection string |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed origins |
-| `CURRENT_USER_ID` | `u-current` | User returned by `GET /users/me` (no auth system yet) |
+| `CURRENT_USER_ID` | `u-current` | Fallback user returned by `GET /users/me` when no auth system is configured |
 | `JIRA_BASE_URL` | _(empty)_ | Jira instance URL |
 | `JIRA_API_TOKEN` | _(empty)_ | Jira API token |
 | `JIRA_USER_EMAIL` | _(empty)_ | Email for Jira API auth |
+| `OAUTH_SERVICE_URL` | _(empty)_ | Custom OAuth service base URL (see SSO configuration) |
+| `OAUTH_CLIENT_ID` | `migration-hub` | Client ID registered with the OAuth service |
+| `OAUTH_CLIENT_SECRET` | _(empty)_ | Client secret for backend-to-service userinfo calls |
+| `SESSION_SECRET_KEY` | _(empty)_ | Secret key for signing backend session JWTs |
+| `SESSION_MAX_AGE_MINUTES` | `480` | Session lifetime in minutes |
+| `OIDC_ISSUER` | _(empty)_ | OIDC issuer URL (legacy, see SSO configuration) |
+| `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in OIDC JWTs |
 | `ENVIRONMENT` | `development` | `development` or `production` |
 
 ## Dev workflow

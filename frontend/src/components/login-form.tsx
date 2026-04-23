@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { login as loginService } from "@/services/users"
 import { useCurrentUser } from "@/context/UserContext"
 import { oidcManager } from "@/auth/oidcManager"
+import { isOAuthEnabled, buildOAuthLoginUrl } from "@/auth/oauthConfig"
 import { toast } from "sonner"
 
 export function LoginForm({
@@ -24,10 +25,25 @@ export function LoginForm({
   const navigate = useNavigate()
 
   async function handleLogin() {
+    if (isOAuthEnabled) {
+      // Custom enterprise OAuth flow
+      const state = crypto.randomUUID()
+      sessionStorage.setItem('oauth_state', state)
+      // Remember where the user was trying to go (optional)
+      const currentPath = location.pathname + location.search
+      if (currentPath !== '/login') {
+        sessionStorage.setItem('oauth_redirect', currentPath)
+      }
+      window.location.assign(buildOAuthLoginUrl(state))
+      return
+    }
+
     if (oidcManager) {
       await oidcManager.signinRedirect()
       return
     }
+
+    // Mock auth mode
     setLoading(true)
     try {
       const user = await loginService("", "")

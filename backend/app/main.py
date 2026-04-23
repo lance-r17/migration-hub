@@ -84,6 +84,7 @@ def create_app() -> FastAPI:
         email_templates,
         embargos,
         jira,
+        oauth,
         product_categories,
         projects,
         survey,
@@ -96,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(waves.router, prefix=prefix)
     app.include_router(users.router, prefix=prefix)
     app.include_router(users.auth_router, prefix=prefix)
+    app.include_router(oauth.router, prefix=prefix)
     app.include_router(dashboard.router, prefix=prefix)
     app.include_router(audit.router, prefix=prefix)
     app.include_router(survey.router, prefix=prefix)

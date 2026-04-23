@@ -13,8 +13,15 @@ const MOCK_DELAY_MS = 200
 export const delay = (ms = MOCK_DELAY_MS): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms))
 
-/** Returns Authorization header when an OIDC access token is available. */
+/** Returns Authorization header for the active auth mode. */
 async function authHeader(): Promise<HeadersInit> {
+  // 1. Custom OAuth mode: backend-issued JWT
+  const backendToken = sessionStorage.getItem('backend_token')
+  if (backendToken) {
+    return { Authorization: `Bearer ${backendToken}` }
+  }
+
+  // 2. Standard OIDC mode
   if (!oidcManager) return {}
   const user = await oidcManager.getUser()
   return user?.access_token ? { Authorization: `Bearer ${user.access_token}` } : {}

@@ -1,36 +1,199 @@
-# SSO / OIDC Configuration
+# SSO / Authentication Configuration
 
-Migration Hub supports enterprise Single Sign-On via OpenID Connect (OIDC). Authentication is controlled entirely by environment variables — no code changes are needed to switch between the mock development provider and a real enterprise IdP.
+Migration Hub supports three authentication modes, controlled entirely by environment variables:
+
+1. **Custom Enterprise OAuth** (recommended for new deployments)
+2. **Standard OIDC** (legacy — dex, Azure AD, Okta, etc.)
+3. **Mock Auth** (default for local development — no IdP)
 
 ---
 
 ## How the toggle works
 
-| State | Behavior |
-|---|---|
-| `VITE_OIDC_ISSUER` is **empty** (default) | Mock auth — any click on the login button signs in as the seeded dev user; no real IdP involved |
-| `VITE_OIDC_ISSUER` is **set** | Real OIDC — "Login with Enterprise SSO" redirects to your IdP; the backend validates the returned JWT |
+| Priority | State | Behavior |
+|---|---|---|
+| 1 | `VITE_OAUTH_SERVICE_URL` is **set** | Custom OAuth — backend exchanges one-time codes with the OAuth service and issues session JWTs |
+| 2 | `VITE_OIDC_ISSUER` is **set** (and OAuth is empty) | Standard OIDC — frontend exchanges codes via PKCE; backend validates IdP JWTs via JWKS |
+| 3 | Both are **empty** (default) | Mock auth — any click on the login button signs in as the seeded dev user |
 
-Both frontend and backend must have matching issuer configuration.
+Both frontend and backend must have matching configuration.
 
 ---
 
-## Environment variable reference
+## Authentication flow diagrams
 
-### Frontend (`frontend/.env.local`)
+### Custom Enterprise OAuth (recommended)
+
+```
+  User          Browser            React SPA         OAuth Service        FastAPI Backend
+   │               │                   │                     │                      │
+   │               │   1. Click "Login with Enterprise SSO"  │                      │
+   │──────────────>│──────────────────>│                     │                      │
+   │               │                   │  2. window.location = {oauth}/auth?...     │
+   │               │─────────────────────────────────────────>│                      │
+   │               │                   │                     │                      │
+   │               │   3. Authenticate (enter credentials)    │                      │
+   │──────────────>│─────────────────────────────────────────>│                      │
+   │               │                   │                     │                      │
+   │               │<─────────────────────────────────────────│  4. 302 /callback?code=OTC
+   │               │                   │                     │                      │
+   │               │   5. Load /callback?code=OTC&state=...   │                      │
+   │               │──────────────────>│                     │                      │
+   │               │                   │  6. Validate state   │                      │
+   │               │                   │  7. POST /auth/sso/exchange {code}          │
+   │               │                   │─────────────────────────────────────────────>│
+   │               │                   │                     │  8. POST /userinfo    │
+   │               │                   │                     │  {client_id,secret,   │
+   │               │                   │                     │   code}               │
+   │               │                   │                     │<─────────────────────│
+   │               │                   │                     │  9. 200 {email,...}   │
+   │               │                   │                     │─────────────────────>│
+   │               │                   │                     │ 10. Lookup user by    │
+   │               │                   │                     │     email in DB       │
+   │               │                   │                     │ 11. Issue backend JWT │
+   │               │                   │<─────────────────────────────────────────────│
+   │               │                   │ 12. 200 {user,token} │                      │
+   │               │                   │ 13. Store token      │                      │
+   │               │                   │     in sessionStorage│                      │
+   │               │<──────────────────│ 14. navigate('/')    │                      │
+   │               │                   │                     │                      │
+   │               │                   │  ╔═══════════════════════════════════════╗ │
+   │               │                   │  ║  Every API call                       ║ │
+   │               │                   │  ║  GET /api/v1/...                      ║ │
+   │               │                   │  ║  Authorization: Bearer <backend_jwt>  ║ │
+   │               │                   │  ║  ────────────────────────────────────>║ │
+   │               │                   │  ║  Verify JWT & claims                  ║ │
+   │               │                   │  ║  <────────────────────────────────────║ │
+   │               │                   │  ╚═══════════════════════════════════════╝ │
+   │               │                   │                     │                      │
+   │   15. Logout  │──────────────────>│                     │                      │
+   │               │                   │ 16. Remove token    │                      │
+   │               │<──────────────────│ 17. Redirect /login │                      │
+```
+
+### Standard OIDC (legacy)
+
+```
+  User          Browser            React SPA         OIDC IdP (dex/Azure)   FastAPI Backend
+   │               │                   │                     │                      │
+   │               │   1. Click "Login with Enterprise SSO"  │                      │
+   │──────────────>│──────────────────>│                     │                      │
+   │               │                   │  2. signinRedirect()│                      │
+   │               │                   │  3. Navigate /auth?code_challenge=...      │
+   │               │─────────────────────────────────────────>│                      │
+   │               │                   │                     │                      │
+   │               │   4. Authenticate                      │                      │
+   │──────────────>│─────────────────────────────────────────>│                      │
+   │               │                   │                     │                      │
+   │               │<─────────────────────────────────────────│  5. 302 /callback?code
+   │               │                   │                     │                      │
+   │               │   6. Load /callback                     │                      │
+   │               │──────────────────>│                     │                      │
+   │               │                   │  7. POST /token     │                      │
+   │               │                   │  {code,code_verifier}│                     │
+   │               │                   │─────────────────────>│                      │
+   │               │                   │<─────────────────────│  8. 200 {access_token}
+   │               │                   │  9. Store tokens     │                      │
+   │               │                   │     in sessionStorage│                      │
+   │               │                   │ 10. GET /users/me   │                      │
+   │               │                   │     Authorization: Bearer <access_token>    │
+   │               │                   │─────────────────────────────────────────────>│
+   │               │                   │                     │ 11. Fetch JWKS /keys  │
+   │               │                   │                     │ 12. Verify RS256 sig  │
+   │               │                   │<─────────────────────────────────────────────│
+   │               │                   │ 13. 200 User        │                      │
+   │               │                   │ 14. Set auth flag   │                      │
+   │               │<──────────────────│ 15. navigate('/')   │                      │
+```
+
+### Mock Auth (development)
+
+```
+  User          Browser            React SPA         FastAPI Backend
+   │               │                   │                      │
+   │   1. Click    │──────────────────>│                      │
+   │      Login    │                   │  2. POST /auth/login │
+   │               │                   │  {email, password}   │
+   │               │                   │─────────────────────>│
+   │               │                   │                      │
+   │               │                   │                      │  3. Ignore credentials
+   │               │                   │                      │     Return CURRENT_USER_ID
+   │               │                   │<─────────────────────│
+   │               │                   │  4. 200 User         │
+   │               │                   │  5. Set auth flag    │
+   │               │<──────────────────│  6. navigate('/')    │
+   │               │                   │                      │
+   │               │                   │  ╔═══════════════════╗│
+   │               │                   │  ║  Every API call   ║│
+   │               │                   │  ║  GET /api/v1/...  ║│
+   │               │                   │  ║  (no auth header) ║│
+   │               │                   │  ║  ────────────────>║│
+   │               │                   │  ║  Return mock user ║│
+   │               │                   │  ║  <────────────────║│
+   │               │                   │  ╚═══════════════════╝│
+```
+
+---
+
+## Custom Enterprise OAuth (Recommended)
+
+This flow matches a real enterprise OAuth service that does **not** expose standard OIDC discovery.
+
+### Flow
+
+1. Frontend redirects user to `{OAUTH_SERVICE_URL}/api/v1/oauth/sso/authentication`
+2. User authenticates on the OAuth service
+3. OAuth service redirects to frontend `/callback` with a **one-time code**
+4. Frontend POSTs the code to `POST /api/v1/auth/sso/exchange`
+5. **Backend** calls the OAuth service `/userinfo` endpoint with `client_id`, `client_secret`, and `code`
+6. OAuth service returns user details
+7. Backend looks up the user by email, issues a **backend-signed JWT**, and returns it to the frontend
+8. Frontend stores the token and redirects to the app
+
+### Environment variable reference
+
+#### Frontend (`frontend/.env.local`)
 
 | Variable | Required | Description | Example |
 |---|---|---|---|
-| `VITE_OIDC_ISSUER` | Yes | OIDC issuer base URL — triggers real auth mode | `https://login.microsoftonline.com/{tenant}/v2.0` |
-| `VITE_OIDC_CLIENT_ID` | Yes | App registration client ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `VITE_OIDC_REDIRECT_URI` | Yes | Post-login callback URL (must match what is registered in your IdP) | `https://yourdomain.com/callback` |
+| `VITE_OAUTH_SERVICE_URL` | Yes | Base URL of the OAuth service | `http://localhost:5557` |
+| `VITE_OAUTH_CLIENT_ID` | Yes | Registered client ID | `migration-hub` |
+| `VITE_OAUTH_REDIRECT_URI` | Yes | Post-login callback URL | `http://localhost:5173/callback` |
 
-### Backend (`backend/.env`)
+#### Backend (`backend/.env`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `OAUTH_SERVICE_URL` | _(empty)_ | Must match `VITE_OAUTH_SERVICE_URL` |
+| `OAUTH_CLIENT_ID` | `migration-hub` | Client ID registered with the OAuth service |
+| `OAUTH_CLIENT_SECRET` | _(empty)_ | Client secret for backend-to-service exchange |
+| `SESSION_SECRET_KEY` | _(empty)_ | Secret key for signing backend JWTs (HS256) |
+| `SESSION_MAX_AGE_MINUTES` | `480` | Session lifetime in minutes (default: 8 hours) |
+
+> **Security:** `SESSION_SECRET_KEY` must be a cryptographically random string of at least 32 bytes in production.
+
+---
+
+## Standard OIDC (Legacy)
+
+For dex, Azure AD, Okta, Auth0, Keycloak, or any standard OIDC-compliant IdP.
+
+### Environment variable reference
+
+#### Frontend (`frontend/.env.local`)
+
+| Variable | Required | Description | Example |
+|---|---|---|---|
+| `VITE_OIDC_ISSUER` | Yes | OIDC issuer base URL | `https://login.microsoftonline.com/{tenant}/v2.0` |
+| `VITE_OIDC_CLIENT_ID` | Yes | App registration client ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `VITE_OIDC_REDIRECT_URI` | Yes | Post-login callback URL | `https://yourdomain.com/callback` |
+
+#### Backend (`backend/.env`)
 
 | Variable | Default | Description |
 |---|---|---|
 | `OIDC_ISSUER` | _(empty)_ | Must match `VITE_OIDC_ISSUER` exactly |
-| `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in the JWT — see provider notes below |
+| `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in the JWT |
 
 > `OIDC_ISSUER` and `VITE_OIDC_ISSUER` must be **identical strings**. A mismatch causes JWT validation to fail with 401.
 
@@ -135,6 +298,19 @@ The `email` scope must be requested and the IdP must include the `email` claim i
 
 ## Production checklist
 
+### If using Custom Enterprise OAuth
+- [ ] `VITE_OAUTH_SERVICE_URL` and `OAUTH_SERVICE_URL` point to the real OAuth service
+- [ ] `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` are production credentials
+- [ ] `SESSION_SECRET_KEY` is a cryptographically random secret (≥32 bytes)
+- [ ] `VITE_OAUTH_REDIRECT_URI` uses the production domain (not `localhost`)
+- [ ] The OAuth service has the production callback URL registered
+- [ ] `CORS_ORIGINS` in `backend/.env` includes the production frontend domain
+- [ ] All users who will log in exist in the `users` table with matching email addresses
+- [ ] `mock-oauth` and `dex` services removed from `backend/docker-compose.yml`
+- [ ] `ENVIRONMENT=production` set in `backend/.env`
+- [ ] Frontend bundle rebuilt after `.env` changes (Vite bakes env vars in at build time)
+
+### If using Standard OIDC
 - [ ] `VITE_OIDC_ISSUER` and `OIDC_ISSUER` are identical
 - [ ] `VITE_OIDC_REDIRECT_URI` uses the production domain (not `localhost`)
 - [ ] `OIDC_AUDIENCE` matches the `aud` claim in your provider's JWTs (verify with jwt.io)
@@ -146,24 +322,30 @@ The `email` scope must be requested and the IdP must include the `email` claim i
 
 ---
 
-## Development: mock OIDC with dex
+## Development: mock OAuth service (recommended)
 
-For local development, a mock OIDC provider ([dex](https://dexidp.io)) is included. It simulates a real Azure AD flow so the auth code path is production-identical.
+For local development, a standalone mock OAuth service is included. It simulates the real enterprise OAuth flow exactly — including the backend-to-service `/userinfo` exchange.
 
 ```bash
-# Start dex alongside the database
-cd backend && docker compose up -d db dex
+# Start the mock OAuth service alongside the database
+cd backend && docker compose up -d db mock-oauth
 
 # Frontend env (frontend/.env.local)
-VITE_OIDC_ISSUER=http://localhost:5556/dex
-VITE_OIDC_CLIENT_ID=migration-hub
-VITE_OIDC_REDIRECT_URI=http://localhost:5173/callback
+VITE_API_BASE_URL=http://localhost:8000
+VITE_OAUTH_SERVICE_URL=http://localhost:5557
+VITE_OAUTH_CLIENT_ID=migration-hub
+VITE_OAUTH_REDIRECT_URI=http://localhost:5173/callback
 
 # Backend env (backend/.env)
-OIDC_ISSUER=http://localhost:5556/dex
+DATABASE_URL=postgresql+asyncpg://hub:hub_dev_secret@localhost/migration_hub
+OAUTH_SERVICE_URL=http://localhost:5557
+OAUTH_CLIENT_ID=migration-hub
+OAUTH_CLIENT_SECRET=mock-secret-do-not-use-in-production
+SESSION_SECRET_KEY=dev-secret-change-me
+SESSION_MAX_AGE_MINUTES=480
 ```
 
-Mock users (password for all: `Dev1234!`):
+Mock users (select in the mock OAuth form):
 
 | Email | Name | Role |
 |---|---|---|
@@ -172,15 +354,27 @@ Mock users (password for all: `Dev1234!`):
 | karen.lee@corp.com | Karen Lee | Business Owner |
 | dan.brown@corp.com | Dan Brown | Viewer |
 
+## Development: mock OIDC with dex (legacy)
+
+The original dex-based mock is still available if you need to test standard OIDC behavior.
+
+```bash
+cd backend && docker compose up -d db dex
+```
+
+Set `VITE_OIDC_ISSUER=http://localhost:5556/dex` and `OIDC_ISSUER=http://localhost:5556/dex`.
+
 ---
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| 401 after successful IdP login | `OIDC_AUDIENCE` mismatch | Decode a JWT at jwt.io, check `aud` claim, update `OIDC_AUDIENCE` |
-| "User not found" / 401 with no OIDC error | Email not in `users` table | Insert a user row with the exact email the IdP sends in the `email` claim |
-| Redirect loop after `/callback` | Redirect URI not registered in IdP | Add the exact URI to your IdP's allowed redirect URIs |
+| 401 after successful login (Custom OAuth) | `SESSION_SECRET_KEY` mismatch or expired token | Check backend logs; verify `SESSION_SECRET_KEY` is consistent across restarts |
+| 401 after successful login (OIDC) | `OIDC_AUDIENCE` mismatch | Decode a JWT at jwt.io, check `aud` claim, update `OIDC_AUDIENCE` |
+| "User not found" / 401 | Email not in `users` table | Insert a user row with the exact email the IdP/OAuth service sends |
+| "Invalid authorization code" | Code already used or expired | Codes are one-time and expire in 5 minutes (mock) or per service policy |
+| Redirect loop after `/callback` | Redirect URI not registered | Add the exact URI to your OAuth service's allowed redirect URIs |
 | JWKS errors in backend logs | `OIDC_ISSUER` URL wrong | Fetch `{issuer}/.well-known/openid-configuration` in a browser to verify |
 | Mock auth still active after setting env vars | Frontend `.env` not picked up | Restart Vite dev server; for production, rebuild the frontend bundle |
-| `email` claim missing from JWT | IdP not including email in token | Ensure `email` scope is requested and included by the IdP |
+| `email` claim missing from JWT | IdP not including email | Ensure `email` scope is requested and included by the IdP |

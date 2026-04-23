@@ -41,6 +41,37 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    // Check custom OAuth backend token expiry first
+    const backendToken = sessionStorage.getItem('backend_token')
+    if (backendToken) {
+      try {
+        const payload = JSON.parse(atob(backendToken.split('.')[1]))
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          logout()
+          window.location.assign('/login')
+          return
+        }
+      } catch {
+        // malformed token — treat as expired
+        logout()
+        window.location.assign('/login')
+        return
+      }
+
+      getCurrentUser()
+        .then((u) => {
+          setUser(u)
+          setDefaultUserId(u.id)
+        })
+        .catch(() => {
+          logout()
+          window.location.assign('/login')
+        })
+        .finally(() => setLoading(false))
+      return
+    }
+
+    // Fall back to OIDC token check
     Promise.resolve(oidcManager?.getUser()).then((oidcUser) => {
       if (oidcUser?.expired) {
         logout()
@@ -73,6 +104,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setDefaultUserId(null)
     setIsAuthenticated(false)
     sessionStorage.removeItem(AUTH_KEY)
+    sessionStorage.removeItem('backend_token')
+    sessionStorage.removeItem('oauth_state')
+    sessionStorage.removeItem('oauth_redirect')
     // Clear OIDC session without redirecting (silent local logout)
     oidcManager?.removeUser()
   }, [])

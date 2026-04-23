@@ -83,6 +83,14 @@ const { user, isAuthenticated, login, logout, loading } = useCurrentUser()
 
 Session is persisted in `sessionStorage` under the key `'auth'`. On mount, the context checks `sessionStorage` and, if authenticated, calls `getCurrentUser()` to hydrate the user object.
 
+Three auth modes are supported:
+
+1. **Custom OAuth** (`VITE_OAUTH_SERVICE_URL` set) — clicking "Login with Enterprise SSO" redirects to the OAuth service. After callback, `CallbackPage` exchanges the code with the backend and stores the returned backend JWT in `sessionStorage`.
+2. **Standard OIDC** (`VITE_OIDC_ISSUER` set) — `oidc-client-ts` handles the PKCE flow. The access token is stored by the library and injected into API calls.
+3. **Mock auth** (neither set) — no IdP involved; login always succeeds as the seeded dev user.
+
+In custom OAuth mode, the `backend_token` is stored in `sessionStorage` and sent as `Authorization: Bearer <token>` on every API call. Logout clears both `'auth'` and `'backend_token'`.
+
 ## Role-based access
 
 `user.role` drives feature gating. Current roles in the mock data:

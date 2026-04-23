@@ -43,3 +43,10 @@ async def get_users_for_project(session: AsyncSession, project_id: str) -> list[
         .where(ProjectUser.project_id == project_id)
     )
     return list(result.scalars().all())
+
+
+async def create_user(session: AsyncSession, user: User) -> User:
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
