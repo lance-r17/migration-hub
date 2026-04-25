@@ -8,7 +8,7 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
 
-  if (user?.role !== 'Platform Migration Lead') {
+  if (!user?.role.includes('platform_migration_lead')) {
     return (
       <AppShell title="Settings">
         <div className="max-w-screen-xl mx-auto w-full">

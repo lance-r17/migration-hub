@@ -63,7 +63,7 @@ export function WavesPage() {
     setLiveWaves(waves)
   }, [waves])
 
-  const isPlatformLead = user?.role === 'Platform Migration Lead'
+  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
   
   const sortedWaves = useMemo(() => {
     return [...liveWaves].sort((a, b) => {

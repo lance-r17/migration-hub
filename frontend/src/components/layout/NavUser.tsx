@@ -33,6 +33,13 @@ import { useNavigate } from "react-router-dom"
 import { useCurrentUser } from "@/context/UserContext"
 import { devPersonas } from "@/data/mock"
 
+const ROLE_LABELS: Record<string, string> = {
+  platform_migration_lead: 'Platform Migration Lead',
+  technical_lead: 'Technical Lead',
+  business_owner: 'Business Owner',
+}
+const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
+
 export function NavUser({
   user,
 }: {
@@ -147,7 +154,7 @@ export function NavUser({
                             <div className="flex flex-col">
                               <span className="text-sm">{persona.name}</span>
                               <span className="text-xs text-muted-foreground">
-                                {persona.role ?? "No role"}
+                                {persona.role.length ? persona.role.map(roleLabel).join(', ') : "No role"}
                               </span>
                             </div>
                           </DropdownMenuItem>

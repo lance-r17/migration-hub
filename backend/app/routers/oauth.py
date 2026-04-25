@@ -10,7 +10,9 @@ Flow:
   6. Backend returns {user, token} to the frontend
 """
 
+import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -18,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from jose import jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.config import HTTP_CLIENT_VERIFY, settings
 from app.database import get_db
 from app.models.user import User
 from app.schemas.oauth import SSOExchangeRequest, SSOExchangeResponse, SSOLoginUrlResponse
@@ -36,6 +38,16 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def _derive_initials(name: str) -> str:
     """Derive initials from a full name (first letter of each word, uppercased)."""
     return "".join(part[0].upper() for part in name.split() if part)
+
+
+def _derive_initials_from_names(given_name: str, family_name: str) -> str:
+    """Derive initials from given + family name (e.g. Andy + ZHANG → AZ)."""
+    initials = ""
+    if given_name:
+        initials += given_name[0].upper()
+    if family_name:
+        initials += family_name[0].upper()
+    return initials
 
 
 def _create_session_token(user: User) -> str:
@@ -96,10 +108,10 @@ async def sso_exchange(
     # 1. Exchange code for userinfo with the OAuth service
     userinfo_url = f"{settings.oauth_service_url}/api/v1/oauth/sso/userinfo"
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
+        async with httpx.AsyncClient(verify=HTTP_CLIENT_VERIFY) as client:
+            resp = await client.get(
                 userinfo_url,
-                json={
+                params={
                     "client_id": settings.oauth_client_id,
                     "client_secret": settings.oauth_client_secret,
                     "code": body.code,
@@ -121,32 +133,62 @@ async def sso_exchange(
             detail="Unable to reach OAuth service",
         )
 
-    # 2. Log and validate userinfo
-    logger.info("OAuth userinfo received: %s", userinfo)
+    # 2. Unwrap and validate userinfo
+    payload = userinfo
+    contents = payload.get("data", {}).get("contents", []) if isinstance(payload, dict) else []
+    if not contents:
+        logger.warning("OAuth userinfo missing data.contents: %s", payload)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="OAuth response missing user data",
+        )
 
-    # Validate required fields
-    user_id: str | None = userinfo.get("id")
-    email: str | None = userinfo.get("email")
-    name: str | None = userinfo.get("name")
+    raw_user = contents[0]
+    logger.info("OAuth userinfo received: %s", raw_user)
+
+    user_id: str | None = raw_user.get("staff_id")
+    email: str | None = raw_user.get("email")
+    name: str | None = raw_user.get("name")
+    given_name: str = raw_user.get("given_name", "")
+    family_name: str = raw_user.get("family_name", "")
 
     if not user_id or not email or not name:
-        missing = [f for f in ("id", "email", "name") if not userinfo.get(f)]
+        missing = []
+        if not user_id:
+            missing.append("staff_id")
+        if not email:
+            missing.append("email")
+        if not name:
+            missing.append("name")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"OAuth response missing required fields: {', '.join(missing)}",
         )
 
-    # Validate field restriction (expected only id, email, name)
-    allowed_fields = {"id", "email", "name"}
-    extra_fields = set(userinfo.keys()) - allowed_fields
-    if extra_fields:
-        logger.warning(
-            "OAuth userinfo contains unexpected fields (expected only id, email, name): %s",
-            extra_fields,
-        )
+    # 4. Extract global roles from AD group mappings
+    member_of: list[str] = raw_user.get("member_of", [])
+    matched_roles: list[str] = []
+    if settings.oauth_role_mappings:
+        try:
+            role_mappings = json.loads(settings.oauth_role_mappings)
+        except json.JSONDecodeError:
+            logger.warning("Invalid OAUTH_ROLE_MAPPINGS JSON: %s", settings.oauth_role_mappings)
+            role_mappings = []
+        for mapping in role_mappings:
+            mapping_regex = mapping.get("regex", "")
+            mapping_role = mapping.get("role", "")
+            if not mapping_regex or not mapping_role:
+                continue
+            compiled = re.compile(mapping_regex)
+            for group in member_of:
+                if compiled.search(group):
+                    matched_roles.append(mapping_role)
+                    break  # one match per mapping is enough
 
-    # 3. Look up local user or auto-onboard
+    # 5. Look up local user or auto-onboard
     user = await user_service.get_by_email(db, email)
+    initials = _derive_initials_from_names(given_name, family_name)
+    user_role = ",".join(matched_roles) if matched_roles else None
     if not user:
         logger.info("User not found in database, auto-onboarding: %s (%s)", email, user_id)
         new_user = User(
@@ -154,13 +196,37 @@ async def sso_exchange(
             name=name,
             email=email,
             department="Unassigned",
-            initials=_derive_initials(name),
+            initials=initials or _derive_initials(name),
             team=None,
-            role=None,
+            role=user_role,
         )
         user = await user_service.create_user(db, new_user)
+    else:
+        # Refresh name, initials, and role from OAuth data
+        user.name = name
+        user.initials = initials or _derive_initials(name)
+        user.role = user_role
+        await db.commit()
+        await db.refresh(user)
 
-    # 4. Issue backend session token
+    # 6. Sync AD group → project memberships
+    matched_project_ids: list[str] = []
+    project_regex = re.compile(settings.oauth_ad_group_regex)
+    for group in member_of:
+        if settings.oauth_ad_group_ou_filter and settings.oauth_ad_group_ou_filter not in group:
+            continue
+        m = project_regex.search(group)
+        if m:
+            matched_project_ids.append(m.group(1))
+
+    logger.info(
+        "Syncing %d project associations for user %s from AD groups",
+        len(matched_project_ids),
+        user.id,
+    )
+    await user_service.sync_user_projects(db, user.id, matched_project_ids)
+
+    # 7. Issue backend session token
     token = _create_session_token(user)
 
     return SSOExchangeResponse(

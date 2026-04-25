@@ -31,7 +31,7 @@ Custom OAuth code exchange. The frontend calls this after receiving a one-time `
 ```
 
 **Flow:**
-1. Backend POSTs `{client_id, client_secret, code}` to `{OAUTH_SERVICE_URL}/api/v1/oauth/sso/userinfo`
+1. Backend GETs `{OAUTH_SERVICE_URL}/api/v1/oauth/sso/userinfo` with `client_id`, `client_secret`, and `code` query parameters
 2. OAuth service returns user details JSON
 3. Backend looks up the user by `email` in the local database
 4. Backend issues a signed JWT session token

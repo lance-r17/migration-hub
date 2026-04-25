@@ -233,7 +233,7 @@ export function FinancePage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedResourceSet, setSelectedResourceSet] = useState<string>('')
 
-  const isPlatformLead = user?.role === 'Platform Migration Lead'
+  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
   // ── Load available months (union of existing + target) ──────────────────────
   const refreshMonths = useCallback(async () => {

@@ -17,9 +17,9 @@ interface SignOffModalProps {
 }
 
 const roles = [
-  { id: 'technical-lead', label: 'Technical Lead', icon: Wrench },
-  { id: 'business-owner', label: 'Business Owner', icon: CreditCard },
-  { id: 'platform-lead', label: 'Platform Migration Lead', icon: Cloud },
+  { id: 'technical_lead', label: 'Technical Lead', icon: Wrench },
+  { id: 'business_owner', label: 'Business Owner', icon: CreditCard },
+  { id: 'platform_migration_lead', label: 'Platform Migration Lead', icon: Cloud },
 ]
 
 function getSubtaskCount(
@@ -70,8 +70,8 @@ export function SignOffModal({
 
   if (!open) return null
 
-  const matchedRole = roles.find(r => r.label === currentUserRole)
-  const isPlatformLead = currentUserRole === 'Platform Migration Lead'
+  const matchedRole = roles.find(r => r.id === currentUserRole)
+  const isPlatformLead = currentUserRole === 'platform_migration_lead'
   const inScopeResources = cloudResources.filter(r => r.needMigration !== false)
   const inScopeCategories = Array.from(new Set(inScopeResources.map(r => getCategoryForProduct(r.product))))
   const inScopeProducts = Array.from(new Set(inScopeResources.map(r => r.product ?? 'Other')))

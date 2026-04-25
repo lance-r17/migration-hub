@@ -116,6 +116,8 @@ export function ProjectDetailsPage() {
     )
   }
 
+  const APPROVAL_SEQUENCE = ['technical_lead', 'business_owner', 'platform_migration_lead'] as const
+
   const handleSave = async <K extends keyof Project>(key: K, value: Project[K]) => {
     try {
       await saveSection(key, value)
@@ -127,11 +129,15 @@ export function ProjectDetailsPage() {
 
   const applyApproval = async (approvedRole: string) => {
     const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-    const updatedApprovals = project.approvals.map(a =>
-      a.role === approvedRole
-        ? { ...a, status: 'approved' as const, approver: user?.name ?? '', timestamp: now }
-        : a
-    )
+    const idx = APPROVAL_SEQUENCE.indexOf(approvedRole as typeof APPROVAL_SEQUENCE[number])
+    const nextRole = idx >= 0 ? APPROVAL_SEQUENCE[idx + 1] : undefined
+    const updatedApprovals = project.approvals.map(a => {
+      if (a.role === approvedRole)
+        return { ...a, status: 'approved' as const, approver: user?.name ?? '', timestamp: now }
+      if (a.role === nextRole && a.status === 'pending')
+        return { ...a, status: 'waiting' as const }
+      return a
+    })
     await saveSection('approvals', updatedApprovals)
     if (updatedApprovals.every(a => a.status === 'approved')) {
       await saveSection('status', 'signed-off')
@@ -185,7 +191,7 @@ export function ProjectDetailsPage() {
   }
 
   const isProjectMember = project.team.some(m => m.id === user?.id)
-  const isPlatformLead = user?.role === 'Platform Migration Lead'
+  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
   const isSurveyActive = !!(surveyConfig?.isActive && surveyConfig.questions.length > 0)
   const assignedWave = waves.find(w => w.id === project.waveId)
 
@@ -194,13 +200,18 @@ export function ProjectDetailsPage() {
   const isAssignedTL = !!overview?.technicalLeadId && overview.technicalLeadId === user?.id
   const isAssignedBO = !!overview?.businessOwnerId && overview.businessOwnerId === user?.id
   const currentUserRole = isPlatformLead
-    ? 'Platform Migration Lead'
-    : isAssignedTL ? 'Technical Lead'
-    : isAssignedBO ? 'Business Owner'
+    ? 'platform_migration_lead'
+    : isAssignedTL ? 'technical_lead'
+    : isAssignedBO ? 'business_owner'
     : null
+  const currentRoleIndex = currentUserRole ? APPROVAL_SEQUENCE.indexOf(currentUserRole) : -1
+  const predecessorsApproved = currentRoleIndex <= 0 || APPROVAL_SEQUENCE
+    .slice(0, currentRoleIndex)
+    .every(role => project.approvals.find(a => a.role === role)?.status === 'approved')
   const canSignOff =
     preSignOffStatuses.includes(project.status) &&
     currentUserRole !== null &&
+    predecessorsApproved &&
     project.approvals.find(a => a.role === currentUserRole)?.status !== 'approved'
   const hasMetadata = project.migrationWave || project.jiraTicket || project.profileOwner || project.lastUpdated
 

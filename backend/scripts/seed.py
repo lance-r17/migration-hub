@@ -105,7 +105,6 @@ def seed(session: Session, force: bool = False) -> None:
             jira_base_url=p.get("jira_base_url"),
             last_updated=p.get("last_updated"),
             wave_id=p.get("wave_id"),
-            team=p.get("team", []),
             application_overview=p.get("application_overview"),
             availability=p.get("availability"),
             data_persistence=p.get("data_persistence"),
@@ -166,6 +165,22 @@ def seed(session: Session, force: bool = False) -> None:
                 existing_pu = session.get(ProjectUser, (p["id"], user_id))
                 if not existing_pu:
                     session.add(ProjectUser(project_id=p["id"], user_id=user_id))
+
+        # Sync governance roles from applicationOverview into project_users
+        _GOVERNANCE_ROLE_FIELDS = {
+            "technicalLeadId": "technical_lead",
+            "businessOwnerId": "business_owner",
+            "dbaDataOwnerId": "dba_data_owner",
+        }
+        ao = p.get("application_overview", {})
+        for field, role in _GOVERNANCE_ROLE_FIELDS.items():
+            uid = ao.get(field)
+            if uid and session.get(User, uid):
+                existing_pu = session.get(ProjectUser, (p["id"], uid))
+                if existing_pu:
+                    existing_pu.role = role
+                else:
+                    session.add(ProjectUser(project_id=p["id"], user_id=uid, role=role))
 
     session.flush()
 

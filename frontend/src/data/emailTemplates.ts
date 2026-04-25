@@ -106,8 +106,8 @@ const predefined: EmailTemplate[] = [
     eventType: 'sign_off_required',
     subject: 'Action Required: Sign-off needed for {{project.name}}',
     recipientList: [
-      { type: 'role', role: 'Technical Lead' },
-      { type: 'role', role: 'Business Owner' },
+      { type: 'role', role: 'technical_lead' },
+      { type: 'role', role: 'business_owner' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
     isPredefined: true,
@@ -134,7 +134,7 @@ const predefined: EmailTemplate[] = [
     eventType: 'project_signed_off',
     subject: '{{project.name}} has been fully signed off',
     recipientList: [
-      { type: 'role', role: 'Platform Migration Lead' },
+      { type: 'role', role: 'platform_migration_lead' },
       { type: 'project_field', field: 'technicalLead' },
       { type: 'project_field', field: 'businessOwner' },
     ],
@@ -163,7 +163,7 @@ const predefined: EmailTemplate[] = [
     eventType: 'risk_alert',
     subject: '⚠ {{risk.severityLabel}} Risk Alert: {{risk.title}} in {{project.name}}',
     recipientList: [
-      { type: 'role', role: 'Platform Migration Lead' },
+      { type: 'role', role: 'platform_migration_lead' },
       { type: 'project_field', field: 'technicalLead' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
@@ -226,7 +226,7 @@ const predefined: EmailTemplate[] = [
     description: 'Notification when an individual approval is submitted for a project.',
     eventType: 'approval_submitted',
     subject: '{{approver.name}} has approved {{project.name}}',
-    recipientList: [{ type: 'role', role: 'Platform Migration Lead' }],
+    recipientList: [{ type: 'role', role: 'platform_migration_lead' }],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
     isPredefined: true,
     createdAt: '2026-04-06T00:00:00Z',
@@ -253,7 +253,7 @@ const predefined: EmailTemplate[] = [
     subject: 'Migration tasks for {{project.name}} are ready in Jira',
     recipientList: [
       { type: 'project_field', field: 'technicalLead' },
-      { type: 'role', role: 'Platform Migration Lead' },
+      { type: 'role', role: 'platform_migration_lead' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
     isPredefined: true,
@@ -294,7 +294,7 @@ const predefined: EmailTemplate[] = [
     eventType: 'survey_submitted',
     subject: '{{project.name}} migration readiness survey completed',
     recipientList: [
-      { type: 'role', role: 'Platform Migration Lead' },
+      { type: 'role', role: 'platform_migration_lead' },
       { type: 'project_field', field: 'technicalLead' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },

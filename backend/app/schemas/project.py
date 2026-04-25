@@ -91,7 +91,6 @@ class ProjectPatch(BaseModel):
     jira_story_key: str | None = None
     jira_job_status: str | None = None
     jira_subtask_config: dict[str, Any] | None = None
-    team: list[dict[str, Any]] | None = None
 
 
 class SectionPatch(BaseModel):

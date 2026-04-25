@@ -43,31 +43,31 @@ const data = {
       title: "Waves",
       url: "/waves",
       icon: <Waves />,
-      requiresRole: "Platform Migration Lead",
+      requiresRole: "platform_migration_lead",
     },
     {
       title: "Finance",
       url: "/finance",
       icon: <DollarSign />,
-      requiresRole: "Platform Migration Lead",
+      requiresRole: "platform_migration_lead",
     },
     {
       title: "Email",
       url: "/email",
       icon: <Mail />,
-      requiresRole: "Platform Migration Lead",
+      requiresRole: "platform_migration_lead",
     },
     {
       title: "Settings",
       url: "/settings",
       icon: <Settings2Icon />,
-      requiresRole: "Platform Migration Lead",
+      requiresRole: "platform_migration_lead",
     },
     {
       title: "Job Monitor",
       url: "/admin/jobs",
       icon: <MonitorDot />,
-      requiresRole: "Platform Migration Lead",
+      requiresRole: "platform_migration_lead",
     },
   ] satisfies NavItem[],
   navSecondary: [
@@ -102,7 +102,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain
-          items={data.navMain.filter(item => !item.requiresRole || user?.role === item.requiresRole)}
+          items={data.navMain.filter(item => !item.requiresRole || (user?.role.includes(item.requiresRole) ?? false))}
           pathname={location.pathname}
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />

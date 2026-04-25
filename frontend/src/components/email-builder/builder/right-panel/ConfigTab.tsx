@@ -20,10 +20,16 @@ interface Props {
 const EVENT_TYPES = Object.entries(EMAIL_EVENT_LABELS) as [EmailTemplate['eventType'], string][]
 
 const RECIPIENT_ROLES = [
-  'Platform Migration Lead',
-  'Technical Lead',
-  'Business Owner',
+  { value: 'platform_migration_lead', label: 'Platform Migration Lead' },
+  { value: 'technical_lead', label: 'Technical Lead' },
+  { value: 'business_owner', label: 'Business Owner' },
 ]
+
+const ROLE_LABELS: Record<string, string> = {
+  platform_migration_lead: 'Platform Migration Lead',
+  technical_lead: 'Technical Lead',
+  business_owner: 'Business Owner',
+}
 
 export function ConfigTab({ template, onTemplateChange, selectedComponent, onComponentConfigChange, selectedRow }: Props) {
   const isAnythingSelected = selectedComponent !== null || selectedRow !== null
@@ -41,7 +47,7 @@ export function ConfigTab({ template, onTemplateChange, selectedComponent, onCom
   }
 
   const recipientLabel = (r: RecipientConfig): string => {
-    if (r.type === 'role') return `Role: ${r.role}`
+    if (r.type === 'role') return `Role: ${ROLE_LABELS[r.role] ?? r.role}`
     if (r.type === 'project_field') return `Field: ${r.field}`
     return r.email
   }
@@ -115,7 +121,7 @@ export function ConfigTab({ template, onTemplateChange, selectedComponent, onCom
                   </SelectTrigger>
                   <SelectContent>
                     {RECIPIENT_ROLES.map(r => (
-                      <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                      <SelectItem key={r.value} value={r.value} className="text-xs">{r.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -17,7 +17,7 @@ type SortKey = 'progress' | 'status'
 export function HomePage() {
   const [sortKey, setSortKey] = useState<SortKey>('progress')
   const { user } = useCurrentUser()
-  const isPlatformLead = user?.role === 'Platform Migration Lead'
+  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
   const { stats: globalStats, activity: allActivity, loading: dashLoading } = useDashboard()
   const { projects, loading: projectsLoading } = useProjects()

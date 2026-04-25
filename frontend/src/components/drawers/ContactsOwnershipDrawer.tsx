@@ -33,7 +33,7 @@ function UserPreview({ userId, users }: { userId: string; users: User[] }) {
 }
 
 function isPlatformLead(u: User) {
-  return u.role === 'Platform Migration Lead'
+  return u.role.includes('platform_migration_lead')
 }
 
 export function ContactsOwnershipDrawer({ open, onOpenChange, data, projectId, onSave }: Props) {

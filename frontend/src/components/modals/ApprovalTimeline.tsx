@@ -2,6 +2,13 @@ import { Check, Clock, Circle, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Approval } from '@/types'
 
+const ROLE_LABELS: Record<string, string> = {
+  platform_migration_lead: 'Platform Migration Lead',
+  technical_lead: 'Technical Lead',
+  business_owner: 'Business Owner',
+}
+const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
+
 interface ApprovalTimelineProps {
   approvals: Approval[]
 }
@@ -42,7 +49,7 @@ export function ApprovalTimeline({ approvals }: ApprovalTimelineProps) {
                 'text-sm font-semibold',
                 approval.status === 'pending' && 'text-muted-foreground'
               )}>
-                {approval.role}
+                {roleLabel(approval.role)}
               </p>
               {approval.status === 'approved' && (
                 <>

@@ -19,15 +19,22 @@ from app.schemas.user import UserOut
 from app.schemas.risk import RiskOut
 from app.services import audit_service, jira_client, project_service, user_service
 from app.config import settings
+from app.auth import get_current_user
+from app.models.user import User
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-async def _get_actor(db: AsyncSession) -> dict[str, Any]:
-    user = await user_service.get_current(db)
-    if user:
-        return {"id": user.id, "name": user.name, "initials": user.initials}
-    return {"id": "system", "name": "System", "initials": "SY"}
+def _user_to_actor(user: User) -> dict[str, Any]:
+    return {"id": user.id, "name": user.name, "initials": user.initials}
+
+
+def _team_from_project_users(p) -> list[dict]:
+    return [
+        {"id": pu.user.id, "name": pu.user.name, "initials": pu.user.initials}
+        for pu in (p.project_users or [])
+        if pu.user is not None
+    ]
 
 
 def _project_list_item(p) -> ProjectListItem:
@@ -46,7 +53,7 @@ def _project_list_item(p) -> ProjectListItem:
         jira_story_key=p.jira_story_key,
         jira_job_status=p.jira_job_status,
         planning=p.planning,
-        team=p.team or [],
+        team=_team_from_project_users(p),
         migration_constraints=p.migration_constraints,
         approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
         cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
@@ -70,7 +77,7 @@ def _project_detail(p) -> ProjectDetail:
         jira_job_status=p.jira_job_status,
         planning=p.planning,
         jira_subtask_config=p.jira_subtask_config,
-        team=p.team or [],
+        team=_team_from_project_users(p),
         application_overview=p.application_overview,
         availability=p.availability,
         data_persistence=p.data_persistence,
@@ -120,11 +127,12 @@ async def update_project(
     project_id: str,
     body: ProjectPatch,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     project = await project_service.get_by_id(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    actor = await _get_actor(db)
+    actor = _user_to_actor(current_user)
     try:
         project = await project_service.update(db, project, body, actor)
     except ValueError as e:
@@ -138,13 +146,14 @@ async def update_section(
     section_key: str,
     body: SectionPatch,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     project = await project_service.get_by_id(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if section_key not in project_service.SECTION_COLUMN_MAP:
         raise HTTPException(status_code=400, detail=f"Unknown section key: {section_key}")
-    actor = await _get_actor(db)
+    actor = _user_to_actor(current_user)
     try:
         project = await project_service.update_section(db, project, section_key, body.value, actor)
     except ValueError as e:
@@ -166,11 +175,12 @@ async def batch_update_resource_specs(
     project_id: str,
     body: ResourceSpecsBatchUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     project = await project_service.get_by_id(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    actor = await _get_actor(db)
+    actor = _user_to_actor(current_user)
     await project_service.batch_update_resource_specs(db, project_id, body.updates, actor)
 
 

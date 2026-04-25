@@ -33,7 +33,6 @@ class Project(Base, TimestampMixin):
     nfrs: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     migration_constraints: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     target_architecture: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    team: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
     jira_subtask_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships

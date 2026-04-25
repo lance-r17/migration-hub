@@ -22,7 +22,7 @@ export interface User {
   department: string
   team?: string
   initials: string
-  role?: string
+  role: string[]
 }
 
 export interface ProjectUsers {

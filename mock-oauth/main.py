@@ -3,7 +3,7 @@ Mock OAuth Service for local development.
 
 Simulates a real enterprise OAuth service with two endpoints:
   - GET/POST /api/v1/oauth/sso/authentication
-  - POST   /api/v1/oauth/sso/userinfo
+  - GET    /api/v1/oauth/sso/userinfo
 
 Usage:
   uvicorn main:app --host 0.0.0.0 --port 5557
@@ -16,7 +16,6 @@ from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from pydantic import BaseModel
 
 app = FastAPI(title="Mock OAuth Service")
 
@@ -33,29 +32,61 @@ _code_store: dict[str, dict] = {}
 
 MOCK_USERS = {
     "u-current": {
-        "id": "u-current",
+        "staff_id": "u-current",
         "email": "henry.wilson@corp.com",
         "name": "Henry Wilson",
+        "given_name": "Henry",
+        "family_name": "Wilson",
+        "member_of": [
+            "CN=prj-1234-aaaa,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
+        ],
     },
     "u3": {
-        "id": "u3",
+        "staff_id": "u3",
         "email": "alice.johnson@corp.com",
         "name": "Alice Johnson",
+        "given_name": "Alice",
+        "family_name": "Johnson",
+        "member_of": [],
     },
     "u12": {
-        "id": "u12",
+        "staff_id": "u12",
         "email": "karen.lee@corp.com",
         "name": "Karen Lee",
+        "given_name": "Karen",
+        "family_name": "Lee",
+        "member_of": [
+            "CN=M-77122-ResourceSetReadOnly,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
+        ],
     },
     "u2": {
-        "id": "u2",
+        "staff_id": "u2",
         "email": "dan.brown@corp.com",
         "name": "Dan Brown",
+        "given_name": "Dan",
+        "family_name": "Brown",
+        "member_of": [],
+    },
+    "u10": {
+        "staff_id": "u10",
+        "email": "irene.cho@company.com",
+        "name": "Irene Cho",
+        "given_name": "Irene",
+        "family_name": "Cho",
+        "member_of": [
+            "CN=M-77122-ResourceSetReadOnly,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
+        ],
     },
     "u100": {
-        "id": "u100",
+        "staff_id": "u100",
         "email": "lance.chen@corp.com",
         "name": "Lance Chen",
+        "given_name": "Lance",
+        "family_name": "Chen",
+        "member_of": [
+            "CN=platform-core,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
+            "CN=platform-product,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
+        ],
     },
 }
 
@@ -342,25 +373,31 @@ def authentication_post(
     return RedirectResponse(url=redirect_url, status_code=302)
 
 
-class UserInfoRequest(BaseModel):
-    client_id: str
-    client_secret: str
-    code: str
-
-
-@app.post("/api/v1/oauth/sso/userinfo")
-def userinfo(body: UserInfoRequest):
-    if body.client_id != CLIENT_ID or body.client_secret != CLIENT_SECRET:
+@app.get("/api/v1/oauth/sso/userinfo")
+def userinfo(
+    client_id: str = Query(...),
+    client_secret: str = Query(...),
+    code: str = Query(...),
+):
+    if client_id != CLIENT_ID or client_secret != CLIENT_SECRET:
         raise HTTPException(status_code=401, detail="Invalid client credentials")
 
-    entry = _code_store.pop(body.code, None)
+    entry = _code_store.pop(code, None)
     if not entry:
         raise HTTPException(status_code=400, detail="Invalid or expired code")
 
     if datetime.utcnow() > entry["expires_at"]:
         raise HTTPException(status_code=400, detail="Code expired")
 
-    return entry["user"]
+    return {
+        "data": {
+            "page_number": 1,
+            "page_size": 10,
+            "total": 1,
+            "contents": [entry["user"]],
+        },
+        "messages": "",
+    }
 
 
 @app.get("/health")

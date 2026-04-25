@@ -42,7 +42,7 @@ Both frontend and backend must have matching configuration.
    │               │                   │  6. Validate state   │                      │
    │               │                   │  7. POST /auth/sso/exchange {code}          │
    │               │                   │─────────────────────────────────────────────>│
-   │               │                   │                     │  8. POST /userinfo    │
+   │               │                   │                     │  8. GET /userinfo     │
    │               │                   │                     │  {client_id,secret,   │
    │               │                   │                     │   code}               │
    │               │                   │                     │<─────────────────────│

@@ -18,7 +18,7 @@ import { useCurrentUser } from '@/context/UserContext'
 import { getAllJobsAdmin, retryJiraJob, type AdminJiraJobRow, type JiraJobLog } from '@/services/jiraJobs'
 import { JobLogsDrawer } from '@/components/drawers/JobLogsDrawer'
 
-const ADMIN_ROLES = new Set(['admin', 'Platform Migration Lead'])
+const ADMIN_ROLES = new Set(['admin', 'platform_migration_lead'])
 
 function JobStatusBadge({ status }: { status: AdminJiraJobRow['status'] }) {
   const config = {
@@ -51,7 +51,7 @@ export function AdminJiraJobsPage() {
   const [selectedJob, setSelectedJob] = useState<AdminJiraJobRow | null>(null)
   const [retrying, setRetrying] = useState<string | null>(null)
 
-  const isAdmin = ADMIN_ROLES.has(user?.role ?? '')
+  const isAdmin = user?.role.some(r => ADMIN_ROLES.has(r)) ?? false
 
   useEffect(() => {
     if (user && !isAdmin) {

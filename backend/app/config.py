@@ -1,4 +1,18 @@
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _resolve_ca_bundle() -> str | bool:
+    """Return the CA bundle path from standard env vars, or True for system defaults."""
+    for key in ("SSL_CERT_FILE", "REQUEST_CA_BUNDLE", "CURL_CA_BUNDLE"):
+        path = os.environ.get(key)
+        if path:
+            return path
+    return True
+
+
+HTTP_CLIENT_VERIFY = _resolve_ca_bundle()
 
 
 class Settings(BaseSettings):
@@ -24,6 +38,13 @@ class Settings(BaseSettings):
     oauth_client_secret: str = "mock-secret-do-not-use-in-production"
     session_secret_key: str = "change-me-in-production"
     session_max_age_minutes: int = 480  # 8 hours
+
+    # AD group → project auto-assignment
+    oauth_ad_group_regex: str = r"CN=([^,]+)-ResourceSetReadOnly"
+    oauth_ad_group_ou_filter: str = "OU=Ali"
+
+    # AD group → global role mapping (JSON array of {"regex": "...", "role": "..."})
+    oauth_role_mappings: str = ""
 
     @property
     def cors_origins_list(self) -> list[str]:

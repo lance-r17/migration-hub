@@ -8,7 +8,7 @@ A lightweight FastAPI service that simulates the real enterprise OAuth service f
 |--------|------|-------------|
 | `GET`  | `/api/v1/oauth/sso/authentication` | Renders a login form with mock users |
 | `POST` | `/api/v1/oauth/sso/authentication` | Submits user selection, generates one-time code, redirects to callback |
-| `POST` | `/api/v1/oauth/sso/userinfo` | Exchanges `client_id`, `client_secret`, `code` for user details |
+| `GET`  | `/api/v1/oauth/sso/userinfo` | Exchanges `client_id`, `client_secret`, `code` for user details |
 
 ## Run
 

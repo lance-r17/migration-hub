@@ -28,7 +28,7 @@ from jose import jws as jose_jws
 from jose import jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.config import HTTP_CLIENT_VERIFY, settings
 from app.database import get_db
 from app.models.user import User
 from app.services import user_service
@@ -50,7 +50,7 @@ async def _fetch_jwks(issuer: str, *, force_refresh: bool = False) -> dict:
         return _jwks_cache[issuer]
     jwks_uri = f"{issuer}/keys"
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=HTTP_CLIENT_VERIFY) as client:
             resp = await client.get(jwks_uri, timeout=10.0)
             resp.raise_for_status()
             jwks = resp.json()
@@ -231,12 +231,20 @@ async def get_current_user(
 
 # ─── Admin dependency ────────────────────────────────────────────────────────
 
-_ADMIN_ROLES = {"admin", "Platform Migration Lead"}
+_ADMIN_ROLES = {"admin", "platform_migration_lead"}
+
+
+def _user_has_admin_role(role: str | None) -> bool:
+    """Check whether a role string (which may be comma-separated) contains an admin role."""
+    if not role:
+        return False
+    user_roles = {r.strip() for r in role.split(",") if r.strip()}
+    return not user_roles.isdisjoint(_ADMIN_ROLES)
 
 
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """Dependency that allows admin and Platform Migration Lead users."""
-    if current_user.role not in _ADMIN_ROLES:
+    """Dependency that allows admin and platform_migration_lead users."""
+    if not _user_has_admin_role(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin role required",

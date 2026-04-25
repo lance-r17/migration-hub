@@ -10,6 +10,7 @@ from app.models.approval import Approval
 from app.models.cloud_resource import CloudResource
 from app.models.project import Project
 from app.models.risk import Risk
+from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectPatch
 from app.services import audit_service
 
@@ -22,7 +23,6 @@ SECTION_COLUMN_MAP: dict[str, str | None] = {
     "nfrs": "nfrs",
     "migrationConstraints": "migration_constraints",
     "targetArchitecture": "target_architecture",
-    "team": "team",
     "jiraSubtaskConfig": "jira_subtask_config",
     "status": "status",
     "waveId": "wave_id",
@@ -40,9 +40,18 @@ SECTION_LABELS: dict[str, str] = {
     "nfrs": "Non-Functional Requirements",
     "migrationConstraints": "Migration Constraints",
     "targetArchitecture": "Target Architecture",
-    "team": "Team",
     "status": "Project Status",
     "waveId": "Migration Wave",
+}
+
+# Approval sequence — must be approved in this order
+APPROVAL_SEQUENCE = ["technical_lead", "business_owner", "platform_migration_lead"]
+
+# applicationOverview field → project_users role value
+GOVERNANCE_ROLE_FIELDS = {
+    "technicalLeadId": "technical_lead",
+    "businessOwnerId": "business_owner",
+    "dbaDataOwnerId":  "dba_data_owner",
 }
 
 
@@ -98,11 +107,13 @@ def _classify_resource_changes(
 
 
 def _project_options():
+    from app.models.project_user import ProjectUser
     return [
         selectinload(Project.cloud_resources),
         selectinload(Project.risks),
         selectinload(Project.approvals),
         selectinload(Project.wave),
+        selectinload(Project.project_users).selectinload(ProjectUser.user),
     ]
 
 
@@ -115,6 +126,7 @@ async def get_all(
         selectinload(Project.approvals),
         selectinload(Project.cloud_resources),
         selectinload(Project.wave),
+        selectinload(Project.project_users).selectinload(ProjectUser.user),
     )
     if user_id:
         q = q.join(ProjectUser, ProjectUser.project_id == Project.id).where(
@@ -198,6 +210,8 @@ async def update_section(
             await _check_wave_completed(session, value)
         old = getattr(project, column, None)
         setattr(project, column, value)
+        if section_key == "applicationOverview":
+            await _sync_project_user_roles(session, project)
         changes = _diff_section(old, value)
         if changes:
             await audit_service.append_entry(
@@ -277,10 +291,78 @@ async def _replace_risks(
         session.add(risk)
 
 
+def _validate_approval_sequence(approvals_data: list[dict]) -> None:
+    """Raise ValueError if any role is approved while its predecessor is not."""
+    status_map = {a.get("role"): a.get("status", "pending") for a in approvals_data}
+    for i, role in enumerate(APPROVAL_SEQUENCE):
+        if status_map.get(role) == "approved":
+            for predecessor in APPROVAL_SEQUENCE[:i]:
+                if status_map.get(predecessor) != "approved":
+                    raise ValueError(
+                        f"Cannot approve '{role}' before '{predecessor}' has approved."
+                    )
+
+
+async def _check_approval_authority(
+    session: AsyncSession, project: Project, role: str, actor_id: str
+) -> None:
+    """Raise ValueError if actor is not authorized to submit this role's approval."""
+    from app.models.project_user import ProjectUser
+    if role == "platform_migration_lead":
+        user = await session.get(User, actor_id)
+        if not user or "platform_migration_lead" not in (user.role or ""):
+            raise ValueError("Actor is not a Platform Migration Lead.")
+    else:
+        pu = await session.get(ProjectUser, (project.id, actor_id))
+        if not pu or pu.role != role:
+            raise ValueError(f"Actor is not authorized to approve as '{role}'.")
+
+
+async def _sync_project_user_roles(session: AsyncSession, project: Project) -> None:
+    """Sync governance roles from applicationOverview into project_users.role."""
+    from app.models.project_user import ProjectUser
+    ao = project.application_overview or {}
+    governed: dict[str, str] = {}
+    for field, role in GOVERNANCE_ROLE_FIELDS.items():
+        uid = ao.get(field)
+        if uid:
+            governed[uid] = role
+    result = await session.execute(
+        select(ProjectUser).where(ProjectUser.project_id == project.id)
+    )
+    existing_pus = result.scalars().all()
+    existing_ids = {pu.user_id for pu in existing_pus}
+
+    for pu in existing_pus:
+        new_role = governed.get(pu.user_id, "member")
+        if pu.role != new_role:
+            pu.role = new_role
+
+    # Insert a project_users row for governance-role holders who aren't yet members
+    for uid, role in governed.items():
+        if uid not in existing_ids:
+            user = await session.get(User, uid)
+            if user is not None:
+                session.add(ProjectUser(project_id=project.id, user_id=uid, role=role))
+
+    await session.flush()
+
+
 async def _replace_approvals(
     session: AsyncSession, project: Project, value: Any, actor: dict[str, Any]
 ) -> None:
     approvals_data = value if isinstance(value, list) else []
+
+    # 1. Enforce sequence order
+    _validate_approval_sequence(approvals_data)
+
+    # 2. Enforce actor authority for any newly-approved role
+    old_status = {a.role: a.status for a in project.approvals}
+    for a_data in approvals_data:
+        role = a_data.get("role", "")
+        if a_data.get("status") == "approved" and old_status.get(role) != "approved":
+            await _check_approval_authority(session, project, role, actor["id"])
+
     for a in list(project.approvals):
         await session.delete(a)
     await session.flush()

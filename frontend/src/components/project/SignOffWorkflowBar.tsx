@@ -2,6 +2,13 @@ import { CheckCircle2, Clock, Hourglass } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Approval } from '@/types'
 
+const ROLE_LABELS: Record<string, string> = {
+  platform_migration_lead: 'Platform Migration Lead',
+  technical_lead: 'Technical Lead',
+  business_owner: 'Business Owner',
+}
+const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
+
 interface SignOffWorkflowBarProps {
   approvals: Approval[]
   pendingCount?: number
@@ -28,7 +35,7 @@ function ApprovalNode({ approval }: { approval: Approval }) {
       </div>
       <div className="text-center">
         <p className={cn('text-[11px] font-bold', isPending ? 'text-muted-foreground' : 'text-foreground')}>
-          {approval.role}
+          {roleLabel(approval.role)}
         </p>
         {isApproved && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase">Approved</p>}
         {isWaiting && <p className="text-[10px] text-secondary-foreground font-bold uppercase">In Review</p>}

@@ -243,7 +243,7 @@ export function useProjects(): ProjectsState {
   })
 
   const { user } = useCurrentUser()
-  const isPlatformLead = user?.role === 'Platform Migration Lead'
+  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
   useEffect(() => {
     if (!user) return

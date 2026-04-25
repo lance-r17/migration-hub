@@ -6,8 +6,14 @@
     "event_type": "wave_assigned",
     "subject": "Your project {{project.name}} has been assigned to {{wave.name}}",
     "recipient_list": [
-      { "type": "project_field", "field": "technicalLead" },
-      { "type": "project_field", "field": "businessOwner" }
+      {
+        "type": "project_field",
+        "field": "technicalLead"
+      },
+      {
+        "type": "project_field",
+        "field": "businessOwner"
+      }
     ],
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
@@ -21,40 +27,216 @@
     },
     "rows": [
       {
-        "id": "twa-r1", "layout": "full",
-        "columns": [{ "id": "twa-r1-c1", "components": [{ "id": "twa-r1-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "twa-r1",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r1-c1",
+            "components": [
+              {
+                "id": "twa-r1-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "twa-r2", "layout": "full",
-        "columns": [{ "id": "twa-r2-c1", "components": [{ "id": "twa-r2-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Wave Assignment Confirmed</span></h2>" }, "config": {} }] }]
+        "id": "twa-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r2-c1",
+            "components": [
+              {
+                "id": "twa-r2-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Wave Assignment Confirmed</span></h2>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "twa-r3", "layout": "full",
-        "columns": [{ "id": "twa-r3-c1", "components": [{ "id": "twa-r3-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "twa-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r3-c1",
+            "components": [
+              {
+                "id": "twa-r3-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "twa-r4", "layout": "full",
-        "columns": [{ "id": "twa-r4-c1", "components": [{ "id": "twa-r4-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p>Hi {{user.name}},</p><p>Your application <strong>{{project.name}}</strong> has been assigned to <strong>{{wave.name}}</strong> with a planned cutover date of <strong>{{wave.cutoverDate}}</strong>.</p><p>Please review your migration readiness and ensure all sections are complete before the cutover window.</p>" }, "config": {} }] }]
+        "id": "twa-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r4-c1",
+            "components": [
+              {
+                "id": "twa-r4-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p>Hi {{user.name}},</p><p>Your application <strong>{{project.name}}</strong> has been assigned to <strong>{{wave.name}}</strong> with a planned cutover date of <strong>{{wave.cutoverDate}}</strong>.</p><p>Please review your migration readiness and ensure all sections are complete before the cutover window.</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "twa-r5", "layout": "full",
-        "columns": [{ "id": "twa-r5-c1", "components": [{ "id": "twa-r5-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 16 }, "config": {} }] }]
+        "id": "twa-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r5-c1",
+            "components": [
+              {
+                "id": "twa-r5-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 16
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "twa-r6", "layout": "full",
-        "columns": [{ "id": "twa-r6-c1", "components": [{ "id": "twa-r6-c1-cta1", "type": "cta", "style": { "paddingTop": 16, "paddingBottom": 16, "textAlign": "center", "backgroundColor": "#A67C52", "textColor": "#ffffff", "borderRadius": 6 }, "content": { "buttonText": "View Jira Epic \u2192" }, "config": { "linkUrl": "{{jiraTicket.url}}", "openInNewTab": true } }] }]
+        "id": "twa-r6",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r6-c1",
+            "components": [
+              {
+                "id": "twa-r6-c1-cta1",
+                "type": "cta",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "content": {
+                  "buttonText": "View Jira Epic →"
+                },
+                "config": {
+                  "linkUrl": "{{jiraTicket.url}}",
+                  "openInNewTab": true
+                }
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "twa-r7", "layout": "full",
-        "columns": [{ "id": "twa-r7-c1", "components": [{ "id": "twa-r7-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "twa-r7",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r7-c1",
+            "components": [
+              {
+                "id": "twa-r7-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "twa-r8", "layout": "full",
-        "columns": [{ "id": "twa-r8-c1", "components": [{ "id": "twa-r8-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "twa-r8",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r8-c1",
+            "components": [
+              {
+                "id": "twa-r8-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "twa-r9", "layout": "full",
-        "columns": [{ "id": "twa-r9-c1", "components": [{ "id": "twa-r9-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "center" }, "content": { "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>" }, "config": {} }] }]
+        "id": "twa-r9",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "twa-r9-c1",
+            "components": [
+              {
+                "id": "twa-r9-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "center"
+                },
+                "content": {
+                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       }
     ],
     "is_predefined": true
@@ -66,8 +248,14 @@
     "event_type": "sign_off_required",
     "subject": "Action Required: Sign-off needed for {{project.name}}",
     "recipient_list": [
-      { "type": "role", "role": "Technical Lead" },
-      { "type": "role", "role": "Business Owner" }
+      {
+        "type": "role",
+        "role": "technical_lead"
+      },
+      {
+        "type": "role",
+        "role": "business_owner"
+      }
     ],
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
@@ -81,40 +269,216 @@
     },
     "rows": [
       {
-        "id": "tsr-r1", "layout": "full",
-        "columns": [{ "id": "tsr-r1-c1", "components": [{ "id": "tsr-r1-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tsr-r1",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r1-c1",
+            "components": [
+              {
+                "id": "tsr-r1-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tsr-r2", "layout": "full",
-        "columns": [{ "id": "tsr-r2-c1", "components": [{ "id": "tsr-r2-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Sign-Off Approval Required</span></h2>" }, "config": {} }] }]
+        "id": "tsr-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r2-c1",
+            "components": [
+              {
+                "id": "tsr-r2-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Sign-Off Approval Required</span></h2>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tsr-r3", "layout": "full",
-        "columns": [{ "id": "tsr-r3-c1", "components": [{ "id": "tsr-r3-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "tsr-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r3-c1",
+            "components": [
+              {
+                "id": "tsr-r3-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tsr-r4", "layout": "full",
-        "columns": [{ "id": "tsr-r4-c1", "components": [{ "id": "tsr-r4-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p>Hi {{user.name}},</p><p>The migration project <strong>{{project.name}}</strong> is awaiting your formal sign-off. Your approval is required to proceed with the cutover process.</p><p>Please review all migration sections and submit your approval at your earliest convenience.</p>" }, "config": {} }] }]
+        "id": "tsr-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r4-c1",
+            "components": [
+              {
+                "id": "tsr-r4-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p>Hi {{user.name}},</p><p>The migration project <strong>{{project.name}}</strong> is awaiting your formal sign-off. Your approval is required to proceed with the cutover process.</p><p>Please review all migration sections and submit your approval at your earliest convenience.</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tsr-r5", "layout": "full",
-        "columns": [{ "id": "tsr-r5-c1", "components": [{ "id": "tsr-r5-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 16 }, "config": {} }] }]
+        "id": "tsr-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r5-c1",
+            "components": [
+              {
+                "id": "tsr-r5-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 16
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tsr-r6", "layout": "full",
-        "columns": [{ "id": "tsr-r6-c1", "components": [{ "id": "tsr-r6-c1-cta1", "type": "cta", "style": { "paddingTop": 16, "paddingBottom": 16, "textAlign": "center", "backgroundColor": "#A67C52", "textColor": "#ffffff", "borderRadius": 6 }, "content": { "buttonText": "Review & Approve \u2192" }, "config": { "linkUrl": "{{platform.url}}/projects/{{project.id}}", "openInNewTab": true } }] }]
+        "id": "tsr-r6",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r6-c1",
+            "components": [
+              {
+                "id": "tsr-r6-c1-cta1",
+                "type": "cta",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "content": {
+                  "buttonText": "Review & Approve →"
+                },
+                "config": {
+                  "linkUrl": "{{platform.url}}/projects/{{project.id}}",
+                  "openInNewTab": true
+                }
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tsr-r7", "layout": "full",
-        "columns": [{ "id": "tsr-r7-c1", "components": [{ "id": "tsr-r7-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tsr-r7",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r7-c1",
+            "components": [
+              {
+                "id": "tsr-r7-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tsr-r8", "layout": "full",
-        "columns": [{ "id": "tsr-r8-c1", "components": [{ "id": "tsr-r8-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "tsr-r8",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r8-c1",
+            "components": [
+              {
+                "id": "tsr-r8-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tsr-r9", "layout": "full",
-        "columns": [{ "id": "tsr-r9-c1", "components": [{ "id": "tsr-r9-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "center" }, "content": { "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>" }, "config": {} }] }]
+        "id": "tsr-r9",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tsr-r9-c1",
+            "components": [
+              {
+                "id": "tsr-r9-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "center"
+                },
+                "content": {
+                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       }
     ],
     "is_predefined": true
@@ -126,9 +490,18 @@
     "event_type": "project_signed_off",
     "subject": "{{project.name}} has been fully signed off",
     "recipient_list": [
-      { "type": "role", "role": "Platform Migration Lead" },
-      { "type": "project_field", "field": "technicalLead" },
-      { "type": "project_field", "field": "businessOwner" }
+      {
+        "type": "role",
+        "role": "platform_migration_lead"
+      },
+      {
+        "type": "project_field",
+        "field": "technicalLead"
+      },
+      {
+        "type": "project_field",
+        "field": "businessOwner"
+      }
     ],
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
@@ -142,40 +515,216 @@
     },
     "rows": [
       {
-        "id": "tps-r1", "layout": "full",
-        "columns": [{ "id": "tps-r1-c1", "components": [{ "id": "tps-r1-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tps-r1",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r1-c1",
+            "components": [
+              {
+                "id": "tps-r1-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tps-r2", "layout": "full",
-        "columns": [{ "id": "tps-r2-c1", "components": [{ "id": "tps-r2-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Migration Sign-Off Complete \u2713</span></h2>" }, "config": {} }] }]
+        "id": "tps-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r2-c1",
+            "components": [
+              {
+                "id": "tps-r2-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Migration Sign-Off Complete ✓</span></h2>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tps-r3", "layout": "full",
-        "columns": [{ "id": "tps-r3-c1", "components": [{ "id": "tps-r3-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "tps-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r3-c1",
+            "components": [
+              {
+                "id": "tps-r3-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tps-r4", "layout": "full",
-        "columns": [{ "id": "tps-r4-c1", "components": [{ "id": "tps-r4-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p>Hi {{user.name}},</p><p>Great news \u2014 <strong>{{project.name}}</strong> has received all required approvals and is now officially signed off for migration.</p><p>Jira migration tasks have been automatically created. You can track progress through the Jira epic below.</p>" }, "config": {} }] }]
+        "id": "tps-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r4-c1",
+            "components": [
+              {
+                "id": "tps-r4-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p>Hi {{user.name}},</p><p>Great news — <strong>{{project.name}}</strong> has received all required approvals and is now officially signed off for migration.</p><p>Jira migration tasks have been automatically created. You can track progress through the Jira epic below.</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tps-r5", "layout": "full",
-        "columns": [{ "id": "tps-r5-c1", "components": [{ "id": "tps-r5-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 16 }, "config": {} }] }]
+        "id": "tps-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r5-c1",
+            "components": [
+              {
+                "id": "tps-r5-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 16
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tps-r6", "layout": "full",
-        "columns": [{ "id": "tps-r6-c1", "components": [{ "id": "tps-r6-c1-cta1", "type": "cta", "style": { "paddingTop": 16, "paddingBottom": 16, "textAlign": "center", "backgroundColor": "#A67C52", "textColor": "#ffffff", "borderRadius": 6 }, "content": { "buttonText": "View Jira Epic \u2192" }, "config": { "linkUrl": "{{jiraTicket.url}}", "openInNewTab": true } }] }]
+        "id": "tps-r6",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r6-c1",
+            "components": [
+              {
+                "id": "tps-r6-c1-cta1",
+                "type": "cta",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "content": {
+                  "buttonText": "View Jira Epic →"
+                },
+                "config": {
+                  "linkUrl": "{{jiraTicket.url}}",
+                  "openInNewTab": true
+                }
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tps-r7", "layout": "full",
-        "columns": [{ "id": "tps-r7-c1", "components": [{ "id": "tps-r7-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tps-r7",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r7-c1",
+            "components": [
+              {
+                "id": "tps-r7-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tps-r8", "layout": "full",
-        "columns": [{ "id": "tps-r8-c1", "components": [{ "id": "tps-r8-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "tps-r8",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r8-c1",
+            "components": [
+              {
+                "id": "tps-r8-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tps-r9", "layout": "full",
-        "columns": [{ "id": "tps-r9-c1", "components": [{ "id": "tps-r9-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "center" }, "content": { "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>" }, "config": {} }] }]
+        "id": "tps-r9",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tps-r9-c1",
+            "components": [
+              {
+                "id": "tps-r9-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "center"
+                },
+                "content": {
+                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       }
     ],
     "is_predefined": true
@@ -185,10 +734,16 @@
     "name": "Risk Alert",
     "description": "Notification when a risk is raised on a project, reflecting the severity of the risk item.",
     "event_type": "risk_alert",
-    "subject": "\u26a0 {{risk.severityLabel}} Risk Alert: {{risk.title}} in {{project.name}}",
+    "subject": "⚠ {{risk.severityLabel}} Risk Alert: {{risk.title}} in {{project.name}}",
     "recipient_list": [
-      { "type": "role", "role": "Platform Migration Lead" },
-      { "type": "project_field", "field": "technicalLead" }
+      {
+        "type": "role",
+        "role": "platform_migration_lead"
+      },
+      {
+        "type": "project_field",
+        "field": "technicalLead"
+      }
     ],
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
@@ -202,63 +757,356 @@
     },
     "rows": [
       {
-        "id": "tra-r1", "layout": "full",
-        "columns": [{ "id": "tra-r1-c1", "components": [{ "id": "tra-r1-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
-      },
-      {
-        "id": "tra-r2", "layout": "full",
-        "columns": [{ "id": "tra-r2-c1", "components": [{ "id": "tra-r2-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">\u26a0 {{risk.severityLabel}} Risk Identified</span></h2>" }, "config": {} }] }]
-      },
-      {
-        "id": "tra-r3", "layout": "full",
-        "columns": [{ "id": "tra-r3-c1", "components": [{ "id": "tra-r3-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
-      },
-      {
-        "id": "tra-r4", "layout": "full",
-        "columns": [{ "id": "tra-r4-c1", "components": [{ "id": "tra-r4-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p>Hi {{user.name}},</p><p>A {{risk.severity}} risk has been raised on project <strong>{{project.name}}</strong> that requires your attention.</p>" }, "config": {} }] }]
-      },
-      {
-        "id": "tra-r5", "layout": "full",
-        "columns": [{ "id": "tra-r5-c1", "components": [{ "id": "tra-r5-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
-      },
-      {
-        "id": "tra-r6", "layout": "two-col",
+        "id": "tra-r1",
+        "layout": "full",
         "columns": [
-          { "id": "tra-r6-c1", "components": [{ "id": "tra-r6-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p><strong><span style=\"font-size: 12px; color: #6b7280; text-transform: uppercase;\">Risk Title</span></strong></p><p><strong>{{risk.title}}</strong></p>" }, "config": {} }] },
-          { "id": "tra-r6-c2", "components": [{ "id": "tra-r6-c2-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p><strong><span style=\"font-size: 12px; color: #6b7280; text-transform: uppercase;\">Severity</span></strong></p><p><strong><span style=\"color: #A67C52;\">{{risk.severity}}</span></strong></p>" }, "config": {} }] }
+          {
+            "id": "tra-r1-c1",
+            "components": [
+              {
+                "id": "tra-r1-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
         ]
       },
       {
-        "id": "tra-r7", "layout": "full",
-        "columns": [{ "id": "tra-r7-c1", "components": [{ "id": "tra-r7-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "tra-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r2-c1",
+            "components": [
+              {
+                "id": "tra-r2-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">⚠ {{risk.severityLabel}} Risk Identified</span></h2>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tra-r8", "layout": "full",
-        "columns": [{ "id": "tra-r8-c1", "components": [{ "id": "tra-r8-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p><strong><span style=\"font-size: 12px; color: #6b7280; text-transform: uppercase;\">Description</span></strong></p><p>{{risk.description}}</p>" }, "config": {} }] }]
+        "id": "tra-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r3-c1",
+            "components": [
+              {
+                "id": "tra-r3-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tra-r9", "layout": "full",
-        "columns": [{ "id": "tra-r9-c1", "components": [{ "id": "tra-r9-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "tra-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r4-c1",
+            "components": [
+              {
+                "id": "tra-r4-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p>Hi {{user.name}},</p><p>A {{risk.severity}} risk has been raised on project <strong>{{project.name}}</strong> that requires your attention.</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tra-r10", "layout": "full",
-        "columns": [{ "id": "tra-r10-c1", "components": [{ "id": "tra-r10-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "tra-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r5-c1",
+            "components": [
+              {
+                "id": "tra-r5-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tra-r11", "layout": "full",
-        "columns": [{ "id": "tra-r11-c1", "components": [{ "id": "tra-r11-c1-cta1", "type": "cta", "style": { "paddingTop": 16, "paddingBottom": 16, "textAlign": "center", "backgroundColor": "#A67C52", "textColor": "#ffffff", "borderRadius": 6 }, "content": { "buttonText": "View Project Risks \u2192" }, "config": { "linkUrl": "{{platform.url}}/projects/{{project.id}}", "openInNewTab": true } }] }]
+        "id": "tra-r6",
+        "layout": "two-col",
+        "columns": [
+          {
+            "id": "tra-r6-c1",
+            "components": [
+              {
+                "id": "tra-r6-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p><strong><span style=\"font-size: 12px; color: #6b7280; text-transform: uppercase;\">Risk Title</span></strong></p><p><strong>{{risk.title}}</strong></p>"
+                },
+                "config": {}
+              }
+            ]
+          },
+          {
+            "id": "tra-r6-c2",
+            "components": [
+              {
+                "id": "tra-r6-c2-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p><strong><span style=\"font-size: 12px; color: #6b7280; text-transform: uppercase;\">Severity</span></strong></p><p><strong><span style=\"color: #A67C52;\">{{risk.severity}}</span></strong></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tra-r12", "layout": "full",
-        "columns": [{ "id": "tra-r12-c1", "components": [{ "id": "tra-r12-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tra-r7",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r7-c1",
+            "components": [
+              {
+                "id": "tra-r7-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tra-r13", "layout": "full",
-        "columns": [{ "id": "tra-r13-c1", "components": [{ "id": "tra-r13-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "tra-r8",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r8-c1",
+            "components": [
+              {
+                "id": "tra-r8-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p><strong><span style=\"font-size: 12px; color: #6b7280; text-transform: uppercase;\">Description</span></strong></p><p>{{risk.description}}</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tra-r14", "layout": "full",
-        "columns": [{ "id": "tra-r14-c1", "components": [{ "id": "tra-r14-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "center" }, "content": { "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>" }, "config": {} }] }]
+        "id": "tra-r9",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r9-c1",
+            "components": [
+              {
+                "id": "tra-r9-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tra-r10",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r10-c1",
+            "components": [
+              {
+                "id": "tra-r10-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tra-r11",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r11-c1",
+            "components": [
+              {
+                "id": "tra-r11-c1-cta1",
+                "type": "cta",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "content": {
+                  "buttonText": "View Project Risks →"
+                },
+                "config": {
+                  "linkUrl": "{{platform.url}}/projects/{{project.id}}",
+                  "openInNewTab": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tra-r12",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r12-c1",
+            "components": [
+              {
+                "id": "tra-r12-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tra-r13",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r13-c1",
+            "components": [
+              {
+                "id": "tra-r13-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tra-r14",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tra-r14-c1",
+            "components": [
+              {
+                "id": "tra-r14-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "center"
+                },
+                "content": {
+                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       }
     ],
     "is_predefined": true
@@ -270,8 +1118,14 @@
     "event_type": "cutover_reminder",
     "subject": "Reminder: {{wave.name}} cutover in {{daysUntilCutover}} days",
     "recipient_list": [
-      { "type": "project_field", "field": "technicalLead" },
-      { "type": "project_field", "field": "businessOwner" }
+      {
+        "type": "project_field",
+        "field": "technicalLead"
+      },
+      {
+        "type": "project_field",
+        "field": "businessOwner"
+      }
     ],
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
@@ -285,40 +1139,216 @@
     },
     "rows": [
       {
-        "id": "tcr-r1", "layout": "full",
-        "columns": [{ "id": "tcr-r1-c1", "components": [{ "id": "tcr-r1-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tcr-r1",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r1-c1",
+            "components": [
+              {
+                "id": "tcr-r1-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tcr-r2", "layout": "full",
-        "columns": [{ "id": "tcr-r2-c1", "components": [{ "id": "tcr-r2-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Cutover Approaching</span></h2>" }, "config": {} }] }]
+        "id": "tcr-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r2-c1",
+            "components": [
+              {
+                "id": "tcr-r2-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Cutover Approaching</span></h2>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tcr-r3", "layout": "full",
-        "columns": [{ "id": "tcr-r3-c1", "components": [{ "id": "tcr-r3-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "tcr-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r3-c1",
+            "components": [
+              {
+                "id": "tcr-r3-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tcr-r4", "layout": "full",
-        "columns": [{ "id": "tcr-r4-c1", "components": [{ "id": "tcr-r4-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p>Hi {{user.name}},</p><p>This is a reminder that the cutover date for <strong>{{wave.name}}</strong> is in <strong>{{daysUntilCutover}} days</strong> (<strong>{{wave.cutoverDate}}</strong>).</p><p>Please ensure all migration sign-offs and Jira tasks for your application are completed before the cutover window.</p>" }, "config": {} }] }]
+        "id": "tcr-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r4-c1",
+            "components": [
+              {
+                "id": "tcr-r4-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p>Hi {{user.name}},</p><p>This is a reminder that the cutover date for <strong>{{wave.name}}</strong> is in <strong>{{daysUntilCutover}} days</strong> (<strong>{{wave.cutoverDate}}</strong>).</p><p>Please ensure all migration sign-offs and Jira tasks for your application are completed before the cutover window.</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tcr-r5", "layout": "full",
-        "columns": [{ "id": "tcr-r5-c1", "components": [{ "id": "tcr-r5-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 16 }, "config": {} }] }]
+        "id": "tcr-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r5-c1",
+            "components": [
+              {
+                "id": "tcr-r5-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 16
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tcr-r6", "layout": "full",
-        "columns": [{ "id": "tcr-r6-c1", "components": [{ "id": "tcr-r6-c1-cta1", "type": "cta", "style": { "paddingTop": 16, "paddingBottom": 16, "textAlign": "center", "backgroundColor": "#A67C52", "textColor": "#ffffff", "borderRadius": 6 }, "content": { "buttonText": "View Jira Epic \u2192" }, "config": { "linkUrl": "{{jiraTicket.url}}", "openInNewTab": true } }] }]
+        "id": "tcr-r6",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r6-c1",
+            "components": [
+              {
+                "id": "tcr-r6-c1-cta1",
+                "type": "cta",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "content": {
+                  "buttonText": "View Jira Epic →"
+                },
+                "config": {
+                  "linkUrl": "{{jiraTicket.url}}",
+                  "openInNewTab": true
+                }
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tcr-r7", "layout": "full",
-        "columns": [{ "id": "tcr-r7-c1", "components": [{ "id": "tcr-r7-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tcr-r7",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r7-c1",
+            "components": [
+              {
+                "id": "tcr-r7-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tcr-r8", "layout": "full",
-        "columns": [{ "id": "tcr-r8-c1", "components": [{ "id": "tcr-r8-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "tcr-r8",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r8-c1",
+            "components": [
+              {
+                "id": "tcr-r8-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tcr-r9", "layout": "full",
-        "columns": [{ "id": "tcr-r9-c1", "components": [{ "id": "tcr-r9-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "center" }, "content": { "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>" }, "config": {} }] }]
+        "id": "tcr-r9",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tcr-r9-c1",
+            "components": [
+              {
+                "id": "tcr-r9-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "center"
+                },
+                "content": {
+                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       }
     ],
     "is_predefined": true
@@ -330,7 +1360,10 @@
     "event_type": "approval_submitted",
     "subject": "{{approver.name}} has approved {{project.name}}",
     "recipient_list": [
-      { "type": "role", "role": "Platform Migration Lead" }
+      {
+        "type": "role",
+        "role": "platform_migration_lead"
+      }
     ],
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
@@ -344,40 +1377,216 @@
     },
     "rows": [
       {
-        "id": "tas-r1", "layout": "full",
-        "columns": [{ "id": "tas-r1-c1", "components": [{ "id": "tas-r1-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 32 }, "config": {} }] }]
+        "id": "tas-r1",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r1-c1",
+            "components": [
+              {
+                "id": "tas-r1-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 32
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tas-r2", "layout": "full",
-        "columns": [{ "id": "tas-r2-c1", "components": [{ "id": "tas-r2-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Approval Received</span></h2>" }, "config": {} }] }]
+        "id": "tas-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r2-c1",
+            "components": [
+              {
+                "id": "tas-r2-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Approval Received</span></h2>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tas-r3", "layout": "full",
-        "columns": [{ "id": "tas-r3-c1", "components": [{ "id": "tas-r3-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "tas-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r3-c1",
+            "components": [
+              {
+                "id": "tas-r3-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tas-r4", "layout": "full",
-        "columns": [{ "id": "tas-r4-c1", "components": [{ "id": "tas-r4-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p>Hi {{user.name}},</p><p><strong>{{approver.name}}</strong> has submitted their approval for <strong>{{project.name}}</strong>.</p><p>Please review the current approval status and check if all required approvals have been collected.</p>" }, "config": {} }] }]
+        "id": "tas-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r4-c1",
+            "components": [
+              {
+                "id": "tas-r4-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p>Hi {{user.name}},</p><p><strong>{{approver.name}}</strong> has submitted their approval for <strong>{{project.name}}</strong>.</p><p>Please review the current approval status and check if all required approvals have been collected.</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tas-r5", "layout": "full",
-        "columns": [{ "id": "tas-r5-c1", "components": [{ "id": "tas-r5-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 16 }, "config": {} }] }]
+        "id": "tas-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r5-c1",
+            "components": [
+              {
+                "id": "tas-r5-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 16
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tas-r6", "layout": "full",
-        "columns": [{ "id": "tas-r6-c1", "components": [{ "id": "tas-r6-c1-cta1", "type": "cta", "style": { "paddingTop": 16, "paddingBottom": 16, "textAlign": "center", "backgroundColor": "#A67C52", "textColor": "#ffffff", "borderRadius": 6 }, "content": { "buttonText": "View Sign-Off Status \u2192" }, "config": { "linkUrl": "{{platform.url}}/projects/{{project.id}}", "openInNewTab": true } }] }]
+        "id": "tas-r6",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r6-c1",
+            "components": [
+              {
+                "id": "tas-r6-c1-cta1",
+                "type": "cta",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "content": {
+                  "buttonText": "View Sign-Off Status →"
+                },
+                "config": {
+                  "linkUrl": "{{platform.url}}/projects/{{project.id}}",
+                  "openInNewTab": true
+                }
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tas-r7", "layout": "full",
-        "columns": [{ "id": "tas-r7-c1", "components": [{ "id": "tas-r7-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tas-r7",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r7-c1",
+            "components": [
+              {
+                "id": "tas-r7-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tas-r8", "layout": "full",
-        "columns": [{ "id": "tas-r8-c1", "components": [{ "id": "tas-r8-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "tas-r8",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r8-c1",
+            "components": [
+              {
+                "id": "tas-r8-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tas-r9", "layout": "full",
-        "columns": [{ "id": "tas-r9-c1", "components": [{ "id": "tas-r9-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "center" }, "content": { "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>" }, "config": {} }] }]
+        "id": "tas-r9",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tas-r9-c1",
+            "components": [
+              {
+                "id": "tas-r9-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "center"
+                },
+                "content": {
+                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       }
     ],
     "is_predefined": true
@@ -389,8 +1598,14 @@
     "event_type": "jira_stories_created",
     "subject": "Migration tasks for {{project.name}} are ready in Jira",
     "recipient_list": [
-      { "type": "project_field", "field": "technicalLead" },
-      { "type": "role", "role": "Platform Migration Lead" }
+      {
+        "type": "project_field",
+        "field": "technicalLead"
+      },
+      {
+        "type": "role",
+        "role": "platform_migration_lead"
+      }
     ],
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
@@ -404,67 +1619,289 @@
     },
     "rows": [
       {
-        "id": "tjc-r1", "layout": "full",
-        "columns": [{ "id": "tjc-r1-c1", "components": [{ "id": "tjc-r1-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tjc-r1",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r1-c1",
+            "components": [
+              {
+                "id": "tjc-r1-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tjc-r2", "layout": "full",
-        "columns": [{ "id": "tjc-r2-c1", "components": [{ "id": "tjc-r2-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Jira Migration Tasks Created</span></h2>" }, "config": {} }] }]
+        "id": "tjc-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r2-c1",
+            "components": [
+              {
+                "id": "tjc-r2-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Jira Migration Tasks Created</span></h2>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tjc-r3", "layout": "full",
-        "columns": [{ "id": "tjc-r3-c1", "components": [{ "id": "tjc-r3-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "tjc-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r3-c1",
+            "components": [
+              {
+                "id": "tjc-r3-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tjc-r4", "layout": "full",
-        "columns": [{ "id": "tjc-r4-c1", "components": [{ "id": "tjc-r4-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p>Hi {{user.name}},</p><p>Migration tasks for <strong>{{project.name}}</strong> have been automatically created in Jira following the completed sign-off.</p><p>Each cloud resource now has a corresponding Jira subtask under epic <strong>{{jiraTicket.key}}</strong>. Assign tasks to your team and begin tracking migration progress in Jira.</p>" }, "config": {} }] }]
+        "id": "tjc-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r4-c1",
+            "components": [
+              {
+                "id": "tjc-r4-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p>Hi {{user.name}},</p><p>Migration tasks for <strong>{{project.name}}</strong> have been automatically created in Jira following the completed sign-off.</p><p>Each cloud resource now has a corresponding Jira subtask under epic <strong>{{jiraTicket.key}}</strong>. Assign tasks to your team and begin tracking migration progress in Jira.</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tjc-r5", "layout": "full",
-        "columns": [{ "id": "tjc-r5-c1", "components": [{ "id": "tjc-r5-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 16 }, "config": {} }] }]
+        "id": "tjc-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r5-c1",
+            "components": [
+              {
+                "id": "tjc-r5-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 16
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
         "id": "tjc-r6",
         "layout": "table",
         "columns": [
-          { "id": "tjc-r6-c1", "components": [] },
-          { "id": "tjc-r6-c2", "components": [] },
-          { "id": "tjc-r6-c3", "components": [] },
-          { "id": "tjc-r6-c4", "components": [] }
+          {
+            "id": "tjc-r6-c1",
+            "components": []
+          },
+          {
+            "id": "tjc-r6-c2",
+            "components": []
+          },
+          {
+            "id": "tjc-r6-c3",
+            "components": []
+          },
+          {
+            "id": "tjc-r6-c4",
+            "components": []
+          }
         ],
         "tableConfig": {
           "numCols": 4,
           "numRows": 3,
           "headerEnabled": true,
-          "headerTexts": ["Resource Name", "Product", "Category", "Jira Ticket"],
+          "headerTexts": [
+            "Resource Name",
+            "Product",
+            "Category",
+            "Jira Ticket"
+          ],
           "dataSource": "project.currentInfrastructure.resources",
           "columnConfigs": [
-            { "fieldKey": "name", "type": "text" },
-            { "fieldKey": "product", "type": "text" },
-            { "fieldKey": "category", "type": "text" },
-            { "fieldKey": "jiraSubtaskKey", "type": "link", "linkPattern": "{{jiraBaseUrl}}/browse/{jiraSubtaskKey}" }
+            {
+              "fieldKey": "name",
+              "type": "text"
+            },
+            {
+              "fieldKey": "product",
+              "type": "text"
+            },
+            {
+              "fieldKey": "category",
+              "type": "text"
+            },
+            {
+              "fieldKey": "jiraSubtaskKey",
+              "type": "link",
+              "linkPattern": "{{jiraBaseUrl}}/browse/{jiraSubtaskKey}"
+            }
           ]
         }
       },
       {
-        "id": "tjc-r7", "layout": "full",
-        "columns": [{ "id": "tjc-r7-c1", "components": [{ "id": "tjc-r7-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 16 }, "config": {} }] }]
+        "id": "tjc-r7",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r7-c1",
+            "components": [
+              {
+                "id": "tjc-r7-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 16
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tjc-r8", "layout": "full",
-        "columns": [{ "id": "tjc-r8-c1", "components": [{ "id": "tjc-r8-c1-cta1", "type": "cta", "style": { "paddingTop": 16, "paddingBottom": 16, "textAlign": "center", "backgroundColor": "#A67C52", "textColor": "#ffffff", "borderRadius": 6 }, "content": { "buttonText": "Open in Jira \u2192" }, "config": { "linkUrl": "{{jiraTicket.url}}", "openInNewTab": true } }] }]
+        "id": "tjc-r8",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r8-c1",
+            "components": [
+              {
+                "id": "tjc-r8-c1-cta1",
+                "type": "cta",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "content": {
+                  "buttonText": "Open in Jira →"
+                },
+                "config": {
+                  "linkUrl": "{{jiraTicket.url}}",
+                  "openInNewTab": true
+                }
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tjc-r9", "layout": "full",
-        "columns": [{ "id": "tjc-r9-c1", "components": [{ "id": "tjc-r9-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tjc-r9",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r9-c1",
+            "components": [
+              {
+                "id": "tjc-r9-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tjc-r10", "layout": "full",
-        "columns": [{ "id": "tjc-r10-c1", "components": [{ "id": "tjc-r10-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "tjc-r10",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r10-c1",
+            "components": [
+              {
+                "id": "tjc-r10-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tjc-r11", "layout": "full",
-        "columns": [{ "id": "tjc-r11-c1", "components": [{ "id": "tjc-r11-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "center" }, "content": { "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>" }, "config": {} }] }]
+        "id": "tjc-r11",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tjc-r11-c1",
+            "components": [
+              {
+                "id": "tjc-r11-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "center"
+                },
+                "content": {
+                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       }
     ],
     "is_predefined": true
@@ -476,8 +1913,14 @@
     "event_type": "survey_submitted",
     "subject": "{{project.name}} migration readiness survey completed",
     "recipient_list": [
-      { "type": "role", "role": "Platform Migration Lead" },
-      { "type": "project_field", "field": "technicalLead" }
+      {
+        "type": "role",
+        "role": "platform_migration_lead"
+      },
+      {
+        "type": "project_field",
+        "field": "technicalLead"
+      }
     ],
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
@@ -491,40 +1934,216 @@
     },
     "rows": [
       {
-        "id": "tss-r1", "layout": "full",
-        "columns": [{ "id": "tss-r1-c1", "components": [{ "id": "tss-r1-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 32 }, "config": {} }] }]
+        "id": "tss-r1",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r1-c1",
+            "components": [
+              {
+                "id": "tss-r1-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 32
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tss-r2", "layout": "full",
-        "columns": [{ "id": "tss-r2-c1", "components": [{ "id": "tss-r2-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Survey Completed \u2713</span></h2>" }, "config": {} }] }]
+        "id": "tss-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r2-c1",
+            "components": [
+              {
+                "id": "tss-r2-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Survey Completed ✓</span></h2>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tss-r3", "layout": "full",
-        "columns": [{ "id": "tss-r3-c1", "components": [{ "id": "tss-r3-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 8 }, "config": {} }] }]
+        "id": "tss-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r3-c1",
+            "components": [
+              {
+                "id": "tss-r3-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 8
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tss-r4", "layout": "full",
-        "columns": [{ "id": "tss-r4-c1", "components": [{ "id": "tss-r4-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "left" }, "content": { "html": "<p>Hi {{user.name}},</p><p>The migration readiness survey for <strong>{{project.name}}</strong> has been submitted. The platform team can now review the submitted information and proceed with migration planning.</p>" }, "config": {} }] }]
+        "id": "tss-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r4-c1",
+            "components": [
+              {
+                "id": "tss-r4-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "content": {
+                  "html": "<p>Hi {{user.name}},</p><p>The migration readiness survey for <strong>{{project.name}}</strong> has been submitted. The platform team can now review the submitted information and proceed with migration planning.</p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tss-r5", "layout": "full",
-        "columns": [{ "id": "tss-r5-c1", "components": [{ "id": "tss-r5-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 16 }, "config": {} }] }]
+        "id": "tss-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r5-c1",
+            "components": [
+              {
+                "id": "tss-r5-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 16
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tss-r6", "layout": "full",
-        "columns": [{ "id": "tss-r6-c1", "components": [{ "id": "tss-r6-c1-cta1", "type": "cta", "style": { "paddingTop": 16, "paddingBottom": 16, "textAlign": "center", "backgroundColor": "#A67C52", "textColor": "#ffffff", "borderRadius": 6 }, "content": { "buttonText": "View Project Details \u2192" }, "config": { "linkUrl": "{{platform.url}}/projects/{{project.id}}", "openInNewTab": true } }] }]
+        "id": "tss-r6",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r6-c1",
+            "components": [
+              {
+                "id": "tss-r6-c1-cta1",
+                "type": "cta",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "content": {
+                  "buttonText": "View Project Details →"
+                },
+                "config": {
+                  "linkUrl": "{{platform.url}}/projects/{{project.id}}",
+                  "openInNewTab": true
+                }
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tss-r7", "layout": "full",
-        "columns": [{ "id": "tss-r7-c1", "components": [{ "id": "tss-r7-c1-s1", "type": "spacer", "style": {}, "content": { "spacerHeight": 24 }, "config": {} }] }]
+        "id": "tss-r7",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r7-c1",
+            "components": [
+              {
+                "id": "tss-r7-c1-s1",
+                "type": "spacer",
+                "style": {},
+                "content": {
+                  "spacerHeight": 24
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tss-r8", "layout": "full",
-        "columns": [{ "id": "tss-r8-c1", "components": [{ "id": "tss-r8-c1-d1", "type": "divider", "style": { "paddingTop": 12, "paddingBottom": 12 }, "content": { "color": "#e5e7eb", "thickness": 1 }, "config": {} }] }]
+        "id": "tss-r8",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r8-c1",
+            "components": [
+              {
+                "id": "tss-r8-c1-d1",
+                "type": "divider",
+                "style": {
+                  "paddingTop": 12,
+                  "paddingBottom": 12
+                },
+                "content": {
+                  "color": "#e5e7eb",
+                  "thickness": 1
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       },
       {
-        "id": "tss-r9", "layout": "full",
-        "columns": [{ "id": "tss-r9-c1", "components": [{ "id": "tss-r9-c1-t1", "type": "text", "style": { "paddingTop": 8, "paddingBottom": 8, "paddingLeft": 0, "paddingRight": 0, "textAlign": "center" }, "content": { "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>" }, "config": {} }] }]
+        "id": "tss-r9",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tss-r9-c1",
+            "components": [
+              {
+                "id": "tss-r9-c1-t1",
+                "type": "text",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "center"
+                },
+                "content": {
+                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
+                },
+                "config": {}
+              }
+            ]
+          }
+        ]
       }
     ],
     "is_predefined": true

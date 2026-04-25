@@ -27,21 +27,21 @@ export const mockProductCategoryMap: ProductCategoryEntry[] = [
 ]
 
 export const mockUsers: User[] = [
-  { id: 'u1',  name: 'Sarah Jenkins', email: 'sarah.jenkins@corp.com',    department: 'Finance & Operations', initials: 'SJ' },
-  { id: 'u2',  name: 'Dan Brown',     email: 'dan.brown@corp.com',         department: 'Platform Engineering', team: 'Platform Engineering', initials: 'DB' },
-  { id: 'u3',  name: 'Alice Johnson', email: 'alice.johnson@corp.com',     department: 'Platform Engineering', team: 'Platform Engineering', initials: 'AJ' },
-  { id: 'u4',  name: 'Bob Smith',     email: 'bob.smith@corp.com',         department: 'DevOps',               team: 'DevOps',               initials: 'BS' },
-  { id: 'u5',  name: 'Carol White',   email: 'carol.white@corp.com',       department: 'Data Engineering',     team: 'Data Engineering',     initials: 'CW' },
-  { id: 'u6',  name: 'Eve Davis',     email: 'eve.davis@company.com',      department: 'IT Operations',        team: 'IT Ops',               initials: 'ED' },
-  { id: 'u7',  name: 'Frank Miller',  email: 'frank.miller@company.com',   department: 'Platform Security',    team: 'Platform Security',    initials: 'FM' },
-  { id: 'u8',  name: 'Grace Lee',     email: 'grace.lee@corp.com',         department: 'Data Engineering',     team: 'Data Engineering',     initials: 'GL' },
-  { id: 'u9',  name: 'Henry Wilson',  email: 'henry.wilson@company.com',   department: 'Network Operations',   team: 'Network Ops',          initials: 'HW' },
-  { id: 'u10', name: 'Irene Cho',     email: 'irene.cho@company.com',      department: 'Network Engineering',  team: 'Network Engineering',  initials: 'IC' },
-  { id: 'u11', name: 'James Park',    email: 'james.park@corp.com',        department: 'Product Management',   initials: 'JP' },
-  { id: 'u12', name: 'Karen Lee',     email: 'karen.lee@corp.com',         department: 'Compliance & Risk',    initials: 'KL' },
-  { id: 'u13', name: 'Liam Turner',   email: 'liam.turner@corp.com',       department: 'Cloud Architecture',   initials: 'LT' },
-  { id: 'u14', name: 'Monica Shah',   email: 'monica.shah@corp.com',       department: 'Site Reliability',     team: 'SRE',                  initials: 'MS' },
-  { id: 'u15', name: 'Nathan Cross',  email: 'nathan.cross@corp.com',      department: 'Application Security', initials: 'NC' },
+  { id: 'u1',  name: 'Sarah Jenkins', email: 'sarah.jenkins@corp.com',    department: 'Finance & Operations', initials: 'SJ', role: [] },
+  { id: 'u2',  name: 'Dan Brown',     email: 'dan.brown@corp.com',         department: 'Platform Engineering', team: 'Platform Engineering', initials: 'DB', role: [] },
+  { id: 'u3',  name: 'Alice Johnson', email: 'alice.johnson@corp.com',     department: 'Platform Engineering', team: 'Platform Engineering', initials: 'AJ', role: [] },
+  { id: 'u4',  name: 'Bob Smith',     email: 'bob.smith@corp.com',         department: 'DevOps',               team: 'DevOps',               initials: 'BS', role: [] },
+  { id: 'u5',  name: 'Carol White',   email: 'carol.white@corp.com',       department: 'Data Engineering',     team: 'Data Engineering',     initials: 'CW', role: [] },
+  { id: 'u6',  name: 'Eve Davis',     email: 'eve.davis@company.com',      department: 'IT Operations',        team: 'IT Ops',               initials: 'ED', role: [] },
+  { id: 'u7',  name: 'Frank Miller',  email: 'frank.miller@company.com',   department: 'Platform Security',    team: 'Platform Security',    initials: 'FM', role: [] },
+  { id: 'u8',  name: 'Grace Lee',     email: 'grace.lee@corp.com',         department: 'Data Engineering',     team: 'Data Engineering',     initials: 'GL', role: [] },
+  { id: 'u9',  name: 'Henry Wilson',  email: 'henry.wilson@company.com',   department: 'Network Operations',   team: 'Network Ops',          initials: 'HW', role: [] },
+  { id: 'u10', name: 'Irene Cho',     email: 'irene.cho@company.com',      department: 'Network Engineering',  team: 'Network Engineering',  initials: 'IC', role: [] },
+  { id: 'u11', name: 'James Park',    email: 'james.park@corp.com',        department: 'Product Management',   initials: 'JP', role: [] },
+  { id: 'u12', name: 'Karen Lee',     email: 'karen.lee@corp.com',         department: 'Compliance & Risk',    initials: 'KL', role: [] },
+  { id: 'u13', name: 'Liam Turner',   email: 'liam.turner@corp.com',       department: 'Cloud Architecture',   initials: 'LT', role: [] },
+  { id: 'u14', name: 'Monica Shah',   email: 'monica.shah@corp.com',       department: 'Site Reliability',     team: 'SRE',                  initials: 'MS', role: [] },
+  { id: 'u15', name: 'Nathan Cross',  email: 'nathan.cross@corp.com',      department: 'Application Security', initials: 'NC', role: [] },
 ]
 
 export const mockProjectUsers: ProjectUsers[] = [
@@ -101,15 +101,15 @@ export const mockProjects: Project[] = [
     profileOwner: 'Dan Brown, Platform Engineering',
     lastUpdated: '21 MAR 2026',
     team: [
-      { id: 't1', name: 'Alice Johnson', initials: 'AJ' },
-      { id: 't2', name: 'Bob Smith', initials: 'BS' },
-      { id: 't3', name: 'Carol White', initials: 'CW' },
-      { id: 't4', name: 'Dan Brown', initials: 'DB' },
+      { id: 'u3', name: 'Alice Johnson', initials: 'AJ' },
+      { id: 'u4', name: 'Bob Smith', initials: 'BS' },
+      { id: 'u5', name: 'Carol White', initials: 'CW' },
+      { id: 'u2', name: 'Dan Brown', initials: 'DB' },
     ],
     approvals: [
-      { id: 'a1', role: 'Technical Lead', approver: 'Dan Brown', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u2' },
-      { id: 'a2', role: 'Business Owner', approver: 'Sarah Jenkins', status: 'approved', timestamp: 'Mar 22, 02:30 PM', icon: 'CreditCard', userId: 'u1' },
-      { id: 'a3', role: 'Platform Migration Lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
+      { id: 'a1', role: 'technical_lead', approver: 'Dan Brown', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u2' },
+      { id: 'a2', role: 'business_owner', approver: 'Sarah Jenkins', status: 'approved', timestamp: 'Mar 22, 02:30 PM', icon: 'CreditCard', userId: 'u1' },
+      { id: 'a3', role: 'platform_migration_lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
     ],
 
     // Section 1
@@ -423,13 +423,13 @@ export const mockProjects: Project[] = [
     jiraBaseUrl: 'https://your-org.atlassian.net',
     lastUpdated: '25 OCT 2025',
     team: [
-      { id: 't5', name: 'Eve Davis', initials: 'ED' },
-      { id: 't6', name: 'Frank Miller', initials: 'FM' },
+      { id: 'u6', name: 'Eve Davis', initials: 'ED' },
+      { id: 'u7', name: 'Frank Miller', initials: 'FM' },
     ],
     approvals: [
-      { id: 'a4', role: 'Technical Lead', approver: 'Frank Miller', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u7' },
-      { id: 'a5', role: 'Business Owner', approver: 'Eve Davis', status: 'approved', timestamp: 'Oct 24, 14:30 PM', icon: 'CreditCard', userId: 'u6' },
-      { id: 'a6', role: 'Platform Migration Lead', approver: 'R. Kim', status: 'approved', timestamp: 'Oct 25, 10:00 AM', icon: 'CloudCheck', userId: 'u-current' },
+      { id: 'a4', role: 'technical_lead', approver: 'Frank Miller', status: 'approved', timestamp: 'Oct 24, 09:12 AM', icon: 'Wrench', userId: 'u7' },
+      { id: 'a5', role: 'business_owner', approver: 'Eve Davis', status: 'approved', timestamp: 'Oct 24, 14:30 PM', icon: 'CreditCard', userId: 'u6' },
+      { id: 'a6', role: 'platform_migration_lead', approver: 'R. Kim', status: 'approved', timestamp: 'Oct 25, 10:00 AM', icon: 'CloudCheck', userId: 'u-current' },
     ],
 
     applicationOverview: {
@@ -568,12 +568,12 @@ export const mockProjects: Project[] = [
     progress: 12,
     jiraBaseUrl: 'https://your-org.atlassian.net',
     team: [
-      { id: 't7', name: 'Grace Lee', initials: 'GL' },
+      { id: 'u8', name: 'Grace Lee', initials: 'GL' },
     ],
     approvals: [
-      { id: 'a7', role: 'Technical Lead', status: 'pending', icon: 'Wrench' },
-      { id: 'a8', role: 'Business Owner', status: 'pending', icon: 'CreditCard' },
-      { id: 'a9', role: 'Platform Migration Lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
+      { id: 'a7', role: 'technical_lead', status: 'pending', icon: 'Wrench' },
+      { id: 'a8', role: 'business_owner', status: 'pending', icon: 'CreditCard' },
+      { id: 'a9', role: 'platform_migration_lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
     ],
     risks: [],
   },
@@ -589,13 +589,13 @@ export const mockProjects: Project[] = [
     profileOwner: 'Henry Wilson, Network Operations',
     lastUpdated: '20 MAR 2026',
     team: [
-      { id: 't8', name: 'Henry Wilson', initials: 'HW' },
-      { id: 't9', name: 'Irene Cho', initials: 'IC' },
+      { id: 'u9', name: 'Henry Wilson', initials: 'HW' },
+      { id: 'u10', name: 'Irene Cho', initials: 'IC' },
     ],
     approvals: [
-      { id: 'a10', role: 'Technical Lead', approver: 'Irene Cho', status: 'approved', timestamp: 'Oct 20, 11:00 AM', icon: 'Wrench', userId: 'u10' },
-      { id: 'a11', role: 'Business Owner', status: 'waiting', icon: 'CreditCard', userId: 'u12' },
-      { id: 'a12', role: 'Platform Migration Lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
+      { id: 'a10', role: 'technical_lead', approver: 'Irene Cho', status: 'approved', timestamp: 'Oct 20, 11:00 AM', icon: 'Wrench', userId: 'u10' },
+      { id: 'a11', role: 'business_owner', status: 'waiting', icon: 'CreditCard', userId: 'u12' },
+      { id: 'a12', role: 'platform_migration_lead', status: 'pending', icon: 'CloudCheck', userId: 'u-current' },
     ],
 
     applicationOverview: {
@@ -781,7 +781,7 @@ export const mockCurrentUser: User = {
   name: 'Henry Wilson',
   email: 'henry.wilson@corp.com',
   department: 'Platform Engineering',
-  role: 'Platform Migration Lead',
+  role: ['platform_migration_lead'],
   initials: 'HW',
 }
 
@@ -793,7 +793,7 @@ export const devPersonas: User[] = [
     name: 'Henry Wilson',
     email: 'henry.wilson@corp.com',
     department: 'Platform Engineering',
-    role: 'Platform Migration Lead',
+    role: ['platform_migration_lead'],
     initials: 'HW',
   },
   {
@@ -802,7 +802,7 @@ export const devPersonas: User[] = [
     email: 'alice.johnson@corp.com',
     department: 'Platform Engineering',
     team: 'Platform Engineering',
-    role: 'Technical Lead',
+    role: ['technical_lead'],
     initials: 'AJ',
   },
   {
@@ -810,7 +810,7 @@ export const devPersonas: User[] = [
     name: 'Karen Lee',
     email: 'karen.lee@corp.com',
     department: 'Compliance & Risk',
-    role: 'Business Owner',
+    role: ['business_owner'],
     initials: 'KL',
   },
   {
@@ -819,6 +819,7 @@ export const devPersonas: User[] = [
     email: 'dan.brown@corp.com',
     department: 'Platform Engineering',
     team: 'Platform Engineering',
+    role: [],
     initials: 'DB',
   },
 ]

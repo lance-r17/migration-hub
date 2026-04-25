@@ -1,4 +1,6 @@
-from sqlalchemy import select
+import logging
+
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -50,3 +52,41 @@ async def create_user(session: AsyncSession, user: User) -> User:
     await session.commit()
     await session.refresh(user)
     return user
+
+
+async def sync_user_projects(
+    session: AsyncSession, user_id: str, project_ids: list[str]
+) -> None:
+    """Sync a user's AD-group-based project memberships (role='member').
+    Governance roles (business_owner, technical_lead, etc.) are left untouched."""
+    # Remove stale 'member' rows for projects no longer in AD groups
+    if project_ids:
+        await session.execute(
+            delete(ProjectUser).where(
+                (ProjectUser.user_id == user_id)
+                & (ProjectUser.role == "member")
+                & (ProjectUser.project_id.not_in(project_ids))
+            )
+        )
+    else:
+        await session.execute(
+            delete(ProjectUser).where(
+                (ProjectUser.user_id == user_id) & (ProjectUser.role == "member")
+            )
+        )
+
+    # Add 'member' rows for new projects; skip if user already has a role there
+    for project_id in project_ids:
+        project = await session.get(Project, project_id)
+        if project is None:
+            logging.getLogger(__name__).warning(
+                "Project %s not found, skipping AD group assignment for user %s",
+                project_id,
+                user_id,
+            )
+            continue
+        existing = await session.get(ProjectUser, (project_id, user_id))
+        if existing is None:
+            session.add(ProjectUser(project_id=project_id, user_id=user_id, role="member"))
+
+    await session.commit()
