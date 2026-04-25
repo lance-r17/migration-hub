@@ -4,6 +4,14 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { CheckCircle2, AlertOctagon, Clock } from 'lucide-react'
 import { useProductCategoryMap } from '@/hooks/use-product-category'
 import type { CloudResource, ProjectStatus, SyncStatus } from '@/types'
@@ -15,7 +23,8 @@ interface Props {
   editingResource: CloudResource | null
   projectStatus?: ProjectStatus
   isProjectMember: boolean
-  onSave: (resources: CloudResource[]) => void
+  onSave?: (resources: CloudResource[]) => void
+  onMarkSyncCompleted?: (resourceId: string) => void
 }
 
 function formatSpecKey(key: string): string {
@@ -51,11 +60,12 @@ function SyncBadge({ status }: { status: SyncStatus }) {
 
 
 const isSignedOff = (status?: ProjectStatus) =>
-  status === 'signed-off' || status === 'completed'
+  status === 'signed-off' || status === 'migrating' || status === 'completed'
 
-export function CloudResourceEditDrawer({ open, onOpenChange, resources, editingResource, projectStatus, isProjectMember, onSave }: Props) {
+export function CloudResourceEditDrawer({ open, onOpenChange, resources, editingResource, projectStatus, isProjectMember, onSave, onMarkSyncCompleted }: Props) {
   const [needMigration, setNeedMigration] = useState(true)
   const [subApplication, setSubApplication] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const { getCategoryForProduct, getNameForProduct } = useProductCategoryMap()
 
   useEffect(() => {
@@ -68,23 +78,28 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
   if (!editingResource) return null
 
   function handleSave() {
-    onSave(resources.map(r =>
+    onSave?.(resources.map(r =>
       r.id === editingResource!.id ? { ...editingResource!, needMigration, subApplication: subApplication || undefined } : r
     ))
     onOpenChange(false)
   }
 
   function handleMarkSyncCompleted() {
-    onSave(resources.map(r =>
-      r.id === editingResource!.id ? { ...editingResource!, needMigration, subApplication: subApplication || undefined, syncStatus: 'synced' } : r
-    ))
+    if (onMarkSyncCompleted) {
+      onMarkSyncCompleted(editingResource!.id)
+    } else {
+      onSave?.(resources.map(r =>
+        r.id === editingResource!.id ? { ...editingResource!, needMigration, subApplication: subApplication || undefined, syncStatus: 'synced' } : r
+      ))
+    }
     onOpenChange(false)
   }
 
-  const canSave = isProjectMember && !isSignedOff(projectStatus)
-  const canMarkSynced = isProjectMember && isSignedOff(projectStatus) && editingResource.syncStatus !== 'synced'
+  const canSave = !!onSave && isProjectMember && !isSignedOff(projectStatus)
+  const canMarkSynced = (!!onSave || !!onMarkSyncCompleted) && isProjectMember && isSignedOff(projectStatus) && editingResource.syncStatus !== 'synced' && editingResource.needMigration !== false
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[600px] sm:!max-w-[600px] flex flex-col p-0 gap-0" showCloseButton={false}>
         <SheetHeader className="border-b px-6 py-4 pr-12">
@@ -158,7 +173,7 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
         <SheetFooter className="border-t px-6 py-4 flex flex-row gap-2 justify-between">
           <div>
             {canMarkSynced && (
-              <Button variant="outline" onClick={handleMarkSyncCompleted} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30">
+              <Button variant="outline" onClick={() => setConfirmOpen(true)} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30">
                 Mark Sync Completed
               </Button>
             )}
@@ -172,5 +187,30 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
         </SheetFooter>
       </SheetContent>
     </Sheet>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark Sync Complete?</DialogTitle>
+            <DialogDescription>
+              Are you sure? Marking sync complete indicates the resource has been fully verified in the target environment. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmOpen(false)
+                handleMarkSyncCompleted()
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

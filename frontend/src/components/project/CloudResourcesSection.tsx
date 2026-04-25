@@ -20,6 +20,8 @@ interface CurrentInfrastructureSectionProps {
   jiraBaseUrl?: string
   onRetryJiraJob?: () => void
   onOpenOperations?: () => void
+  onMarkMigrationComplete?: (resourceId: string, completed: boolean) => void
+  onMarkSyncCompleted?: (resourceId: string) => void
 }
 
 function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
@@ -29,7 +31,7 @@ function SyncIcon({ status }: { status: CloudResource['syncStatus'] }) {
 }
 
 
-export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, isPlatformLead = false, jiraJobStatus, jiraStoryKey, jiraBaseUrl, onRetryJiraJob, onOpenOperations }: CurrentInfrastructureSectionProps) {
+export function CurrentInfrastructureSection({ data, onSave, projectStatus, isProjectMember = false, isPlatformLead = false, jiraJobStatus, jiraStoryKey, jiraBaseUrl, onRetryJiraJob, onOpenOperations, onMarkMigrationComplete, onMarkSyncCompleted }: CurrentInfrastructureSectionProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const [editingResource, setEditingResource] = useState<CloudResource | null>(null)
   const { getCategoryForProduct, getNameForProduct } = useProductCategoryMap()
@@ -104,7 +106,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border">
-                    {['Resource ID', 'Resource Name', 'Product', 'Category', 'Resource Set', 'Sub Application', 'Target Resource ID', 'Sync', 'Jira Sub-task'].map(h => (
+                    {['Resource ID', 'Resource Name', 'Product', 'Category', 'Resource Set', 'Sub Application', 'Target Resource ID', 'Sync', 'Jira Sub-task', ...(jiraJobStatus === 'completed' ? ['Done'] : [])].map(h => (
                       <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -118,11 +120,10 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                     <tr
                       key={resource.id}
                       className={cn(
-                        'hover:bg-muted/30 transition-colors border-b border-border last:border-0',
-                        onSave && 'cursor-pointer',
+                        'hover:bg-muted/30 transition-colors border-b border-border last:border-0 cursor-pointer',
                         resource.needMigration === false && 'opacity-40 line-through',
                       )}
-                      onClick={() => onSave && setEditingResource(resource)}
+                      onClick={() => setEditingResource(resource)}
                     >
                       <td className="py-3 pr-4">
                         {resource.resourceId
@@ -162,7 +163,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                           : <span className="text-muted-foreground/40">—</span>}
                       </td>
                       <td className="py-3 pr-4"><SyncIcon status={resource.syncStatus} /></td>
-                      <td className="py-3">
+                      <td className="py-3 pr-4">
                         {resource.jiraSubtaskKey ? (
                           jiraBaseUrl ? (
                             <a href={`${jiraBaseUrl}/browse/${resource.jiraSubtaskKey}`} target="_blank" rel="noopener noreferrer" className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline">{resource.jiraSubtaskKey}</a>
@@ -178,6 +179,26 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                           <span className="text-muted-foreground/40">—</span>
                         )}
                       </td>
+                      {jiraJobStatus === 'completed' && (
+                        <td className="py-3" onClick={e => e.stopPropagation()}>
+                          {resource.jiraSubtaskKey && onMarkMigrationComplete ? (
+                            <button
+                              onClick={() => onMarkMigrationComplete(resource.id, !resource.migrationCompleted)}
+                              className="flex items-center justify-center"
+                              title={resource.migrationCompleted ? 'Mark as incomplete' : 'Mark migration complete'}
+                            >
+                              <CheckCircle2
+                                size={18}
+                                className={resource.migrationCompleted
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : 'text-muted-foreground/30 hover:text-muted-foreground transition-colors'}
+                              />
+                            </button>
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                     )
                   })}
@@ -212,17 +233,16 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
 
       </div>
 
-      {onSave && (
-        <CloudResourceEditDrawer
-          open={!!editingResource}
-          onOpenChange={(o) => !o && setEditingResource(null)}
-          resources={data?.resources ?? []}
-          editingResource={editingResource}
-          projectStatus={projectStatus}
-          isProjectMember={isProjectMember}
-          onSave={(updated) => { onSave({ ...(data ?? { resources: [] }), resources: updated }); setEditingResource(null) }}
-        />
-      )}
+      <CloudResourceEditDrawer
+        open={!!editingResource}
+        onOpenChange={(o) => !o && setEditingResource(null)}
+        resources={data?.resources ?? []}
+        editingResource={editingResource}
+        projectStatus={projectStatus}
+        isProjectMember={isProjectMember}
+        onSave={onSave ? (updated) => { onSave({ ...(data ?? { resources: [] }), resources: updated }); setEditingResource(null) } : undefined}
+        onMarkSyncCompleted={onMarkSyncCompleted ? (id) => { onMarkSyncCompleted(id); setEditingResource(null) } : undefined}
+      />
     </div>
   )
 }

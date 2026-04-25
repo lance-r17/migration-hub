@@ -16,6 +16,7 @@ class ActivityOut(BaseModel):
     time: str
     actor: str
     project_id: str | None = None
+    project_name: str | None = None
 
 
 class ActivityListOut(BaseModel):

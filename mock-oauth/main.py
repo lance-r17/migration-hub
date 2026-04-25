@@ -31,6 +31,16 @@ _code_store: dict[str, dict] = {}
 # ─── Mock Users ──────────────────────────────────────────────────────────────
 
 MOCK_USERS = {
+    "u1": {
+        "staff_id": "u1",
+        "email": "sarah.jenkins@corp.com",
+        "name": "Sarah Jenkins",
+        "given_name": "Sarah",
+        "family_name": "Jenkins",
+        "member_of": [
+            "CN=PRJ-2024-ALPHA-ResourceSetReadOnly,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
+        ],
+    },
     "u-current": {
         "staff_id": "u-current",
         "email": "henry.wilson@corp.com",
@@ -39,6 +49,7 @@ MOCK_USERS = {
         "family_name": "Wilson",
         "member_of": [
             "CN=prj-1234-aaaa,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
+            "CN=M-11029-ResourceSetReadOnly,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
         ],
     },
     "u3": {

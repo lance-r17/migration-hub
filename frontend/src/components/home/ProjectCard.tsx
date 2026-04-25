@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight } from 'lucide-react'
+import { AlertTriangle, ChevronRight, ClipboardList, FileText, ShieldCheck, Server } from 'lucide-react'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { TeamAvatars } from '@/components/shared/TeamAvatars'
 import { MotionCard } from '@/components/shared/MotionCard'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import type { Project } from '@/types'
+import type { Project, StageProgress } from '@/types'
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface ProjectCardProps {
@@ -19,10 +20,19 @@ function getProgressVariant(project: Project) {
   return 'primary'
 }
 
+const STAGES = [
+  { key: 'setup' as const, label: 'Setup', icon: ClipboardList },
+  { key: 'survey' as const, label: 'Survey', icon: FileText },
+  { key: 'signoff' as const, label: 'Sign-off', icon: ShieldCheck },
+  { key: 'migration' as const, label: 'Migration', icon: Server },
+]
+
+
 export function ProjectCard({ project }: ProjectCardProps) {
   const navigate = useNavigate()
   const isBlocked = project.status === 'blocked'
   const ctaLabel = isBlocked ? 'Resolve Issues' : 'View Details'
+  const sp: StageProgress = project.stageProgress ?? { setup: 0, survey: 0, signoff: 0, migration: 0 }
 
   return (
     <MotionCard
@@ -41,7 +51,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
           <CardDescription>Project ID: {project.id}</CardDescription>
         </div>
-        <StatusBadge status={project.status} />
+        <StatusBadge status={project.status} stageProgress={project.stageProgress} />
       </CardHeader>
 
       <CardContent className="flex flex-col gap-6">
@@ -52,7 +62,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
               <span className="text-muted-foreground">Migration Status</span>
               <span className="text-foreground">{project.progress}%</span>
             </div>
-            <ProgressBar value={project.progress} variant={getProgressVariant(project)} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <ProgressBar value={project.progress} variant={getProgressVariant(project)} />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                <div className="space-y-1 min-w-[140px]">
+                  {STAGES.map(s => (
+                    <div key={s.key} className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">{s.label}</span>
+                      <span className="font-medium">{sp[s.key]}%</span>
+                    </div>
+                  ))}
+                </div>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Footer */}

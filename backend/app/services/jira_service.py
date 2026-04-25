@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.database import AsyncSessionLocal
@@ -141,10 +142,11 @@ async def reset_stale_jobs(session: AsyncSession) -> list[str]:
     job_ids_to_resume: list[str] = []
     for job in result.scalars().all():
         project = await session.get(Project, job.project_id)
+        job_type = (job.config or {}).get("type", "migration")
         if job.story_key:
             # Progress was made in Jira — resume from last checkpoint
             job.status = "pending"
-            if project:
+            if project and job_type == "migration":
                 project.jira_job_status = "pending"
             job_ids_to_resume.append(job.id)
             logger.info("reset_stale_jobs: resuming %s (story_key=%s)", job.id, job.story_key)
@@ -152,7 +154,7 @@ async def reset_stale_jobs(session: AsyncSession) -> list[str]:
         else:
             # Nothing created in Jira — safe to fail; user can retry
             job.status = "failed"
-            if project:
+            if project and job_type == "migration":
                 project.jira_job_status = "failed"
             logger.warning("reset_stale_jobs: marking failed (no Jira progress): %s", job.id)
             await _log_event(
@@ -230,7 +232,7 @@ async def retry_job(session: AsyncSession, project_id: str) -> JiraJob | None:
     job.status = "pending"
     project = await session.get(Project, project_id)
     # Operation jobs must not clobber project.jira_job_status — that field tracks the migration job only.
-    if project and (job.config or {}).get("type") != "operation":
+    if project and (job.config or {}).get("type", "migration") == "migration":
         project.jira_job_status = "pending"
     await _log_event(session, job.id, "info", "Job retried by user")
     await session.flush()
@@ -253,17 +255,21 @@ async def process_job(job_id: str) -> None:
                     return
 
                 job.status = "processing"
-                project = await session.get(Project, job.project_id)
+                result = await session.execute(
+                    select(Project).where(Project.id == job.project_id).options(selectinload(Project.profile_owner_user))
+                )
+                project = result.scalar_one_or_none()
                 job_type = (job.config or {}).get("type", "migration")
-                # Operation jobs must not clobber project.jira_job_status — that
-                # field tracks the migration job only.
-                if job_type != "operation" and project:
+                # Only migration jobs should update project.jira_job_status.
+                if job_type == "migration" and project:
                     project.jira_job_status = "processing"
                 await _log_event(session, job_id, "info", "Job started processing")
                 await session.commit()
                 logger.info("process_job processing: %s (project=%s)", job_id, job.project_id)
                 if job_type == "operation":
                     await _complete_operation_job(session, job, project)
+                elif job_type == "sync-complete":
+                    await _complete_sync_complete_job(session, job, project)
                 else:
                     await _complete_job(session, job, project)
                 await session.commit()
@@ -279,7 +285,7 @@ async def process_job(job_id: str) -> None:
                         if err_job:
                             err_job.status = "failed"
                             err_project = await err_session.get(Project, err_job.project_id)
-                            if err_project:
+                            if err_project and (err_job.config or {}).get("type", "migration") == "migration":
                                 err_project.jira_job_status = "failed"
                             await _log_event(
                                 err_session, job_id, "error",
@@ -391,7 +397,7 @@ def _build_story_description(
         ("Application Tier", ao.get("applicationTier")),
         ("BA ID", ao.get("baId")),
         ("IBS In Scope", ("Yes" if ao.get("ibsInScope") else "No") if ao.get("ibsInScope") is not None else None),
-        ("Profile Owner", project.profile_owner),
+        ("Profile Owner", project.profile_owner_user.name if project.profile_owner_user else None),
         ("Status", project.status),
     ]))
     content.append(_adf_rule())
@@ -432,13 +438,6 @@ def _build_story_description(
         content.append(_adf_rule())
         content.append(_adf_heading(f"Open Risks ({len(open_risks)})"))
         content.append(_adf_bullet_list([f"[{r.severity.upper()}] {r.title}" for r in open_risks]))
-
-    # ── Team ─────────────────────────────────────────────────────────────────
-    team_names = [m.get("name") for m in (project.team or []) if m.get("name")]
-    if team_names:
-        content.append(_adf_rule())
-        content.append(_adf_heading("Team"))
-        content.append(_adf_paragraph(", ".join(team_names)))
 
     # ── Dependencies ─────────────────────────────────────────────────────────
     dep_items: list[str] = []
@@ -841,5 +840,129 @@ async def _complete_operation_job(
     logger.info(
         "_complete_operation_job done: job=%s cr_key=%s links=%d",
         job.id, cr_key, len(selected_subtask_keys),
+    )
+    # Final commit is done by process_job() after this function returns
+
+
+async def _complete_sync_complete_job(
+    session: AsyncSession, job: JiraJob, project: Project | None
+) -> None:
+    """
+    Process a sync-complete job: transition a resource's Jira subtask to Done
+    and mark the resource as migration_completed locally.
+
+    Checkpoint:
+      C1 — job.status set to "completed" after subtask transition + DB update.
+    """
+    from app.config import settings
+    from app.services import jira_client
+    from app.models.cloud_resource import CloudResource
+
+    config = job.config or {}
+    resource_id: str = config.get("resource_id", "")
+    subtask_key: str = config.get("subtask_key", "")
+    actor_name: str = config.get("actor_name", "")
+    actor_email: str = config.get("actor_email", "")
+    if actor_name and actor_email:
+        comment_text = f"Synchronization is confirmed by user - {actor_name} ({actor_email})"
+    elif actor_name:
+        comment_text = f"Synchronization is confirmed by user - {actor_name}"
+    else:
+        comment_text = "Synchronization confirmed"
+
+    logger.info(
+        "_complete_sync_complete_job enter: job_id=%s resource_id=%s subtask_key=%s",
+        job.id, resource_id, subtask_key,
+    )
+
+    use_real_jira = bool(settings.jira_base_url and subtask_key)
+    logger.info("_complete_sync_complete_job use_real_jira=%s", use_real_jira)
+
+    # ── C1: Transition subtask to Done and add comment (real Jira only) ───────
+    if use_real_jira:
+        try:
+            transitions = await jira_client.get_transitions(subtask_key)
+            transition_id = jira_client.get_done_transition_id(transitions)
+            if transition_id:
+                await jira_client.transition_issue(subtask_key, transition_id)
+                await _log_event(
+                    session, job.id, "info",
+                    f"Subtask transitioned to Done: {subtask_key}",
+                )
+                logger.info(
+                    "_complete_sync_complete_job: transitioned %s to Done",
+                    subtask_key,
+                )
+            else:
+                logger.warning(
+                    "_complete_sync_complete_job: no Done transition found for %s",
+                    subtask_key,
+                )
+                await _log_event(
+                    session, job.id, "warning",
+                    f"No Done transition found for subtask {subtask_key}",
+                )
+        except Exception as exc:
+            logger.exception(
+                "_complete_sync_complete_job: failed to transition %s: %s",
+                subtask_key, exc,
+            )
+            await _log_event(
+                session, job.id, "error",
+                f"Failed to transition subtask {subtask_key}: {exc}",
+            )
+            raise
+
+        # Add comment independently of transition so it appears even if the
+        # subtask was already in Done status.
+        try:
+            await jira_client.add_comment(subtask_key, comment_text)
+            await _log_event(
+                session, job.id, "info",
+                f"Comment added to subtask {subtask_key}",
+            )
+            logger.info(
+                "_complete_sync_complete_job: comment added to %s",
+                subtask_key,
+            )
+        except Exception as exc:
+            logger.warning(
+                "_complete_sync_complete_job: failed to add comment to %s: %s",
+                subtask_key, exc,
+            )
+            await _log_event(
+                session, job.id, "warning",
+                f"Failed to add comment to subtask {subtask_key}: {exc}",
+            )
+
+    # ── Update resource migration_completed ───────────────────────────────────
+    if resource_id:
+        resource = await session.get(CloudResource, resource_id)
+        if resource:
+            resource.migration_completed = True
+            await _log_event(
+                session, job.id, "info",
+                f"Resource marked migration completed: {resource.name or resource_id}",
+            )
+            logger.info(
+                "_complete_sync_complete_job: resource %s migration_completed=True",
+                resource_id,
+            )
+        else:
+            logger.warning(
+                "_complete_sync_complete_job: resource %s not found", resource_id
+            )
+
+    # ── Mark job complete ─────────────────────────────────────────────────────
+    job.status = "completed"
+    job.processed_at = datetime.now(timezone.utc)
+
+    await _log_event(
+        session, job.id, "info",
+        f"Sync-complete job finished: subtask={subtask_key}",
+    )
+    logger.info(
+        "_complete_sync_complete_job done: job=%s subtask=%s",
+        job.id, subtask_key,
     )
     # Final commit is done by process_job() after this function returns

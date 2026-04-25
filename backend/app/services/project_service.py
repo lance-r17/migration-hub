@@ -55,6 +55,68 @@ GOVERNANCE_ROLE_FIELDS = {
 }
 
 
+_STAGE_WEIGHTS = {"setup": 5, "survey": 15, "signoff": 10, "migration": 70}
+
+
+def compute_stage_progress(project: "Project") -> dict[str, int]:
+    """Compute per-stage progress (0-100) and weighted overall progress."""
+    has_resources = any(r.need_migration for r in (project.cloud_resources or []))
+    ao = project.application_overview or {}
+    has_team = bool(ao.get("technicalLeadId")) and bool(ao.get("businessOwnerId"))
+    setup = 100 if (has_resources and has_team) else 0
+
+    survey = 100 if project.survey_submitted_at is not None else 0
+
+    approved = sum(1 for a in (project.approvals or []) if a.status == "approved")
+    signoff = round(approved / 3 * 100)
+
+    in_scope = [r for r in (project.cloud_resources or []) if r.need_migration]
+    migration = round(sum(1 for r in in_scope if r.migration_completed) / len(in_scope) * 100) if in_scope else 0
+
+    overall = round(
+        setup * _STAGE_WEIGHTS["setup"] / 100
+        + survey * _STAGE_WEIGHTS["survey"] / 100
+        + signoff * _STAGE_WEIGHTS["signoff"] / 100
+        + migration * _STAGE_WEIGHTS["migration"] / 100
+    )
+    return {"setup": setup, "survey": survey, "signoff": signoff, "migration": migration, "overall": overall}
+
+
+def derive_status_from_stage_progress(stage_data: dict[str, int]) -> str:
+    """Derive project status from stage progress percentages.
+
+    Rules:
+      - setup == 0                          -> planning
+      - setup == 100 && survey < 100        -> in-progress
+      - setup == 100 && survey == 100 && signoff < 100 -> in-progress
+      - setup == 100 && survey == 100 && signoff == 100 && migration == 0 -> signed-off
+      - setup == 100 && survey == 100 && signoff == 100 && migration > 0 && migration < 100 -> migrating
+      - setup == 100 && survey == 100 && signoff == 100 && migration == 100 -> completed
+    """
+    setup = stage_data.get("setup", 0)
+    survey = stage_data.get("survey", 0)
+    signoff = stage_data.get("signoff", 0)
+    migration = stage_data.get("migration", 0)
+
+    if setup == 0:
+        return "planning"
+    if survey < 100:
+        return "in-progress"
+    if signoff < 100:
+        return "in-progress"
+    if migration == 0:
+        return "signed-off"
+    if migration < 100:
+        return "migrating"
+    return "completed"
+
+
+async def _derive_and_store_status(session: AsyncSession, project: "Project") -> None:
+    stage_data = compute_stage_progress(project)
+    if project.status != "blocked":
+        project.status = derive_status_from_stage_progress(stage_data)
+
+
 def _to_label(key: str) -> str:
     s = re.sub(r'([A-Z])', r' \1', key).strip()
     return s[0].upper() + s[1:] if s else key
@@ -76,32 +138,46 @@ def _diff_section(old: Any, new: Any) -> list[dict]:
     return changes
 
 
+_RESOURCE_FIELD_MAP = {
+    "syncStatus":         ("sync_status",         "Sync Status"),
+    "needMigration":      ("need_migration",       "In Migration Scope"),
+    "migrationCompleted": ("migration_completed",  "Migration Completed"),
+    "subApplication":     ("sub_application",      "Sub Application"),
+    "targetResourceId":   ("target_resource_id",   "Target Resource ID"),
+}
+
+
 def _classify_resource_changes(
     old_list: list, new_list: list[dict]
-) -> list[tuple[str, str, list[dict]]]:
-    """Returns (resource_id, entity_label, changes) per changed resource.
-
-    - Removed: empty changes list (entityLabel carries the resource name)
-    - Added: empty changes list
-    - Specs modified: field-level diff via _diff_section
-    """
+) -> list[tuple[str, str, list[dict], bool]]:
+    """Returns (resource_id, entity_label, changes, is_sync_complete) per changed resource."""
     result = []
     old_map = {r.id: r for r in old_list}
     new_map = {r_data["id"]: r_data for r_data in new_list if r_data.get("id")}
 
     for rid, r in old_map.items():
         if rid not in new_map:
-            result.append((rid, r.name, []))
+            result.append((rid, r.name, [], False))
 
     for rid, r_data in new_map.items():
         name = r_data.get("name", rid)
         old_r = old_map.get(rid)
         if old_r is None:
-            result.append((rid, name, []))
-        else:
-            spec_changes = _diff_section(old_r.specs or {}, r_data.get("specs") or {})
-            if spec_changes:
-                result.append((rid, name, spec_changes))
+            result.append((rid, name, [], False))
+            continue
+        changes = []
+        for api_key, (col, label) in _RESOURCE_FIELD_MAP.items():
+            old_val = getattr(old_r, col)
+            new_val = r_data.get(api_key, old_val)
+            if old_val != new_val:
+                changes.append({"field": api_key, "label": label, "old_value": old_val, "new_value": new_val})
+        spec_changes = _diff_section(old_r.specs or {}, r_data.get("specs") or {})
+        changes.extend(spec_changes)
+        if changes:
+            is_sync_complete = any(
+                c["field"] == "syncStatus" and c["new_value"] == "synced" for c in changes
+            )
+            result.append((rid, name, changes, is_sync_complete))
 
     return result
 
@@ -113,6 +189,7 @@ def _project_options():
         selectinload(Project.risks),
         selectinload(Project.approvals),
         selectinload(Project.wave),
+        selectinload(Project.profile_owner_user),
         selectinload(Project.project_users).selectinload(ProjectUser.user),
     ]
 
@@ -126,6 +203,7 @@ async def get_all(
         selectinload(Project.approvals),
         selectinload(Project.cloud_resources),
         selectinload(Project.wave),
+        selectinload(Project.profile_owner_user),
         selectinload(Project.project_users).selectinload(ProjectUser.user),
     )
     if user_id:
@@ -148,7 +226,6 @@ async def create(session: AsyncSession, data: ProjectCreate) -> Project:
         id=data.id or f"PRJ-{uuid.uuid4().hex[:8].upper()}",
         name=data.name,
         status=data.status,
-        progress=data.progress,
         description=data.description,
         wave_id=data.wave_id,
     )
@@ -227,6 +304,11 @@ async def update_section(
 
     await session.flush()
     await session.refresh(project)
+
+    if section_key in ("currentInfrastructure", "approvals", "applicationOverview"):
+        await _derive_and_store_status(session, project)
+        await session.flush()
+
     return project
 
 
@@ -255,19 +337,22 @@ async def _replace_resources(
             target_resource_id=r_data.get("targetResourceId"),
             sync_status=r_data.get("syncStatus", "out-of-sync"),
             need_migration=r_data.get("needMigration", True),
+            migration_completed=r_data.get("migrationCompleted", False),
             jira_subtask_key=r_data.get("jiraSubtaskKey"),
         )
         session.add(resource)
-    for rid, entity_label, resource_changes in resource_events:
-        await audit_service.append_entry(
-            session, project_id=project.id,
-            event_type="resource_updated",
-            entity_type="resource",
-            actor=actor,
-            entity_id=rid,
-            entity_label=entity_label,
-            changes=resource_changes,
-        )
+        project.cloud_resources.append(resource)
+    for rid, entity_label, resource_changes, is_sync_complete in resource_events:
+        if resource_changes:
+            await audit_service.append_entry(
+                session, project_id=project.id,
+                event_type="resource_sync_completed" if is_sync_complete else "resource_updated",
+                entity_type="resource",
+                actor=actor,
+                entity_id=rid,
+                entity_label=entity_label,
+                changes=resource_changes,
+            )
 
 
 async def _replace_risks(
@@ -289,6 +374,7 @@ async def _replace_risks(
             risk_status=r_data.get("riskStatus"),
         )
         session.add(risk)
+        project.risks.append(risk)
 
 
 def _validate_approval_sequence(approvals_data: list[dict]) -> None:
@@ -378,6 +464,7 @@ async def _replace_approvals(
             user_id=a_data.get("userId"),
         )
         session.add(approval)
+        project.approvals.append(approval)
     await audit_service.append_entry(
         session, project_id=project.id, event_type="approval_submitted",
         entity_type="approval", actor=actor, changes=[],

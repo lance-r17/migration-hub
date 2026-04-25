@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { BadgeCheck, History, ClipboardList } from 'lucide-react'
+import { BadgeCheck, History, ClipboardList, Ban } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { SignOffWorkflowBar } from '@/components/project/SignOffWorkflowBar'
+import { StageProgressStepper } from '@/components/project/StageProgressStepper'
 import { ApplicationOverviewSection } from '@/components/project/ApplicationOverviewSection'
 import { CurrentInfrastructureSection } from '@/components/project/CloudResourcesSection'
 import { RisksBlockersSection } from '@/components/project/RisksBlockersSection'
@@ -36,7 +36,9 @@ import { useProject } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
 import { createJiraJob } from '@/services/jiraJobs'
+import { markResourceSyncComplete } from '@/services/projects'
 import { apiClient } from '@/services/client'
+import { ensureAllRoles } from '@/lib/approvals'
 import type { Project, ProjectStatus } from '@/types'
 import type { JiraSubtaskConfig } from '@/types/wave'
 
@@ -131,7 +133,8 @@ export function ProjectDetailsPage() {
     const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     const idx = APPROVAL_SEQUENCE.indexOf(approvedRole as typeof APPROVAL_SEQUENCE[number])
     const nextRole = idx >= 0 ? APPROVAL_SEQUENCE[idx + 1] : undefined
-    const updatedApprovals = project.approvals.map(a => {
+    const allApprovals = ensureAllRoles(project.approvals)
+    const updatedApprovals = allApprovals.map(a => {
       if (a.role === approvedRole)
         return { ...a, status: 'approved' as const, approver: user?.name ?? '', timestamp: now }
       if (a.role === nextRole && a.status === 'pending')
@@ -149,6 +152,7 @@ export function ProjectDetailsPage() {
     setModalOpen(false)
     try {
       await applyApproval(approvedRole)
+      await refreshProject()
       toast.success('Sign-off submitted successfully', {
         description: 'Approval recorded. Jira issues will be created shortly.',
       })
@@ -190,8 +194,29 @@ export function ProjectDetailsPage() {
     await handleSave('waveId', waveId)
   }
 
+  const handleMarkMigrationComplete = async (resourceId: string, completed: boolean) => {
+    const resources = (project.currentInfrastructure?.resources ?? []).map(r =>
+      r.id === resourceId ? { ...r, migrationCompleted: completed } : r
+    )
+    await handleSave('currentInfrastructure', { ...(project.currentInfrastructure ?? { resources: [] }), resources })
+    await refreshProject()
+  }
+
+  const handleMarkSyncCompleted = async (resourceId: string) => {
+    try {
+      await markResourceSyncComplete(project.id, resourceId)
+      await refreshProject()
+      toast.success('Sync completed', {
+        description: 'Jira subtask closure has been queued.',
+      })
+    } catch {
+      toast.error('Failed to mark sync complete. Please try again.')
+    }
+  }
+
   const isProjectMember = project.team.some(m => m.id === user?.id)
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isLocked = project.approvals.find(a => a.role === 'technical_lead')?.status === 'approved'
   const isSurveyActive = !!(surveyConfig?.isActive && surveyConfig.questions.length > 0)
   const assignedWave = waves.find(w => w.id === project.waveId)
 
@@ -213,7 +238,7 @@ export function ProjectDetailsPage() {
     currentUserRole !== null &&
     predecessorsApproved &&
     project.approvals.find(a => a.role === currentUserRole)?.status !== 'approved'
-  const hasMetadata = project.migrationWave || project.jiraTicket || project.profileOwner || project.lastUpdated
+  const hasMetadata = project.migrationWave || project.jiraTicket || project.profileOwner || project.updatedAt
 
   return (
     <AppShell title={project.name}>
@@ -241,9 +266,9 @@ export function ProjectDetailsPage() {
         <div>
           <div className="flex items-center gap-3 mb-1 flex-wrap">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">{project.name}</h1>
-            <StatusBadge status={project.status} />
+            <StatusBadge status={project.status} stageProgress={project.stageProgress} />
             <div className="ml-auto flex items-center gap-3">
-              {isSurveyActive && (isProjectMember || isPlatformLead) && (
+              {isSurveyActive && !isLocked && (isProjectMember || isPlatformLead) && (
                 <button
                   onClick={() => setSurveyOpen(true)}
                   className="flex items-center gap-1.5 text-sm text-primary hover:opacity-80 transition-opacity font-medium"
@@ -265,6 +290,9 @@ export function ProjectDetailsPage() {
             {project.description ?? 'No description provided.'}
           </p>
         </div>
+
+        {/* Stage Progress Stepper */}
+        <StageProgressStepper project={project} />
 
         {/* Metadata strip */}
         {(hasMetadata || preSignOffStatuses.includes(project.status)) && (
@@ -315,10 +343,26 @@ export function ProjectDetailsPage() {
               {project.profileOwner && (
                 <span>Profile Owner: <strong className="text-foreground">{project.profileOwner}</strong></span>
               )}
-              {project.lastUpdated && (
-                <span>Last Updated: <strong className="text-foreground">{project.lastUpdated}</strong></span>
+              {project.updatedAt && (
+                <span>Last Updated: <strong className="text-foreground">{project.updatedAt}</strong></span>
               )}
             </div>
+            {isPlatformLead && project.status !== 'blocked' && (
+              <button
+                onClick={() => handleSave('status', 'blocked')}
+                className="flex items-center gap-2 px-4 py-2.5 bg-destructive/10 text-destructive font-semibold rounded shadow-sm hover:bg-destructive/20 transition-all text-sm flex-shrink-0"
+              >
+                <Ban size={16} /> Block Project
+              </button>
+            )}
+            {isPlatformLead && project.status === 'blocked' && (
+              <button
+                onClick={() => handleSave('status', 'in-progress')}
+                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-semibold rounded shadow-sm hover:opacity-90 transition-all text-sm flex-shrink-0"
+              >
+                <BadgeCheck size={16} /> Unblock Project
+              </button>
+            )}
             {canSignOff && (
               <button
                 onClick={() => setModalOpen(true)}
@@ -336,23 +380,20 @@ export function ProjectDetailsPage() {
           embargos={embargos}
         />
 
-        {/* Sign-off Workflow Bar */}
-        <SignOffWorkflowBar approvals={project.approvals} />
-
         {/* Sections */}
         <div>
           <ApplicationOverviewSection
             data={project.applicationOverview}
             projectId={project.id}
-            onSave={(d) => handleSave('applicationOverview', d)}
+            onSave={!isLocked ? (d) => handleSave('applicationOverview', d) : undefined}
           />
           <RisksBlockersSection
             risks={project.risks}
-            onSave={(risks) => handleSave('risks', risks)}
+            onSave={!isLocked ? (risks) => handleSave('risks', risks) : undefined}
           />
           <CurrentInfrastructureSection
             data={project.currentInfrastructure}
-            onSave={(d) => handleSave('currentInfrastructure', d)}
+            onSave={!isLocked ? (d) => handleSave('currentInfrastructure', d) : undefined}
             projectStatus={project.status}
             isProjectMember={isProjectMember}
             isPlatformLead={isPlatformLead}
@@ -361,30 +402,32 @@ export function ProjectDetailsPage() {
             jiraBaseUrl={project.jiraBaseUrl}
             onRetryJiraJob={handleRetryJiraJob}
             onOpenOperations={() => setOperationsOpen(true)}
+            onMarkMigrationComplete={(isProjectMember || isPlatformLead) ? handleMarkMigrationComplete : undefined}
+            onMarkSyncCompleted={(isProjectMember || isPlatformLead) ? handleMarkSyncCompleted : undefined}
           />
           <DataPersistenceSection
             data={project.dataPersistence}
-            onSave={(d) => handleSave('dataPersistence', d)}
+            onSave={!isLocked ? (d) => handleSave('dataPersistence', d) : undefined}
           />
           <AvailabilityResilienceSection
             data={project.availability}
-            onSave={(d) => handleSave('availability', d)}
+            onSave={!isLocked ? (d) => handleSave('availability', d) : undefined}
           />
           <DependenciesSection
             data={project.dependencies}
-            onSave={(d) => handleSave('dependencies', d)}
+            onSave={!isLocked ? (d) => handleSave('dependencies', d) : undefined}
           />
           <NonFunctionalRequirementsSection
             data={project.nfrs}
-            onSave={(d) => handleSave('nfrs', d)}
+            onSave={!isLocked ? (d) => handleSave('nfrs', d) : undefined}
           />
           <MigrationConstraintsSection
             data={project.migrationConstraints}
-            onSave={(d) => handleSave('migrationConstraints', d)}
+            onSave={!isLocked ? (d) => handleSave('migrationConstraints', d) : undefined}
           />
           <TargetArchitectureSection
             data={project.targetArchitecture}
-            onSave={(d) => handleSave('targetArchitecture', d)}
+            onSave={!isLocked ? (d) => handleSave('targetArchitecture', d) : undefined}
           />
         </div>
       </div>
@@ -428,6 +471,7 @@ export function ProjectDetailsPage() {
           surveyConfig={surveyConfig}
           project={project}
           onSave={handleSave}
+          onSubmitted={refreshProject}
           resourceSurveyConfig={resourceSurveyConfig ?? undefined}
           getCategoryForProduct={getCategoryForProduct}
         />

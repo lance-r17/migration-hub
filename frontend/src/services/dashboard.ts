@@ -29,5 +29,6 @@ export async function getRecentActivity(): Promise<Activity[]> {
     time: item.time as string,
     actor: item.actor as string,
     projectId: item.project_id as string | undefined,
+    projectName: item.project_name as string | undefined,
   }))
 }

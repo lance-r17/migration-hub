@@ -56,10 +56,9 @@
 | `progress` | `INTEGER NOT NULL` | 0–100 |
 | `description` | `TEXT` | nullable |
 | `migration_wave` | `TEXT` | nullable; legacy label |
-| `profile_owner` | `TEXT` | nullable |
+| `profile_owner` | `TEXT FK → users.id` | nullable |
 | `jira_ticket` | `TEXT` | nullable |
 | `jira_base_url` | `TEXT` | nullable |
-| `last_updated` | `TEXT` | nullable |
 | `wave_id` | `TEXT FK → waves.id` | nullable |
 | `jira_story_key` | `TEXT` | nullable; e.g. `'MIG-200'` |
 | `jira_job_status` | `TEXT` | nullable; `'pending'\|'processing'\|'completed'\|'failed'` |

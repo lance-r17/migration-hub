@@ -1,5 +1,6 @@
 import { Check, Clock, Circle, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ensureAllRoles } from '@/lib/approvals'
 import type { Approval } from '@/types'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -36,12 +37,13 @@ function StepDot({ status }: { status: Approval['status'] }) {
 }
 
 export function ApprovalTimeline({ approvals }: ApprovalTimelineProps) {
+  const allApprovals = ensureAllRoles(approvals)
   return (
     <div className="flex flex-col h-full">
       <h2 className="text-lg font-bold text-foreground mb-8">Approval Status</h2>
       <div className="space-y-10 relative flex-1">
         <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border" />
-        {approvals.map((approval) => (
+        {allApprovals.map((approval) => (
           <div key={approval.id} className="relative flex gap-4">
             <StepDot status={approval.status} />
             <div>

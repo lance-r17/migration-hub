@@ -22,6 +22,7 @@ class CloudResource(Base):
     target_resource_id: Mapped[str | None] = mapped_column(String, nullable=True)
     sync_status: Mapped[str] = mapped_column(String, nullable=False, default="out-of-sync")
     need_migration: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    migration_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     jira_subtask_key: Mapped[str | None] = mapped_column(String, nullable=True)
 
     project: Mapped["Project"] = relationship("Project", back_populates="cloud_resources")

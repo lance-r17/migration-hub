@@ -304,3 +304,102 @@ async def get_epic(epic_key: str) -> dict:
             "jira_project_key": fields.get("project", {}).get("key"),
             "jira_status_category": status_category,
         }
+
+
+async def get_transitions(issue_key: str) -> list[dict]:
+    """
+    Return available transitions for a Jira issue via REST API v3.
+    Raises ValueError if Jira is not configured.
+    Raises httpx.HTTPStatusError on Jira API failure.
+    """
+    if not settings.jira_base_url:
+        raise ValueError("Jira not configured")
+
+    url = f"{settings.jira_base_url}/rest/api/3/issue/{issue_key}/transitions"
+    logger.info("jira_client get_transitions: GET %s", url)
+    async with httpx.AsyncClient(
+        auth=httpx.BasicAuth(settings.jira_user_email, settings.jira_api_token),
+        headers={"Accept": "application/json"},
+    ) as client:
+        response = await client.get(url)
+        logger.info("jira_client get_transitions: response status=%d", response.status_code)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            _raise_with_body(exc)
+        return response.json().get("transitions", [])
+
+
+def get_done_transition_id(transitions: list[dict]) -> str | None:
+    """
+    Scan transition list for one whose target status name is 'Done'.
+    Falls back to 'Closed' or 'Resolved' if 'Done' is not found.
+    Returns the transition id or None.
+    """
+    for name in ("Done", "Closed", "Resolved"):
+        for t in transitions:
+            if t.get("to", {}).get("name") == name:
+                return t.get("id")
+    return None
+
+
+async def transition_issue(
+    issue_key: str,
+    transition_id: str,
+) -> None:
+    """
+    Transition a Jira issue via REST API v3.
+    Raises ValueError if Jira is not configured.
+    Raises httpx.HTTPStatusError on Jira API failure.
+    """
+    if not settings.jira_base_url:
+        raise ValueError("Jira not configured")
+
+    body: dict = {"transition": {"id": transition_id}}
+
+    url = f"{settings.jira_base_url}/rest/api/3/issue/{issue_key}/transitions"
+    logger.info("jira_client transition_issue: POST %s transition=%s", url, transition_id)
+    async with httpx.AsyncClient(
+        auth=httpx.BasicAuth(settings.jira_user_email, settings.jira_api_token),
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+    ) as client:
+        response = await client.post(url, json=body)
+        logger.info("jira_client transition_issue: response status=%d", response.status_code)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            _raise_with_body(exc)
+
+
+async def add_comment(issue_key: str, comment: str) -> None:
+    """
+    Add a comment to a Jira issue via REST API v3.
+    Raises ValueError if Jira is not configured.
+    Raises httpx.HTTPStatusError on Jira API failure.
+    """
+    if not settings.jira_base_url:
+        raise ValueError("Jira not configured")
+
+    body = {
+        "body": {
+            "version": 1,
+            "type": "doc",
+            "content": [{
+                "type": "paragraph",
+                "content": [{"type": "text", "text": comment}]
+            }]
+        }
+    }
+
+    url = f"{settings.jira_base_url}/rest/api/3/issue/{issue_key}/comment"
+    logger.info("jira_client add_comment: POST %s", url)
+    async with httpx.AsyncClient(
+        auth=httpx.BasicAuth(settings.jira_user_email, settings.jira_api_token),
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+    ) as client:
+        response = await client.post(url, json=body)
+        logger.info("jira_client add_comment: response status=%d", response.status_code)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            _raise_with_body(exc)

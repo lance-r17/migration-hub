@@ -74,6 +74,7 @@ export interface CloudResource {
   syncStatus: SyncStatus
   needMigration?: boolean  // default true; false = excluded from migration scope
   jiraSubtaskKey?: string  // populated by async Jira job after sign-off
+  migrationCompleted?: boolean  // project member marks resource migration as done after subtask created
 }
 
 export interface CurrentInfrastructure {
@@ -201,11 +202,20 @@ export interface ProjectPlanning {
 
 // ─── Project ─────────────────────────────────────────────────────────────────
 
+export interface StageProgress {
+  setup: number      // 0 or 100
+  survey: number     // 0 or 100
+  signoff: number    // 0, 33, 67, or 100
+  migration: number  // 0–100
+}
+
 export interface Project {
   id: string
   name: string
   status: ProjectStatus
   progress: number
+  stageProgress?: StageProgress
+  surveySubmittedAt?: string
   team: TeamMember[]
   description?: string
   // Header metadata
@@ -213,7 +223,7 @@ export interface Project {
   profileOwner?: string
   jiraTicket?: string
   jiraBaseUrl?: string              // e.g. "https://your-org.atlassian.net", returned by backend API
-  lastUpdated?: string
+  updatedAt?: string
   // Register sections
   applicationOverview?: ApplicationOverview
   currentInfrastructure?: CurrentInfrastructure
@@ -242,6 +252,7 @@ export interface Activity {
   time: string
   actor: string
   projectId?: string
+  projectName?: string
 }
 
 export interface OverallStats {

@@ -4,7 +4,6 @@ import {
   mockProjectUsers,
   mockCurrentUser,
   overallStats,
-  recentActivity,
   mockAuditEntries,
   mockWaves,
   mockProductCategoryMap,
@@ -17,6 +16,7 @@ import {
 } from '@/data/mock'
 import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
+import { buildActivityMessage } from '@/utils/activityMessages'
 import type { Wave, JiraJobRequest } from '@/types/wave'
 import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
 import type { BillingBreakdownRecord, BillingRecord, BillingThresholdConfig } from '@/types/finance'
@@ -43,7 +43,6 @@ const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
 const _stats: OverallStats = structuredClone(overallStats)
-const _activity: Activity[] = structuredClone(recentActivity)
 
 export const store = {
   // ─── Projects ──────────────────────────────────────────────────────────────
@@ -265,6 +264,22 @@ export const store = {
   },
 
   getRecentActivity(): Activity[] {
-    return _activity
+    const projectMap = new Map(_projects.map(p => [p.id, p.name]))
+    const allEntries = Object.values(_auditLogs).flat()
+    const sorted = allEntries.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+    return sorted.map(entry => {
+      const { message, type } = buildActivityMessage(entry, projectMap.get(entry.projectId))
+      return {
+        id: entry.id,
+        type,
+        message,
+        time: entry.timestamp,
+        actor: entry.actor.name,
+        projectId: entry.projectId,
+        projectName: projectMap.get(entry.projectId),
+      }
+    })
   },
 }

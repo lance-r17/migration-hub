@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,17 +14,16 @@ class Project(Base, TimestampMixin):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="planning")
-    progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     migration_wave: Mapped[str | None] = mapped_column(String, nullable=True)
-    profile_owner: Mapped[str | None] = mapped_column(String, nullable=True)
+    profile_owner: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)
     jira_ticket: Mapped[str | None] = mapped_column(String, nullable=True)
     jira_base_url: Mapped[str | None] = mapped_column(String, nullable=True)
-    last_updated: Mapped[str | None] = mapped_column(String, nullable=True)
     wave_id: Mapped[str | None] = mapped_column(String, ForeignKey("waves.id"), nullable=True)
     jira_story_key: Mapped[str | None] = mapped_column(String, nullable=True)
     jira_job_status: Mapped[str | None] = mapped_column(String, nullable=True)
     planning: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    survey_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # JSONB section columns
     application_overview: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
@@ -36,6 +36,7 @@ class Project(Base, TimestampMixin):
     jira_subtask_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
+    profile_owner_user: Mapped["User | None"] = relationship("User")
     wave: Mapped["Wave | None"] = relationship("Wave", back_populates="projects")
     cloud_resources: Mapped[list["CloudResource"]] = relationship(
         "CloudResource", back_populates="project", cascade="all, delete-orphan"

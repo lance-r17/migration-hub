@@ -1,25 +1,119 @@
-import { ProgressBar } from '@/components/shared/ProgressBar'
+import { AlertTriangle, ShieldAlert, Lock, Ban } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-export function SecurityHealthWidget() {
+interface SecurityHealthWidgetProps {
+  openCriticalRisksCount: number
+  openCriticalRisksTitles: string[]
+  blockedProjectsCount: number
+  securityResourcesOutOfSyncCount: number
+  activeEmbargosCount: number
+  activeEmbargoNames: string[]
+}
+
+interface MetricRowProps {
+  icon: React.ElementType
+  label: string
+  count: number
+  detail?: string
+  variant: 'danger' | 'warning' | 'neutral'
+}
+
+function MetricRow({ icon: Icon, label, count, detail, variant }: MetricRowProps) {
   return (
-    <div className="bg-muted/50 p-6 rounded-xl flex flex-col justify-between">
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-4 uppercase tracking-widest">Security Health</h3>
-        <div className="p-4 bg-card rounded-lg shadow-sm border border-border">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground">SOC2 Readiness</span>
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">94%</span>
-          </div>
-          <ProgressBar value={94} variant="tertiary" height="h-2" />
-        </div>
+    <div className="flex items-start gap-3 py-2.5">
+      <div className={cn(
+        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5',
+        variant === 'danger' && 'bg-destructive/10',
+        variant === 'warning' && 'bg-amber-100 dark:bg-amber-900/30',
+        variant === 'neutral' && 'bg-muted',
+      )}>
+        <Icon size={14} className={cn(
+          variant === 'danger' && 'text-destructive',
+          variant === 'warning' && 'text-amber-700 dark:text-amber-300',
+          variant === 'neutral' && 'text-muted-foreground',
+        )} />
       </div>
-      <div className="mt-8">
-        <p className="text-[10px] text-muted-foreground italic mb-4">
-          "Your migration projects are currently 100% compliant with NIST standards."
-        </p>
-        <button className="w-full py-2 bg-card text-foreground text-xs font-bold rounded-lg border border-border hover:bg-muted transition-colors">
-          View Compliance Report
-        </button>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-medium text-foreground">{label}</span>
+          <span className={cn(
+            'text-sm font-bold tabular-nums',
+            variant === 'danger' && 'text-destructive',
+            variant === 'warning' && 'text-amber-700 dark:text-amber-300',
+            variant === 'neutral' && 'text-muted-foreground',
+          )}>
+            {count}
+          </span>
+        </div>
+        {detail && (
+          <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+            {detail}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function SecurityHealthWidget({
+  openCriticalRisksCount,
+  openCriticalRisksTitles,
+  blockedProjectsCount,
+  securityResourcesOutOfSyncCount,
+  activeEmbargosCount,
+  activeEmbargoNames,
+}: SecurityHealthWidgetProps) {
+  const hasIssues = openCriticalRisksCount > 0 || blockedProjectsCount > 0
+    || securityResourcesOutOfSyncCount > 0 || activeEmbargosCount > 0
+
+  return (
+    <div className="bg-card p-6 rounded-xl border border-border flex flex-col">
+      <h3 className="text-sm font-bold text-foreground mb-4 uppercase tracking-widest">Security Health</h3>
+
+      <div className="flex-1 space-y-1">
+        <MetricRow
+          icon={AlertTriangle}
+          label="Open Critical Risks"
+          count={openCriticalRisksCount}
+          detail={openCriticalRisksTitles.join(', ') || 'All clear'}
+          variant={openCriticalRisksCount > 0 ? 'danger' : 'neutral'}
+        />
+        <div className="border-t border-border/50" />
+        <MetricRow
+          icon={Ban}
+          label="Active Embargos"
+          count={activeEmbargosCount}
+          detail={activeEmbargoNames.join(', ') || 'None active'}
+          variant={activeEmbargosCount > 0 ? 'warning' : 'neutral'}
+        />
+        <div className="border-t border-border/50" />
+        <MetricRow
+          icon={ShieldAlert}
+          label="Blocked Projects"
+          count={blockedProjectsCount}
+          detail={blockedProjectsCount > 0 ? 'Migration halted' : 'No blockers'}
+          variant={blockedProjectsCount > 0 ? 'warning' : 'neutral'}
+        />
+        <div className="border-t border-border/50" />
+        <MetricRow
+          icon={Lock}
+          label="Security Resources Out of Sync"
+          count={securityResourcesOutOfSyncCount}
+          detail={securityResourcesOutOfSyncCount > 0 ? 'WAF / Firewall / KMS' : 'All synced'}
+          variant={securityResourcesOutOfSyncCount > 0 ? 'warning' : 'neutral'}
+        />
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-border">
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            'w-2 h-2 rounded-full',
+            hasIssues ? 'bg-destructive' : 'bg-emerald-500',
+          )} />
+          <p className="text-xs font-medium text-foreground">
+            {hasIssues ? 'Attention required' : 'All security checks passing'}
+          </p>
+        </div>
       </div>
     </div>
   )

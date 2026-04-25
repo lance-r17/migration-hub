@@ -3,13 +3,11 @@
     "id": "PRJ-2024-ALPHA",
     "name": "Alpha Core ERP Migration",
     "status": "in-progress",
-    "progress": 45,
     "description": "Modernizing the legacy SAP environment to Azure Cloud Infrastructure with Zero-Downtime goals.",
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "jira_base_url": "https://your-org.atlassian.net",
-    "profile_owner": "Dan Brown, Platform Engineering",
-    "last_updated": "21 MAR 2026",
+    "profile_owner": "u2",
     "application_overview": {
       "applicationName": "Alpha Core ERP",
       "shortName": "ALPHA-ERP",
@@ -151,35 +149,6 @@
       ],
       "architectureDiagram": "https://confluence.corp.com/display/ARCH/ERP-3AZ-Target-Architecture"
     },
-    "approvals": [
-      {
-        "id": "a1",
-        "role": "technical_lead",
-        "approver": "Dan Brown",
-        "status": "approved",
-        "timestamp": "Oct 24, 09:12 AM",
-        "icon": "Wrench",
-        "user_id": "u2"
-      },
-      {
-        "id": "a2",
-        "role": "business_owner",
-        "approver": "Sarah Jenkins",
-        "status": "approved",
-        "timestamp": "Mar 22, 02:30 PM",
-        "icon": "CreditCard",
-        "user_id": "u1"
-      },
-      {
-        "id": "a3",
-        "role": "platform_migration_lead",
-        "approver": null,
-        "status": "pending",
-        "timestamp": null,
-        "icon": "CloudCheck",
-        "user_id": "u-current"
-      }
-    ],
     "risks": [
       {
         "id": "r1",
@@ -451,14 +420,12 @@
     "id": "M-11029",
     "name": "User Auth Legacy",
     "status": "signed-off",
-    "progress": 100,
     "description": "Completed migration of the legacy Node.js OAuth2/JWT authentication service to an AZ-resilient ECS Fargate deployment with Multi-AZ RDS.",
     "migration_wave": "Wave 1",
     "wave_id": "wave-3",
-    "profile_owner": "Frank Miller, Platform Security",
+    "profile_owner": "u6",
     "jira_ticket": "JIRA-1829",
     "jira_base_url": "https://your-org.atlassian.net",
-    "last_updated": "25 OCT 2025",
     "application_overview": {
       "applicationName": "User Auth Legacy",
       "shortName": "auth-svc",
@@ -547,35 +514,6 @@
       "topology3Az": "ECS Fargate service with tasks distributed across AZ-A, AZ-B, AZ-C behind an internal ALB.",
       "dnsIpChanges": "auth.internal.company.com updated to new ALB DNS name."
     },
-    "approvals": [
-      {
-        "id": "a4",
-        "role": "technical_lead",
-        "approver": "Frank Miller",
-        "status": "approved",
-        "timestamp": "Oct 24, 09:12 AM",
-        "icon": "Wrench",
-        "user_id": "u7"
-      },
-      {
-        "id": "a5",
-        "role": "business_owner",
-        "approver": "Eve Davis",
-        "status": "approved",
-        "timestamp": "Oct 24, 14:30 PM",
-        "icon": "CreditCard",
-        "user_id": "u6"
-      },
-      {
-        "id": "a6",
-        "role": "platform_migration_lead",
-        "approver": "R. Kim",
-        "status": "approved",
-        "timestamp": "Oct 25, 10:00 AM",
-        "icon": "CloudCheck",
-        "user_id": "u-current"
-      }
-    ],
     "risks": [],
     "resources": [
       {
@@ -690,37 +628,7 @@
     "id": "M-88271",
     "name": "Data Warehouse Sync",
     "status": "planning",
-    "progress": 12,
     "jira_base_url": "https://your-org.atlassian.net",
-    "approvals": [
-      {
-        "id": "a7",
-        "role": "technical_lead",
-        "approver": null,
-        "status": "pending",
-        "timestamp": null,
-        "icon": "Wrench",
-        "user_id": null
-      },
-      {
-        "id": "a8",
-        "role": "business_owner",
-        "approver": null,
-        "status": "pending",
-        "timestamp": null,
-        "icon": "CreditCard",
-        "user_id": null
-      },
-      {
-        "id": "a9",
-        "role": "platform_migration_lead",
-        "approver": null,
-        "status": "pending",
-        "timestamp": null,
-        "icon": "CloudCheck",
-        "user_id": "u-current"
-      }
-    ],
     "risks": [],
     "resources": [],
     "project_users": [
@@ -732,13 +640,11 @@
     "id": "M-77122",
     "name": "Global Edge DNS",
     "status": "blocked",
-    "progress": 88,
     "description": "Large-scale DNS infrastructure migration from on-prem BIND clusters to AWS Route 53 with Anycast edge. APAC and US regions live; EU cutover blocked on propagation TTL issue.",
     "migration_wave": "Wave 2",
     "wave_id": "wave-1",
     "jira_base_url": "https://your-org.atlassian.net",
-    "profile_owner": "Henry Wilson, Network Operations",
-    "last_updated": "20 MAR 2026",
+    "profile_owner": "u9",
     "application_overview": {
       "applicationName": "Global Edge DNS",
       "shortName": "edge-dns",
@@ -868,35 +774,6 @@
         "CloudFront (edge resolution)"
       ]
     },
-    "approvals": [
-      {
-        "id": "a10",
-        "role": "technical_lead",
-        "approver": "Irene Cho",
-        "status": "approved",
-        "timestamp": "Oct 20, 11:00 AM",
-        "icon": "Wrench",
-        "user_id": "u10"
-      },
-      {
-        "id": "a11",
-        "role": "business_owner",
-        "approver": null,
-        "status": "waiting",
-        "timestamp": null,
-        "icon": "CreditCard",
-        "user_id": "u12"
-      },
-      {
-        "id": "a12",
-        "role": "platform_migration_lead",
-        "approver": null,
-        "status": "pending",
-        "timestamp": null,
-        "icon": "CloudCheck",
-        "user_id": "u-current"
-      }
-    ],
     "risks": [
       {
         "id": "r3",

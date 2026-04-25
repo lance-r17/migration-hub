@@ -180,6 +180,7 @@ function classifyResourceEvents(
     name: 'Name', category: 'Category', existingStatus: 'Existing Status',
     targetStatus: 'Target Status', syncStatus: 'Sync Status', specs: 'Specs',
     quantity: 'Quantity', availabilityZones: 'Availability Zones', needMigration: 'In Migration Scope',
+    migrationCompleted: 'Migration Completed',
   }
 
   for (const [id, next] of nextMap) {

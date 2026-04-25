@@ -2,6 +2,7 @@ import { store } from '@/data/store'
 import { USE_MOCK, delay, apiClient } from './client'
 import type {
   Project,
+  StageProgress,
   ProjectPlanning,
   TeamMember,
   ApplicationOverview,
@@ -22,6 +23,8 @@ const ENDPOINTS = {
   project: (id: string) => `/api/v1/projects/${id}`,
   section: (id: string, key: string) => `/api/v1/projects/${id}/sections/${key}`,
   planning: (id: string) => `/api/v1/projects/${id}/planning`,
+  surveySubmitted: (id: string) => `/api/v1/projects/${id}/survey-submitted`,
+  resourceSyncComplete: (projectId: string, resourceId: string) => `/api/v1/projects/${projectId}/resources/${resourceId}/sync-complete`,
 }
 
 // ─── Raw API shapes (snake_case, matching backend schemas) ────────────────────
@@ -38,6 +41,7 @@ interface CloudResourceApi {
   target_resource_id: string | null
   sync_status: string
   need_migration: boolean
+  migration_completed: boolean
   jira_subtask_key: string | null
 }
 
@@ -68,13 +72,15 @@ interface ProjectListItemApi {
   name: string
   status: string
   progress: number
+  stage_progress: StageProgress | null
+  survey_submitted_at: string | null
   team: TeamMember[]
   description: string | null
   migration_wave: string | null
   profile_owner: string | null
   jira_ticket: string | null
   jira_base_url: string | null
-  last_updated: string | null
+  updated_at: string | null
   wave_id: string | null
   jira_story_key: string | null
   jira_job_status: string | null
@@ -111,6 +117,7 @@ function mapResource(r: CloudResourceApi): CloudResource {
     targetResourceId: r.target_resource_id ?? undefined,
     syncStatus: r.sync_status as CloudResource['syncStatus'],
     needMigration: r.need_migration,
+    migrationCompleted: r.migration_completed,
     jiraSubtaskKey: r.jira_subtask_key ?? undefined,
   }
 }
@@ -151,11 +158,13 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     profileOwner: raw.profile_owner ?? undefined,
     jiraTicket: raw.jira_ticket ?? undefined,
     jiraBaseUrl: raw.jira_base_url ?? undefined,
-    lastUpdated: raw.last_updated ?? undefined,
+    updatedAt: raw.updated_at ?? undefined,
     waveId: raw.wave_id ?? undefined,
     jiraStoryKey: raw.jira_story_key ?? undefined,
     jiraJobStatus: raw.jira_job_status as Project['jiraJobStatus'] ?? undefined,
     planning: raw.planning ?? undefined,
+    surveySubmittedAt: raw.survey_submitted_at ?? undefined,
+    stageProgress: raw.stage_progress ?? undefined,
     migrationConstraints: raw.migration_constraints ?? undefined,
     risks: [],
     approvals: (raw.approvals ?? []).map(mapApproval),
@@ -227,5 +236,45 @@ export async function updatePlanning(
     return store.updateProject(id, 'planning' as keyof Project, planning as Project[keyof Project])
   }
   const raw = await apiClient.patch<ProjectApiResponse>(ENDPOINTS.planning(id), { planning })
+  return fromApi(raw)
+}
+
+export async function submitSurvey(id: string): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const now = new Date().toISOString()
+    store.updateProject(id, 'surveySubmittedAt', now)
+    const p = store.getProject(id)!
+    const current = p.stageProgress ?? { setup: 0, survey: 0, signoff: 0, migration: 0 }
+    store.updateProject(id, 'stageProgress', { ...current, survey: 100 })
+    return store.getProject(id)!
+  }
+  const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.surveySubmitted(id), {})
+  return fromApi(raw)
+}
+
+export async function markResourceSyncComplete(
+  projectId: string,
+  resourceId: string,
+): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const p = store.getProject(projectId)
+    if (!p) throw new Error('Project not found')
+    const resources = (p.currentInfrastructure?.resources ?? []).map(r =>
+      r.id === resourceId
+        ? { ...r, syncStatus: 'synced' as const, migrationCompleted: true }
+        : r
+    )
+    store.updateProject(projectId, 'currentInfrastructure', {
+      ...(p.currentInfrastructure ?? { resources: [] }),
+      resources,
+    })
+    return store.getProject(projectId)!
+  }
+  const raw = await apiClient.post<ProjectApiResponse>(
+    ENDPOINTS.resourceSyncComplete(projectId, resourceId),
+    {},
+  )
   return fromApi(raw)
 }

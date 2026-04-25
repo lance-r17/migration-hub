@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -26,11 +27,13 @@ class ProjectListItem(BaseModel):
     profile_owner: str | None = None
     jira_ticket: str | None = None
     jira_base_url: str | None = None
-    last_updated: str | None = None
+    updated_at: str | None = None
     wave_id: str | None = None
     jira_story_key: str | None = None
     jira_job_status: str | None = None
     planning: dict[str, Any] | None = None
+    survey_submitted_at: datetime | None = None
+    stage_progress: dict[str, int] | None = None
     team: list[dict[str, Any]] = []
     migration_constraints: dict[str, Any] | None = None
     approvals: list[ApprovalOut] = []
@@ -49,11 +52,13 @@ class ProjectDetail(BaseModel):
     profile_owner: str | None = None
     jira_ticket: str | None = None
     jira_base_url: str | None = None
-    last_updated: str | None = None
+    updated_at: str | None = None
     wave_id: str | None = None
     jira_story_key: str | None = None
     jira_job_status: str | None = None
     planning: dict[str, Any] | None = None
+    survey_submitted_at: datetime | None = None
+    stage_progress: dict[str, int] | None = None
     jira_subtask_config: dict[str, Any] | None = None
     team: list[dict[str, Any]] = []
     application_overview: dict[str, Any] | None = None
@@ -72,7 +77,6 @@ class ProjectCreate(BaseModel):
     id: str | None = None
     name: str
     status: str = "planning"
-    progress: int = 0
     description: str | None = None
     wave_id: str | None = None
 
@@ -80,13 +84,11 @@ class ProjectCreate(BaseModel):
 class ProjectPatch(BaseModel):
     name: str | None = None
     status: str | None = None
-    progress: int | None = None
     description: str | None = None
     migration_wave: str | None = None
     profile_owner: str | None = None
     jira_ticket: str | None = None
     jira_base_url: str | None = None
-    last_updated: str | None = None
     wave_id: str | None = None
     jira_story_key: str | None = None
     jira_job_status: str | None = None

@@ -17,6 +17,7 @@ class CloudResourceOut(BaseModel):
     target_resource_id: str | None = None
     sync_status: str
     need_migration: bool = True
+    migration_completed: bool = False
     jira_subtask_key: str | None = None
 
 

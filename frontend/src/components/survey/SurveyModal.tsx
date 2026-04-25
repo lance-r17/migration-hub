@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { useSurveyFieldDefs } from '@/hooks/use-survey'
+import { submitSurvey } from '@/services/projects'
 import { MigrationWindowPicker } from '@/components/shared/MigrationWindowPicker'
 import type { SurveyConfig, SurveyQuestion, SurveyFieldDef, ResourceSurveyConfig, ResourceQuestionDef } from '@/types/survey'
 import type { Project, DependencyEntry, CloudResource, ResourceCategory } from '@/types'
@@ -18,6 +19,7 @@ interface SurveyModalProps {
   surveyConfig: SurveyConfig
   project: Project
   onSave: <K extends keyof Project>(key: K, value: Project[K]) => Promise<void>
+  onSubmitted?: () => void | Promise<void>
   resourceSurveyConfig?: ResourceSurveyConfig
   getCategoryForProduct?: (product?: string) => ResourceCategory
 }
@@ -534,7 +536,7 @@ function computeResourceSteps(
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
 export function SurveyModal({
-  open, onClose, surveyConfig, project, onSave, resourceSurveyConfig, getCategoryForProduct,
+  open, onClose, surveyConfig, project, onSave, onSubmitted, resourceSurveyConfig, getCategoryForProduct,
 }: SurveyModalProps) {
   const { getFieldById } = useSurveyFieldDefs()
   const orderedQuestions = [...surveyConfig.questions].sort((a, b) => a.order - b.order)
@@ -752,11 +754,13 @@ export function SurveyModal({
         }
       }
 
+      await submitSurvey(project.id)
+      await onSubmitted?.()
       setCompleted(true)
     } finally {
       setSubmitting(false)
     }
-  }, [answers, resourceAnswers, project, onSave, resources, getCategoryForProduct])
+  }, [answers, resourceAnswers, project, onSave, resources, getCategoryForProduct, onSubmitted])
 
   const goNext = useCallback(() => {
     if (isLast) void handleSubmit()

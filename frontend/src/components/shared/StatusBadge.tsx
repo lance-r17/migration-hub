@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import type { ProjectStatus } from '@/types'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import type { ProjectStatus, StageProgress } from '@/types'
 
 const statusConfig: Record<ProjectStatus, { label: string; className: string }> = {
   'migrating':   { label: 'Migrating',   className: 'bg-secondary text-secondary-foreground hover:bg-secondary/80' },
@@ -20,20 +21,63 @@ const statusVariant: Record<ProjectStatus, 'secondary' | 'destructive' | 'outlin
   'completed':   'outline',
 }
 
+function getStatusDetail(status: ProjectStatus, stageProgress?: StageProgress): string | undefined {
+  if (!stageProgress) return undefined
+
+  switch (status) {
+    case 'planning':
+      return stageProgress.setup === 0 ? 'Awaiting setup' : 'Setup in progress'
+    case 'in-progress': {
+      if (stageProgress.setup < 100) return 'Awaiting setup'
+      if (stageProgress.survey < 100) return 'Awaiting survey'
+      if (stageProgress.signoff < 100) return 'Awaiting sign-off'
+      return 'In progress'
+    }
+    case 'signed-off':
+      return 'Ready for migration'
+    case 'migrating':
+      return `Migration ${stageProgress.migration}%`
+    case 'completed':
+      return 'All done'
+    case 'blocked':
+      return 'Needs attention'
+    default:
+      return undefined
+  }
+}
+
 interface StatusBadgeProps {
   status: ProjectStatus
+  stageProgress?: StageProgress
   className?: string
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, stageProgress, className }: StatusBadgeProps) {
   const { label, className: colorClass } = statusConfig[status]
   const variant = statusVariant[status]
-  return (
+  const detail = getStatusDetail(status, stageProgress)
+
+  const badge = (
     <Badge
       variant={variant}
       className={cn('text-[10px] font-bold uppercase tracking-wider', colorClass, className)}
     >
       {label}
     </Badge>
+  )
+
+  if (!detail) {
+    return badge
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {badge}
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {detail}
+      </TooltipContent>
+    </Tooltip>
   )
 }
