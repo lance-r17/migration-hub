@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DollarSign, Paperclip, Trash2, Upload, FileText } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { SectionEditDrawer } from '@/components/drawers/SectionEditDrawer'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { getBillingThresholdConfig } from '@/services/billingConfig'
 import { uploadAttachment, getAttachments, deleteAttachment } from '@/services/attachments'
 import type { MigrationEffortEstimation } from '@/types'
@@ -21,6 +23,7 @@ export function MigrationEffortEstimationSection({ data, projectId, onSave }: Pr
   const [editing, setEditing] = useState(false)
   const [currency, setCurrency] = useState('CNY')
   const [draft, setDraft] = useState<MigrationEffortEstimation>(data ?? {})
+  const [mode, setMode] = useState<'number' | 'tbc'>('number')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [uploading, setUploading] = useState(false)
 
@@ -37,7 +40,9 @@ export function MigrationEffortEstimationSection({ data, projectId, onSave }: Pr
 
   useEffect(() => {
     if (editing) {
-      setDraft(data ?? {})
+      const initial = data ?? {}
+      setDraft(initial)
+      setMode(initial.effortEstimate?.toLowerCase() === 'tbc' ? 'tbc' : 'number')
       loadAttachments()
     }
   }, [editing, data])
@@ -95,7 +100,29 @@ export function MigrationEffortEstimationSection({ data, projectId, onSave }: Pr
     }))
   }
 
+  const handleModeChange = (value: 'number' | 'tbc') => {
+    if (!value) return
+    setMode(value)
+    if (value === 'tbc') {
+      setDraft(prev => ({ ...prev, effortEstimate: 'tbc' }))
+    } else {
+      setDraft(prev => ({
+        ...prev,
+        effortEstimate: prev.effortEstimate?.toLowerCase() === 'tbc' ? '' : prev.effortEstimate,
+      }))
+    }
+  }
+
+  const validationError = useMemo(() => {
+    if (mode === 'tbc' && !draft.notes?.trim()) {
+      return 'Notes are required when Effort Estimate is TBC.'
+    }
+    return null
+  }, [mode, draft.notes])
+
   const handleSave = async () => {
+    if (validationError) return
+
     const originalIds = new Set(data?.attachmentIds ?? [])
     const currentIds = new Set(draft.attachmentIds ?? [])
     const removedIds = [...originalIds].filter(id => !currentIds.has(id))
@@ -116,6 +143,7 @@ export function MigrationEffortEstimationSection({ data, projectId, onSave }: Pr
 
   const effortDisplay = useMemo(() => {
     if (!data?.effortEstimate) return null
+    if (data.effortEstimate.toLowerCase() === 'tbc') return 'TBC'
     return `${data.effortEstimate}K ${currency}`
   }, [data, currency])
 
@@ -123,6 +151,8 @@ export function MigrationEffortEstimationSection({ data, projectId, onSave }: Pr
     const ids = new Set(data?.attachmentIds ?? [])
     return attachments.filter(a => ids.has(a.id))
   }, [attachments, data])
+
+  const notesInvalid = mode === 'tbc' && !draft.notes?.trim()
 
   return (
     <div>
@@ -180,27 +210,54 @@ export function MigrationEffortEstimationSection({ data, projectId, onSave }: Pr
           title="Migration Effort Estimation"
           description="Provide your best current estimate for this project's migration effort and cost."
           onSave={handleSave}
+          saveDisabled={!!validationError}
         >
           <FieldGroup>
             <Field>
               <FieldLabel>Effort Estimate ({currency}K)</FieldLabel>
-              <FieldDescription>Enter a numeric value in thousands. If unknown, enter TBC and explain in Notes.</FieldDescription>
+              <FieldDescription>Enter a numeric value in thousands, or select TBC if the estimate is not yet known.</FieldDescription>
+              <ToggleGroup
+                type="single"
+                value={mode}
+                onValueChange={(v) => handleModeChange(v as 'number' | 'tbc')}
+                variant="outline"
+                size="sm"
+                spacing={0}
+                className="mt-1"
+              >
+                <ToggleGroupItem value="number">Number</ToggleGroupItem>
+                <ToggleGroupItem value="tbc">TBC</ToggleGroupItem>
+              </ToggleGroup>
               <Input
                 value={draft.effortEstimate ?? ''}
                 onChange={e => setDraft(prev => ({ ...prev, effortEstimate: e.target.value }))}
-                placeholder="e.g. 150"
+                placeholder={mode === 'tbc' ? 'TBC' : 'e.g. 150'}
+                disabled={mode === 'tbc'}
+                className="mt-2"
               />
             </Field>
 
             <Field>
-              <FieldLabel>Notes (Breakdown & Rationale)</FieldLabel>
+              <FieldLabel>
+                Notes (Breakdown & Rationale)
+                {mode === 'tbc' && <span className="text-destructive ml-1">*</span>}
+              </FieldLabel>
               <FieldDescription>Prioritise a clear breakdown and rationale: scope, key assumptions, exclusions, risks and any vendor quotes.</FieldDescription>
               <textarea
                 value={draft.notes ?? ''}
                 onChange={e => setDraft(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Enter notes..."
-                className="min-h-[120px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-y"
+                aria-invalid={notesInvalid || undefined}
+                className={cn(
+                  "min-h-[120px] w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-y",
+                  notesInvalid
+                    ? "border-destructive ring-3 ring-destructive/20"
+                    : "border-input"
+                )}
               />
+              {notesInvalid && (
+                <p className="text-sm text-destructive">{validationError}</p>
+              )}
             </Field>
 
             <Field>

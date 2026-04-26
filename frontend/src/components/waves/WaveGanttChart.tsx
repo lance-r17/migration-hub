@@ -180,7 +180,11 @@ function EffortCell({ projectId, estimation }: { projectId: string; estimation?:
     setLoaded(true)
   }, [loaded, projectId, estimation])
 
-  const effortText = estimation?.effortEstimate ? `${estimation.effortEstimate}K` : '—'
+  const effortText = estimation?.effortEstimate
+    ? estimation.effortEstimate.toLowerCase() === 'tbc'
+      ? 'TBC'
+      : `${estimation.effortEstimate}K`
+    : '—'
   const hasTooltip = estimation && (estimation.notes || estimation.attachmentIds?.length)
 
   if (!hasTooltip) return <span>{effortText}</span>

@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, ClipboardList, Plus, CalendarIcon, Server, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
@@ -350,6 +351,109 @@ function QuestionInput({
   }
 }
 
+// ─── Combined effort estimate input (estimate + notes on one slide) ───────────
+
+function EffortEstimateSurveyInput({
+  estimateValue,
+  onEstimateChange,
+  notesValue,
+  onNotesChange,
+  notesQuestionText,
+  notesHintText,
+  attachmentValue,
+  onAttachmentChange,
+  onRemove,
+  projectId,
+}: {
+  estimateValue: AnswerValue
+  onEstimateChange: (v: AnswerValue) => void
+  notesValue: AnswerValue
+  onNotesChange: (v: AnswerValue) => void
+  notesQuestionText: string
+  notesHintText?: string
+  attachmentValue?: string[]
+  onAttachmentChange?: (ids: string[]) => void
+  onRemove?: (id: string) => void
+  projectId: string
+}) {
+  const [mode, setMode] = useState<'number' | 'tbc'>(
+    ((estimateValue as string) ?? '').toLowerCase() === 'tbc' ? 'tbc' : 'number'
+  )
+
+  useEffect(() => {
+    const val = (estimateValue as string) ?? ''
+    setMode(val.toLowerCase() === 'tbc' ? 'tbc' : 'number')
+  }, [estimateValue])
+
+  const handleModeChange = (value: 'number' | 'tbc') => {
+    if (!value) return
+    setMode(value)
+    if (value === 'tbc') {
+      onEstimateChange('tbc')
+    } else {
+      onEstimateChange('')
+    }
+  }
+
+  const notesInvalid = mode === 'tbc' && (!notesValue || (notesValue as string).trim() === '')
+
+  return (
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <ToggleGroup
+          type="single"
+          value={mode}
+          onValueChange={(v) => handleModeChange(v as 'number' | 'tbc')}
+          variant="outline"
+          size="sm"
+          spacing={0}
+        >
+          <ToggleGroupItem value="number">Number</ToggleGroupItem>
+          <ToggleGroupItem value="tbc">TBC</ToggleGroupItem>
+        </ToggleGroup>
+        <Input
+          value={(estimateValue as string) ?? ''}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onEstimateChange(e.target.value)}
+          placeholder={mode === 'tbc' ? 'TBC' : 'e.g. 150'}
+          disabled={mode === 'tbc'}
+          className="text-base h-12 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
+        />
+      </div>
+
+      <div className="space-y-4 border-t border-border pt-6">
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold leading-snug">
+            {notesQuestionText}
+            {mode === 'tbc' && <span className="text-destructive ml-1 text-sm align-super">*</span>}
+          </h3>
+          {notesHintText && (
+            <p className="text-sm text-muted-foreground leading-relaxed">{notesHintText}</p>
+          )}
+        </div>
+        <textarea
+          value={(notesValue as string) ?? ''}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onNotesChange(e.target.value)}
+          placeholder="Type your answer…"
+          rows={4}
+          className={cn(
+            textareaClass,
+            notesInvalid && 'border-destructive focus-visible:border-destructive'
+          )}
+        />
+        {notesInvalid && (
+          <p className="text-sm text-destructive">Notes are required when Effort Estimate is TBC.</p>
+        )}
+        <SurveyFileUpload
+          projectId={projectId}
+          value={attachmentValue ?? []}
+          onChange={onAttachmentChange ?? (() => {})}
+          onRemove={onRemove}
+        />
+      </div>
+    </div>
+  )
+}
+
 // ─── Resource question input ──────────────────────────────────────────────────
 
 function ResourceQuestionInput({
@@ -574,6 +678,8 @@ export function SurveyModal({
 }: SurveyModalProps) {
   const { getFieldById } = useSurveyFieldDefs()
   const orderedQuestions = [...surveyConfig.questions].sort((a, b) => a.order - b.order)
+  // effort__notes is rendered together with effort__estimate on one slide
+  const displayQuestions = orderedQuestions.filter(q => q.fieldId !== 'effort__notes')
   const resources = project.currentInfrastructure?.resources ?? []
 
   // Compute resource steps (stable reference while modal is open)
@@ -584,12 +690,12 @@ export function SurveyModal({
   // Survey structure: Welcome (0) -> App Questions -> Transition -> Resource Steps
   const welcomeSlideIndex = 0
   const appQuestionsStartIndex = 1
-  const appQuestionsEndIndex = orderedQuestions.length // (inclusive, e.g. if 3 questions: 1, 2, 3)
+  const appQuestionsEndIndex = displayQuestions.length // (inclusive, e.g. if 3 questions: 1, 2, 3)
 
   // Transition slide sits between app questions and resource steps
   const hasTransitionSlide = resourceSteps.length > 0
-  const transitionSlideIndex = orderedQuestions.length + 1
-  const totalSteps = 1 + orderedQuestions.length + (hasTransitionSlide ? 1 : 0) + resourceSteps.length
+  const transitionSlideIndex = displayQuestions.length + 1
+  const totalSteps = 1 + displayQuestions.length + (hasTransitionSlide ? 1 : 0) + resourceSteps.length
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Map<string, AnswerValue>>(new Map())
@@ -606,7 +712,7 @@ export function SurveyModal({
   const isWelcomeSlide = currentIndex === welcomeSlideIndex
   const isMainStep = currentIndex >= appQuestionsStartIndex && currentIndex <= appQuestionsEndIndex
   const isTransitionSlide = hasTransitionSlide && currentIndex === transitionSlideIndex
-  const resourceStepIndex = currentIndex - (orderedQuestions.length + 1 + (hasTransitionSlide ? 1 : 0))
+  const resourceStepIndex = currentIndex - (displayQuestions.length + 1 + (hasTransitionSlide ? 1 : 0))
   const currentResourceStep = (!isWelcomeSlide && !isMainStep && !isTransitionSlide) ? resourceSteps[resourceStepIndex] : undefined
 
   // Reset + pre-fill when opened
@@ -674,11 +780,24 @@ export function SurveyModal({
 
   // ─── App question state ─────────────────────────────────────────────────────
 
-  const currentQuestion = isMainStep ? orderedQuestions[currentIndex - 1] : undefined
+  const currentQuestion = isMainStep ? displayQuestions[currentIndex - 1] : undefined
   const currentAnswer = currentQuestion ? answers.get(currentQuestion.fieldId) : undefined
   const isAppAnswered = currentAnswer !== undefined && currentAnswer !== '' &&
     !(Array.isArray(currentAnswer) && currentAnswer.length === 0)
-  const appCanAdvance = !currentQuestion?.required || isAppAnswered
+
+  // Combined effort slide: notes is required when estimate is TBC
+  const effortNotesAnswer = answers.get('effort__notes')
+  const isEffortSlide = currentQuestion?.fieldId === 'effort__estimate'
+  const isEffortTbc = isEffortSlide && ((currentAnswer as string) ?? '').toLowerCase() === 'tbc'
+  const notesMissing = isEffortTbc && (!effortNotesAnswer || (effortNotesAnswer as string).trim() === '')
+  const appCanAdvance = (() => {
+    if (!currentQuestion?.required) return true
+    if (isEffortSlide) {
+      if (!isAppAnswered) return false
+      return !notesMissing
+    }
+    return isAppAnswered
+  })()
 
   // ─── Resource step state ────────────────────────────────────────────────────
 
@@ -968,25 +1087,59 @@ export function SurveyModal({
                   <p className="text-sm text-muted-foreground leading-relaxed">{currentQuestion.hintText}</p>
                 )}
               </div>
-              <QuestionInput
-                question={currentQuestion}
-                value={currentAnswer}
-                onChange={setAnswer}
-                attachmentValue={currentQuestion ? attachmentAnswers.get(currentQuestion.fieldId) : undefined}
-                onAttachmentChange={(ids) => {
-                  if (!currentQuestion) return
-                  setAttachmentAnswers(prev => {
-                    const next = new Map(prev)
-                    if (ids.length === 0) next.delete(currentQuestion.fieldId)
-                    else next.set(currentQuestion.fieldId, ids)
-                    return next
-                  })
-                }}
-                onRemove={(id) => setRemovedAttachmentIds(prev => new Set(prev).add(id))}
-                autoFocus
-                getFieldById={getFieldById}
-                projectId={project.id}
-              />
+              {currentQuestion.fieldId === 'effort__estimate' ? (
+                (() => {
+                  const notesQuestion = orderedQuestions.find(q => q.fieldId === 'effort__notes')
+                  return (
+                    <EffortEstimateSurveyInput
+                      estimateValue={currentAnswer}
+                      onEstimateChange={setAnswer}
+                      notesValue={answers.get('effort__notes')}
+                      onNotesChange={(v) => {
+                        setAnswers(prev => {
+                          const next = new Map(prev)
+                          if (v === undefined || v === '') next.delete('effort__notes')
+                          else next.set('effort__notes', v)
+                          return next
+                        })
+                      }}
+                      notesQuestionText={notesQuestion?.questionText ?? 'Notes (Breakdown & Rationale)'}
+                      notesHintText={notesQuestion?.hintText}
+                      attachmentValue={attachmentAnswers.get('effort__notes')}
+                      onAttachmentChange={(ids) => {
+                        setAttachmentAnswers(prev => {
+                          const next = new Map(prev)
+                          if (ids.length === 0) next.delete('effort__notes')
+                          else next.set('effort__notes', ids)
+                          return next
+                        })
+                      }}
+                      onRemove={(id) => setRemovedAttachmentIds(prev => new Set(prev).add(id))}
+                      projectId={project.id}
+                    />
+                  )
+                })()
+              ) : (
+                <QuestionInput
+                  question={currentQuestion}
+                  value={currentAnswer}
+                  onChange={setAnswer}
+                  attachmentValue={currentQuestion ? attachmentAnswers.get(currentQuestion.fieldId) : undefined}
+                  onAttachmentChange={(ids) => {
+                    if (!currentQuestion) return
+                    setAttachmentAnswers(prev => {
+                      const next = new Map(prev)
+                      if (ids.length === 0) next.delete(currentQuestion.fieldId)
+                      else next.set(currentQuestion.fieldId, ids)
+                      return next
+                    })
+                  }}
+                  onRemove={(id) => setRemovedAttachmentIds(prev => new Set(prev).add(id))}
+                  autoFocus
+                  getFieldById={getFieldById}
+                  projectId={project.id}
+                />
+              )}
             </div>
 
           ) : isTransitionSlide ? (

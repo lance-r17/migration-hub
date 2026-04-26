@@ -22,6 +22,7 @@ const textareaClass =
 const INPUT_TYPE_LABELS: Record<string, string> = {
   short_text: 'Short text',
   long_text: 'Long text',
+  long_text_with_upload: 'Long text + upload',
   select: 'Select',
   boolean: 'Yes / No',
   string_array: 'List',
@@ -30,6 +31,8 @@ const INPUT_TYPE_LABELS: Record<string, string> = {
   date: 'Date',
   date_range: 'Date Range',
   checkbox_select: 'Checkboxes',
+  file_upload: 'File upload',
+  effort_estimate: 'Effort estimate',
 }
 
 const RESOURCE_INPUT_TYPES: { value: ResourceSurveyInputType; label: string }[] = [
@@ -97,12 +100,30 @@ function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }:
       required: true,
       order: questions.length,
     }
-    setQuestions(prev => [...prev, newQuestion])
+    setQuestions(prev => {
+      const next = [...prev, newQuestion]
+      if (fieldId === 'effort__estimate') {
+        const notesDef = getFieldById('effort__notes')
+        if (notesDef) {
+          next.push({
+            fieldId: notesDef.id,
+            questionText: notesDef.defaultQuestion,
+            hintText: notesDef.defaultHint,
+            required: true,
+            order: next.length,
+          })
+        }
+      }
+      return next.map((q, i) => ({ ...q, order: i }))
+    })
   }
 
   const removeQuestion = (fieldId: string) => {
     setQuestions(prev => {
-      const filtered = prev.filter(q => q.fieldId !== fieldId)
+      const idsToRemove = new Set([fieldId])
+      if (fieldId === 'effort__estimate') idsToRemove.add('effort__notes')
+      if (fieldId === 'effort__notes') idsToRemove.add('effort__estimate')
+      const filtered = prev.filter(q => !idsToRemove.has(q.fieldId))
       return filtered.map((q, i) => ({ ...q, order: i }))
     })
   }
@@ -110,8 +131,23 @@ function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }:
   const moveQuestion = (index: number, direction: 'up' | 'down') => {
     setQuestions(prev => {
       const arr = [...prev]
+      const isEffortPair = arr[index]?.fieldId === 'effort__estimate'
+      if (isEffortPair) {
+        if (direction === 'up' && index === 0) return prev
+        if (direction === 'down' && index >= arr.length - 2) return prev
+        const pair = arr.splice(index, 2)
+        const insertAt = direction === 'up' ? index - 1 : index
+        arr.splice(insertAt, 0, ...pair)
+        return arr.map((q, i) => ({ ...q, order: i }))
+      }
       const swapIdx = direction === 'up' ? index - 1 : index + 1
       if (swapIdx < 0 || swapIdx >= arr.length) return prev
+      if (arr[swapIdx]?.fieldId === 'effort__notes') {
+        // Moving into the effort pair — swap with the pair instead
+        const pair = arr.splice(swapIdx - 1, 2)
+        arr.splice(index, 0, ...pair)
+        return arr.map((q, i) => ({ ...q, order: i }))
+      }
         ;[arr[index], arr[swapIdx]] = [arr[swapIdx]!, arr[index]!]
       return arr.map((q, i) => ({ ...q, order: i }))
     })
@@ -138,8 +174,16 @@ function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }:
     }
     setQuestions(prev => {
       const arr = [...prev]
+      const draggedIsPair = arr[dragIndex]?.fieldId === 'effort__estimate'
+      if (draggedIsPair) {
+        const pair = arr.splice(dragIndex, 2)
+        const adjustedDrop = dropIndex > dragIndex ? dropIndex - 2 : dropIndex
+        arr.splice(adjustedDrop, 0, ...pair)
+        return arr.map((q, i) => ({ ...q, order: i }))
+      }
       const [removed] = arr.splice(dragIndex, 1)
-      arr.splice(dropIndex, 0, removed!)
+      const adjustedDrop = dropIndex > dragIndex ? dropIndex - 1 : dropIndex
+      arr.splice(adjustedDrop, 0, removed!)
       return arr.map((q, i) => ({ ...q, order: i }))
     })
     dragIndexRef.current = null
@@ -166,6 +210,24 @@ function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }:
       })
     } catch {
       toast.error('Failed to save survey configuration. Please try again.')
+    }
+  }
+
+  // Build render items: merge effort__estimate + effort__notes into one visible card
+  type RenderItem =
+    | { type: 'question'; question: SurveyQuestion; index: number }
+    | { type: 'effort_group'; estimate: SurveyQuestion; notes: SurveyQuestion; index: number }
+
+  const renderItems: RenderItem[] = []
+  let i = 0
+  while (i < questions.length) {
+    const q = questions[i]
+    if (q.fieldId === 'effort__estimate' && questions[i + 1]?.fieldId === 'effort__notes') {
+      renderItems.push({ type: 'effort_group', estimate: q, notes: questions[i + 1], index: i })
+      i += 2
+    } else {
+      renderItems.push({ type: 'question', question: q, index: i })
+      i += 1
     }
   }
 
@@ -211,7 +273,10 @@ function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }:
                 </p>
                 <div className="space-y-1">
                   {fields.map(def => {
-                    const isAdded = selectedFieldIds.has(def.id)
+                    if (def.id === 'effort__notes') return null
+                    const isAdded = selectedFieldIds.has(def.id) ||
+                      (def.id === 'effort__estimate' && selectedFieldIds.has('effort__notes'))
+                    const label = def.id === 'effort__estimate' ? 'Migration Effort Estimation' : def.label
                     return (
                       <button
                         key={def.id}
@@ -224,7 +289,7 @@ function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }:
                             : 'hover:bg-primary/5 hover:text-primary cursor-pointer')
                         }
                       >
-                        <span className="truncate">{def.label}</span>
+                        <span className="truncate">{label}</span>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
                             {INPUT_TYPE_LABELS[def.inputType]}
@@ -255,24 +320,126 @@ function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }:
               </p>
             </div>
           ) : (
-            questions.map((q, idx) => {
+            renderItems.map((item, dIdx) => {
+              const actualIdx = item.index
+              if (item.type === 'effort_group') {
+                const estimateDef = getFieldById(item.estimate.fieldId) ?? fieldDefs[0]
+                return (
+                  <Card
+                    key="effort__estimate"
+                    draggable
+                    onDragStart={() => handleDragStart(actualIdx)}
+                    onDragOver={(e) => handleDragOver(e, actualIdx)}
+                    onDrop={(e) => handleDrop(e, actualIdx)}
+                    onDragEnd={handleDragEnd}
+                    className={dragOverIndex === actualIdx ? 'ring-2 ring-primary/50 ring-offset-1' : ''}
+                  >
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex flex-col items-center gap-1 pt-1 shrink-0 cursor-grab active:cursor-grabbing">
+                          <GripVertical size={14} className="text-muted-foreground/60" />
+                          <span className="text-xs font-mono text-muted-foreground/60 leading-none">{dIdx + 1}</span>
+                        </div>
+                        <div className="flex-1 space-y-3 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              {estimateDef?.sectionLabel} — Migration Effort Estimation
+                            </span>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
+                              {INPUT_TYPE_LABELS[estimateDef?.inputType ?? '']}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">Question (Estimate)</label>
+                            <Input
+                              value={item.estimate.questionText}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                updateQuestion(item.estimate.fieldId, { questionText: e.target.value })
+                              }
+                              placeholder="Enter question text…"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">Hint (Estimate)</label>
+                            <textarea
+                              value={item.estimate.hintText}
+                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                                updateQuestion(item.estimate.fieldId, { hintText: e.target.value })
+                              }
+                              placeholder="e.g. sample answer or guidance…"
+                              className={textareaClass}
+                              rows={2}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">Question (Notes)</label>
+                            <Input
+                              value={item.notes.questionText}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                updateQuestion(item.notes.fieldId, { questionText: e.target.value })
+                              }
+                              placeholder="Enter question text…"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">Hint (Notes)</label>
+                            <textarea
+                              value={item.notes.hintText}
+                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                                updateQuestion(item.notes.fieldId, { hintText: e.target.value })
+                              }
+                              placeholder="e.g. sample answer or guidance…"
+                              className={textareaClass}
+                              rows={2}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Required</span>
+                            <Switch
+                              id="required-effort__estimate"
+                              checked={item.estimate.required}
+                              onCheckedChange={(v) => {
+                                updateQuestion(item.estimate.fieldId, { required: v })
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon-sm" onClick={() => moveQuestion(actualIdx, 'up')} disabled={actualIdx === 0} className="text-muted-foreground hover:text-foreground" title="Move up">
+                            <ChevronUp size={14} />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" onClick={() => moveQuestion(actualIdx, 'down')} disabled={actualIdx >= questions.length - 2} className="text-muted-foreground hover:text-foreground" title="Move down">
+                            <ChevronDown size={14} />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" onClick={() => removeQuestion(item.estimate.fieldId)} className="text-muted-foreground hover:text-destructive" title="Remove">
+                            <X size={14} />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              }
+              const q = item.question
               const def = getFieldById(q.fieldId) ?? fieldDefs[0]
               if (!def) return null
               return (
                 <Card
                   key={q.fieldId}
                   draggable
-                  onDragStart={() => handleDragStart(idx)}
-                  onDragOver={(e) => handleDragOver(e, idx)}
-                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragStart={() => handleDragStart(actualIdx)}
+                  onDragOver={(e) => handleDragOver(e, actualIdx)}
+                  onDrop={(e) => handleDrop(e, actualIdx)}
                   onDragEnd={handleDragEnd}
-                  className={dragOverIndex === idx ? 'ring-2 ring-primary/50 ring-offset-1' : ''}
+                  className={dragOverIndex === actualIdx ? 'ring-2 ring-primary/50 ring-offset-1' : ''}
                 >
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-start gap-3">
                       <div className="flex flex-col items-center gap-1 pt-1 shrink-0 cursor-grab active:cursor-grabbing">
                         <GripVertical size={14} className="text-muted-foreground/60" />
-                        <span className="text-xs font-mono text-muted-foreground/60 leading-none">{idx + 1}</span>
+                        <span className="text-xs font-mono text-muted-foreground/60 leading-none">{dIdx + 1}</span>
                       </div>
                       <div className="flex-1 space-y-3 min-w-0">
                         <div className="flex items-center gap-2">
@@ -316,10 +483,10 @@ function ApplicationSurveyTab({ isActive, surveyConfig, loading, saving, save }:
                         </div>
                       </div>
                       <div className="flex flex-col items-center gap-1 shrink-0">
-                        <Button variant="ghost" size="icon-sm" onClick={() => moveQuestion(idx, 'up')} disabled={idx === 0} className="text-muted-foreground hover:text-foreground" title="Move up">
+                        <Button variant="ghost" size="icon-sm" onClick={() => moveQuestion(actualIdx, 'up')} disabled={actualIdx === 0} className="text-muted-foreground hover:text-foreground" title="Move up">
                           <ChevronUp size={14} />
                         </Button>
-                        <Button variant="ghost" size="icon-sm" onClick={() => moveQuestion(idx, 'down')} disabled={idx === questions.length - 1} className="text-muted-foreground hover:text-foreground" title="Move down">
+                        <Button variant="ghost" size="icon-sm" onClick={() => moveQuestion(actualIdx, 'down')} disabled={actualIdx === questions.length - 1} className="text-muted-foreground hover:text-foreground" title="Move down">
                           <ChevronDown size={14} />
                         </Button>
                         <Button variant="ghost" size="icon-sm" onClick={() => removeQuestion(q.fieldId)} className="text-muted-foreground hover:text-destructive" title="Remove">

@@ -1,6 +1,6 @@
 import type { Project, ResourceCategory } from '@/types'
 
-export type SurveyInputType = 'short_text' | 'long_text' | 'long_text_with_upload' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select' | 'file_upload'
+export type SurveyInputType = 'short_text' | 'long_text' | 'long_text_with_upload' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select' | 'file_upload' | 'effort_estimate'
 
 export interface SurveyFieldDef {
   id: string                      // stable unique ID e.g. "appoverview__applicationName"
