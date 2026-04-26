@@ -182,13 +182,15 @@ async def sso_exchange(
             compiled = re.compile(mapping_regex)
             for group in member_of:
                 if compiled.search(group):
-                    matched_roles.append(mapping_role)
+                    # mapping_role may contain multiple comma-separated roles
+                    roles = [r.strip() for r in mapping_role.split(",") if r.strip()]
+                    matched_roles.extend(roles)
                     break  # one match per mapping is enough
 
     # 5. Look up local user or auto-onboard
     user = await user_service.get_by_email(db, email)
     initials = _derive_initials_from_names(given_name, family_name)
-    user_role = ",".join(matched_roles) if matched_roles else None
+    user_role = ",".join(dict.fromkeys(matched_roles)) if matched_roles else None
     if not user:
         logger.info("User not found in database, auto-onboarding: %s (%s)", email, user_id)
         new_user = User(

@@ -38,6 +38,18 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
 
   useEffect(() => { setCurrentPage(0) }, [data])
 
+  const sortedResources = (data?.resources ?? []).slice().sort((a, b) => {
+    const catA = getCategoryForProduct(a.product) ?? ''
+    const catB = getCategoryForProduct(b.product) ?? ''
+    if (catA !== catB) return catA.localeCompare(catB)
+    const prodA = a.product ?? ''
+    const prodB = b.product ?? ''
+    if (prodA !== prodB) return prodA.localeCompare(prodB)
+    const idA = a.resourceId ?? a.id ?? ''
+    const idB = b.resourceId ?? b.id ?? ''
+    return idA.localeCompare(idB)
+  })
+
   return (
     <div>
       <h2 className="mt-8 mb-4 text-2xl font-bold">Current Infrastructure</h2>
@@ -112,7 +124,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                   </tr>
                 </thead>
                 <tbody>
-                  {data.resources.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((resource) => {
+                  {sortedResources.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((resource) => {
                     const inScope = resource.needMigration !== false
                     const isProcessing = jiraJobStatus === 'pending' || jiraJobStatus === 'processing'
                     const specsEntries = resource.specs ? Object.entries(resource.specs) : []
@@ -204,10 +216,10 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                   })}
                 </tbody>
               </table>
-              {data.resources.length > PAGE_SIZE && (
+              {sortedResources.length > PAGE_SIZE && (
                 <div className="flex items-center justify-between pt-3 text-sm text-muted-foreground">
                   <span>
-                    Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, data.resources.length)} of {data.resources.length}
+                    Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, sortedResources.length)} of {sortedResources.length}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
