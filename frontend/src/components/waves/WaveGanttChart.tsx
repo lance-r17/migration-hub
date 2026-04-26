@@ -1694,12 +1694,29 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                   {/* Status col */}
                   <div className={cn(cellClass, 'justify-center')}>
                     {statusMeta && (
-                      <span
-                        className="py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent"
-                        style={{ background: statusMeta.bg, color: statusMeta.color }}
-                      >
-                        {p.status}
-                      </span>
+                      p.status === 'blocked' && p.blockedReason ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent cursor-help"
+                              style={{ background: statusMeta.bg, color: statusMeta.color }}
+                            >
+                              {p.status}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">
+                            <p className="font-semibold mb-0.5">Blocked reason</p>
+                            <p className="whitespace-pre-wrap">{p.blockedReason}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <span
+                          className="py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent"
+                          style={{ background: statusMeta.bg, color: statusMeta.color }}
+                        >
+                          {p.status}
+                        </span>
+                      )
                     )}
                   </div>
                   {/* Labels col */}

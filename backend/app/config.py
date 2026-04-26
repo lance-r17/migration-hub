@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def _resolve_ca_bundle() -> str | bool:
     """Return the CA bundle path from standard env vars, or True for system defaults."""
-    for key in ("SSL_CERT_FILE", "REQUEST_CA_BUNDLE", "CURL_CA_BUNDLE"):
+    for key in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"):
         path = os.environ.get(key)
         if path:
             return path

@@ -25,6 +25,15 @@ import { useSurveyConfig, useResourceSurveyConfig } from '@/hooks/use-survey'
 import { useProductCategoryMap } from '@/hooks/use-product-category'
 import { useEmbargos } from '@/hooks/use-embargos'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -37,7 +46,7 @@ import { useProject } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
 import { createJiraJob } from '@/services/jiraJobs'
-import { markResourceSyncComplete } from '@/services/projects'
+import { markResourceSyncComplete, blockProject } from '@/services/projects'
 import { getSignoffConfig } from '@/services/signoffConfig'
 import { apiClient } from '@/services/client'
 import { ensureAllRoles } from '@/lib/approvals'
@@ -57,6 +66,8 @@ export function ProjectDetailsPage() {
   const { embargos } = useEmbargos()
   const [signoffEnabled, setSignoffEnabled] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false)
+  const [blockReason, setBlockReason] = useState('')
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [assignWaveOpen, setAssignWaveOpen] = useState(false)
   const [surveyOpen, setSurveyOpen] = useState(false)
@@ -133,6 +144,19 @@ export function ProjectDetailsPage() {
       toast.success('Changes saved')
     } catch {
       toast.error('Failed to save changes. Please try again.')
+    }
+  }
+
+  const handleBlockConfirm = async () => {
+    if (!id) return
+    try {
+      await blockProject(id, blockReason.trim())
+      await refreshProject()
+      toast.success('Project blocked')
+      setBlockDialogOpen(false)
+      setBlockReason('')
+    } catch {
+      toast.error('Failed to block project. Please try again.')
     }
   }
 
@@ -358,7 +382,7 @@ export function ProjectDetailsPage() {
             </div>
             {isPlatformLead && project.status !== 'blocked' && (
               <button
-                onClick={() => handleSave('status', 'blocked')}
+                onClick={() => setBlockDialogOpen(true)}
                 className="flex items-center gap-2 px-4 py-2.5 bg-destructive/10 text-destructive font-semibold rounded shadow-sm hover:bg-destructive/20 transition-all text-sm flex-shrink-0"
               >
                 <Ban size={16} /> Block Project
@@ -495,6 +519,40 @@ export function ProjectDetailsPage() {
           getCategoryForProduct={getCategoryForProduct}
         />
       )}
+
+      <Dialog
+        open={blockDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBlockDialogOpen(false)
+            setBlockReason('')
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Block Project</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for blocking this project. This will be recorded and visible to the team.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            rows={3}
+            placeholder="Enter reason for blocking..."
+            value={blockReason}
+            onChange={(e) => setBlockReason(e.target.value)}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setBlockDialogOpen(false); setBlockReason('') }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleBlockConfirm} disabled={!blockReason.trim()}>
+              Block Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   )
 }

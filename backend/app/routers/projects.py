@@ -62,6 +62,7 @@ def _project_list_item(p) -> ProjectListItem:
         id=p.id,
         name=p.name,
         status=_derive_status(p, stage_data),
+        blocked_reason=p.blocked_reason,
         progress=stage_data["overall"],
         description=p.description,
         migration_wave=p.migration_wave,
@@ -89,6 +90,7 @@ def _project_detail(p) -> ProjectDetail:
         id=p.id,
         name=p.name,
         status=_derive_status(p, stage_data),
+        blocked_reason=p.blocked_reason,
         progress=stage_data["overall"],
         description=p.description,
         migration_wave=p.migration_wave,
@@ -182,15 +184,20 @@ async def update_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     patch_data = body.model_dump(exclude_none=True)
+    unblocking = False
     if "status" in patch_data:
         old_status = project.status
         new_status = patch_data["status"]
         if old_status == "blocked" or new_status == "blocked":
             _require_platform_lead_for_block(current_user)
             patch_data["status"] = _resolve_status_if_unblocking(project, new_status)
+            if patch_data["status"] != "blocked":
+                unblocking = True
         body = ProjectPatch(**patch_data)
 
     actor = _user_to_actor(current_user)
+    if unblocking:
+        project.blocked_reason = None
     try:
         project = await project_service.update(db, project, body, actor)
     except ValueError as e:

@@ -21,6 +21,7 @@ class ProjectListItem(BaseModel):
     id: str
     name: str
     status: str
+    blocked_reason: str | None = None
     progress: int
     description: str | None = None
     migration_wave: str | None = None
@@ -47,6 +48,7 @@ class ProjectDetail(BaseModel):
     id: str
     name: str
     status: str
+    blocked_reason: str | None = None
     progress: int
     description: str | None = None
     migration_wave: str | None = None
@@ -86,6 +88,7 @@ class ProjectCreate(BaseModel):
 class ProjectPatch(BaseModel):
     name: str | None = None
     status: str | None = None
+    blocked_reason: str | None = None
     description: str | None = None
     migration_wave: str | None = None
     profile_owner: str | None = None

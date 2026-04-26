@@ -14,6 +14,7 @@ class Project(Base, TimestampMixin):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="planning")
+    blocked_reason: Mapped[str | None] = mapped_column(String, nullable=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     migration_wave: Mapped[str | None] = mapped_column(String, nullable=True)
     profile_owner: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)

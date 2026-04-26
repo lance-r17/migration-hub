@@ -71,6 +71,7 @@ interface ProjectListItemApi {
   id: string
   name: string
   status: string
+  blocked_reason: string | null
   progress: number
   stage_progress: StageProgress | null
   survey_submitted_at: string | null
@@ -92,6 +93,7 @@ interface ProjectListItemApi {
 }
 
 interface ProjectApiResponse extends ProjectListItemApi {
+  blocked_reason: string | null
   jira_subtask_config: JiraSubtaskConfig | null
   application_overview: ApplicationOverview | null
   availability: AvailabilityResilience | null
@@ -152,6 +154,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     id: raw.id,
     name: raw.name,
     status: raw.status as Project['status'],
+    blockedReason: raw.blocked_reason ?? undefined,
     progress: raw.progress,
     team: raw.team ?? [],
     description: raw.description ?? undefined,
@@ -213,6 +216,14 @@ export async function getProjectsForUser(userId: string): Promise<Project[]> {
 export async function getProject(id: string): Promise<Project | undefined> {
   if (USE_MOCK) { await delay(); return store.getProject(id) }
   const raw = await apiClient.get<ProjectApiResponse>(ENDPOINTS.project(id))
+  return fromApi(raw)
+}
+
+export async function blockProject(id: string, reason: string): Promise<Project> {
+  const raw = await apiClient.patch<ProjectApiResponse>(ENDPOINTS.project(id), {
+    status: 'blocked',
+    blocked_reason: reason,
+  })
   return fromApi(raw)
 }
 

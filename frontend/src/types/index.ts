@@ -220,6 +220,7 @@ export interface Project {
   id: string
   name: string
   status: ProjectStatus
+  blockedReason?: string
   progress: number
   stageProgress?: StageProgress
   surveySubmittedAt?: string
