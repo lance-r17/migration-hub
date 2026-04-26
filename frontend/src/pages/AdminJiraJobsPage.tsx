@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Clock, Loader2, RefreshCw } from 'lucide-react'
+import { CheckCircle2, MonitorDot, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
-import { AppShell } from '@/components/layout/AppShell'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,11 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCurrentUser } from '@/context/UserContext'
 import { getAllJobsAdmin, retryJiraJob, type AdminJiraJobRow, type JiraJobLog } from '@/services/jiraJobs'
 import { JobLogsDrawer } from '@/components/drawers/JobLogsDrawer'
-
-const ADMIN_ROLES = new Set(['admin', 'platform_migration_lead'])
 
 function JobStatusBadge({ status }: { status: AdminJiraJobRow['status'] }) {
   const config = {
@@ -44,20 +48,11 @@ function formatTs(iso: string) {
 }
 
 export function AdminJiraJobsPage() {
-  const { user } = useCurrentUser()
   const navigate = useNavigate()
   const [jobs, setJobs] = useState<AdminJiraJobRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedJob, setSelectedJob] = useState<AdminJiraJobRow | null>(null)
   const [retrying, setRetrying] = useState<string | null>(null)
-
-  const isAdmin = user?.role.some(r => ADMIN_ROLES.has(r)) ?? false
-
-  useEffect(() => {
-    if (user && !isAdmin) {
-      navigate('/', { replace: true })
-    }
-  }, [user, isAdmin, navigate])
 
   const load = () => {
     setLoading(true)
@@ -93,12 +88,26 @@ export function AdminJiraJobsPage() {
   }
 
   return (
-    <AppShell title="Jira Job Monitor">
-      <div className="max-w-screen-xl mx-auto w-full space-y-6">
+    <div className="space-y-8">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink onClick={() => navigate('/admin')} className="cursor-pointer">
+              Admin
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Job Monitor</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Clock className="size-5 text-muted-foreground" />
+              <MonitorDot className="size-5 text-muted-foreground" />
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">Jira Job Monitor</h1>
             </div>
             <p className="text-muted-foreground text-sm">
@@ -194,6 +203,6 @@ export function AdminJiraJobsPage() {
         logs={selectedJob?.logs ?? []}
         projectName={selectedJob?.projectName ?? ''}
       />
-    </AppShell>
+    </div>
   )
 }

@@ -63,8 +63,7 @@ export interface ProductCategoryEntry {
 }
 
 export interface CloudResource {
-  id: string
-  resourceId?: string                  // e.g. "i-abc1234"
+  resourceId: string                  // e.g. "i-abc1234"
   name: string
   product?: string                     // e.g. "ecs", "polarDB", "rds", "oss", "sls", "slb", "dns"
   resourceSet?: string                 // format: xxxx-<ba_id>-<app_name>-(dev|prod)
@@ -155,6 +154,14 @@ export interface TargetArchitecture {
   architectureDiagram?: string
 }
 
+// ─── Section 8.5: Migration Effort Estimation ────────────────────────────────
+
+export interface MigrationEffortEstimation {
+  effortEstimate?: string
+  notes?: string
+  attachmentIds?: string[]
+}
+
 // ─── Section 9: Risks & Blockers ─────────────────────────────────────────────
 
 export interface Risk {
@@ -233,6 +240,7 @@ export interface Project {
   nfrs?: NonFunctionalRequirements
   migrationConstraints?: MigrationConstraints
   targetArchitecture?: TargetArchitecture
+  migrationEffortEstimation?: MigrationEffortEstimation
   risks: Risk[]
   approvals: Approval[]
   // Wave planning

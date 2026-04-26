@@ -1,7 +1,10 @@
 """
 Authentication dependency for FastAPI routes.
 
-Supports three modes (checked in priority order):
+Supports four modes (checked in priority order):
+
+0. API Key mode (X-API-Key header present):
+   - SHA-256 hashes the key, looks up matching service account in DB.
 
 1. Custom OAuth mode (OAUTH_SERVICE_URL set):
    - Validates the Bearer token as a backend-signed JWT (HS256).
@@ -17,13 +20,14 @@ Supports three modes (checked in priority order):
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from datetime import datetime, timezone
 
 import httpx
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from jose import jws as jose_jws
 from jose import jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +40,7 @@ from app.services import user_service
 logger = logging.getLogger(__name__)
 
 _bearer = HTTPBearer(auto_error=False)
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Module-level JWKS cache — keyed by issuer URL.
 # Refreshed on each process start. For dev use only.
@@ -157,21 +162,41 @@ async def _verify_oidc_jwt(token: str) -> dict:
     return payload
 
 
+# ─── API Key verification (service accounts) ────────────────────────────────
+
+
+async def _verify_api_key(api_key: str, db: AsyncSession) -> User:
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    user = await user_service.get_by_api_key_hash(db, key_hash)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+        )
+    return user
+
+
 # ─── Main dependency ─────────────────────────────────────────────────────────
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    api_key: str | None = Depends(_api_key_header),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
     Resolve the current authenticated user.
 
     Priority:
+      0. API Key (X-API-Key header)             → verify against service account hash
       1. Custom OAuth (OAUTH_SERVICE_URL set)   → verify backend JWT
       2. Standard OIDC (OIDC_ISSUER set)        → verify OIDC JWT via JWKS
       3. Mock mode (neither set)                → return CURRENT_USER_ID user
     """
+    # ── 0. API Key mode ─────────────────────────────────────────────────────
+    if api_key:
+        return await _verify_api_key(api_key, db)
+
     # ── 1. Custom OAuth mode ────────────────────────────────────────────────
     if settings.oauth_service_url:
         if credentials is None:
@@ -231,7 +256,7 @@ async def get_current_user(
 
 # ─── Admin dependency ────────────────────────────────────────────────────────
 
-_ADMIN_ROLES = {"admin", "platform_migration_lead"}
+_ADMIN_ROLES = {"admin"}
 
 
 def _user_has_admin_role(role: str | None) -> bool:

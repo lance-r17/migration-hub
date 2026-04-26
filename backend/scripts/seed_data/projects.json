@@ -171,7 +171,6 @@
     ],
     "resources": [
       {
-        "id": "res1",
         "resource_id": "i-0a1b2c3d4e",
         "name": "ERP App Server",
         "product": "ecs",
@@ -187,7 +186,6 @@
         "need_migration": true
       },
       {
-        "id": "res2",
         "resource_id": "rm-0b2c3d4e5f",
         "name": "Primary Oracle DB",
         "product": "rds",
@@ -204,7 +202,6 @@
         "need_migration": true
       },
       {
-        "id": "res3",
         "resource_id": "r-0c3d4e5f6a",
         "name": "Redis Session Cache",
         "product": "ecs",
@@ -219,7 +216,6 @@
         "need_migration": false
       },
       {
-        "id": "res4",
         "resource_id": "oss-0d4e5f6a7b",
         "name": "Static Assets Bucket",
         "product": "oss",
@@ -234,7 +230,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a5",
         "resource_id": "i-0e5f6a7b8c",
         "name": "SAP ABAP Application Server",
         "product": "ecs",
@@ -250,7 +245,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a12",
         "resource_id": "rm-6f2a3b4c5d",
         "name": "Oracle DB Read Replica",
         "product": "rds",
@@ -265,7 +259,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a13",
         "resource_id": "rm-7a3b4c5d6e",
         "name": "Reporting Analytics DB",
         "product": "polardb",
@@ -281,7 +274,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a19",
         "resource_id": "slb-3a9b0c1d2e",
         "name": "F5 BIG-IP Load Balancer",
         "product": "slb",
@@ -295,7 +287,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a24",
         "resource_id": "redis-8f4a5b6c7d",
         "name": "Session Cache (Redis)",
         "product": "r-kvstore",
@@ -306,7 +297,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a23",
         "resource_id": "mq-7e3f4a5b6c",
         "name": "ActiveMQ Message Broker",
         "product": "rocketmq",
@@ -322,7 +312,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a26",
         "resource_id": "ess-1a2b3c4d5e",
         "name": "ERP Auto Scaling Group",
         "product": "ess",
@@ -337,7 +326,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a27",
         "resource_id": "cs-2b3c4d5e6f",
         "name": "ERP Container Service Cluster",
         "product": "cs",
@@ -352,7 +340,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a28",
         "resource_id": "cr-3c4d5e6f7a",
         "name": "ERP Container Registry",
         "product": "cr-ee",
@@ -366,7 +353,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a29",
         "resource_id": "sls-4d5e6f7a8b",
         "name": "Application Event Log Service",
         "product": "sls",
@@ -380,7 +366,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a30",
         "resource_id": "vpc-5e6f7a8b9c",
         "name": "ERP Production VPC",
         "product": "vpc",
@@ -394,7 +379,6 @@
         "need_migration": true
       },
       {
-        "id": "res-a31",
         "resource_id": "kms-6f7a8b9c0d",
         "name": "ERP Secrets & Key Store",
         "product": "kms",
@@ -517,7 +501,6 @@
     "risks": [],
     "resources": [
       {
-        "id": "res5",
         "resource_id": "i-aa1b2c3d",
         "name": "auth-svc App Server",
         "product": "ecs",
@@ -532,7 +515,6 @@
         "need_migration": true
       },
       {
-        "id": "res6",
         "resource_id": "rm-bb2c3d4e",
         "name": "PostgreSQL 14 Session Store",
         "product": "rds",
@@ -546,7 +528,6 @@
         "need_migration": true
       },
       {
-        "id": "res-m11-6",
         "resource_id": "slb-ff6a7b8c",
         "name": "Auth API Gateway",
         "product": "slb",
@@ -560,7 +541,6 @@
         "need_migration": true
       },
       {
-        "id": "res-m11-7",
         "resource_id": "dds-aa1b2c3d4e",
         "name": "Session Document Store",
         "product": "dds",
@@ -575,7 +555,6 @@
         "need_migration": true
       },
       {
-        "id": "res-m11-8",
         "resource_id": "dw-bb2c3d4e5f",
         "name": "Auth Data Pipeline",
         "product": "dataworks",
@@ -589,7 +568,6 @@
         "need_migration": true
       },
       {
-        "id": "res-m11-9",
         "resource_id": "qbi-cc3d4e5f6a",
         "name": "Security Analytics Dashboard",
         "product": "quickbi-public",
@@ -603,7 +581,6 @@
         "need_migration": true
       },
       {
-        "id": "res-m11-10",
         "resource_id": "cms-dd4e5f6a7b",
         "name": "Auth Service Health Monitor",
         "product": "cms",
@@ -796,7 +773,6 @@
     ],
     "resources": [
       {
-        "id": "res7",
         "resource_id": "i-aa7b8c9d",
         "name": "DNS Primary Cluster (APAC)",
         "product": "ecs",
@@ -811,7 +787,6 @@
         "need_migration": true
       },
       {
-        "id": "res8",
         "resource_id": "i-bb8c9d0e",
         "name": "DNS Secondary Cluster (EU)",
         "product": "ecs",
@@ -826,7 +801,6 @@
         "need_migration": true
       },
       {
-        "id": "res9",
         "resource_id": "i-cc9d0e1f",
         "name": "Anycast Edge Nodes x12",
         "product": "clouddns",

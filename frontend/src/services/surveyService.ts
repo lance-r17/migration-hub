@@ -81,11 +81,11 @@ export async function batchUpdateResourceSpecs(
     await delay(300)
     const project = store.getProject(projectId)
     const resources = project?.currentInfrastructure?.resources ?? []
-    const oldSpecsMap = Object.fromEntries(resources.map(r => [r.id, r.specs ?? {}]))
+    const oldSpecsMap = Object.fromEntries(resources.map(r => [r.resourceId, r.specs ?? {}]))
     store.batchUpdateResourceSpecs(projectId, updates)
     const u = store.getCurrentUser()
     for (const { resourceId, specs } of updates) {
-      const resource = resources.find(r => r.id === resourceId)
+      const resource = resources.find(r => r.resourceId === resourceId)
       if (!resource) continue
       const resourceChanges = diffObjects(
         oldSpecsMap[resourceId] ?? {},

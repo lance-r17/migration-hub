@@ -629,9 +629,9 @@ async def _complete_job(
             bucket_resources.setdefault(prod, []).append(r)
     else:
         # resource-level or custom: bucket_key = resource ID, display = resource name
-        selected_ids = config.get("selectedResourceIds") or [r.id for r in in_scope]
-        id_to_name = {r.id: r.name for r in in_scope}
-        id_to_resource = {r.id: r for r in in_scope}
+        selected_ids = config.get("selectedResourceIds") or [r.resource_id for r in in_scope]
+        id_to_name = {r.resource_id: r.name for r in in_scope}
+        id_to_resource = {r.resource_id: r for r in in_scope}
         buckets = {rid: id_to_name.get(rid, rid) for rid in selected_ids}
         bucket_resources = {rid: [id_to_resource[rid]] for rid in selected_ids if rid in id_to_resource}
 
@@ -722,8 +722,8 @@ async def _complete_job(
             r.jira_subtask_key = job.subtask_keys.get(r.product or "Other")
     else:
         for r in in_scope_fresh:
-            if r.id in (job.subtask_keys or {}):
-                r.jira_subtask_key = job.subtask_keys[r.id]
+            if r.resource_id in (job.subtask_keys or {}):
+                r.jira_subtask_key = job.subtask_keys[r.resource_id]
 
     job.status = "completed"
     job.processed_at = datetime.now(timezone.utc)

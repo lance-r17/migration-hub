@@ -28,6 +28,13 @@ async def get_by_email(session: AsyncSession, email: str) -> User | None:
     return result.scalar_one_or_none()
 
 
+async def get_by_api_key_hash(session: AsyncSession, key_hash: str) -> User | None:
+    result = await session.execute(
+        select(User).where(User.api_key_hash == key_hash, User.is_service_account == True)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_projects_for_user(session: AsyncSession, user_id: str) -> list[Project]:
     result = await session.execute(
         select(Project)

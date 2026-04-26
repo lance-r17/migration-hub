@@ -1,13 +1,18 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.schemas.approval import ApprovalOut
 from app.schemas.audit_log import AuditLogEntryOut, AuditLogResponse
-from app.schemas.cloud_resource import CloudResourceOut, ResourceSpecsBatchUpdate
+from app.schemas.cloud_resource import (
+    CloudResourceOut,
+    ResourceSpecsBatchUpdate,
+    ResourcesBatchDelete,
+    ResourcesBatchUpsert,
+)
 from app.schemas.project import (
     PlanningPatch,
     ProjectCreate,
@@ -19,17 +24,22 @@ from app.schemas.project import (
 from app.schemas.user import UserOut
 from app.schemas.risk import RiskOut
 from app.schemas.jira_job import JiraJobCreate
-from app.services import audit_service, jira_client, jira_service, project_service, user_service
+from app.services import audit_service, attachment_service, jira_client, jira_service, project_service, user_service
 from app.config import settings
 from app.auth import get_current_user
 from app.models.user import User
 from app.models.cloud_resource import CloudResource
+from app.models.project_attachment import ProjectAttachment
+from app.schemas.project_attachment import AttachmentOut
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 def _user_to_actor(user: User) -> dict[str, Any]:
-    return {"id": user.id, "name": user.name, "initials": user.initials}
+    actor: dict[str, Any] = {"id": user.id, "name": user.name, "initials": user.initials}
+    if user.is_service_account:
+        actor["type"] = "service_account"
+    return actor
 
 
 def _team_from_project_users(p) -> list[dict]:
@@ -93,6 +103,7 @@ def _project_detail(p) -> ProjectDetail:
         stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
         jira_subtask_config=p.jira_subtask_config,
         team=_team_from_project_users(p),
+        migration_effort_estimation=p.migration_effort_estimation,
         application_overview=p.application_overview,
         availability=p.availability,
         data_persistence=p.data_persistence,
@@ -116,8 +127,13 @@ async def list_projects(
 
 
 @router.post("", response_model=ProjectDetail, status_code=201)
-async def create_project(body: ProjectCreate, db: AsyncSession = Depends(get_db)):
-    project = await project_service.create(db, body)
+async def create_project(
+    body: ProjectCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    actor = _user_to_actor(current_user)
+    project = await project_service.create(db, body, actor)
     return _project_detail(project)
 
 
@@ -234,6 +250,38 @@ async def batch_update_resource_specs(
     await project_service.batch_update_resource_specs(db, project_id, body.updates, actor)
 
 
+@router.patch("/{project_id}/resources", response_model=ProjectDetail)
+async def upsert_project_resources(
+    project_id: str,
+    body: ResourcesBatchUpsert,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    actor = _user_to_actor(current_user)
+    await project_service.upsert_resources(db, project, body.resources, actor)
+    await db.refresh(project)
+    return _project_detail(project)
+
+
+@router.delete("/{project_id}/resources", response_model=ProjectDetail)
+async def delete_project_resources(
+    project_id: str,
+    body: ResourcesBatchDelete,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    actor = _user_to_actor(current_user)
+    await project_service.delete_resources_by_ids(db, project, body.resource_ids, actor)
+    await db.refresh(project)
+    return _project_detail(project)
+
+
 @router.post("/{project_id}/resources/{resource_id}/sync-complete", response_model=ProjectDetail, status_code=202)
 async def mark_resource_sync_complete(
     project_id: str,
@@ -308,6 +356,13 @@ async def mark_survey_submitted(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.survey_submitted_at = datetime.now(timezone.utc)
+    await audit_service.append_entry(
+        db,
+        project_id=project_id,
+        event_type="survey_submitted",
+        entity_type="project",
+        actor=_user_to_actor(current_user),
+    )
     await project_service._derive_and_store_status(db, project)
     await db.flush()
     await db.refresh(project)
@@ -320,11 +375,13 @@ async def update_planning(
     body: PlanningPatch,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     project = await project_service.get_by_id(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    project = await project_service.update_planning(db, project, body.planning)
+    actor = _user_to_actor(current_user)
+    project = await project_service.update_planning(db, project, body.planning, actor)
     # Best-effort Jira story date sync if a story exists
     if project.jira_story_key:
         story_key = project.jira_story_key
@@ -332,3 +389,155 @@ async def update_planning(
         end = body.planning.get("endDate")
         background_tasks.add_task(jira_client.update_issue_dates, story_key, start, end)
     return _project_detail(project)
+
+
+# ─── Project Attachments ──────────────────────────────────────────────────────
+
+import os
+import uuid
+from fastapi.responses import FileResponse
+from sqlalchemy import select
+
+_UPLOAD_DIR = os.path.join(os.getcwd(), "uploads", "projects")
+
+
+def _ensure_upload_dir(project_id: str) -> str:
+    path = os.path.join(_UPLOAD_DIR, project_id)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+@router.post("/{project_id}/attachments", response_model=AttachmentOut, status_code=201)
+async def upload_attachment(
+    project_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    safe_filename = os.path.basename(file.filename or "unnamed")
+    attachment_id = str(uuid.uuid4())
+    storage_filename = f"{attachment_id}_{safe_filename}"
+    project_dir = _ensure_upload_dir(project_id)
+    file_path = os.path.join(project_dir, storage_filename)
+
+    contents = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(contents)
+
+    attachment = ProjectAttachment(
+        id=attachment_id,
+        project_id=project_id,
+        filename=safe_filename,
+        file_path=file_path,
+    )
+    db.add(attachment)
+    await db.flush()
+    await db.refresh(attachment)
+
+    await audit_service.append_entry(
+        db,
+        project_id=project_id,
+        event_type="attachment_uploaded",
+        entity_type="attachment",
+        actor=_user_to_actor(current_user),
+        entity_id=attachment_id,
+        entity_label=safe_filename,
+    )
+    await db.flush()
+
+    return AttachmentOut(
+        id=attachment.id,
+        project_id=attachment.project_id,
+        filename=attachment.filename,
+        file_path=attachment.file_path,
+        status=attachment.status,
+        created_at=attachment.created_at.isoformat() if attachment.created_at else None,
+    )
+
+
+@router.get("/{project_id}/attachments", response_model=list[AttachmentOut])
+async def list_attachments(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    result = await db.execute(
+        select(ProjectAttachment)
+        .where(
+            ProjectAttachment.project_id == project_id,
+            ProjectAttachment.status != attachment_service.STATUS_DELETED,
+        )
+        .order_by(ProjectAttachment.created_at.desc())
+    )
+    attachments = result.scalars().all()
+    return [
+        AttachmentOut(
+            id=a.id,
+            project_id=a.project_id,
+            filename=a.filename,
+            file_path=a.file_path,
+            status=a.status,
+            created_at=a.created_at.isoformat() if a.created_at else None,
+        )
+        for a in attachments
+    ]
+
+
+@router.get("/{project_id}/attachments/{attachment_id}")
+async def download_attachment(
+    project_id: str,
+    attachment_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    attachment = await db.get(ProjectAttachment, attachment_id)
+    if not attachment or attachment.project_id != project_id:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    if not os.path.exists(attachment.file_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    return FileResponse(
+        attachment.file_path,
+        filename=attachment.filename,
+        media_type="application/octet-stream",
+    )
+
+
+@router.delete("/{project_id}/attachments/{attachment_id}", status_code=204)
+async def delete_attachment(
+    project_id: str,
+    attachment_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    attachment = await attachment_service.soft_delete_attachment(
+        db, project_id, attachment_id
+    )
+    if attachment is None:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    await audit_service.append_entry(
+        db,
+        project_id=project_id,
+        event_type="attachment_deleted",
+        entity_type="attachment",
+        actor=_user_to_actor(current_user),
+        entity_id=attachment_id,
+        entity_label=attachment.filename,
+    )
+    await db.flush()

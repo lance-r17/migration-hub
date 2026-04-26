@@ -14,6 +14,7 @@ import { DependenciesSection } from '@/components/project/DependenciesSection'
 import { NonFunctionalRequirementsSection } from '@/components/project/NonFunctionalRequirementsSection'
 import { MigrationConstraintsSection } from '@/components/project/MigrationCutoverSection'
 import { TargetArchitectureSection } from '@/components/project/TargetArchitectureSection'
+import { MigrationEffortEstimationSection } from '@/components/project/MigrationEffortEstimationSection'
 import { SignOffModal } from '@/components/modals/SignOffModal'
 import { AuditLogDrawer } from '@/components/drawers/AuditLogDrawer'
 import { AssignWaveDrawer } from '@/components/drawers/AssignWaveDrawer'
@@ -202,7 +203,7 @@ export function ProjectDetailsPage() {
 
   const handleMarkMigrationComplete = async (resourceId: string, completed: boolean) => {
     const resources = (project.currentInfrastructure?.resources ?? []).map(r =>
-      r.id === resourceId ? { ...r, migrationCompleted: completed } : r
+      r.resourceId === resourceId ? { ...r, migrationCompleted: completed } : r
     )
     await handleSave('currentInfrastructure', { ...(project.currentInfrastructure ?? { resources: [] }), resources })
     await refreshProject()
@@ -441,6 +442,11 @@ export function ProjectDetailsPage() {
           <TargetArchitectureSection
             data={project.targetArchitecture}
             onSave={!isLocked ? (d) => handleSave('targetArchitecture', d) : undefined}
+          />
+          <MigrationEffortEstimationSection
+            data={project.migrationEffortEstimation}
+            projectId={project.id}
+            onSave={!isLocked ? (d) => handleSave('migrationEffortEstimation', d) : undefined}
           />
         </div>
       </div>

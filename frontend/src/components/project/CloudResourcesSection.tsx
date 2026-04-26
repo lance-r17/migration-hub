@@ -130,7 +130,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                     const specsEntries = resource.specs ? Object.entries(resource.specs) : []
                     return (
                     <tr
-                      key={resource.id}
+                      key={resource.resourceId}
                       className={cn(
                         'hover:bg-muted/30 transition-colors border-b border-border last:border-0 cursor-pointer',
                         resource.needMigration === false && 'opacity-40 line-through',
@@ -195,7 +195,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
                         <td className="py-3" onClick={e => e.stopPropagation()}>
                           {resource.jiraSubtaskKey && onMarkMigrationComplete ? (
                             <button
-                              onClick={() => onMarkMigrationComplete(resource.id, !resource.migrationCompleted)}
+                              onClick={() => onMarkMigrationComplete(resource.resourceId, !resource.migrationCompleted)}
                               className="flex items-center justify-center"
                               title={resource.migrationCompleted ? 'Mark as incomplete' : 'Mark migration complete'}
                             >

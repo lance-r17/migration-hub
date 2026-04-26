@@ -55,7 +55,7 @@ interface RowDragState {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const LEFT_PANEL_W = 600
+const LEFT_PANEL_W = 680
 const ROW_H        = 38
 const GROUP_H      = 42
 const HEADER_H     = 40
@@ -902,7 +902,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   }, [rows, rowTops, colPx, daysPerCol])
 
   // ─── Left panel column grid ───────────────────────────────────────────────────
-  const LP_GRID = '40px minmax(160px,1fr) 100px 80px 32px'
+  const LP_GRID = '40px minmax(160px,1fr) 100px 80px 80px 32px'
 
   const cellClass = 'h-full flex items-center px-2 border-r min-w-0'
 
@@ -993,17 +993,17 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
           <div className="sticky top-0 z-30 flex h-[40px]">
             {/* Left panel header */}
             <div
-              className="border-b sticky left-0 z-20 grid shrink-0 h-[40px] w-[600px] bg-background border-r "
+              className="border-b sticky left-0 z-20 grid shrink-0 h-[40px] w-[680px] bg-background border-r "
               style={{ gridTemplateColumns: LP_GRID }}
             >
-              {['', 'Project / Tasks', 'Status', 'Labels', ''].map((col, i) => (
+              {['', 'Project / Tasks', 'Status', 'Labels', 'Effort', ''].map((col, i) => (
                 <div
                   key={i}
                   className={cn(
                     cellClass,
                     'text-[11.5px] font-semibold text-[var(--g-text-muted)] uppercase tracking-[0.02em] ',
-                    (i === 2 || i === 3) && 'justify-center',
-                    i === 4 && 'border-r-0',
+                    (i === 2 || i === 3 || i === 4) && 'justify-center',
+                    i === 5 && 'border-r-0',
                   )}
                 >
                   {col}
@@ -1092,7 +1092,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
               return (
                 <div key={rowKey} className="flex border-b" style={{ height: rh }}>
                   <div
-                    className="sticky left-0 z-10 grid shrink-0 w-[600px] border-r cursor-pointer bg-background"
+                    className="sticky left-0 z-10 grid shrink-0 w-[680px] border-r cursor-pointer bg-background"
                     style={{ gridTemplateColumns: LP_GRID }}
                     onClick={() => setEmbargosCollapsed(c => !c)}
                   >
@@ -1109,6 +1109,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                       </div>
                       <span className="text-xs text-[var(--g-text-muted)]">{embargos.length}</span>
                     </div>
+                    <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'border-r-0')} />
@@ -1140,7 +1141,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
               return (
                 <div key={rowKey} className="flex border-b" style={{ height: rh }}>
                   <div
-                    className="sticky left-0 z-10 grid shrink-0 w-[600px] bg-card border-r cursor-pointer"
+                    className="sticky left-0 z-10 grid shrink-0 w-[680px] bg-card border-r cursor-pointer"
                     style={{ gridTemplateColumns: LP_GRID }}
                     onClick={() => scrollToBar(embargo.id)}
                   >
@@ -1221,7 +1222,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                 <div key={rowKey} className="flex border-b" style={{ height: rh }}>
                   {/* Left cell */}
                   <div
-                    className="sticky left-0 z-10 grid shrink-0 w-[600px] bg-muted cursor-pointer border-r"
+                    className="sticky left-0 z-10 grid shrink-0 w-[680px] bg-muted cursor-pointer border-r"
                     style={{ gridTemplateColumns: LP_GRID }}
                     onClick={() => toggleWave(w.id)}
                   >
@@ -1319,7 +1320,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                 <div key={rowKey} className="flex border-b bg-muted" style={{ height: rh }}>
                   {/* Left cell */}
                   <div
-                    className="sticky left-0 z-10 grid shrink-0 w-[600px] bg-muted cursor-pointer border-r"
+                    className="sticky left-0 z-10 grid shrink-0 w-[680px] bg-muted cursor-pointer border-r"
                     style={{ gridTemplateColumns: LP_GRID }}
                     onClick={() => toggleWave('__unassigned__')}
                   >
@@ -1342,6 +1343,8 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                     <div className={cn(cellClass, 'justify-center')} />
                     {/* Labels col */}
                     <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)]')} />
+                    {/* Effort col */}
+                    <div className={cn(cellClass, 'justify-center')} />
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0')} />
                   </div>
@@ -1384,7 +1387,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                   {/* Left panel */}
                   <div
                     className={cn(
-                      'sticky left-0 z-10 grid shrink-0 w-[600px] border-r',
+                      'sticky left-0 z-10 grid shrink-0 w-[680px] border-r',
                       isSelected ? 'bg-[var(--g-accent-soft)]' : 'bg-card',
                     )}
                     style={{ gridTemplateColumns: LP_GRID }}
@@ -1453,6 +1456,8 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                         </span>
                       )}
                     </div>
+                    {/* Effort col (task: empty) */}
+                    <div className={cn(cellClass, 'justify-center')} />
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
                       <DropdownMenu>
@@ -1569,7 +1574,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                 {/* Left panel */}
                 <div
                   className={cn(
-                    'group/row sticky left-0 z-10 grid shrink-0 w-[600px] border-r cursor-pointer',
+                    'group/row sticky left-0 z-10 grid shrink-0 w-[680px] border-r cursor-pointer',
                     isSelected ? 'bg-[var(--g-accent-soft)]' : 'bg-background',
                     isProjDragging ? 'bg-[var(--g-accent-soft)]' : '',
                   )}
@@ -1643,6 +1648,10 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                             {labelText}
                           </span>
                     )}
+                  </div>
+                  {/* Effort col */}
+                  <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
+                    {p.migrationEffortEstimation?.effortEstimate ? `${p.migrationEffortEstimation.effortEstimate}K` : '—'}
                   </div>
                   {/* Action col */}
                   <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
@@ -1908,6 +1917,8 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                 </span>
               )}
             </div>
+            <div className={cellClass} />
+            <div className={cellClass} />
             <div className={cn(cellClass, 'border-r-0')} />
           </div>
         )
@@ -1951,6 +1962,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                 </span>
               )}
             </div>
+            <div className={cellClass} />
             <div className={cellClass} />
             <div className={cn(cellClass, 'border-r-0')} />
           </div>

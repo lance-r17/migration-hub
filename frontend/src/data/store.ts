@@ -172,7 +172,7 @@ export const store = {
     if (!project) throw new Error(`Project not found: ${projectId}`)
     const resources = [...(project.currentInfrastructure?.resources ?? [])]
     for (const { resourceId, specs } of updates) {
-      const idx = resources.findIndex(r => r.id === resourceId)
+      const idx = resources.findIndex(r => r.resourceId === resourceId)
       if (idx !== -1) {
         resources[idx] = {
           ...resources[idx]!,

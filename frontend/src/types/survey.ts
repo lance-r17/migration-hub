@@ -1,12 +1,13 @@
 import type { Project, ResourceCategory } from '@/types'
 
-export type SurveyInputType = 'short_text' | 'long_text' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select'
+export type SurveyInputType = 'short_text' | 'long_text' | 'long_text_with_upload' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select' | 'file_upload'
 
 export interface SurveyFieldDef {
   id: string                      // stable unique ID e.g. "appoverview__applicationName"
   sectionKey: keyof Project       // e.g. "applicationOverview"
   fieldPath: string               // dot-notation within section e.g. "applicationName" or "network.loadBalancerType"
   toFieldPath?: string            // second field path for 'date_range' (the "to" date)
+  attachmentFieldPath?: string    // path within section where attachment IDs are stored (for long_text_with_upload)
   label: string                   // human-readable field label
   sectionLabel: string            // human-readable section label
   inputType: SurveyInputType

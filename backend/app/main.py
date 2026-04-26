@@ -50,9 +50,14 @@ async def lifespan(app: FastAPI):
     logger.info("lifespan startup: starting background job monitor (interval=30s)")
     monitor_task = asyncio.create_task(jira_service.start_pending_job_monitor())
 
+    # Start the attachment cleanup monitor (interval=1h)
+    logger.info("lifespan startup: starting attachment cleanup monitor (interval=1h)")
+    from app.services import attachment_service
+    cleanup_task = asyncio.create_task(attachment_service.start_cleanup_monitor())
+
     yield
 
-    # Shutdown: cancel monitor gracefully
+    # Shutdown: cancel monitors gracefully
     logger.info("lifespan shutdown: cancelling background job monitor")
     monitor_task.cancel()
     try:
@@ -60,13 +65,40 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         logger.info("lifespan shutdown: monitor stopped")
 
+    logger.info("lifespan shutdown: cancelling attachment cleanup monitor")
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        logger.info("lifespan shutdown: attachment cleanup monitor stopped")
+
+
+_OPENAPI_TAGS = [
+    {"name": "projects",   "description": "Project lifecycle management"},
+    {"name": "audit",      "description": "Project-scoped audit log"},
+    {"name": "waves",      "description": "Migration wave management"},
+    {"name": "users",      "description": "User directory and current session"},
+    {"name": "auth",       "description": "OAuth / OIDC login"},
+    {"name": "admin",      "description": "Service account management (admin only)"},
+    {"name": "survey",     "description": "Survey field configuration"},
+    {"name": "billing",    "description": "Billing records and thresholds"},
+    {"name": "jira",       "description": "Jira integration jobs"},
+    {"name": "embargos",   "description": "Change freeze embargo windows"},
+    {"name": "dashboard",  "description": "Summary statistics"},
+]
+
 
 def create_app() -> FastAPI:
+    _is_prod = settings.environment == "production"
     app = FastAPI(
         title="Migration Hub API",
         version="0.1.0",
         description="Backend API for the Migration Hub cloud migration tracking platform",
         lifespan=lifespan,
+        openapi_tags=_OPENAPI_TAGS,
+        docs_url=None if _is_prod else "/docs",
+        redoc_url=None if _is_prod else "/redoc",
+        openapi_url=None if _is_prod else "/openapi.json",
     )
 
     app.add_middleware(
@@ -78,6 +110,7 @@ def create_app() -> FastAPI:
     )
 
     from app.routers import (
+        admin,
         audit,
         billing,
         dashboard,
@@ -108,6 +141,7 @@ def create_app() -> FastAPI:
     app.include_router(jira.admin_router, prefix=prefix)
     app.include_router(product_categories.router, prefix=prefix)
     app.include_router(email_templates.router, prefix=prefix)
+    app.include_router(admin.router, prefix=prefix)
 
     @app.get("/health")
     async def health():

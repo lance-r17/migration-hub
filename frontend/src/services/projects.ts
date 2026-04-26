@@ -12,6 +12,7 @@ import type {
   NonFunctionalRequirements,
   MigrationConstraints,
   TargetArchitecture,
+  MigrationEffortEstimation,
   CloudResource,
   Risk,
   Approval,
@@ -30,9 +31,8 @@ const ENDPOINTS = {
 // ─── Raw API shapes (snake_case, matching backend schemas) ────────────────────
 
 interface CloudResourceApi {
-  id: string
+  resource_id: string
   project_id: string
-  resource_id: string | null
   name: string
   product: string | null
   resource_set: string | null
@@ -99,6 +99,7 @@ interface ProjectApiResponse extends ProjectListItemApi {
   nfrs: NonFunctionalRequirements | null
   migration_constraints: MigrationConstraints | null
   target_architecture: TargetArchitecture | null
+  migration_effort_estimation: MigrationEffortEstimation | null
   cloud_resources: CloudResourceApi[]
   risks: RiskApi[]
 }
@@ -107,8 +108,7 @@ interface ProjectApiResponse extends ProjectListItemApi {
 
 function mapResource(r: CloudResourceApi): CloudResource {
   return {
-    id: r.id,
-    resourceId: r.resource_id ?? undefined,
+    resourceId: r.resource_id,
     name: r.name,
     product: r.product ?? undefined,
     resourceSet: r.resource_set ?? undefined,
@@ -185,6 +185,7 @@ function fromApi(raw: ProjectApiResponse): Project {
     nfrs: raw.nfrs ?? undefined,
     migrationConstraints: raw.migration_constraints ?? undefined,
     targetArchitecture: raw.target_architecture ?? undefined,
+    migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
     currentInfrastructure: raw.cloud_resources?.length
       ? { resources: raw.cloud_resources.map(mapResource) }
       : undefined,
@@ -262,7 +263,7 @@ export async function markResourceSyncComplete(
     const p = store.getProject(projectId)
     if (!p) throw new Error('Project not found')
     const resources = (p.currentInfrastructure?.resources ?? []).map(r =>
-      r.id === resourceId
+      r.resourceId === resourceId
         ? { ...r, syncStatus: 'synced' as const, migrationCompleted: true }
         : r
     )

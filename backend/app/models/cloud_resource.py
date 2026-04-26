@@ -11,9 +11,8 @@ class CloudResource(Base):
     __tablename__ = "cloud_resources"
     __table_args__ = (Index("ix_cloud_resources_project_id", "project_id"),)
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    resource_id: Mapped[str] = mapped_column(String, primary_key=True)
     project_id: Mapped[str] = mapped_column(String, ForeignKey("projects.id"), nullable=False)
-    resource_id: Mapped[str | None] = mapped_column(String, nullable=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     product: Mapped[str | None] = mapped_column(String, nullable=True)
     resource_set: Mapped[str | None] = mapped_column(String, nullable=True)

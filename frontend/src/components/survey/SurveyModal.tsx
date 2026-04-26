@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 import { useSurveyFieldDefs } from '@/hooks/use-survey'
 import { submitSurvey } from '@/services/projects'
 import { MigrationWindowPicker } from '@/components/shared/MigrationWindowPicker'
+import { SurveyFileUpload } from '@/components/survey/SurveyFileUpload'
+import { deleteAttachment } from '@/services/attachments'
 import type { SurveyConfig, SurveyQuestion, SurveyFieldDef, ResourceSurveyConfig, ResourceQuestionDef } from '@/types/survey'
 import type { Project, DependencyEntry, CloudResource, ResourceCategory } from '@/types'
 
@@ -163,13 +165,17 @@ function DependencyListEditor({ value, onChange }: { value: DependencyEntry[]; o
 // ─── Application question input ───────────────────────────────────────────────
 
 function QuestionInput({
-  question, value, onChange, autoFocus, getFieldById,
+  question, value, onChange, attachmentValue, onAttachmentChange, onRemove, autoFocus, getFieldById, projectId,
 }: {
   question: SurveyQuestion
   value: AnswerValue
   onChange: (v: AnswerValue) => void
+  attachmentValue?: string[]
+  onAttachmentChange?: (ids: string[]) => void
+  onRemove?: (id: string) => void
   autoFocus?: boolean
   getFieldById: (id: string) => SurveyFieldDef | undefined
+  projectId: string
 }) {
   const def = getFieldById(question.fieldId)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -187,6 +193,34 @@ function QuestionInput({
     case 'long_text':
       return (
         <textarea value={(value as string) ?? ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)} placeholder="Type your answer…" rows={4} className={textareaClass} autoFocus={autoFocus} />
+      )
+    case 'long_text_with_upload':
+      return (
+        <div className="space-y-4">
+          <textarea
+            value={(value as string) ?? ''}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
+            placeholder="Type your answer…"
+            rows={4}
+            className={textareaClass}
+            autoFocus={autoFocus}
+          />
+          <SurveyFileUpload
+            projectId={projectId}
+            value={attachmentValue ?? []}
+            onChange={onAttachmentChange ?? (() => {})}
+            onRemove={onRemove}
+          />
+        </div>
+      )
+    case 'file_upload':
+      return (
+        <SurveyFileUpload
+          projectId={projectId}
+          value={(value as string[]) ?? []}
+          onChange={onChange as (v: string[]) => void}
+          onRemove={onRemove}
+        />
       )
     case 'select':
       return (
@@ -470,7 +504,7 @@ type ResourceStep =
 function stepKey(step: ResourceStep): string {
   if (step.kind === 'category') return `category:${step.category}`
   if (step.kind === 'product') return `product:${step.product}`
-  return `resource:${step.resource.id}`
+  return `resource:${step.resource.resourceId}`
 }
 
 function computeResourceSteps(
@@ -500,16 +534,16 @@ function computeResourceSteps(
   for (const group of config.groups.filter(g => g.level === 'resource')) {
     let matchingIds: string[]
     if (group.resourceId) {
-      matchingIds = resources.find(r => r.id === group.resourceId) ? [group.resourceId] : []
+      matchingIds = resources.find(r => r.resourceId === group.resourceId) ? [group.resourceId] : []
     } else if (group.product || group.products?.length) {
       matchingIds = resources.filter(r =>
         (group.product && r.product === group.product) ||
         (group.products && group.products.includes(r.product))
-      ).map(r => r.id)
+      ).map(r => r.resourceId)
     } else if (group.category) {
-      matchingIds = resources.filter(r => getCategoryForProduct(r.product) === group.category).map(r => r.id)
+      matchingIds = resources.filter(r => getCategoryForProduct(r.product) === group.category).map(r => r.resourceId)
     } else {
-      matchingIds = resources.map(r => r.id)
+      matchingIds = resources.map(r => r.resourceId)
     }
     for (const rid of matchingIds) {
       const existing = resourceQuestionsMap.get(rid) ?? []
@@ -519,7 +553,7 @@ function computeResourceSteps(
 
   // One step per resource in project order — deduplicate by specsKey
   for (const resource of resources) {
-    const questions = resourceQuestionsMap.get(resource.id)
+    const questions = resourceQuestionsMap.get(resource.resourceId)
     if (!questions || questions.length === 0) continue
     const seen = new Set<string>()
     const deduped = questions.filter(q => {
@@ -559,6 +593,10 @@ export function SurveyModal({
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Map<string, AnswerValue>>(new Map())
+  // Attachment answers: fieldId → attachmentIds (for long_text_with_upload and file_upload)
+  const [attachmentAnswers, setAttachmentAnswers] = useState<Map<string, string[]>>(new Map())
+  // Track attachment IDs removed during the survey session (deferred deletion)
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<Set<string>>(new Set())
   // Resource answers: stepKey → { specsKey: value }
   const [resourceAnswers, setResourceAnswers] = useState<Map<string, Record<string, ResourceAnswerValue>>>(new Map())
   const [submitting, setSubmitting] = useState(false)
@@ -580,6 +618,7 @@ export function SurveyModal({
 
     // Pre-fill app survey answers
     const prefilled = new Map<string, AnswerValue>()
+    const prefilledAttachments = new Map<string, string[]>()
     for (const q of orderedQuestions) {
       const def = getFieldById(q.fieldId)
       if (!def) continue
@@ -587,12 +626,21 @@ export function SurveyModal({
         const from = getExistingValue(project, def.sectionKey, def.fieldPath) as string | undefined
         const to = def.toFieldPath ? getExistingValue(project, def.sectionKey, def.toFieldPath) as string | undefined : undefined
         if (from !== undefined || to !== undefined) prefilled.set(q.fieldId, { from, to })
+      } else if (def.inputType === 'long_text_with_upload' && def.attachmentFieldPath) {
+        const existing = getExistingValue(project, def.sectionKey, def.fieldPath)
+        if (existing !== undefined) prefilled.set(q.fieldId, existing)
+        const existingIds = getExistingValue(project, def.sectionKey, def.attachmentFieldPath) as string[] | undefined
+        if (existingIds !== undefined) prefilledAttachments.set(q.fieldId, existingIds)
+      } else if (def.inputType === 'file_upload') {
+        const existingIds = getExistingValue(project, def.sectionKey, def.fieldPath) as string[] | undefined
+        if (existingIds !== undefined) prefilledAttachments.set(q.fieldId, existingIds)
       } else {
         const existing = getExistingValue(project, def.sectionKey, def.fieldPath)
         if (existing !== undefined) prefilled.set(q.fieldId, existing)
       }
     }
     setAnswers(prefilled)
+    setAttachmentAnswers(prefilledAttachments)
 
     // Pre-fill resource answers from existing specs
     const prefilledResource = new Map<string, Record<string, ResourceAnswerValue>>()
@@ -712,9 +760,26 @@ export function SurveyModal({
         }
         sectionUpdates.set(sectionKey, current)
       }
+      // Merge attachment answers into section updates
+      for (const [fieldId, attachmentIds] of attachmentAnswers.entries()) {
+        const def = getFieldById(fieldId)
+        if (!def) continue
+        const sectionKey = def.sectionKey
+        const targetPath = def.attachmentFieldPath ?? def.fieldPath
+        const existing = (project[sectionKey] ?? {}) as unknown as Record<string, unknown>
+        let current = sectionUpdates.get(sectionKey) ?? { ...existing }
+        current = deepSet(current, targetPath, attachmentIds)
+        sectionUpdates.set(sectionKey, current)
+      }
+
       for (const [sectionKey, merged] of sectionUpdates.entries()) {
         const safeMerged = ensureRequiredArrayFields(sectionKey, merged, project)
         await onSave(sectionKey, safeMerged as unknown as Project[typeof sectionKey])
+      }
+
+      // Delete attachments that were removed during the survey
+      for (const id of removedAttachmentIds) {
+        try { await deleteAttachment(project.id, id) } catch { /* ignore */ }
       }
 
       // Save resource survey answers → resource.specs
@@ -725,11 +790,11 @@ export function SurveyModal({
           if (key.startsWith('category:')) {
             const cat = key.slice('category:'.length) as ResourceCategory
             const matching = resources.filter(r => getCategoryForProduct?.(r.product) === cat)
-            matching.forEach(r => specsUpdates.push({ resourceId: r.id, specs: answers as Record<string, unknown> }))
+            matching.forEach(r => specsUpdates.push({ resourceId: r.resourceId, specs: answers as Record<string, unknown> }))
           } else if (key.startsWith('product:')) {
             const prod = key.slice('product:'.length)
             const matching = resources.filter(r => r.product === prod)
-            matching.forEach(r => specsUpdates.push({ resourceId: r.id, specs: answers as Record<string, unknown> }))
+            matching.forEach(r => specsUpdates.push({ resourceId: r.resourceId, specs: answers as Record<string, unknown> }))
           } else if (key.startsWith('resource:')) {
             const rid = key.slice('resource:'.length)
             specsUpdates.push({ resourceId: rid, specs: answers as Record<string, unknown> })
@@ -744,7 +809,7 @@ export function SurveyModal({
           }
           // Route through onSave so saveSection → classifyResourceEvents → audit log fires
           const updatedResources = resources.map(r => {
-            const patch = mergedSpecs.get(r.id)
+            const patch = mergedSpecs.get(r.resourceId)
             return patch ? { ...r, specs: { ...(r.specs ?? {}), ...patch } } : r
           })
           await onSave('currentInfrastructure', {
@@ -760,7 +825,7 @@ export function SurveyModal({
     } finally {
       setSubmitting(false)
     }
-  }, [answers, resourceAnswers, project, onSave, resources, getCategoryForProduct, onSubmitted])
+  }, [answers, attachmentAnswers, removedAttachmentIds, resourceAnswers, project, onSave, resources, getCategoryForProduct, onSubmitted, getFieldById])
 
   const goNext = useCallback(() => {
     if (isLast) void handleSubmit()
@@ -783,6 +848,7 @@ export function SurveyModal({
         if (tag === 'TEXTAREA') return
         if ((e.target as HTMLElement).dataset.tagInput) return
         if ((e.target as HTMLElement).dataset.depInput) return
+        if ((e.target as HTMLElement).dataset.surveyFileInput) return
         e.preventDefault()
         if (canAdvance) goNext()
       }
@@ -902,7 +968,25 @@ export function SurveyModal({
                   <p className="text-sm text-muted-foreground leading-relaxed">{currentQuestion.hintText}</p>
                 )}
               </div>
-              <QuestionInput question={currentQuestion} value={currentAnswer} onChange={setAnswer} autoFocus getFieldById={getFieldById} />
+              <QuestionInput
+                question={currentQuestion}
+                value={currentAnswer}
+                onChange={setAnswer}
+                attachmentValue={currentQuestion ? attachmentAnswers.get(currentQuestion.fieldId) : undefined}
+                onAttachmentChange={(ids) => {
+                  if (!currentQuestion) return
+                  setAttachmentAnswers(prev => {
+                    const next = new Map(prev)
+                    if (ids.length === 0) next.delete(currentQuestion.fieldId)
+                    else next.set(currentQuestion.fieldId, ids)
+                    return next
+                  })
+                }}
+                onRemove={(id) => setRemovedAttachmentIds(prev => new Set(prev).add(id))}
+                autoFocus
+                getFieldById={getFieldById}
+                projectId={project.id}
+              />
             </div>
 
           ) : isTransitionSlide ? (
@@ -922,7 +1006,7 @@ export function SurveyModal({
                 <Server size={13} />
                 {(() => {
                   const uniqueResources = new Set(resourceSteps.flatMap(s =>
-                    s.kind === 'resource' ? [s.resource.id] : s.matchingResources.map(r => r.id)
+                    s.kind === 'resource' ? [s.resource.resourceId] : s.matchingResources.map(r => r.resourceId)
                   ))
                   return `${uniqueResources.size} resource${uniqueResources.size !== 1 ? 's' : ''} · ${resourceSteps.length} step${resourceSteps.length !== 1 ? 's' : ''}`
                 })()}
@@ -965,10 +1049,10 @@ export function SurveyModal({
                       {currentResourceStep.matchingResources.map(r => {
                         const specEntries = Object.entries(r.specs ?? {}).slice(0, 5)
                         return (
-                          <div key={r.id} className="px-3 py-2 flex flex-col gap-1 bg-muted/20">
+                          <div key={r.resourceId} className="px-3 py-2 flex flex-col gap-1 bg-muted/20">
                             <div className="flex items-baseline gap-2">
                               <span className="text-xs font-medium">{r.name}</span>
-                              <span className="text-xs text-muted-foreground font-mono">{r.resourceId ?? r.id}</span>
+                              <span className="text-xs text-muted-foreground font-mono">{r.resourceId}</span>
                             </div>
                             {specEntries.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
@@ -998,7 +1082,7 @@ export function SurveyModal({
                   </h2>
                   {currentResourceStep.resource.product && (
                     <p className="text-sm text-muted-foreground">
-                      {currentResourceStep.resource.product.toUpperCase()} · {currentResourceStep.resource.resourceId ?? currentResourceStep.resource.id}
+                      {currentResourceStep.resource.product.toUpperCase()} · {currentResourceStep.resource.resourceId}
                     </p>
                   )}
                 </div>

@@ -17,6 +17,7 @@ const SECTION_LABELS: Partial<Record<keyof Project, string>> = {
   nfrs:                   'Non-Functional Requirements',
   migrationConstraints:   'Migration Constraints',
   targetArchitecture:     'Target Architecture',
+  migrationEffortEstimation: 'Migration Effort Estimation',
   risks:                  'Risks & Blockers',
   approvals:              'Sign-off',
   status:                 'Project Status',
@@ -69,6 +70,11 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
     topology3Az:           '3-AZ Topology',
     dnsIpChanges:          'DNS / IP Changes',
     newServicesRequired:   'New Services Required',
+  },
+  migrationEffortEstimation: {
+    effortEstimate: 'Effort Estimate',
+    notes: 'Notes',
+    attachmentIds: 'Attachments',
   },
   status: { status: 'Status' },
   waveId: { waveId: 'Wave' },
@@ -173,8 +179,8 @@ function classifyResourceEvents(
   const events: ResourceEvent[] = []
   const prevResources = prevInfra?.resources ?? []
   const nextResources = nextInfra?.resources ?? []
-  const prevMap = new Map(prevResources.map(r => [r.id, r]))
-  const nextMap = new Map(nextResources.map(r => [r.id, r]))
+  const prevMap = new Map(prevResources.map(r => [r.resourceId, r]))
+  const nextMap = new Map(nextResources.map(r => [r.resourceId, r]))
 
   const resLabelMap: Record<string, string> = {
     name: 'Name', category: 'Category', existingStatus: 'Existing Status',

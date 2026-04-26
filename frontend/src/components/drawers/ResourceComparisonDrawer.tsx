@@ -108,7 +108,7 @@ export function ResourceComparisonDrawer({
               {/* Resource rows */}
               {resources.map((resource, idx) => (
                 <div
-                  key={resource.id}
+                  key={resource.resourceId}
                   className={cn(
                     'grid grid-cols-2 divide-x divide-border',
                     idx < resources.length - 1 && 'border-b border-border',

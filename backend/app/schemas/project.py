@@ -36,6 +36,7 @@ class ProjectListItem(BaseModel):
     stage_progress: dict[str, int] | None = None
     team: list[dict[str, Any]] = []
     migration_constraints: dict[str, Any] | None = None
+    migration_effort_estimation: dict[str, Any] | None = None
     approvals: list[ApprovalOut] = []
     cloud_resources: list[CloudResourceOut] = []
 
@@ -60,6 +61,7 @@ class ProjectDetail(BaseModel):
     survey_submitted_at: datetime | None = None
     stage_progress: dict[str, int] | None = None
     jira_subtask_config: dict[str, Any] | None = None
+    migration_effort_estimation: dict[str, Any] | None = None
     team: list[dict[str, Any]] = []
     application_overview: dict[str, Any] | None = None
     availability: dict[str, Any] | None = None
@@ -93,6 +95,7 @@ class ProjectPatch(BaseModel):
     jira_story_key: str | None = None
     jira_job_status: str | None = None
     jira_subtask_config: dict[str, Any] | None = None
+    migration_effort_estimation: dict[str, Any] | None = None
 
 
 class SectionPatch(BaseModel):

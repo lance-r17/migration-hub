@@ -12,7 +12,7 @@ from app.models.project import Project
 from app.models.risk import Risk
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectPatch
-from app.services import audit_service
+from app.services import audit_service, attachment_service
 
 # Maps camelCase frontend section keys → ORM column names
 SECTION_COLUMN_MAP: dict[str, str | None] = {
@@ -23,6 +23,7 @@ SECTION_COLUMN_MAP: dict[str, str | None] = {
     "nfrs": "nfrs",
     "migrationConstraints": "migration_constraints",
     "targetArchitecture": "target_architecture",
+    "migrationEffortEstimation": "migration_effort_estimation",
     "jiraSubtaskConfig": "jira_subtask_config",
     "status": "status",
     "waveId": "wave_id",
@@ -40,6 +41,7 @@ SECTION_LABELS: dict[str, str] = {
     "nfrs": "Non-Functional Requirements",
     "migrationConstraints": "Migration Constraints",
     "targetArchitecture": "Target Architecture",
+    "migrationEffortEstimation": "Migration Effort Estimation",
     "status": "Project Status",
     "waveId": "Migration Wave",
 }
@@ -146,24 +148,41 @@ _RESOURCE_FIELD_MAP = {
     "targetResourceId":   ("target_resource_id",   "Target Resource ID"),
 }
 
+# Complete label map for the upsert endpoint (all updatable columns, snake_case)
+_RESOURCE_LABEL_MAP: dict[str, str] = {
+    "resource_id":         "Resource ID",
+    "name":                "Name",
+    "product":             "Product",
+    "resource_set":        "Resource Set",
+    "sub_application":     "Sub Application",
+    "target_resource_id":  "Target Resource ID",
+    "sync_status":         "Sync Status",
+    "need_migration":      "In Migration Scope",
+    "migration_completed": "Migration Completed",
+    "jira_subtask_key":    "Jira Subtask Key",
+}
+
 
 def _classify_resource_changes(
     old_list: list, new_list: list[dict]
-) -> list[tuple[str, str, list[dict], bool]]:
-    """Returns (resource_id, entity_label, changes, is_sync_complete) per changed resource."""
+) -> list[tuple[str, str, list[dict], bool, str]]:
+    """Returns (resource_id, entity_label, changes, is_sync_complete, action) per changed resource.
+
+    action is one of: "added", "removed", "updated"
+    """
     result = []
-    old_map = {r.id: r for r in old_list}
-    new_map = {r_data["id"]: r_data for r_data in new_list if r_data.get("id")}
+    old_map = {r.resource_id: r for r in old_list}
+    new_map = {r_data["resourceId"]: r_data for r_data in new_list if r_data.get("resourceId")}
 
     for rid, r in old_map.items():
         if rid not in new_map:
-            result.append((rid, r.name, [], False))
+            result.append((rid, r.name, [], False, "removed"))
 
     for rid, r_data in new_map.items():
         name = r_data.get("name", rid)
         old_r = old_map.get(rid)
         if old_r is None:
-            result.append((rid, name, [], False))
+            result.append((rid, name, [], False, "added"))
             continue
         changes = []
         for api_key, (col, label) in _RESOURCE_FIELD_MAP.items():
@@ -177,7 +196,7 @@ def _classify_resource_changes(
             is_sync_complete = any(
                 c["field"] == "syncStatus" and c["new_value"] == "synced" for c in changes
             )
-            result.append((rid, name, changes, is_sync_complete))
+            result.append((rid, name, changes, is_sync_complete, "updated"))
 
     return result
 
@@ -221,7 +240,9 @@ async def get_by_id(session: AsyncSession, project_id: str) -> Project | None:
     return result.scalar_one_or_none()
 
 
-async def create(session: AsyncSession, data: ProjectCreate) -> Project:
+async def create(
+    session: AsyncSession, data: ProjectCreate, actor: dict[str, Any]
+) -> Project:
     project = Project(
         id=data.id or f"PRJ-{uuid.uuid4().hex[:8].upper()}",
         name=data.name,
@@ -231,6 +252,13 @@ async def create(session: AsyncSession, data: ProjectCreate) -> Project:
     )
     session.add(project)
     await session.flush()
+    await audit_service.append_entry(
+        session,
+        project_id=project.id,
+        event_type="project_created",
+        entity_type="project",
+        actor=actor,
+    )
     await session.refresh(project)
     return project
 
@@ -263,6 +291,21 @@ async def update(
     await session.flush()
     await session.refresh(project)
     return project
+
+
+def _collect_attachment_ids(obj: Any) -> list[str]:
+    """Recursively collect all string values found under 'attachmentIds' keys."""
+    ids: list[str] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k == "attachmentIds" and isinstance(v, list):
+                ids.extend([str(item) for item in v if isinstance(item, str)])
+            else:
+                ids.extend(_collect_attachment_ids(v))
+    elif isinstance(obj, list):
+        for item in obj:
+            ids.extend(_collect_attachment_ids(item))
+    return ids
 
 
 async def update_section(
@@ -302,6 +345,13 @@ async def update_section(
                 changes=changes,
             )
 
+        # Confirm any attachment IDs referenced in the saved section data
+        attachment_ids = _collect_attachment_ids(value)
+        if attachment_ids:
+            await attachment_service.confirm_attachments(
+                session, project.id, attachment_ids
+            )
+
     await session.flush()
     await session.refresh(project)
 
@@ -326,9 +376,8 @@ async def _replace_resources(
     # Insert new
     for r_data in resources:
         resource = CloudResource(
-            id=r_data.get("id") or str(uuid.uuid4()),
-            project_id=project.id,
             resource_id=r_data.get("resourceId"),
+            project_id=project.id,
             name=r_data.get("name", ""),
             product=r_data.get("product"),
             resource_set=r_data.get("resourceSet"),
@@ -342,11 +391,19 @@ async def _replace_resources(
         )
         session.add(resource)
         project.cloud_resources.append(resource)
-    for rid, entity_label, resource_changes, is_sync_complete in resource_events:
-        if resource_changes:
+    for rid, entity_label, resource_changes, is_sync_complete, action in resource_events:
+        if action == "added":
+            event_type = "resource_added"
+        elif action == "removed":
+            event_type = "resource_removed"
+        elif is_sync_complete:
+            event_type = "resource_sync_completed"
+        else:
+            event_type = "resource_updated"
+        if resource_changes or action in ("added", "removed"):
             await audit_service.append_entry(
                 session, project_id=project.id,
-                event_type="resource_sync_completed" if is_sync_complete else "resource_updated",
+                event_type=event_type,
                 entity_type="resource",
                 actor=actor,
                 entity_id=rid,
@@ -375,6 +432,14 @@ async def _replace_risks(
         )
         session.add(risk)
         project.risks.append(risk)
+    await audit_service.append_entry(
+        session,
+        project_id=project.id,
+        event_type="risks_updated",
+        entity_type="risks",
+        actor=actor,
+        changes=[],
+    )
 
 
 def _validate_approval_sequence(approvals_data: list[dict]) -> None:
@@ -476,7 +541,7 @@ async def batch_update_resource_specs(
     actor: dict[str, Any] | None = None,
 ) -> None:
     for upd in updates:
-        resource_id = upd.get("id")
+        resource_id = upd.get("resource_id") or upd.get("resourceId") or upd.get("id")
         specs_patch = upd.get("specs", {})
         if not resource_id:
             continue
@@ -491,7 +556,7 @@ async def batch_update_resource_specs(
                     event_type="resource_updated",
                     entity_type="resource",
                     actor=actor,
-                    entity_id=resource.id,
+                    entity_id=resource.resource_id,
                     entity_label=resource.name,
                     changes=resource_changes,
                 )
@@ -501,12 +566,122 @@ async def update_planning(
     session: AsyncSession,
     project: Project,
     planning: dict[str, Any],
+    actor: dict[str, Any],
 ) -> Project:
     project.planning = planning
     attributes.flag_modified(project, "planning")
+    await audit_service.append_entry(
+        session,
+        project_id=project.id,
+        event_type="section_updated",
+        entity_type="section",
+        actor=actor,
+        section_key="planning",
+        section_label="Planning",
+    )
     await session.flush()
     await session.refresh(project)
     return project
+
+
+async def upsert_resources(
+    session: AsyncSession,
+    project: Project,
+    items: list,
+    actor: dict[str, Any],
+) -> None:
+    """Upsert resources without touching the rest of the project's resource list.
+
+    Items with resource_id present in DB → update only non-null fields on that resource.
+    Items with resource_id not in DB → create a new resource.
+    Resources absent from items → left untouched.
+    """
+    from app.schemas.cloud_resource import ResourceUpsertItem  # local to avoid circular
+
+    for item in items:
+        if not item.resource_id:
+            continue  # resource_id is required
+        resource = await session.get(CloudResource, item.resource_id)
+        if resource:
+            if resource.project_id != project.id:
+                continue  # silently skip resources not belonging to this project
+            changes = []
+            for col, label in _RESOURCE_LABEL_MAP.items():
+                new_val = getattr(item, col, None)
+                if new_val is not None:
+                    old_val = getattr(resource, col)
+                    if old_val != new_val:
+                        changes.append({
+                            "field": col, "label": label,
+                            "old_value": old_val, "new_value": new_val,
+                        })
+                    setattr(resource, col, new_val)
+            if item.specs is not None:
+                spec_changes = _diff_section(resource.specs or {}, item.specs)
+                changes.extend(spec_changes)
+                resource.specs = item.specs
+                attributes.flag_modified(resource, "specs")
+            if changes:
+                await audit_service.append_entry(
+                    session, project_id=project.id,
+                    event_type="resource_updated",
+                    entity_type="resource", actor=actor,
+                    entity_id=resource.resource_id, entity_label=resource.name,
+                    changes=changes,
+                )
+        else:
+            resource = CloudResource(
+                resource_id=item.resource_id,
+                project_id=project.id,
+                name=item.name or "",
+                product=item.product,
+                resource_set=item.resource_set,
+                specs=item.specs,
+                sub_application=item.sub_application,
+                target_resource_id=item.target_resource_id,
+                sync_status=item.sync_status or "out-of-sync",
+                need_migration=item.need_migration if item.need_migration is not None else True,
+                migration_completed=item.migration_completed or False,
+                jira_subtask_key=item.jira_subtask_key,
+            )
+            session.add(resource)
+            project.cloud_resources.append(resource)
+            await audit_service.append_entry(
+                session, project_id=project.id,
+                event_type="resource_added",
+                entity_type="resource", actor=actor,
+                entity_id=resource.resource_id, entity_label=resource.name,
+                changes=[],
+            )
+    await session.flush()
+
+
+async def delete_resources_by_ids(
+    session: AsyncSession,
+    project: Project,
+    resource_ids: list[str],
+    actor: dict[str, Any],
+) -> int:
+    """Delete project resources by resource_id list. Returns count of deleted resources.
+
+    IDs not found in the project are silently skipped.
+    """
+    deleted = 0
+    for rid in resource_ids:
+        resource = await session.get(CloudResource, rid)
+        if resource and resource.project_id == project.id:
+            label = resource.name
+            await session.delete(resource)
+            await audit_service.append_entry(
+                session, project_id=project.id,
+                event_type="resource_removed",
+                entity_type="resource", actor=actor,
+                entity_id=rid, entity_label=label,
+                changes=[],
+            )
+            deleted += 1
+    await session.flush()
+    return deleted
 
 
 async def _check_wave_completed(session: AsyncSession, wave_id: str | None) -> None:

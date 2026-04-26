@@ -241,7 +241,7 @@ export function SignOffModal({
                     {inScopeResources.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No cloud resources defined.</p>
                     ) : inScopeResources.map(r => (
-                      <div key={r.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                      <div key={r.resourceId} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
                         <span className="text-foreground font-medium">{r.name}</span>
                         <span className="text-xs text-muted-foreground bg-muted rounded px-1.5 py-0.5">{getCategoryForProduct(r.product)}</span>
                       </div>
@@ -284,11 +284,11 @@ export function SignOffModal({
                     {inScopeResources.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No cloud resources defined.</p>
                     ) : inScopeResources.map(r => (
-                      <label key={r.id} className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2 cursor-pointer hover:bg-muted/80 transition-colors">
+                      <label key={r.resourceId} className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2 cursor-pointer hover:bg-muted/80 transition-colors">
                         <input
                           type="checkbox"
-                          checked={customIds.includes(r.id)}
-                          onChange={() => toggleCustomId(r.id)}
+                          checked={customIds.includes(r.resourceId)}
+                          onChange={() => toggleCustomId(r.resourceId)}
                           className="h-4 w-4 rounded accent-primary"
                         />
                         <span className="text-sm text-foreground font-medium flex-1">{r.name}</span>

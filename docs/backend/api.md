@@ -6,6 +6,18 @@ All endpoints are prefixed with `/api/v1`. All request and response bodies are J
 
 ## Authentication
 
+All mutating endpoints require authentication. Three mechanisms are supported (checked in priority order):
+
+| Mechanism | Header | When to use |
+|---|---|---|
+| **API Key** | `X-API-Key: mhub_<key>` | Service accounts / automated integrations |
+| **Bearer JWT** | `Authorization: Bearer <token>` | Custom OAuth or standard OIDC (human users) |
+| **Mock** | _(none)_ | Dev only — returns `CURRENT_USER_ID` user when no auth is configured |
+
+Service accounts are created via `POST /admin/service-accounts` (admin only). The plaintext key is returned once on creation and never stored.
+
+---
+
 ### `POST /api/v1/auth/login`
 
 Legacy mock login. Authenticates a user by email.
@@ -90,11 +102,13 @@ Returns all projects visible to the authenticated user.
 
 ### `POST /api/v1/projects`
 
-Creates a new project.
+Creates a new project. Requires authentication — records the creator as the audit actor.
 
-**Request body:** `ProjectCreate` — at minimum `{ "id": "string", "name": "string" }`
+**Request body:** `ProjectCreate` — at minimum `{ "name": "string" }`; `id` is auto-generated if omitted.
 
 **Response:** `Project`
+
+**Audit:** emits `project_created` event.
 
 ---
 
@@ -140,11 +154,53 @@ Replaces one section on a project. `:key` is a camelCase section name (e.g. `app
 | `nfrs` | JSONB column on `projects` |
 | `migrationConstraints` | JSONB column on `projects` |
 | `targetArchitecture` | JSONB column on `projects` |
-| `team` | JSONB column on `projects` |
 | `jiraSubtaskConfig` | JSONB column on `projects` |
+| `status` | Scalar column on `projects` |
+| `waveId` | Scalar column on `projects` |
 | `currentInfrastructure` | Delegates to `cloud_resources` table (replace-all) |
 | `risks` | Delegates to `risks` table (replace-all) |
 | `approvals` | Delegates to `approvals` table (replace-all) |
+
+---
+
+### `GET /api/v1/projects/:id/users`
+
+Returns users who are members of a project.
+
+**Response:** `User[]`
+
+---
+
+### `POST /api/v1/projects/:id/survey-submitted`
+
+Marks the project's survey as submitted (sets `surveySubmittedAt` timestamp). Advances stage progress from `survey: 0` to `survey: 100`.
+
+**Response:** `Project`
+
+**Audit:** emits `survey_submitted` event.
+
+---
+
+### `PATCH /api/v1/projects/:id/planning`
+
+Replaces the project's planning JSONB (start date, end date, task list). Requires authentication.
+
+**Request body:**
+```json
+{
+  "planning": {
+    "startDate": "2026-05-01",
+    "endDate": "2026-08-31",
+    "tasks": []
+  }
+}
+```
+
+**Response:** `Project`
+
+**Side effects:** if a Jira story key exists, best-effort syncs `startDate`/`endDate` to Jira target date custom fields in the background.
+
+**Audit:** emits `section_updated` with `sectionKey: "planning"`.
 
 ---
 
@@ -156,23 +212,154 @@ Returns audit log entries for a project, sorted newest-first.
 ```json
 {
   "entries": "AuditLogEntry[]",
-  "total": 42,
-  "page": 1,
-  "limit": 50
+  "total": 42
 }
 ```
+
+**Audit event types:**
+
+| `eventType` | Trigger |
+|---|---|
+| `project_created` | `POST /projects` |
+| `section_updated` | `PATCH /sections/{key}` or `PATCH /planning` |
+| `status_changed` | `PATCH /projects/:id` with `status` field |
+| `risks_updated` | `PATCH /sections/risks` |
+| `approval_submitted` | `PATCH /sections/approvals` |
+| `survey_submitted` | `POST /survey-submitted` |
+| `resource_added` | `PATCH /sections/currentInfrastructure` — new resource |
+| `resource_removed` | `PATCH /sections/currentInfrastructure` — resource deleted |
+| `resource_updated` | `PATCH /sections/currentInfrastructure` — field change |
+| `resource_sync_completed` | `POST /resources/:id/sync-complete` |
+
+Each entry's `actor` object is `{ id, name, initials }` for human users; service account entries additionally include `"type": "service_account"`.
 
 ---
 
 ## Cloud Resources
 
+### `PATCH /api/v1/projects/:id/resources`
+
+Upserts specific resources **without** affecting the rest of the project's resource list.
+
+- Items with `resource_id` **already in DB** → update only the non-null fields provided; other fields on that resource are unchanged
+- Items with `resource_id` **not in DB** → create a new resource
+- Resources **absent** from the payload → left untouched
+
+This is the targeted alternative to `PATCH /sections/currentInfrastructure`, which is a full replace.
+
+**Request body:**
+```json
+{
+  "resources": [
+    {
+      "resource_id": "rm-bp1abc123456",
+      "sync_status": "synced",
+      "target_resource_id": "rm-cn-hz-target-001"
+    },
+    {
+      "resource_id": "rm-new-999",
+      "name": "prod-redis-cache",
+      "product": "r-kvstore",
+      "resource_set": "set-cache",
+      "need_migration": true
+    }
+  ]
+}
+```
+
+All fields use **snake_case** (consistent with other typed schemas). `resource_id` is the cloud provider resource identifier and serves as the primary key.
+
+**Response:** `Project`
+
+**Audit:** emits `resource_updated` per changed resource; `resource_added` per created resource.
+
+---
+
+### `DELETE /api/v1/projects/:id/resources`
+
+Deletes specific resources by `resource_id`. IDs not found in the project are silently skipped — no error is returned for unknown IDs.
+
+**Request body:**
+```json
+{ "resource_ids": ["rm-bp1abc123456", "oss-bucket-prod-assets"] }
+```
+
+**Response:** `Project` — updated resource list, so the caller sees the result without a separate fetch.
+
+**Audit:** emits `resource_removed` per deleted resource.
+
+---
+
 ### `POST /api/v1/projects/:id/resources/specs`
 
-Batch-updates the `specs` field for multiple cloud resources. Used by the resource questionnaire to write spec data per resource.
+Batch-updates the `specs` JSONB field for multiple cloud resources. Merges provided specs into existing — does not replace the full resource.
 
-**Request body:** `{ "updates": [{ "resourceId": "string", "specs": {} }] }`
+**Request body:** `{ "updates": [{ "resource_id": "string", "specs": {} }] }`
 
-**Response:** `{ "updated": number }`
+> Note: `resource_id` is the cloud provider resource identifier.
+
+**Response:** `204 No Content`
+
+**Audit:** emits `resource_updated` per changed resource.
+
+---
+
+### `POST /api/v1/projects/:id/resources/:resource_id/sync-complete`
+
+Marks a single cloud resource's migration sync as complete (`syncStatus → "synced"`, `migrationCompleted → true`). If the resource has an associated Jira subtask, queues a background job to close it.
+
+**Response:** `202 Accepted` — `Project`
+
+**Audit:** emits `resource_sync_completed`.
+
+---
+
+## Admin — Service Accounts
+
+All endpoints in this section require the `platform_migration_lead` or `admin` role.
+
+### `POST /api/v1/admin/service-accounts`
+
+Creates a new service account user and issues an API key. The plaintext key is returned **once** and never stored — save it immediately.
+
+**Request body:**
+```json
+{
+  "name": "Inventory Sync Bot",
+  "email": "svc-inventory@example.com",
+  "department": "Platform"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "svc-a1b2c3d4",
+  "name": "Inventory Sync Bot",
+  "email": "svc-inventory@example.com",
+  "department": "Platform",
+  "initials": "IS",
+  "api_key": "mhub_<64-hex>"
+}
+```
+
+Use the returned `api_key` as the `X-API-Key` header on all subsequent requests.
+
+---
+
+### `GET /api/v1/admin/service-accounts`
+
+Lists all service accounts.
+
+**Response:** `ServiceAccountOut[]` — same shape as above minus `api_key`.
+
+---
+
+### `DELETE /api/v1/admin/service-accounts/:id`
+
+Revokes a service account's API key by clearing its hash. The user row is retained for audit log attribution. After revocation, any request using the old key returns `401`.
+
+**Response:** `204 No Content`
 
 ---
 

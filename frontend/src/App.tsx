@@ -17,6 +17,10 @@ import { EmailBuilderPage } from './pages/EmailBuilderPage'
 import { EmailPreviewPage } from './pages/EmailPreviewPage'
 import { CallbackPage } from './pages/CallbackPage'
 import { AdminJiraJobsPage } from './pages/AdminJiraJobsPage'
+import { ServiceAccountsPage } from './pages/ServiceAccountsPage'
+import { AdminAttachmentsPage } from './pages/AdminAttachmentsPage'
+import { AdminPage } from './pages/AdminPage'
+import { AdminHome } from './pages/AdminHome'
 import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -40,7 +44,12 @@ function App() {
         <Route path="/email/new" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
         <Route path="/email/:id/edit" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
         <Route path="/email/:id/preview" element={<ProtectedRoute><EmailPreviewPage /></ProtectedRoute>} />
-        <Route path="/admin/jobs" element={<ProtectedRoute><AdminJiraJobsPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
+          <Route index element={<AdminHome />} />
+          <Route path="jobs" element={<AdminJiraJobsPage />} />
+          <Route path="service-accounts" element={<ServiceAccountsPage />} />
+          <Route path="attachments" element={<AdminAttachmentsPage />} />
+        </Route>
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
           <Route index element={<SettingsHome />} />
           <Route path="survey" element={<SurveyBuilderPage />} />

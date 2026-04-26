@@ -376,6 +376,39 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     defaultQuestion: 'Provide the URL to the target architecture diagram.',
     defaultHint: 'e.g. Confluence page URL, draw.io link, or Lucidchart URL',
   },
+
+  // ─── Migration Effort Estimation ─────────────────────────────────────────────
+  {
+    id: 'effort__estimate',
+    sectionKey: 'migrationEffortEstimation',
+    fieldPath: 'effortEstimate',
+    label: 'Migration Effort Estimate',
+    sectionLabel: 'Migration Effort Estimation',
+    inputType: 'short_text',
+    defaultQuestion: 'What is the estimated migration effort and cost (in thousands)?',
+    defaultHint: 'Enter a numeric value in thousands (K). If unknown, enter TBC and explain in Notes.',
+  },
+  {
+    id: 'effort__notes',
+    sectionKey: 'migrationEffortEstimation',
+    fieldPath: 'notes',
+    attachmentFieldPath: 'attachmentIds',
+    label: 'Notes (Breakdown & Rationale)',
+    sectionLabel: 'Migration Effort Estimation',
+    inputType: 'long_text_with_upload',
+    defaultQuestion: 'Provide a breakdown and rationale for the effort estimate.',
+    defaultHint: 'Include scope, key assumptions, exclusions, risks and any vendor quotes.',
+  },
+  {
+    id: 'effort__attachments',
+    sectionKey: 'migrationEffortEstimation',
+    fieldPath: 'attachmentIds',
+    label: 'Attachments',
+    sectionLabel: 'Migration Effort Estimation',
+    inputType: 'file_upload',
+    defaultQuestion: 'Upload any supporting documents (e.g. vendor quotes).',
+    defaultHint: 'You can upload multiple files.',
+  },
 ]
 
 /** Return the field definitions grouped by sectionLabel */

@@ -79,17 +79,17 @@ export function CloudResourceEditDrawer({ open, onOpenChange, resources, editing
 
   function handleSave() {
     onSave?.(resources.map(r =>
-      r.id === editingResource!.id ? { ...editingResource!, needMigration, subApplication: subApplication || undefined } : r
+      r.resourceId === editingResource!.resourceId ? { ...editingResource!, needMigration, subApplication: subApplication || undefined } : r
     ))
     onOpenChange(false)
   }
 
   function handleMarkSyncCompleted() {
     if (onMarkSyncCompleted) {
-      onMarkSyncCompleted(editingResource!.id)
+      onMarkSyncCompleted(editingResource!.resourceId)
     } else {
       onSave?.(resources.map(r =>
-        r.id === editingResource!.id ? { ...editingResource!, needMigration, subApplication: subApplication || undefined, syncStatus: 'synced' } : r
+        r.resourceId === editingResource!.resourceId ? { ...editingResource!, needMigration, subApplication: subApplication || undefined, syncStatus: 'synced' } : r
       ))
     }
     onOpenChange(false)

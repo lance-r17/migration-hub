@@ -15,6 +15,7 @@ from app.models.jira_job import JiraJob
 from app.models.jira_job_log import JiraJobLog
 from app.models.config_store import ConfigStore
 from app.models.email_template import EmailTemplate
+from app.models.project_attachment import ProjectAttachment
 
 __all__ = [
     "Base",

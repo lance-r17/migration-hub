@@ -117,9 +117,8 @@ def seed(session: Session, force: bool = False) -> None:
         # Cloud resources
         for r in p.get("resources", []):
             session.add(CloudResource(
-                id=r["id"],
+                resource_id=r["resource_id"],
                 project_id=p["id"],
-                resource_id=r.get("resource_id"),
                 name=r["name"],
                 product=r.get("product"),
                 resource_set=r.get("resource_set"),

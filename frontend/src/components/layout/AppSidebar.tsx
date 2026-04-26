@@ -19,7 +19,7 @@ import {
   Waves,
   DollarSign,
   Mail,
-  MonitorDot,
+  UserCog,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
@@ -64,10 +64,10 @@ const data = {
       requiresRole: "platform_migration_lead",
     },
     {
-      title: "Job Monitor",
-      url: "/admin/jobs",
-      icon: <MonitorDot />,
-      requiresRole: "platform_migration_lead",
+      title: "Admin",
+      url: "/admin",
+      icon: <UserCog />,
+      requiresRole: "admin",
     },
   ] satisfies NavItem[],
   navSecondary: [

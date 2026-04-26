@@ -154,7 +154,7 @@ export async function createJiraJob(
         const project = store.getProject(projectId)
         if (project?.currentInfrastructure) {
           const updatedResources = project.currentInfrastructure.resources.map(r =>
-            inScope.some(s => s.id === r.id)
+            inScope.some(s => s.resourceId === r.resourceId)
               ? { ...r, jiraSubtaskKey: subtaskKeys[getCategoryForProduct(r.product)] }
               : r
           )
@@ -171,7 +171,7 @@ export async function createJiraJob(
         const project = store.getProject(projectId)
         if (project?.currentInfrastructure) {
           const updatedResources = project.currentInfrastructure.resources.map(r =>
-            inScope.some(s => s.id === r.id)
+            inScope.some(s => s.resourceId === r.resourceId)
               ? { ...r, jiraSubtaskKey: subtaskKeys[r.product ?? 'Other'] }
               : r
           )
@@ -183,7 +183,7 @@ export async function createJiraJob(
       } else {
         const targetIds = config.mode === 'custom'
           ? (config.selectedResourceIds ?? [])
-          : inScope.map(r => r.id)
+          : inScope.map(r => r.resourceId)
 
         for (const id of targetIds) {
           subtaskKeys[id] = `${projectKey}-${counter++}`
@@ -192,7 +192,7 @@ export async function createJiraJob(
         const project = store.getProject(projectId)
         if (project?.currentInfrastructure) {
           const updatedResources = project.currentInfrastructure.resources.map(r =>
-            subtaskKeys[r.id] ? { ...r, jiraSubtaskKey: subtaskKeys[r.id] } : r
+            subtaskKeys[r.resourceId] ? { ...r, jiraSubtaskKey: subtaskKeys[r.resourceId] } : r
           )
           store.updateProject(projectId, 'currentInfrastructure', {
             ...project.currentInfrastructure,

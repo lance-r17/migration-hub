@@ -11,6 +11,7 @@ import {
   ArrowDownToLine,
   ExternalLink,
   GitBranch,
+  CircleDot,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatValue } from '@/utils/diff'
@@ -125,8 +126,15 @@ function groupByDate(entries: AuditLogEntry[]): Array<{ label: string; entries: 
 
 // ─── Single entry ─────────────────────────────────────────────────────────────
 
+const DEFAULT_CONFIG = {
+  icon: CircleDot,
+  label: 'Updated',
+  iconClass: 'text-slate-600 dark:text-slate-400',
+  dotClass: 'bg-slate-500',
+}
+
 function AuditEntry({ entry }: { entry: AuditLogEntry }) {
-  const config = EVENT_CONFIG[entry.eventType]
+  const config = EVENT_CONFIG[entry.eventType] ?? DEFAULT_CONFIG
   const Icon = config.icon
   const time = format(parseISO(entry.timestamp), 'HH:mm')
 
