@@ -86,6 +86,7 @@ interface ProjectListItemApi {
   jira_job_status: string | null
   planning: ProjectPlanning | null
   migration_constraints: MigrationConstraints | null
+  migration_effort_estimation: MigrationEffortEstimation | null
   approvals: ApprovalApi[]
   cloud_resources: CloudResourceApi[]
 }
@@ -166,6 +167,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     surveySubmittedAt: raw.survey_submitted_at ?? undefined,
     stageProgress: raw.stage_progress ?? undefined,
     migrationConstraints: raw.migration_constraints ?? undefined,
+    migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
     risks: [],
     approvals: (raw.approvals ?? []).map(mapApproval),
     currentInfrastructure: raw.cloud_resources?.length

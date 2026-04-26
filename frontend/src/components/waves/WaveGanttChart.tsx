@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { ChevronDown, ChevronRight, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, ScrollText, BarChart2, Cpu, Lock } from 'lucide-react'
+import { ChevronDown, ChevronRight, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, ScrollText, BarChart2, Cpu, Lock, FileText } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import type { Project, ProjectPlanning, PlanningTask, TaskType } from '@/types'
+import type { Project, ProjectPlanning, PlanningTask, TaskType, MigrationEffortEstimation } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { EmbargoRecord } from '@/types/embargo'
 import { useEmbargos } from '@/hooks/use-embargos'
+import { getAttachments } from '@/services/attachments'
+import type { Attachment } from '@/services/attachments'
 import { Button } from '../ui/button'
 import {
   DropdownMenu,
@@ -21,6 +23,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -155,6 +162,68 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(h.substring(2, 4), 16)
   const b = parseInt(h.substring(4, 6), 16)
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+// ─── Effort cell with lazy attachment fetch ────────────────────────────────────
+
+function EffortCell({ projectId, estimation }: { projectId: string; estimation?: MigrationEffortEstimation }) {
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  const load = useCallback(async () => {
+    if (loaded || !estimation?.attachmentIds?.length) return
+    try {
+      const list = await getAttachments(projectId)
+      const ids = new Set(estimation.attachmentIds)
+      setAttachments(list.filter(a => ids.has(a.id)))
+    } catch { /* ignore */ }
+    setLoaded(true)
+  }, [loaded, projectId, estimation])
+
+  const effortText = estimation?.effortEstimate ? `${estimation.effortEstimate}K` : '—'
+  const hasTooltip = estimation && (estimation.notes || estimation.attachmentIds?.length)
+
+  if (!hasTooltip) return <span>{effortText}</span>
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-help underline decoration-dotted underline-offset-2" onMouseEnter={load}>
+          {effortText}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs">
+        <div className="space-y-2">
+          {estimation.notes && (
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Notes</p>
+              <p className="text-xs whitespace-pre-wrap">{estimation.notes}</p>
+            </div>
+          )}
+          {attachments.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Attachments</p>
+              <div className="flex flex-col gap-1">
+                {attachments.map(att => (
+                  <a
+                    key={att.id}
+                    href={`/api/v1/projects/${projectId}/attachments/${att.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <FileText className="w-3 h-3 shrink-0" />
+                    <span className="truncate max-w-[200px]">{att.filename}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  )
 }
 
 // ─── Main component ────────────────────────────────────────────────────────────
@@ -1651,7 +1720,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                   </div>
                   {/* Effort col */}
                   <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
-                    {p.migrationEffortEstimation?.effortEstimate ? `${p.migrationEffortEstimation.effortEstimate}K` : '—'}
+                    <EffortCell projectId={p.id} estimation={p.migrationEffortEstimation} />
                   </div>
                   {/* Action col */}
                   <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
