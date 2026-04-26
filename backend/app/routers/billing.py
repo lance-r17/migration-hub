@@ -9,7 +9,8 @@ from app.schemas.billing import (
     BillingThresholdConfigUpdate,
     BillingUpload,
 )
-from app.services import billing_service
+from app.schemas.signoff import SignoffConfigOut, SignoffConfigUpdate
+from app.services import billing_service, signoff_service
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 settings_router = APIRouter(prefix="/settings", tags=["settings"])
@@ -98,3 +99,13 @@ async def update_billing_thresholds(
     body: BillingThresholdConfigUpdate, db: AsyncSession = Depends(get_db)
 ):
     return await billing_service.update_threshold_config(db, body)
+
+
+@settings_router.get("/signoff", response_model=SignoffConfigOut)
+async def get_signoff(db: AsyncSession = Depends(get_db)):
+    return await signoff_service.get_signoff_config(db)
+
+
+@settings_router.put("/signoff", response_model=SignoffConfigOut)
+async def update_signoff(body: SignoffConfigUpdate, db: AsyncSession = Depends(get_db)):
+    return await signoff_service.update_signoff_config(db, body)

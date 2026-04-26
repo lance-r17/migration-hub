@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { BadgeCheck, History, ClipboardList, Ban } from 'lucide-react'
+import { BadgeCheck, Ban, ClipboardList, History, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -37,6 +37,7 @@ import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
 import { createJiraJob } from '@/services/jiraJobs'
 import { markResourceSyncComplete } from '@/services/projects'
+import { getSignoffConfig } from '@/services/signoffConfig'
 import { apiClient } from '@/services/client'
 import { ensureAllRoles } from '@/lib/approvals'
 import type { Project, ProjectStatus } from '@/types'
@@ -53,6 +54,7 @@ export function ProjectDetailsPage() {
   const { resourceSurveyConfig } = useResourceSurveyConfig()
   const { getCategoryForProduct } = useProductCategoryMap()
   const { embargos } = useEmbargos()
+  const [signoffEnabled, setSignoffEnabled] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [assignWaveOpen, setAssignWaveOpen] = useState(false)
@@ -76,6 +78,10 @@ export function ProjectDetailsPage() {
     const interval = setInterval(() => { refreshProject() }, 2_000)
     return () => clearInterval(interval)
   }, [project?.jiraJobStatus, refreshProject])
+
+  useEffect(() => {
+    getSignoffConfig().then(cfg => setSignoffEnabled(cfg.enabled)).catch(() => {})
+  }, [])
 
   if (loading) {
     return (
@@ -233,11 +239,13 @@ export function ProjectDetailsPage() {
   const predecessorsApproved = currentRoleIndex <= 0 || APPROVAL_SEQUENCE
     .slice(0, currentRoleIndex)
     .every(role => project.approvals.find(a => a.role === role)?.status === 'approved')
-  const canSignOff =
+  const eligibleForSignoff =
     preSignOffStatuses.includes(project.status) &&
     currentUserRole !== null &&
     predecessorsApproved &&
     project.approvals.find(a => a.role === currentUserRole)?.status !== 'approved'
+  const canSignOff = signoffEnabled && eligibleForSignoff
+  const showSignoffDisabledNotice = !signoffEnabled && eligibleForSignoff
   const hasMetadata = project.migrationWave || project.jiraTicket || project.profileOwner || project.updatedAt
 
   return (
@@ -370,6 +378,11 @@ export function ProjectDetailsPage() {
               >
                 <BadgeCheck size={16} /> Sign-off
               </button>
+            )}
+            {showSignoffDisabledNotice && (
+              <span className="flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground bg-muted rounded-lg flex-shrink-0">
+                <Lock size={14} /> Sign-off disabled
+              </span>
             )}
           </div>
         )}

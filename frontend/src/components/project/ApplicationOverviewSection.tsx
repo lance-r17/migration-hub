@@ -163,20 +163,20 @@ export function ApplicationOverviewSection({ data, projectId, onSave }: Applicat
             <p className="text-sm text-muted-foreground">No contacts added yet.</p>
           ) : (
             <div className="space-y-5">
-              {businessOwner && (
-                <div>
-                  <Label>Business Owner</Label>
-                  <p className="text-sm font-medium text-foreground">{businessOwner.name}</p>
-                  <p className="text-xs text-muted-foreground">{businessOwner.department}</p>
-                  <p className="text-xs text-muted-foreground">{businessOwner.email}</p>
-                </div>
-              )}
               {technicalLead && (
                 <div>
                   <Label>Technical Lead</Label>
                   <p className="text-sm font-medium text-foreground">{technicalLead.name}</p>
                   {technicalLead.team && <p className="text-xs text-muted-foreground">{technicalLead.team}</p>}
                   <p className="text-xs text-muted-foreground">{technicalLead.email}</p>
+                </div>
+              )}
+              {businessOwner && (
+                <div>
+                  <Label>Business Owner</Label>
+                  <p className="text-sm font-medium text-foreground">{businessOwner.name}</p>
+                  <p className="text-xs text-muted-foreground">{businessOwner.department}</p>
+                  <p className="text-xs text-muted-foreground">{businessOwner.email}</p>
                 </div>
               )}
               {dbaDataOwner && (

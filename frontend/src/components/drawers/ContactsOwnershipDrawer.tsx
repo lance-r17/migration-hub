@@ -99,20 +99,6 @@ export function ContactsOwnershipDrawer({ open, onOpenChange, data, projectId, o
       onSave={handleSave}
       saveDisabled={!!validationError}
     >
-      <p className={sectionLabel}>Business Owner</p>
-      <div className="space-y-1.5">
-        <Label>User</Label>
-        <Select value={draft.boUserId} onValueChange={(v) => setDraft(d => ({ ...d, boUserId: v }))}>
-          <SelectTrigger disabled={usersLoading}><SelectValue placeholder={usersLoading ? 'Loading users…' : 'Select a user…'} /></SelectTrigger>
-          <SelectContent>
-            {boOptions.map(u => (
-              <SelectItem key={u.id} value={u.id}>{u.name} — {u.department}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {draft.boUserId && <UserPreview userId={draft.boUserId} users={availableUsers} />}
-      </div>
-
       <p className={sectionLabel}>Technical Lead</p>
       <div className="space-y-1.5">
         <Label>User</Label>
@@ -125,6 +111,20 @@ export function ContactsOwnershipDrawer({ open, onOpenChange, data, projectId, o
           </SelectContent>
         </Select>
         {draft.tlUserId && <UserPreview userId={draft.tlUserId} users={availableUsers} />}
+      </div>
+
+      <p className={sectionLabel}>Business Owner</p>
+      <div className="space-y-1.5">
+        <Label>User</Label>
+        <Select value={draft.boUserId} onValueChange={(v) => setDraft(d => ({ ...d, boUserId: v }))}>
+          <SelectTrigger disabled={usersLoading}><SelectValue placeholder={usersLoading ? 'Loading users…' : 'Select a user…'} /></SelectTrigger>
+          <SelectContent>
+            {boOptions.map(u => (
+              <SelectItem key={u.id} value={u.id}>{u.name} — {u.department}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {draft.boUserId && <UserPreview userId={draft.boUserId} users={availableUsers} />}
       </div>
 
       <p className={sectionLabel}>DBA / Data Owner</p>
