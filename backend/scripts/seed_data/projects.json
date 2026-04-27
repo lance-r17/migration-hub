@@ -21,7 +21,8 @@
       },
       "applicationTier": "T0",
       "baId": "EIM-00421",
-      "ibsInScope": true,
+      "systemImportanceClassification": ["IBS"],
+      "iitaApplicability": true,
       "migrationStrategy": "Lift & Shift",
       "serviceLine": "Finance & Operations"
     },
@@ -423,7 +424,7 @@
       "businessOwnerId": "u6",
       "technicalLeadId": "u7",
       "dbaDataOwnerId": "u8",
-      "ibsInScope": false,
+      "systemImportanceClassification": [],
       "migrationStrategy": "Lift & Shift"
     },
     "availability": {
@@ -634,7 +635,8 @@
       "businessFunction": "Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.",
       "businessOwnerId": "u12",
       "technicalLeadId": "u10",
-      "ibsInScope": true,
+      "systemImportanceClassification": ["IBS", "BPS"],
+      "iitaApplicability": false,
       "migrationStrategy": "Refactor",
       "serviceLine": "Network Operations"
     },

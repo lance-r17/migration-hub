@@ -470,6 +470,8 @@ export function ProjectDetailsPage() {
           <MigrationEffortEstimationSection
             data={project.migrationEffortEstimation}
             projectId={project.id}
+            projectBaId={project.applicationOverview?.baId}
+            softwareOrigin={project.applicationOverview?.softwareOrigin}
             onSave={!isLocked ? (d) => handleSave('migrationEffortEstimation', d) : undefined}
           />
         </div>

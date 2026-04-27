@@ -9,6 +9,7 @@ import {
   SheetClose,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface SectionEditDrawerProps {
   open: boolean
@@ -18,6 +19,7 @@ interface SectionEditDrawerProps {
   onSave: () => void
   saveDisabled?: boolean
   children: ReactNode
+  widthClass?: string
 }
 
 export function SectionEditDrawer({
@@ -28,12 +30,13 @@ export function SectionEditDrawer({
   onSave,
   saveDisabled,
   children,
+  widthClass = 'w-[600px] sm:!max-w-[600px]',
 }: SectionEditDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[600px] sm:!max-w-[600px] flex flex-col p-0 gap-0"
+        className={cn(widthClass, 'flex flex-col p-0 gap-0')}
         showCloseButton={false}
       >
         <SheetHeader className="border-b px-6 py-4 pr-12">

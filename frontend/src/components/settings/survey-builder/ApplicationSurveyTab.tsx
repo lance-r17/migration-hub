@@ -55,13 +55,12 @@ const INPUT_TYPE_LABELS: Record<string, string> = {
   checkbox_select: 'Checkboxes',
   file_upload: 'File upload',
   effort_estimate: 'Effort estimate',
+  effort_table: 'Effort table',
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type RenderItem =
-  | { type: 'question'; question: SurveyQuestion; index: number }
-  | { type: 'effort_group'; estimate: SurveyQuestion; notes: SurveyQuestion; index: number }
+type RenderItem = { type: 'question'; question: SurveyQuestion; index: number }
 
 interface ApplicationSurveyTabProps {
   isActive: boolean
@@ -74,43 +73,22 @@ interface ApplicationSurveyTabProps {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildRenderItems(questions: SurveyQuestion[]): RenderItem[] {
-  const items: RenderItem[] = []
-  let i = 0
-  while (i < questions.length) {
-    const q = questions[i]
-    if (q.fieldId === 'effort__estimate' && questions[i + 1]?.fieldId === 'effort__notes') {
-      items.push({ type: 'effort_group', estimate: q, notes: questions[i + 1], index: i })
-      i += 2
-    } else {
-      items.push({ type: 'question', question: q, index: i })
-      i += 1
-    }
-  }
-  return items
+  return questions.map((q, i) => ({ type: 'question', question: q, index: i }))
 }
 
 function flattenRenderItems(items: RenderItem[]): SurveyQuestion[] {
-  const questions: SurveyQuestion[] = []
-  for (const item of items) {
-    if (item.type === 'effort_group') {
-      questions.push(item.estimate, item.notes)
-    } else {
-      questions.push(item.question)
-    }
-  }
-  return questions.map((q, i) => ({ ...q, order: i }))
+  return items.map((item) => item.question).map((q, i) => ({ ...q, order: i }))
 }
 
 function getSortableId(item: RenderItem): string {
-  return item.type === 'effort_group' ? 'effort-group' : item.question.fieldId
+  return item.question.fieldId
 }
 
 function getItemSectionLabel(
   item: RenderItem,
   getFieldById: (id: string) => SurveyFieldDef | undefined
 ): string {
-  const fieldId = item.type === 'effort_group' ? item.estimate.fieldId : item.question.fieldId
-  return getFieldById(fieldId)?.sectionLabel ?? 'Unknown'
+  return getFieldById(item.question.fieldId)?.sectionLabel ?? 'Unknown'
 }
 
 // ─── Section Header ───────────────────────────────────────────────────────────
@@ -190,99 +168,6 @@ function QuestionCardContent({
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>
   isOverlay?: boolean
 }) {
-  if (item.type === 'effort_group') {
-    const estimateDef = getFieldById(item.estimate.fieldId)
-    return (
-      <Card className={cn("bg-muted/30", isOverlay ? 'shadow-xl ring-2 ring-primary/30' : '')}>
-        <CardContent className="pt-4 pb-4">
-          <div className="flex items-start gap-3">
-            <div
-              className="flex flex-col items-center gap-1 pt-1 shrink-0 cursor-grab active:cursor-grabbing"
-              {...dragHandleProps}
-            >
-              <GripVertical size={14} className="text-muted-foreground/60" />
-            </div>
-            <div className="flex-1 space-y-3 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  Migration Effort Estimation
-                </span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
-                  {INPUT_TYPE_LABELS[estimateDef?.inputType ?? '']}
-                </Badge>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Question (Estimate)</label>
-                <Input
-                  value={item.estimate.questionText}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    updateQuestion(item.estimate.fieldId, { questionText: e.target.value })
-                  }
-                  placeholder="Enter question text…"
-                  className="text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Hint (Estimate)</label>
-                <textarea
-                  value={item.estimate.hintText}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    updateQuestion(item.estimate.fieldId, { hintText: e.target.value })
-                  }
-                  placeholder="e.g. sample answer or guidance…"
-                  className={textareaClass}
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Question (Notes)</label>
-                <Input
-                  value={item.notes.questionText}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    updateQuestion(item.notes.fieldId, { questionText: e.target.value })
-                  }
-                  placeholder="Enter question text…"
-                  className="text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Hint (Notes)</label>
-                <textarea
-                  value={item.notes.hintText}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    updateQuestion(item.notes.fieldId, { hintText: e.target.value })
-                  }
-                  placeholder="e.g. sample answer or guidance…"
-                  className={textareaClass}
-                  rows={2}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Required</span>
-                <Switch
-                  id="required-effort__estimate"
-                  checked={item.estimate.required}
-                  onCheckedChange={(v) => {
-                    updateQuestion(item.estimate.fieldId, { required: v })
-                  }}
-                />
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => removeQuestion(item.estimate.fieldId)}
-              className="text-muted-foreground hover:text-destructive shrink-0 mt-1"
-              title="Remove"
-            >
-              <X size={14} />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
   const q = item.question
   const def = getFieldById(q.fieldId)
   if (!def) return null
@@ -467,29 +352,13 @@ export function ApplicationSurveyTab({
       const next = [...prev]
       next.splice(insertAt, 0, newQuestion)
 
-      if (fieldId === 'effort__estimate') {
-        const notesDef = getFieldById('effort__notes')
-        if (notesDef) {
-          next.splice(insertAt + 1, 0, {
-            fieldId: notesDef.id,
-            questionText: notesDef.defaultQuestion,
-            hintText: notesDef.defaultHint,
-            required: true,
-            order: insertAt + 1,
-          })
-        }
-      }
-
       return next.map((q, i) => ({ ...q, order: i }))
     })
   }
 
   const removeQuestion = (fieldId: string) => {
     setQuestions((prev) => {
-      const idsToRemove = new Set([fieldId])
-      if (fieldId === 'effort__estimate') idsToRemove.add('effort__notes')
-      if (fieldId === 'effort__notes') idsToRemove.add('effort__estimate')
-      const filtered = prev.filter((q) => !idsToRemove.has(q.fieldId))
+      const filtered = prev.filter((q) => q.fieldId !== fieldId)
       return filtered.map((q, i) => ({ ...q, order: i }))
     })
   }
@@ -698,12 +567,8 @@ export function ApplicationSurveyTab({
                     {sectionLabel}
                   </p>
                   <div className="space-y-1">
-                    {fields.map((def) => {
-                      if (def.id === 'effort__notes') return null
-                      const isAdded =
-                        selectedFieldIds.has(def.id) ||
-                        (def.id === 'effort__estimate' && selectedFieldIds.has('effort__notes'))
-                      const label = def.id === 'effort__estimate' ? 'Migration Effort Estimation' : def.label
+                    {fields.filter(def => !['effort__notes', 'effort__attachments'].includes(def.id)).map((def) => {
+                      const isAdded = selectedFieldIds.has(def.id)
                       return (
                         <button
                           key={def.id}
@@ -717,7 +582,7 @@ export function ApplicationSurveyTab({
                               : 'hover:bg-primary/5 hover:text-primary cursor-pointer')
                           }
                         >
-                          <span className="truncate">{label}</span>
+                          <span className="truncate">{def.label}</span>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
                               {INPUT_TYPE_LABELS[def.inputType]}

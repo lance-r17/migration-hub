@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Check } from 'lucide-react'
 import { SectionEditDrawer } from './SectionEditDrawer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,6 +24,11 @@ const textareaClass =
 
 const sectionLabel = 'text-xs font-semibold uppercase text-muted-foreground tracking-wide pt-2'
 
+const CLASSIFICATION_OPTIONS = [
+  { value: 'IBS', label: 'IBS - Important Business Service' },
+  { value: 'BPS', label: 'BPS - Business Prioritised Service' },
+] as const
+
 export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: Props) {
   const [draft, setDraft] = useState({
     applicationName: '',
@@ -32,10 +38,14 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
     userBaseType: 'Internal' as 'Internal' | 'External' | 'Both',
     userBaseCount: '',
     businessFunction: '',
-    ibsInScope: '' as 'true' | 'false' | '',
+    systemImportanceClassification: [] as ('IBS' | 'BPS')[],
+    iitaApplicability: '' as 'true' | 'false' | '',
+    softwareOrigin: '' as 'in-house' | '3rd party' | '',
     migrationStrategy: '' as MigrationStrategy | '',
     serviceLine: '',
   })
+
+  const showIita = draft.systemImportanceClassification.includes('IBS')
 
   useEffect(() => {
     if (open) {
@@ -47,12 +57,27 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
         userBaseType: data?.userBase?.type ?? 'Internal',
         userBaseCount: data?.userBase?.count ?? '',
         businessFunction: data?.businessFunction ?? '',
-        ibsInScope: data?.ibsInScope != null ? (data.ibsInScope ? 'true' : 'false') : '',
+        systemImportanceClassification: data?.systemImportanceClassification ?? [],
+        iitaApplicability: data?.iitaApplicability != null ? (data.iitaApplicability ? 'true' : 'false') : '',
+        softwareOrigin: data?.softwareOrigin ?? '',
         migrationStrategy: data?.migrationStrategy ?? '',
         serviceLine: data?.serviceLine ?? '',
       })
     }
   }, [open, data])
+
+  function toggleClassification(value: 'IBS' | 'BPS') {
+    setDraft(d => {
+      const next = d.systemImportanceClassification.includes(value)
+        ? d.systemImportanceClassification.filter(v => v !== value)
+        : [...d.systemImportanceClassification, value]
+      // Clear IITA if IBS is removed
+      if (!next.includes('IBS')) {
+        return { ...d, systemImportanceClassification: next, iitaApplicability: '' }
+      }
+      return { ...d, systemImportanceClassification: next }
+    })
+  }
 
   function handleSave() {
     onSave({
@@ -63,7 +88,9 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
       applicationTier: (draft.applicationTier as ApplicationTier) || undefined,
       userBase: { type: draft.userBaseType, count: draft.userBaseCount || undefined },
       businessFunction: draft.businessFunction || undefined,
-      ibsInScope: draft.ibsInScope !== '' ? draft.ibsInScope === 'true' : undefined,
+      systemImportanceClassification: draft.systemImportanceClassification.length > 0 ? draft.systemImportanceClassification : undefined,
+      iitaApplicability: showIita && draft.iitaApplicability !== '' ? draft.iitaApplicability === 'true' : undefined,
+      softwareOrigin: (draft.softwareOrigin as 'in-house' | '3rd party') || undefined,
       migrationStrategy: (draft.migrationStrategy as MigrationStrategy) || undefined,
       serviceLine: draft.serviceLine || undefined,
     })
@@ -185,37 +212,87 @@ export function ApplicationProfileDrawer({ open, onOpenChange, data, onSave }: P
 
       <p className={sectionLabel}>Migration Classification</p>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label>IBS In Scope *</Label>
-          <Select
-            value={draft.ibsInScope}
-            onValueChange={(v) => setDraft(d => ({ ...d, ibsInScope: v as 'true' | 'false' }))}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">Yes</SelectItem>
-              <SelectItem value="false">No</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label>System Importance Classification *</Label>
+          <div className="flex flex-col gap-2 pt-1">
+            {CLASSIFICATION_OPTIONS.map((opt) => {
+              const isSelected = draft.systemImportanceClassification.includes(opt.value)
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleClassification(opt.value)}
+                  className={
+                    'flex items-center w-full px-3 py-2 rounded-md border-2 text-left transition-all ' +
+                    (isSelected
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground')
+                  }
+                >
+                  <span className={
+                    'flex-shrink-0 flex items-center justify-center w-5 h-5 text-xs font-bold mr-3 border rounded transition-colors ' +
+                    (isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground')
+                  }>
+                    {isSelected && <Check size={12} />}
+                  </span>
+                  <span className="text-sm">{opt.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label>Migration Strategy *</Label>
-          <Select
-            value={draft.migrationStrategy}
-            onValueChange={(v) => setDraft(d => ({ ...d, migrationStrategy: v as MigrationStrategy }))}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select strategy" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Lift & Shift">Lift &amp; Shift</SelectItem>
-              <SelectItem value="Refactor">Refactor</SelectItem>
-              <SelectItem value="Deboard">Deboard</SelectItem>
-            </SelectContent>
-          </Select>
+
+        {showIita && (
+          <div className="space-y-1.5">
+            <Label>IITA (Important IT Asset) Applicability *</Label>
+            <Select
+              value={draft.iitaApplicability}
+              onValueChange={(v) => setDraft(d => ({ ...d, iitaApplicability: v as 'true' | 'false' }))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Yes</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>Software Origin</Label>
+            <Select
+              value={draft.softwareOrigin}
+              onValueChange={(v) => setDraft(d => ({ ...d, softwareOrigin: v as 'in-house' | '3rd party' }))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select origin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in-house">In-house</SelectItem>
+                <SelectItem value="3rd party">3rd party</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Migration Strategy *</Label>
+            <Select
+              value={draft.migrationStrategy}
+              onValueChange={(v) => setDraft(d => ({ ...d, migrationStrategy: v as MigrationStrategy }))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select strategy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Lift & Shift">Lift &amp; Shift</SelectItem>
+                <SelectItem value="Refactor">Refactor</SelectItem>
+                <SelectItem value="Deboard">Deboard</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </SectionEditDrawer>

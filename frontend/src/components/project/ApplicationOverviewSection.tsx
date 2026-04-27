@@ -120,10 +120,32 @@ export function ApplicationOverviewSection({ data, projectId, onSave }: Applicat
                 </div>
               )}
 
-              {data.ibsInScope != null && (
+              {data.systemImportanceClassification != null && data.systemImportanceClassification.length > 0 && (
                 <div>
-                  <Label>IBS In Scope</Label>
-                  <YesNoBadge value={data.ibsInScope} />
+                  <Label>System Importance Classification</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.systemImportanceClassification.map(val => (
+                      <span key={val} className="text-xs font-semibold px-2 py-0.5 rounded bg-secondary text-secondary-foreground">
+                        {val === 'IBS' ? 'IBS - Important Business Service' : 'BPS - Business Prioritised Service'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {data.iitaApplicability != null && (
+                <div>
+                  <Label>IITA Applicability</Label>
+                  <YesNoBadge value={data.iitaApplicability} />
+                </div>
+              )}
+
+              {data.softwareOrigin && (
+                <div>
+                  <Label>Software Origin</Label>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-secondary text-secondary-foreground">
+                    {data.softwareOrigin}
+                  </span>
                 </div>
               )}
 

@@ -47,7 +47,9 @@ export interface ApplicationOverview {
   }
   applicationTier?: ApplicationTier
   baId?: string
-  ibsInScope?: boolean
+  systemImportanceClassification?: ('IBS' | 'BPS')[]
+  iitaApplicability?: boolean
+  softwareOrigin?: 'in-house' | '3rd party'
   migrationStrategy?: MigrationStrategy
   serviceLine?: string
 }
@@ -156,10 +158,26 @@ export interface TargetArchitecture {
 
 // ─── Section 8.5: Migration Effort Estimation ────────────────────────────────
 
+export interface EffortTask {
+  task: string
+  effort?: number        // Effort Unit (FTE)
+  effortTime?: number    // Effort Time (Month)
+  rate?: number          // Rate (Monthly Cost USD)
+  thirdParty?: boolean
+  remarks?: string
+}
+
+export interface EffortTable {
+  baId?: string
+  tasks: EffortTask[]
+}
+
 export interface MigrationEffortEstimation {
   effortEstimate?: string
   notes?: string
   attachmentIds?: string[]
+  tables?: EffortTable[]
+  tableMode?: 'single' | 'multiple'
 }
 
 // ─── Section 9: Risks & Blockers ─────────────────────────────────────────────

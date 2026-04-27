@@ -154,6 +154,7 @@ export const TEMPLATE_VARIABLES: TemplateVariable[] = [
   { key: 'project.id', label: 'Project ID', category: 'Project', example: 'PRJ-2024-ALPHA' },
   { key: 'project.status', label: 'Project Status', category: 'Project', example: 'migrating' },
   { key: 'project.applicationTier', label: 'Application Tier', category: 'Project', example: 'T0' },
+  { key: 'project.softwareOrigin', label: 'Software Origin', category: 'Project', example: 'in-house' },
   // Wave
   { key: 'wave.name', label: 'Wave Name', category: 'Wave', example: 'Wave 3 – Q2 2026' },
   { key: 'wave.cutoverDate', label: 'Cutover Date', category: 'Wave', example: '2026-06-30' },

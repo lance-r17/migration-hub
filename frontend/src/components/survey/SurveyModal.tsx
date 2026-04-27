@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, ClipboardList, Plus, CalendarIcon, Server, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
@@ -12,9 +12,10 @@ import { useSurveyFieldDefs } from '@/hooks/use-survey'
 import { submitSurvey } from '@/services/projects'
 import { MigrationWindowPicker } from '@/components/shared/MigrationWindowPicker'
 import { SurveyFileUpload } from '@/components/survey/SurveyFileUpload'
+import { EffortTableSurveyInput } from '@/components/survey/EffortTableSurveyInput'
 import { deleteAttachment } from '@/services/attachments'
 import type { SurveyConfig, SurveyQuestion, SurveyFieldDef, ResourceSurveyConfig, ResourceQuestionDef } from '@/types/survey'
-import type { Project, DependencyEntry, CloudResource, ResourceCategory } from '@/types'
+import type { Project, DependencyEntry, CloudResource, ResourceCategory, EffortTable } from '@/types'
 
 interface SurveyModalProps {
   open: boolean
@@ -28,7 +29,7 @@ interface SurveyModalProps {
 }
 
 type DateRangeValue = { from?: string; to?: string }
-type AnswerValue = string | boolean | string[] | DependencyEntry[] | DateRangeValue | undefined
+type AnswerValue = string | boolean | string[] | DependencyEntry[] | DateRangeValue | { tables: EffortTable[]; tableMode: 'single' | 'multiple' } | undefined
 type ResourceAnswerValue = string | boolean | string[] | undefined
 
 const textareaClass =
@@ -166,7 +167,7 @@ function DependencyListEditor({ value, onChange }: { value: DependencyEntry[]; o
 // ─── Application question input ───────────────────────────────────────────────
 
 function QuestionInput({
-  question, value, onChange, attachmentValue, onAttachmentChange, onRemove, autoFocus, getFieldById, projectId,
+  question, value, onChange, attachmentValue, onAttachmentChange, onRemove, autoFocus, getFieldById, projectId, project,
 }: {
   question: SurveyQuestion
   value: AnswerValue
@@ -177,6 +178,7 @@ function QuestionInput({
   autoFocus?: boolean
   getFieldById: (id: string) => SurveyFieldDef | undefined
   projectId: string
+  project: Project
 }) {
   const def = getFieldById(question.fieldId)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -346,112 +348,21 @@ function QuestionInput({
         </Popover>
       )
     }
+    case 'effort_table': {
+      const projectBaId = project.applicationOverview?.baId
+      const softwareOrigin = project.applicationOverview?.softwareOrigin
+      return (
+        <EffortTableSurveyInput
+          value={value as { tables?: EffortTable[]; tableMode?: 'single' | 'multiple' } | undefined}
+          onChange={onChange as (v: { tables: EffortTable[]; tableMode: 'single' | 'multiple' }) => void}
+          projectBaId={projectBaId}
+          softwareOrigin={softwareOrigin}
+        />
+      )
+    }
     default:
       return null
   }
-}
-
-// ─── Combined effort estimate input (estimate + notes on one slide) ───────────
-
-function EffortEstimateSurveyInput({
-  estimateValue,
-  onEstimateChange,
-  notesValue,
-  onNotesChange,
-  notesQuestionText,
-  notesHintText,
-  attachmentValue,
-  onAttachmentChange,
-  onRemove,
-  projectId,
-}: {
-  estimateValue: AnswerValue
-  onEstimateChange: (v: AnswerValue) => void
-  notesValue: AnswerValue
-  onNotesChange: (v: AnswerValue) => void
-  notesQuestionText: string
-  notesHintText?: string
-  attachmentValue?: string[]
-  onAttachmentChange?: (ids: string[]) => void
-  onRemove?: (id: string) => void
-  projectId: string
-}) {
-  const [mode, setMode] = useState<'number' | 'tbc'>(
-    ((estimateValue as string) ?? '').toLowerCase() === 'tbc' ? 'tbc' : 'number'
-  )
-
-  useEffect(() => {
-    const val = (estimateValue as string) ?? ''
-    setMode(val.toLowerCase() === 'tbc' ? 'tbc' : 'number')
-  }, [estimateValue])
-
-  const handleModeChange = (value: 'number' | 'tbc') => {
-    if (!value) return
-    setMode(value)
-    if (value === 'tbc') {
-      onEstimateChange('tbc')
-    } else {
-      onEstimateChange('')
-    }
-  }
-
-  const notesInvalid = mode === 'tbc' && (!notesValue || (notesValue as string).trim() === '')
-
-  return (
-    <div className="space-y-8">
-      <div className="space-y-4">
-        <ToggleGroup
-          type="single"
-          value={mode}
-          onValueChange={(v) => handleModeChange(v as 'number' | 'tbc')}
-          variant="outline"
-          size="sm"
-          spacing={0}
-        >
-          <ToggleGroupItem value="number">Number</ToggleGroupItem>
-          <ToggleGroupItem value="tbc">TBC</ToggleGroupItem>
-        </ToggleGroup>
-        <Input
-          value={(estimateValue as string) ?? ''}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onEstimateChange(e.target.value)}
-          placeholder={mode === 'tbc' ? 'TBC' : 'e.g. 150'}
-          disabled={mode === 'tbc'}
-          className="text-base h-12 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent px-0"
-        />
-      </div>
-
-      <div className="space-y-4 border-t border-border pt-6">
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold leading-snug">
-            {notesQuestionText}
-            {mode === 'tbc' && <span className="text-destructive ml-1 text-sm align-super">*</span>}
-          </h3>
-          {notesHintText && (
-            <p className="text-sm text-muted-foreground leading-relaxed">{notesHintText}</p>
-          )}
-        </div>
-        <textarea
-          value={(notesValue as string) ?? ''}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onNotesChange(e.target.value)}
-          placeholder="Type your answer…"
-          rows={4}
-          className={cn(
-            textareaClass,
-            notesInvalid && 'border-destructive focus-visible:border-destructive'
-          )}
-        />
-        {notesInvalid && (
-          <p className="text-sm text-destructive">Notes are required when Effort Estimate is TBC.</p>
-        )}
-        <SurveyFileUpload
-          projectId={projectId}
-          value={attachmentValue ?? []}
-          onChange={onAttachmentChange ?? (() => {})}
-          onRemove={onRemove}
-        />
-      </div>
-    </div>
-  )
 }
 
 // ─── Resource question input ──────────────────────────────────────────────────
@@ -678,8 +589,18 @@ export function SurveyModal({
 }: SurveyModalProps) {
   const { getFieldById } = useSurveyFieldDefs()
   const orderedQuestions = [...surveyConfig.questions].sort((a, b) => a.order - b.order)
-  // effort__notes is rendered together with effort__estimate on one slide
-  const displayQuestions = orderedQuestions.filter(q => q.fieldId !== 'effort__notes')
+
+  // Determine visible app questions based on conditions
+  function isQuestionVisible(q: SurveyQuestion): boolean {
+    if (!q.condition) return true
+    const answer = answers.get(q.condition.fieldId)
+    // For array values (checkbox_select), check inclusion
+    if (Array.isArray(answer)) {
+      return answer.includes(q.condition.value as string)
+    }
+    return answer === q.condition.value
+  }
+
   const resources = project.currentInfrastructure?.resources ?? []
 
   // Compute resource steps (stable reference while modal is open)
@@ -690,12 +611,6 @@ export function SurveyModal({
   // Survey structure: Welcome (0) -> App Questions -> Transition -> Resource Steps
   const welcomeSlideIndex = 0
   const appQuestionsStartIndex = 1
-  const appQuestionsEndIndex = displayQuestions.length // (inclusive, e.g. if 3 questions: 1, 2, 3)
-
-  // Transition slide sits between app questions and resource steps
-  const hasTransitionSlide = resourceSteps.length > 0
-  const transitionSlideIndex = displayQuestions.length + 1
-  const totalSteps = 1 + displayQuestions.length + (hasTransitionSlide ? 1 : 0) + resourceSteps.length
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Map<string, AnswerValue>>(new Map())
@@ -709,10 +624,18 @@ export function SurveyModal({
   const [completed, setCompleted] = useState(false)
   const [resourceListExpanded, setResourceListExpanded] = useState(false)
 
+  const visibleQuestions = orderedQuestions.filter(isQuestionVisible)
+  const appQuestionsEndIndex = visibleQuestions.length // (inclusive, e.g. if 3 questions: 1, 2, 3)
+
+  // Transition slide sits between app questions and resource steps
+  const hasTransitionSlide = resourceSteps.length > 0
+  const transitionSlideIndex = visibleQuestions.length + 1
+  const totalSteps = 1 + visibleQuestions.length + (hasTransitionSlide ? 1 : 0) + resourceSteps.length
+
   const isWelcomeSlide = currentIndex === welcomeSlideIndex
   const isMainStep = currentIndex >= appQuestionsStartIndex && currentIndex <= appQuestionsEndIndex
   const isTransitionSlide = hasTransitionSlide && currentIndex === transitionSlideIndex
-  const resourceStepIndex = currentIndex - (displayQuestions.length + 1 + (hasTransitionSlide ? 1 : 0))
+  const resourceStepIndex = currentIndex - (visibleQuestions.length + 1 + (hasTransitionSlide ? 1 : 0))
   const currentResourceStep = (!isWelcomeSlide && !isMainStep && !isTransitionSlide) ? resourceSteps[resourceStepIndex] : undefined
 
   // Reset + pre-fill when opened
@@ -740,6 +663,12 @@ export function SurveyModal({
       } else if (def.inputType === 'file_upload') {
         const existingIds = getExistingValue(project, def.sectionKey, def.fieldPath) as string[] | undefined
         if (existingIds !== undefined) prefilledAttachments.set(q.fieldId, existingIds)
+      } else if (def.inputType === 'effort_table') {
+        const existingTables = getExistingValue(project, def.sectionKey, 'tables') as EffortTable[] | undefined
+        const existingMode = getExistingValue(project, def.sectionKey, 'tableMode') as 'single' | 'multiple' | undefined
+        if (existingTables !== undefined || existingMode !== undefined) {
+          prefilled.set(q.fieldId, { tables: existingTables ?? [], tableMode: existingMode ?? 'single' })
+        }
       } else {
         const existing = getExistingValue(project, def.sectionKey, def.fieldPath)
         if (existing !== undefined) prefilled.set(q.fieldId, existing)
@@ -780,21 +709,18 @@ export function SurveyModal({
 
   // ─── App question state ─────────────────────────────────────────────────────
 
-  const currentQuestion = isMainStep ? displayQuestions[currentIndex - 1] : undefined
+  const currentQuestion = isMainStep ? visibleQuestions[currentIndex - 1] : undefined
   const currentAnswer = currentQuestion ? answers.get(currentQuestion.fieldId) : undefined
   const isAppAnswered = currentAnswer !== undefined && currentAnswer !== '' &&
     !(Array.isArray(currentAnswer) && currentAnswer.length === 0)
 
-  // Combined effort slide: notes is required when estimate is TBC
-  const effortNotesAnswer = answers.get('effort__notes')
-  const isEffortSlide = currentQuestion?.fieldId === 'effort__estimate'
-  const isEffortTbc = isEffortSlide && ((currentAnswer as string) ?? '').toLowerCase() === 'tbc'
-  const notesMissing = isEffortTbc && (!effortNotesAnswer || (effortNotesAnswer as string).trim() === '')
   const appCanAdvance = (() => {
     if (!currentQuestion?.required) return true
-    if (isEffortSlide) {
-      if (!isAppAnswered) return false
-      return !notesMissing
+    if (currentQuestion.fieldId === 'effort__table') {
+      const tableValue = currentAnswer as { tables?: EffortTable[] } | undefined
+      const tables = tableValue?.tables
+      if (!tables || tables.length === 0) return false
+      return tables.some(t => t.tasks.some(task => task.effort !== undefined && task.effort > 0))
     }
     return isAppAnswered
   })()
@@ -835,6 +761,17 @@ export function SurveyModal({
       } else {
         next.set(currentQuestion.fieldId, value)
       }
+      // Clear answers of dependent questions whose condition is no longer met
+      for (const q of orderedQuestions) {
+        if (!q.condition || q.condition.fieldId !== currentQuestion.fieldId) continue
+        const condValue = next.get(currentQuestion.fieldId)
+        const condMet = Array.isArray(condValue)
+          ? condValue.includes(q.condition.value as string)
+          : condValue === q.condition.value
+        if (!condMet) {
+          next.delete(q.fieldId)
+        }
+      }
       return next
     })
   }
@@ -867,6 +804,15 @@ export function SurveyModal({
       for (const [fieldId, value] of answers.entries()) {
         const def = getFieldById(fieldId)
         if (!def) continue
+        // Skip answers for questions that are currently hidden by condition
+        const question = orderedQuestions.find(q => q.fieldId === fieldId)
+        if (question && question.condition) {
+          const condAnswer = answers.get(question.condition.fieldId)
+          const condMet = Array.isArray(condAnswer)
+            ? condAnswer.includes(question.condition.value as string)
+            : condAnswer === question.condition.value
+          if (!condMet) continue
+        }
         const sectionKey = def.sectionKey
         const existing = (project[sectionKey] ?? {}) as unknown as Record<string, unknown>
         let current = sectionUpdates.get(sectionKey) ?? { ...existing }
@@ -874,6 +820,16 @@ export function SurveyModal({
           const range = value as DateRangeValue
           current = deepSet(current, def.fieldPath, range.from)
           current = deepSet(current, def.toFieldPath, range.to)
+        } else if (def.inputType === 'effort_table') {
+          const tableValue = value as { tables: EffortTable[]; tableMode: 'single' | 'multiple' }
+          current = deepSet(current, 'tables', tableValue.tables)
+          current = deepSet(current, 'tableMode', tableValue.tableMode)
+          // Auto-calculate effortEstimate as total cost
+          const totalCost = tableValue.tables.reduce(
+            (sum, t) => sum + t.tasks.reduce((s, task) => s + (task.effort ?? 0) * (task.effortTime ?? 0) * (task.rate ?? 0), 0),
+            0
+          )
+          current = deepSet(current, 'effortEstimate', totalCost > 0 ? String(totalCost) : undefined)
         } else {
           current = deepSet(current, def.fieldPath, value)
         }
@@ -888,6 +844,23 @@ export function SurveyModal({
         const existing = (project[sectionKey] ?? {}) as unknown as Record<string, unknown>
         let current = sectionUpdates.get(sectionKey) ?? { ...existing }
         current = deepSet(current, targetPath, attachmentIds)
+        sectionUpdates.set(sectionKey, current)
+      }
+
+      // Clear hidden conditional fields from section data
+      for (const q of orderedQuestions) {
+        if (!q.condition) continue
+        const condAnswer = answers.get(q.condition.fieldId)
+        const condMet = Array.isArray(condAnswer)
+          ? condAnswer.includes(q.condition.value as string)
+          : condAnswer === q.condition.value
+        if (condMet) continue
+        const def = getFieldById(q.fieldId)
+        if (!def) continue
+        const sectionKey = def.sectionKey
+        const existing = (project[sectionKey] ?? {}) as unknown as Record<string, unknown>
+        let current = sectionUpdates.get(sectionKey) ?? { ...existing }
+        current = deepSet(current, def.fieldPath, undefined)
         sectionUpdates.set(sectionKey, current)
       }
 
@@ -1008,8 +981,9 @@ export function SurveyModal({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto flex items-center justify-center p-6">
-        <div className={cn('w-full transition-all duration-500', isWelcomeSlide ? 'max-w-5xl' : 'max-w-2xl')}>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className={cn('min-h-full flex flex-col items-center justify-center w-full transition-all duration-500 mx-auto', isWelcomeSlide ? 'max-w-5xl' : 'max-w-4xl')}
+        >
 
           {completed ? (
             /* Completion screen */
@@ -1087,59 +1061,26 @@ export function SurveyModal({
                   <p className="text-sm text-muted-foreground leading-relaxed">{currentQuestion.hintText}</p>
                 )}
               </div>
-              {currentQuestion.fieldId === 'effort__estimate' ? (
-                (() => {
-                  const notesQuestion = orderedQuestions.find(q => q.fieldId === 'effort__notes')
-                  return (
-                    <EffortEstimateSurveyInput
-                      estimateValue={currentAnswer}
-                      onEstimateChange={setAnswer}
-                      notesValue={answers.get('effort__notes')}
-                      onNotesChange={(v) => {
-                        setAnswers(prev => {
-                          const next = new Map(prev)
-                          if (v === undefined || v === '') next.delete('effort__notes')
-                          else next.set('effort__notes', v)
-                          return next
-                        })
-                      }}
-                      notesQuestionText={notesQuestion?.questionText ?? 'Notes (Breakdown & Rationale)'}
-                      notesHintText={notesQuestion?.hintText}
-                      attachmentValue={attachmentAnswers.get('effort__notes')}
-                      onAttachmentChange={(ids) => {
-                        setAttachmentAnswers(prev => {
-                          const next = new Map(prev)
-                          if (ids.length === 0) next.delete('effort__notes')
-                          else next.set('effort__notes', ids)
-                          return next
-                        })
-                      }}
-                      onRemove={(id) => setRemovedAttachmentIds(prev => new Set(prev).add(id))}
-                      projectId={project.id}
-                    />
-                  )
-                })()
-              ) : (
-                <QuestionInput
-                  question={currentQuestion}
-                  value={currentAnswer}
-                  onChange={setAnswer}
-                  attachmentValue={currentQuestion ? attachmentAnswers.get(currentQuestion.fieldId) : undefined}
-                  onAttachmentChange={(ids) => {
-                    if (!currentQuestion) return
-                    setAttachmentAnswers(prev => {
-                      const next = new Map(prev)
-                      if (ids.length === 0) next.delete(currentQuestion.fieldId)
-                      else next.set(currentQuestion.fieldId, ids)
-                      return next
-                    })
-                  }}
-                  onRemove={(id) => setRemovedAttachmentIds(prev => new Set(prev).add(id))}
-                  autoFocus
-                  getFieldById={getFieldById}
-                  projectId={project.id}
-                />
-              )}
+              <QuestionInput
+                question={currentQuestion}
+                value={currentAnswer}
+                onChange={setAnswer}
+                attachmentValue={currentQuestion ? attachmentAnswers.get(currentQuestion.fieldId) : undefined}
+                onAttachmentChange={(ids) => {
+                  if (!currentQuestion) return
+                  setAttachmentAnswers(prev => {
+                    const next = new Map(prev)
+                    if (ids.length === 0) next.delete(currentQuestion.fieldId)
+                    else next.set(currentQuestion.fieldId, ids)
+                    return next
+                  })
+                }}
+                onRemove={(id) => setRemovedAttachmentIds(prev => new Set(prev).add(id))}
+                autoFocus
+                getFieldById={getFieldById}
+                projectId={project.id}
+                project={project}
+              />
             </div>
 
           ) : isTransitionSlide ? (

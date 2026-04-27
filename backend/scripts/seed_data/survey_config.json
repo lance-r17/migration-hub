@@ -2,11 +2,22 @@
   "isActive": true,
   "questions": [
     {
-      "fieldId": "appoverview__ibsInScope",
-      "questionText": "Is IBS (Important Business Service) in scope for this migration?",
-      "hintText": "Select Yes if this application contains an Important Business Service (IBS).",
+      "fieldId": "appoverview__systemImportanceClassification",
+      "questionText": "What is the System Importance Classification for this application?",
+      "hintText": "IBS = Important Business Service, BPS = Business Prioritised Service. Select all that apply.",
       "required": true,
       "order": 1
+    },
+    {
+      "fieldId": "appoverview__iitaApplicability",
+      "questionText": "Is IITA (Important IT Asset) applicable for this application?",
+      "hintText": "Select Yes if this application is classified as an Important IT Asset. Required when IBS is selected.",
+      "required": true,
+      "order": 1.5,
+      "condition": {
+        "fieldId": "appoverview__systemImportanceClassification",
+        "value": "IBS"
+      }
     },
     {
       "fieldId": "appoverview__migrationStrategy",

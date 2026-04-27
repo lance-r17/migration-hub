@@ -92,7 +92,9 @@ export const mockProjects: Project[] = [
       userBase: { type: 'Internal', count: '~2,400 users' },
       applicationTier: 'T0',
       baId: 'EIM-00421',
-      ibsInScope: true,
+      systemImportanceClassification: ['IBS'],
+      iitaApplicability: true,
+      softwareOrigin: 'in-house',
       migrationStrategy: 'Lift & Shift',
       serviceLine: 'Finance & Operations',
     },
@@ -408,7 +410,8 @@ export const mockProjects: Project[] = [
       businessOwnerId: 'u6',
       technicalLeadId: 'u7',
       dbaDataOwnerId: 'u8',
-      ibsInScope: false,
+      systemImportanceClassification: [],
+      softwareOrigin: '3rd party',
       migrationStrategy: 'Lift & Shift',
     },
 
@@ -565,7 +568,9 @@ export const mockProjects: Project[] = [
       businessFunction: 'Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.',
       businessOwnerId: 'u12',
       technicalLeadId: 'u10',
-      ibsInScope: true,
+      systemImportanceClassification: ['IBS', 'BPS'],
+      iitaApplicability: false,
+      softwareOrigin: 'in-house',
       migrationStrategy: 'Refactor',
       serviceLine: 'Network Operations',
     },
@@ -2143,7 +2148,7 @@ export const mockAuditEntries: Record<string, AuditLogEntry[]> = {
       sectionKey: 'applicationOverview',
       sectionLabel: 'Application Overview',
       changes: [
-        { field: 'ibsInScope', label: 'IBS In Scope', oldValue: false, newValue: true },
+        { field: 'systemImportanceClassification', label: 'System Importance Classification', oldValue: '', newValue: 'IBS' },
       ],
     },
     {
@@ -3030,9 +3035,9 @@ export const mockSurveyConfig: SurveyConfig = {
   isActive: true,
   questions: [
     {
-      fieldId: 'appoverview__ibsInScope',
-      questionText: 'Is IBS (Important Business Service) in scope for this migration?',
-      hintText: 'Select Yes if this application contains an Important Business Service (IBS).',
+      fieldId: 'appoverview__systemImportanceClassification',
+      questionText: 'What is the System Importance Classification for this application?',
+      hintText: 'IBS = Important Business Service, BPS = Business Prioritised Service. Select all that apply.',
       required: true,
       order: 1,
     },

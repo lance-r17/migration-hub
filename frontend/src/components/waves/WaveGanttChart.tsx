@@ -183,7 +183,7 @@ function EffortCell({ projectId, estimation }: { projectId: string; estimation?:
   const effortText = estimation?.effortEstimate
     ? estimation.effortEstimate.toLowerCase() === 'tbc'
       ? 'TBC'
-      : `${estimation.effortEstimate}K`
+      : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(estimation.effortEstimate))
     : '—'
   const hasTooltip = estimation && (estimation.notes || estimation.attachmentIds?.length)
 

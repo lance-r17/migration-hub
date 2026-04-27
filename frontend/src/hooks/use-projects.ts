@@ -75,6 +75,8 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
     effortEstimate: 'Effort Estimate',
     notes: 'Notes',
     attachmentIds: 'Attachments',
+    tables: 'Effort Tables',
+    tableMode: 'Table Mode',
   },
   status: { status: 'Status' },
   waveId: { waveId: 'Wave' },

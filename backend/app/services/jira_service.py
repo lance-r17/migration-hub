@@ -396,7 +396,9 @@ def _build_story_description(
         ("Migration Strategy", ao.get("migrationStrategy")),
         ("Application Tier", ao.get("applicationTier")),
         ("BA ID", ao.get("baId")),
-        ("IBS In Scope", ("Yes" if ao.get("ibsInScope") else "No") if ao.get("ibsInScope") is not None else None),
+        ("System Importance Classification", ", ".join(ao.get("systemImportanceClassification") or []) or None),
+        ("IITA Applicability", ("Yes" if ao.get("iitaApplicability") else "No") if ao.get("iitaApplicability") is not None else None),
+        ("Software Origin", ao.get("softwareOrigin")),
         ("Profile Owner", project.profile_owner_user.name if project.profile_owner_user else None),
         ("Status", project.status),
     ]))

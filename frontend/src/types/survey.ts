@@ -1,6 +1,6 @@
 import type { Project, ResourceCategory } from '@/types'
 
-export type SurveyInputType = 'short_text' | 'long_text' | 'long_text_with_upload' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select' | 'file_upload' | 'effort_estimate'
+export type SurveyInputType = 'short_text' | 'long_text' | 'long_text_with_upload' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select' | 'file_upload' | 'effort_estimate' | 'effort_table'
 
 export interface SurveyFieldDef {
   id: string                      // stable unique ID e.g. "appoverview__applicationName"
@@ -22,6 +22,7 @@ export interface SurveyQuestion {
   hintText: string                // sample answer / guidance
   required: boolean
   order: number
+  condition?: { fieldId: string; value: unknown }  // show only when answers[fieldId] === value (or includes value for arrays)
 }
 
 export interface SurveyConfig {
