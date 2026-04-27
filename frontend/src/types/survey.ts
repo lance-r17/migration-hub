@@ -35,7 +35,7 @@ export interface SurveyConfig {
 // ─── Resource Survey ──────────────────────────────────────────────────────────
 
 // Input types supported for resource-level questions (simpler subset of SurveyInputType)
-export type ResourceSurveyInputType = 'select' | 'short_text' | 'boolean' | 'string_array' | 'checkbox_select' | 'date'
+export type ResourceSurveyInputType = 'select' | 'short_text' | 'boolean' | 'string_array' | 'checkbox_select' | 'date' | 'date_range'
 
 // A single question whose answer is written to resource.specs[specsKey]
 export interface ResourceQuestionDef {
@@ -44,6 +44,7 @@ export interface ResourceQuestionDef {
   label: string                       // question text shown to user
   hintText: string                    // sample answer / guidance
   inputType: ResourceSurveyInputType
+  toSpecsKey?: string                 // second specs key for 'date_range' (the "to" date)
   options?: string[]                  // for 'select' and 'checkbox_select'
   required: boolean
   condition?: { specsKey: string; value: string }  // show only when answers[specsKey] === value

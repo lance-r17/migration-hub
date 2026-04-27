@@ -48,6 +48,7 @@ const RESOURCE_INPUT_TYPES: { value: ResourceSurveyInputType; label: string }[] 
   { value: 'string_array', label: 'List (tags)' },
   { value: 'checkbox_select', label: 'Checkboxes (multi)' },
   { value: 'date', label: 'Date' },
+  { value: 'date_range', label: 'Date range' },
 ]
 
 const RESOURCE_CATEGORIES = ['VM', 'Database', 'Buckets', 'Network', 'Other']
@@ -176,7 +177,9 @@ function ResourceQuestionCardContent({
           <div className="flex-1 space-y-3 min-w-0">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Specs key</label>
+                <label className="text-xs text-muted-foreground">
+                  {question.inputType === 'date_range' ? 'Start date specs key' : 'Specs key'}
+                </label>
                 <Input
                   value={question.specsKey}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -203,6 +206,26 @@ function ResourceQuestionCardContent({
                 </Select>
               </div>
             </div>
+            {question.inputType === 'date_range' && (
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">End date specs key</label>
+                <Input
+                  value={question.toSpecsKey ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    updateQuestion({ toSpecsKey: e.target.value })
+                  }
+                  placeholder="e.g. end_date"
+                  className="text-sm h-8"
+                />
+                {(!question.toSpecsKey || question.toSpecsKey === question.specsKey) && (
+                  <p className="text-xs text-destructive">
+                    {question.toSpecsKey === question.specsKey
+                      ? 'End date key must differ from start date key'
+                      : 'End date specs key is required for date range'}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Question</label>
               <Input
@@ -481,6 +504,20 @@ export function ResourceQuestionsTab() {
   }
 
   const handleSave = async () => {
+    for (const g of groups) {
+      for (const q of g.questions) {
+        if (q.inputType === 'date_range') {
+          if (!q.toSpecsKey) {
+            toast.error(`"${q.label}" is missing an end date specs key.`)
+            return
+          }
+          if (q.toSpecsKey === q.specsKey) {
+            toast.error(`"${q.label}" end date key must differ from start date key.`)
+            return
+          }
+        }
+      }
+    }
     const config: ResourceSurveyConfig = {
       groups,
       updatedBy: user?.name ?? 'Unknown',

@@ -24,20 +24,12 @@
           "required": true
         },
         {
-          "id": "db__incremental_migration_start_date",
+          "id": "db__incremental_migration_date_range",
           "specsKey": "incremental_migration_start_date",
-          "label": "Incremental migration start date",
-          "hintText": "Date when incremental replication begins",
-          "inputType": "date",
-          "required": false,
-          "condition": { "specsKey": "migration_type", "value": "Incremental" }
-        },
-        {
-          "id": "db__incremental_migration_end_date",
-          "specsKey": "incremental_migration_end_date",
-          "label": "Incremental migration end date",
-          "hintText": "Target cutover date when incremental replication completes",
-          "inputType": "date",
+          "toSpecsKey": "incremental_migration_end_date",
+          "label": "Incremental migration date range",
+          "hintText": "Select the start and end dates for incremental replication",
+          "inputType": "date_range",
           "required": false,
           "condition": { "specsKey": "migration_type", "value": "Incremental" }
         }

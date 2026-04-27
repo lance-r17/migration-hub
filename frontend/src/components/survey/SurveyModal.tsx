@@ -527,18 +527,27 @@ function computeResourceSteps(
   resources: CloudResource[],
   getCategoryForProduct: (product?: string) => ResourceCategory,
 ): ResourceStep[] {
+  const sortedResources = [...resources].sort((a, b) => {
+    const catA = getCategoryForProduct(a.product)
+    const catB = getCategoryForProduct(b.product)
+    if (catA !== catB) return catA.localeCompare(catB)
+    const prodA = a.product ?? ''
+    const prodB = b.product ?? ''
+    if (prodA !== prodB) return prodA.localeCompare(prodB)
+    return a.resourceId.localeCompare(b.resourceId)
+  })
   const steps: ResourceStep[] = []
 
   // 1. Category-level groups → one step per group (if any project resources match)
   for (const group of config.groups.filter(g => g.level === 'category')) {
-    const matching = resources.filter(r => getCategoryForProduct(r.product) === group.category)
+    const matching = sortedResources.filter(r => getCategoryForProduct(r.product) === group.category)
     if (matching.length === 0 || group.questions.length === 0) continue
     steps.push({ kind: 'category', category: group.category!, questions: group.questions, matchingResources: matching })
   }
 
   // 2. Product-level groups → one step per group
   for (const group of config.groups.filter(g => g.level === 'product')) {
-    const matching = resources.filter(r => r.product === group.product)
+    const matching = sortedResources.filter(r => r.product === group.product)
     if (matching.length === 0 || group.questions.length === 0) continue
     steps.push({ kind: 'product', product: group.product!, questions: group.questions, matchingResources: matching })
   }
@@ -549,16 +558,16 @@ function computeResourceSteps(
   for (const group of config.groups.filter(g => g.level === 'resource')) {
     let matchingIds: string[]
     if (group.resourceId) {
-      matchingIds = resources.find(r => r.resourceId === group.resourceId) ? [group.resourceId] : []
+      matchingIds = sortedResources.find(r => r.resourceId === group.resourceId) ? [group.resourceId] : []
     } else if (group.product || group.products?.length) {
-      matchingIds = resources.filter(r =>
+      matchingIds = sortedResources.filter(r =>
         (group.product && r.product === group.product) ||
         (group.products && group.products.includes(r.product))
       ).map(r => r.resourceId)
     } else if (group.category) {
-      matchingIds = resources.filter(r => getCategoryForProduct(r.product) === group.category).map(r => r.resourceId)
+      matchingIds = sortedResources.filter(r => getCategoryForProduct(r.product) === group.category).map(r => r.resourceId)
     } else {
-      matchingIds = resources.map(r => r.resourceId)
+      matchingIds = sortedResources.map(r => r.resourceId)
     }
     for (const rid of matchingIds) {
       const existing = resourceQuestionsMap.get(rid) ?? []
@@ -566,8 +575,8 @@ function computeResourceSteps(
     }
   }
 
-  // One step per resource in project order — deduplicate by specsKey
-  for (const resource of resources) {
+  // One step per resource in sorted order — deduplicate by specsKey
+  for (const resource of sortedResources) {
     const questions = resourceQuestionsMap.get(resource.resourceId)
     if (!questions || questions.length === 0) continue
     const seen = new Set<string>()
@@ -687,6 +696,10 @@ export function SurveyModal({
         for (const q of step.questions) {
           const val = existing[q.specsKey]
           if (val !== undefined && val !== null) stepAnswers[q.specsKey] = val as ResourceAnswerValue
+          if (q.inputType === 'date_range' && q.toSpecsKey) {
+            const toVal = existing[q.toSpecsKey]
+            if (toVal !== undefined && toVal !== null) stepAnswers[q.toSpecsKey] = toVal as ResourceAnswerValue
+          }
         }
       } else {
         // Product/category: use first matching resource's specs as best-effort pre-fill
@@ -695,6 +708,10 @@ export function SurveyModal({
           for (const q of step.questions) {
             const val = firstResource.specs[q.specsKey]
             if (val !== undefined && val !== null) stepAnswers[q.specsKey] = val as ResourceAnswerValue
+            if (q.inputType === 'date_range' && q.toSpecsKey) {
+              const toVal = firstResource.specs[q.toSpecsKey]
+              if (toVal !== undefined && toVal !== null) stepAnswers[q.toSpecsKey] = toVal as ResourceAnswerValue
+            }
           }
         }
       }
@@ -735,6 +752,11 @@ export function SurveyModal({
     ? currentResourceStep.questions.every(q => {
         if (!q.required) return true
         if (q.condition && currentResourceStepAnswers[q.condition.specsKey] !== q.condition.value) return true
+        if (q.inputType === 'date_range' && q.toSpecsKey) {
+          const from = currentResourceStepAnswers[q.specsKey]
+          const to = currentResourceStepAnswers[q.toSpecsKey]
+          return from !== undefined && from !== '' && to !== undefined && to !== ''
+        }
         const val = currentResourceStepAnswers[q.specsKey]
         return val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 0)
       })
@@ -1195,11 +1217,47 @@ export function SurveyModal({
                       </p>
                       {q.hintText && <p className="text-sm text-muted-foreground">{q.hintText}</p>}
                     </div>
-                    <ResourceQuestionInput
-                      questionDef={q}
-                      value={currentResourceStepAnswers[q.specsKey] as ResourceAnswerValue}
-                      onChange={(v) => setResourceAnswer(q.specsKey, v)}
-                    />
+                    {q.inputType === 'date_range' && q.toSpecsKey ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start text-left font-normal h-12">
+                            <CalendarIcon size={16} className="mr-2 shrink-0" />
+                            {(() => {
+                              const from = currentResourceStepAnswers[q.specsKey] as string | undefined
+                              const to = currentResourceStepAnswers[q.toSpecsKey] as string | undefined
+                              if (from && to) return `${format(new Date(from), 'MMM d, y')} → ${format(new Date(to), 'MMM d, y')}`
+                              if (from) return `From ${format(new Date(from), 'MMM d, y')}`
+                              return <span className="text-muted-foreground">Pick a date range…</span>
+                            })()}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-[400]" align="start">
+                          <Calendar
+                            mode="range"
+                            numberOfMonths={2}
+                            defaultMonth={(() => {
+                              const from = currentResourceStepAnswers[q.specsKey] as string | undefined
+                              return from ? new Date(from) : undefined
+                            })()}
+                            selected={(() => {
+                              const from = currentResourceStepAnswers[q.specsKey] as string | undefined
+                              const to = currentResourceStepAnswers[q.toSpecsKey] as string | undefined
+                              return { from: from ? new Date(from) : undefined, to: to ? new Date(to) : undefined }
+                            })()}
+                            onSelect={(r) => {
+                              setResourceAnswer(q.specsKey, r?.from ? format(r.from, 'yyyy-MM-dd') : undefined)
+                              setResourceAnswer(q.toSpecsKey, r?.to ? format(r.to, 'yyyy-MM-dd') : undefined)
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <ResourceQuestionInput
+                        questionDef={q}
+                        value={currentResourceStepAnswers[q.specsKey] as ResourceAnswerValue}
+                        onChange={(v) => setResourceAnswer(q.specsKey, v)}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
