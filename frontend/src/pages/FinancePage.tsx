@@ -70,14 +70,26 @@ function RatioBadge({ ratio, thresholds }: { ratio: number | null; thresholds: B
 
 // ─── Format Money ─────────────────────────────────────────────────────────────
 
+function currencySymbol(code: string): string {
+  const map: Record<string, string> = {
+    CNY: '¥',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    JPY: '¥',
+    KRW: '₩',
+    INR: '₹',
+  }
+  return map[code] ?? `${code} `
+}
+
 function formatMoney(amount: number | null, currency: string): string {
   if (amount === null) return '—'
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
+  const num = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount)
+  return `${currencySymbol(currency)}${num}`
 }
 
 function formatMonth(yyyyMM: string): string {
@@ -190,8 +202,11 @@ function UploadCard({ label, env, uploadedFileName, uploading, onUpload, onClear
 interface ComparisonRow {
   resourceSet: string
   projectId: string
+  baselineAmount: number | null
   existingAmount: number | null
   targetAmount: number | null
+  existingYtd: number | null
+  targetYtd: number | null
   ratio: number | null
 }
 
@@ -199,6 +214,17 @@ interface ProjectGroup {
   projectId: string
   projectName: string
   rows: ComparisonRow[]
+}
+
+interface SummaryRow {
+  projectId: string
+  projectName: string
+  baselineAmount: number | null
+  existingAmount: number | null
+  targetAmount: number | null
+  existingYtd: number | null
+  targetYtd: number | null
+  ratio: number | null
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -211,6 +237,9 @@ export function FinancePage() {
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [existingRecords, setExistingRecords] = useState<BillingRecord[]>([])
   const [targetRecords, setTargetRecords] = useState<BillingRecord[]>([])
+  const [baselineRecords, setBaselineRecords] = useState<BillingRecord[]>([])
+  const [existingYtdMap, setExistingYtdMap] = useState<Map<string, number>>(new Map())
+  const [targetYtdMap, setTargetYtdMap] = useState<Map<string, number>>(new Map())
   const [loadingMonths, setLoadingMonths] = useState(true)
   const [loadingRecords, setLoadingRecords] = useState(false)
 
@@ -239,11 +268,11 @@ export function FinancePage() {
   const refreshMonths = useCallback(async () => {
     setLoadingMonths(true)
     try {
-      const [existingMonths, targetMonths] = await Promise.all([
+      const [exMonths, tgMonths] = await Promise.all([
         getAvailableBillingMonths('existing'),
         getAvailableBillingMonths('target'),
       ])
-      const union = Array.from(new Set([...existingMonths, ...targetMonths])).sort().reverse()
+      const union = Array.from(new Set([...exMonths, ...tgMonths])).sort().reverse()
       setAvailableMonths(union)
       if (!selectedMonth && union.length > 0) setSelectedMonth(union[0]!)
     } finally {
@@ -258,18 +287,49 @@ export function FinancePage() {
     getBillingThresholdConfig().then(setThresholds).catch(() => { /* keep defaults */ })
   }, [])
 
-  // ── Fetch records for the selected month ────────────────────────────────────
+  // ── Fetch records for the selected month, baseline, and YTD ─────────────────
   useEffect(() => {
-    if (!selectedMonth) return
+    if (!selectedMonth || availableMonths.length === 0) return
     setLoadingRecords(true)
-    Promise.all([
+
+    const ytdStart = thresholds.ytdStartMonth
+    const monthsToFetch = ytdStart
+      ? availableMonths.filter(m => m >= ytdStart && m <= selectedMonth)
+      : []
+
+    const mainPromise = Promise.all([
       getBillingRecords(selectedMonth, 'existing'),
       getBillingRecords(selectedMonth, 'target'),
+      thresholds.baselineMonth ? getBillingRecords(thresholds.baselineMonth, 'existing') : Promise.resolve([]),
     ])
-      .then(([ex, tg]) => { setExistingRecords(ex); setTargetRecords(tg) })
+
+    const ytdPromises = monthsToFetch.flatMap(m => [
+      getBillingRecords(m, 'existing').then(records => ({ env: 'existing' as const, records })),
+      getBillingRecords(m, 'target').then(records => ({ env: 'target' as const, records })),
+    ])
+
+    Promise.all([mainPromise, Promise.all(ytdPromises)])
+      .then(([[ex, tg, baseline], ytdResults]) => {
+        setExistingRecords(ex)
+        setTargetRecords(tg)
+        setBaselineRecords(baseline)
+
+        const exYtd = new Map<string, number>()
+        const tgYtd = new Map<string, number>()
+
+        for (const { env, records } of ytdResults) {
+          const map = env === 'existing' ? exYtd : tgYtd
+          for (const r of records) {
+            map.set(r.resourceSet, (map.get(r.resourceSet) ?? 0) + r.amount)
+          }
+        }
+
+        setExistingYtdMap(exYtd)
+        setTargetYtdMap(tgYtd)
+      })
       .catch(() => toast.error('Failed to load billing records'))
       .finally(() => setLoadingRecords(false))
-  }, [selectedMonth, recordsKey])
+  }, [selectedMonth, thresholds.baselineMonth, thresholds.ytdStartMonth, availableMonths, recordsKey])
 
   // ── Reset filters when month changes ────────────────────────────────────────
   useEffect(() => {
@@ -285,11 +345,11 @@ export function FinancePage() {
       if (env === 'existing') setExistingFileName(`${file.name} (${month})`)
       else setTargetFileName(`${file.name} (${month})`)
 
-      const [existingMonths, targetMonths] = await Promise.all([
+      const [exMonths, tgMonths] = await Promise.all([
         getAvailableBillingMonths('existing'),
         getAvailableBillingMonths('target'),
       ])
-      const union = Array.from(new Set([...existingMonths, ...targetMonths])).sort().reverse()
+      const union = Array.from(new Set([...exMonths, ...tgMonths])).sort().reverse()
       setAvailableMonths(union)
       setSelectedMonth(month)
       setRecordsKey(k => k + 1)
@@ -328,10 +388,19 @@ export function FinancePage() {
     else setTargetFileName(null)
   }
 
+  const monthCount = useMemo(() => {
+    const ytdStart = thresholds.ytdStartMonth
+    if (!ytdStart) return 0
+    return availableMonths.filter(m => m >= ytdStart && m <= selectedMonth).length
+  }, [availableMonths, selectedMonth, thresholds.ytdStartMonth])
+
   // ── Build comparison rows per project ───────────────────────────────────────
   const projectGroups = useMemo<ProjectGroup[]>(() => {
     const existingMap = new Map(existingRecords.map(r => [r.resourceSet, r.amount]))
     const targetMap   = new Map(targetRecords.map(r => [r.resourceSet, r.amount]))
+    const baselineMap = new Map(baselineRecords.map(r => [r.resourceSet, r.amount]))
+    const existingYtd = existingYtdMap
+    const targetYtd   = targetYtdMap
 
     const matchedResourceSets = new Set<string>()
     const groups: ProjectGroup[] = []
@@ -342,16 +411,28 @@ export function FinancePage() {
       if (resourceSets.length === 0) continue
 
       const rows: ComparisonRow[] = resourceSets
-        .filter(rs => existingMap.has(rs) || targetMap.has(rs))
+        .filter(rs => existingMap.has(rs) || targetMap.has(rs) || baselineMap.has(rs) || existingYtd.has(rs) || targetYtd.has(rs))
         .map(rs => {
           matchedResourceSets.add(rs)
+          const baselineAmount = baselineMap.get(rs) ?? null
           const existingAmount = existingMap.get(rs) ?? null
           const targetAmount   = targetMap.get(rs) ?? null
+          const existingYtdAmount = existingYtd.get(rs) ?? null
+          const targetYtdAmount   = targetYtd.get(rs) ?? null
           const ratio =
-            existingAmount !== null && targetAmount !== null
-              ? (targetAmount / existingAmount) * 100
+            baselineAmount !== null && targetYtdAmount !== null && monthCount > 0
+              ? (targetYtdAmount / (baselineAmount * monthCount)) * 100
               : null
-          return { resourceSet: rs, projectId: project.id, existingAmount, targetAmount, ratio }
+          return {
+            resourceSet: rs,
+            projectId: project.id,
+            baselineAmount,
+            existingAmount,
+            targetAmount,
+            existingYtd: existingYtdAmount,
+            targetYtd: targetYtdAmount,
+            ratio,
+          }
         })
         .filter(r => nameFilter === '' || r.resourceSet.toLowerCase().includes(nameFilter.toLowerCase()))
         .filter(r => statusFilter.size === 0 || statusFilter.has(getStatus(r.ratio, thresholds)))
@@ -363,18 +444,30 @@ export function FinancePage() {
 
     // Collect billing records whose resource set wasn't matched to any project
     const allBillingResourceSets = Array.from(
-      new Set([...existingMap.keys(), ...targetMap.keys()])
+      new Set([...existingMap.keys(), ...targetMap.keys(), ...baselineMap.keys(), ...existingYtd.keys(), ...targetYtd.keys()])
     ).filter(rs => !matchedResourceSets.has(rs))
 
     const unassignedRows: ComparisonRow[] = allBillingResourceSets
       .map(rs => {
+        const baselineAmount = baselineMap.get(rs) ?? null
         const existingAmount = existingMap.get(rs) ?? null
         const targetAmount   = targetMap.get(rs) ?? null
+        const existingYtdAmount = existingYtd.get(rs) ?? null
+        const targetYtdAmount   = targetYtd.get(rs) ?? null
         const ratio =
-          existingAmount !== null && targetAmount !== null
-            ? (targetAmount / existingAmount) * 100
+          baselineAmount !== null && targetYtdAmount !== null && monthCount > 0
+            ? (targetYtdAmount / (baselineAmount * monthCount)) * 100
             : null
-        return { resourceSet: rs, projectId: '', existingAmount, targetAmount, ratio }
+        return {
+          resourceSet: rs,
+          projectId: '',
+          baselineAmount,
+          existingAmount,
+          targetAmount,
+          existingYtd: existingYtdAmount,
+          targetYtd: targetYtdAmount,
+          ratio,
+        }
       })
       .filter(r => nameFilter === '' || r.resourceSet.toLowerCase().includes(nameFilter.toLowerCase()))
       .filter(r => statusFilter.size === 0 || statusFilter.has(getStatus(r.ratio, thresholds)))
@@ -384,7 +477,62 @@ export function FinancePage() {
     }
 
     return groups
-  }, [projects, existingRecords, targetRecords, nameFilter, statusFilter, thresholds])
+  }, [projects, existingRecords, targetRecords, baselineRecords, existingYtdMap, targetYtdMap, nameFilter, statusFilter, thresholds, monthCount])
+
+  // ── Build summary rows ──────────────────────────────────────────────────────
+  const summaryRows = useMemo<SummaryRow[]>(() => {
+    let baselineAmount = 0
+    let existingAmount = 0
+    let targetAmount = 0
+    let existingYtd = 0
+    let targetYtd = 0
+    let hasBaseline = false
+    let hasExisting = false
+    let hasTarget = false
+    let hasExistingYtd = false
+    let hasTargetYtd = false
+
+    for (const group of projectGroups) {
+      for (const row of group.rows) {
+        if (row.baselineAmount !== null) {
+          baselineAmount += row.baselineAmount
+          hasBaseline = true
+        }
+        if (row.existingAmount !== null) {
+          existingAmount += row.existingAmount
+          hasExisting = true
+        }
+        if (row.targetAmount !== null) {
+          targetAmount += row.targetAmount
+          hasTarget = true
+        }
+        if (row.existingYtd !== null) {
+          existingYtd += row.existingYtd
+          hasExistingYtd = true
+        }
+        if (row.targetYtd !== null) {
+          targetYtd += row.targetYtd
+          hasTargetYtd = true
+        }
+      }
+    }
+
+    const ratio =
+      hasBaseline && hasTargetYtd && monthCount > 0
+        ? (targetYtd / (baselineAmount * monthCount)) * 100
+        : null
+
+    return [{
+      projectId: '__total__',
+      projectName: 'Total / Summary',
+      baselineAmount: hasBaseline ? baselineAmount : null,
+      existingAmount: hasExisting ? existingAmount : null,
+      targetAmount: hasTarget ? targetAmount : null,
+      existingYtd: hasExistingYtd ? existingYtd : null,
+      targetYtd: hasTargetYtd ? targetYtd : null,
+      ratio,
+    }]
+  }, [projectGroups, monthCount])
 
   // ── Row click → open breakdown drawer ──────────────────────────────────────
   const handleRowClick = (row: ComparisonRow) => {
@@ -469,7 +617,7 @@ export function FinancePage() {
         ) : (
           <div className="space-y-6">
             {/* Month selector */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                 Billing Month
               </label>
@@ -560,6 +708,67 @@ export function FinancePage() {
               </div>
             ) : (
               <div className="space-y-8">
+                {/* Summary table */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-2 text-foreground">Summary</h3>
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                          <TableHead className="font-bold text-xs uppercase tracking-wider">Total / Summary</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Baseline Cost</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Existing Cost</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Target Cost</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Existing YTD Cost</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Target YTD Cost</TableHead>
+                          <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Ratio (Target YTD / Baseline × Months)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {summaryRows.map(row => (
+                          <TableRow key={row.projectId}>
+                            <TableCell className={cn(
+                              'font-semibold text-sm',
+                              row.projectId === '__unassigned__' ? 'text-muted-foreground italic' : 'text-foreground',
+                            )}>
+                              {row.projectName}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {row.baselineAmount !== null
+                                ? formatMoney(row.baselineAmount, thresholds.currency)
+                                : <span className="text-muted-foreground/40">—</span>}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {row.existingAmount !== null
+                                ? formatMoney(row.existingAmount, thresholds.currency)
+                                : <span className="text-muted-foreground/40">—</span>}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {row.targetAmount !== null
+                                ? formatMoney(row.targetAmount, thresholds.currency)
+                                : <span className="text-muted-foreground/40">—</span>}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {row.existingYtd !== null
+                                ? formatMoney(row.existingYtd, thresholds.currency)
+                                : <span className="text-muted-foreground/40">—</span>}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm tabular-nums">
+                              {row.targetYtd !== null
+                                ? formatMoney(row.targetYtd, thresholds.currency)
+                                : <span className="text-muted-foreground/40">—</span>}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <RatioBadge ratio={row.ratio} thresholds={thresholds} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Detail tables per project */}
                 {projectGroups.map(group => (
                   <div key={group.projectId}>
                     <h3 className={cn(
@@ -573,9 +782,12 @@ export function FinancePage() {
                         <TableHeader>
                           <TableRow className="bg-muted/50 hover:bg-muted/50">
                             <TableHead className="font-bold text-xs uppercase tracking-wider">Resource Set</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Baseline Cost</TableHead>
                             <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Existing Cost</TableHead>
                             <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Target Cost</TableHead>
-                            <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Ratio (Target / Existing)</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Existing YTD Cost</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Target YTD Cost</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider text-center">Ratio (Target YTD / Baseline × Months)</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -591,6 +803,11 @@ export function FinancePage() {
                                 </code>
                               </TableCell>
                               <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {row.baselineAmount !== null
+                                  ? formatMoney(row.baselineAmount, thresholds.currency)
+                                  : <span className="text-muted-foreground/40">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
                                 {row.existingAmount !== null
                                   ? formatMoney(row.existingAmount, thresholds.currency)
                                   : <span className="text-muted-foreground/40">—</span>}
@@ -598,6 +815,16 @@ export function FinancePage() {
                               <TableCell className="text-right font-mono text-sm tabular-nums">
                                 {row.targetAmount !== null
                                   ? formatMoney(row.targetAmount, thresholds.currency)
+                                  : <span className="text-muted-foreground/40">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {row.existingYtd !== null
+                                  ? formatMoney(row.existingYtd, thresholds.currency)
+                                  : <span className="text-muted-foreground/40">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm tabular-nums">
+                                {row.targetYtd !== null
+                                  ? formatMoney(row.targetYtd, thresholds.currency)
                                   : <span className="text-muted-foreground/40">—</span>}
                               </TableCell>
                               <TableCell className="text-center">

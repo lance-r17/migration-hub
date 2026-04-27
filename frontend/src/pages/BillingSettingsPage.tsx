@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DollarSign } from 'lucide-react'
+import { DollarSign, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Breadcrumb,
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getBillingThresholdConfig, saveBillingThresholdConfig } from '@/services/billingConfig'
+import { MonthPicker } from '@/components/ui/month-picker'
 import type { BillingThresholdConfig } from '@/types/finance'
 
 const DEFAULTS: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120, currency: 'CNY' }
@@ -170,6 +171,32 @@ export function BillingSettingsPage() {
               {errors.currency && (
                 <p className="text-xs text-destructive">{errors.currency}</p>
               )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="baseline-month">Baseline Month</Label>
+              <p className="text-xs text-muted-foreground">
+                The dedicated existing-cloud month used as the cost baseline.
+              </p>
+              <MonthPicker
+                id="baseline-month"
+                value={config.baselineMonth ?? ''}
+                onChange={val => setConfig(prev => ({ ...prev, baselineMonth: val || undefined }))}
+                placeholder="Select baseline month"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="ytd-start-month">YTD Start Month</Label>
+              <p className="text-xs text-muted-foreground">
+                The start month for year-to-date cost accumulation.
+              </p>
+              <MonthPicker
+                id="ytd-start-month"
+                value={config.ytdStartMonth ?? ''}
+                onChange={val => setConfig(prev => ({ ...prev, ytdStartMonth: val || undefined }))}
+                placeholder="Select YTD start month"
+              />
             </div>
           </div>
 

@@ -10,6 +10,8 @@ interface BillingThresholdConfigApi {
   healthy_at_risk_threshold: number
   at_risk_over_threshold: number
   currency: string
+  baseline_month: string | null
+  ytd_start_month: string | null
 }
 
 function fromApi(raw: BillingThresholdConfigApi): BillingThresholdConfig {
@@ -17,6 +19,8 @@ function fromApi(raw: BillingThresholdConfigApi): BillingThresholdConfig {
     healthyAtRiskThreshold: raw.healthy_at_risk_threshold,
     atRiskOverThreshold: raw.at_risk_over_threshold,
     currency: raw.currency ?? 'CNY',
+    baselineMonth: raw.baseline_month ?? undefined,
+    ytdStartMonth: raw.ytd_start_month ?? undefined,
   }
 }
 
@@ -25,6 +29,8 @@ function toApi(config: BillingThresholdConfig): BillingThresholdConfigApi {
     healthy_at_risk_threshold: config.healthyAtRiskThreshold,
     at_risk_over_threshold: config.atRiskOverThreshold,
     currency: config.currency,
+    baseline_month: config.baselineMonth ?? null,
+    ytd_start_month: config.ytdStartMonth ?? null,
   }
 }
 

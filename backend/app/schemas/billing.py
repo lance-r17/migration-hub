@@ -41,9 +41,13 @@ class BillingThresholdConfigOut(BaseModel):
     healthy_at_risk_threshold: float = 100.0
     at_risk_over_threshold: float = 120.0
     currency: str = "CNY"
+    baseline_month: str | None = None
+    ytd_start_month: str | None = None
 
 
 class BillingThresholdConfigUpdate(BaseModel):
     healthy_at_risk_threshold: float | None = None
     at_risk_over_threshold: float | None = None
     currency: str | None = None
+    baseline_month: str | None = None
+    ytd_start_month: str | None = None

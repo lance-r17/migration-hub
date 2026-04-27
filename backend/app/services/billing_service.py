@@ -197,6 +197,8 @@ async def get_threshold_config(session: AsyncSession) -> BillingThresholdConfigO
         healthy_at_risk_threshold=data.get("healthyAtRiskThreshold", 100.0),
         at_risk_over_threshold=data.get("atRiskOverThreshold", 120.0),
         currency=data.get("currency", "CNY"),
+        baseline_month=data.get("baselineMonth"),
+        ytd_start_month=data.get("ytdStartMonth"),
     )
 
 
@@ -211,6 +213,10 @@ async def update_threshold_config(
         current["atRiskOverThreshold"] = patch.at_risk_over_threshold
     if patch.currency is not None:
         current["currency"] = patch.currency
+    if patch.baseline_month is not None:
+        current["baselineMonth"] = patch.baseline_month
+    if patch.ytd_start_month is not None:
+        current["ytdStartMonth"] = patch.ytd_start_month
     if row:
         row.value = current
         flag_modified(row, 'value')
@@ -221,4 +227,6 @@ async def update_threshold_config(
         healthy_at_risk_threshold=current["healthyAtRiskThreshold"],
         at_risk_over_threshold=current["atRiskOverThreshold"],
         currency=current.get("currency", "CNY"),
+        baseline_month=current.get("baselineMonth"),
+        ytd_start_month=current.get("ytdStartMonth"),
     )
