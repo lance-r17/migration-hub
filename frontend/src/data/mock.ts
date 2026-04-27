@@ -748,45 +748,6 @@ export const mockCurrentUser: User = {
   initials: 'HW',
 }
 
-// ─── Dev Personas (dev-only user switcher) ────────────────────────────────────
-
-export const devPersonas: User[] = [
-  {
-    id: 'u-current',
-    name: 'Henry Wilson',
-    email: 'henry.wilson@corp.com',
-    department: 'Platform Engineering',
-    role: ['platform_migration_lead'],
-    initials: 'HW',
-  },
-  {
-    id: 'u3',
-    name: 'Alice Johnson',
-    email: 'alice.johnson@corp.com',
-    department: 'Platform Engineering',
-    team: 'Platform Engineering',
-    role: ['technical_lead'],
-    initials: 'AJ',
-  },
-  {
-    id: 'u12',
-    name: 'Karen Lee',
-    email: 'karen.lee@corp.com',
-    department: 'Compliance & Risk',
-    role: ['business_owner'],
-    initials: 'KL',
-  },
-  {
-    id: 'u2',
-    name: 'Dan Brown',
-    email: 'dan.brown@corp.com',
-    department: 'Platform Engineering',
-    team: 'Platform Engineering',
-    role: [],
-    initials: 'DB',
-  },
-]
-
 // ─── Audit Log Seed Data ──────────────────────────────────────────────────────
 
 export const mockAuditEntries: Record<string, AuditLogEntry[]> = {

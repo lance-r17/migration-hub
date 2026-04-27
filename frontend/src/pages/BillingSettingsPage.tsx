@@ -24,6 +24,7 @@ import {
 import { getBillingThresholdConfig, saveBillingThresholdConfig } from '@/services/billingConfig'
 import { MonthPicker } from '@/components/ui/month-picker'
 import type { BillingThresholdConfig } from '@/types/finance'
+import { cn } from '@/lib/utils'
 
 const DEFAULTS: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120, currency: 'CNY' }
 
@@ -159,7 +160,7 @@ export function BillingSettingsPage() {
                 value={config.currency ?? 'CNY'}
                 onValueChange={val => setConfig(prev => ({ ...prev, currency: val }))}
               >
-                <SelectTrigger id="currency" className={errors.currency ? 'border-destructive' : ''}>
+                <SelectTrigger id="currency" className={cn("w-full", errors.currency ? 'border-destructive' : '')}>
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
                 <SelectContent>
