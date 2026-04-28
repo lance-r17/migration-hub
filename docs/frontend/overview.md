@@ -8,6 +8,7 @@ frontend/src/
 ├── App.tsx                     # BrowserRouter + route definitions + ProtectedRoute
 ├── pages/
 │   ├── HomePage.tsx            # Dashboard — stats, project cards, activity feed
+│   ├── ProjectsPage.tsx        # All projects table (Platform Migration Lead only)
 │   ├── ProjectDetailsPage.tsx  # Full project register with all 10 sections
 │   ├── WavesPage.tsx          # Wave planning (Platform Migration Lead only)
 │   ├── LoginPage.tsx          # Mock SSO login
@@ -74,10 +75,10 @@ See [shared/sso-configuration.md](../shared/sso-configuration.md) for auth flow 
 ## Role-based access
 
 `user.role` drives feature gating. Current roles in the mock data:
-- `'Platform Migration Lead'` — sees all projects, accesses `/waves`, and has the second sign-off step
+- `'Platform Migration Lead'` — sees all projects, accesses `/projects`, `/waves`, and has the second sign-off step
 - Other roles — see only their own projects
 
-Feature-level checks happen inside components, not in routes (except `WavesPage` which has an inline role guard).
+Feature-level checks happen inside components, not in routes (except `WavesPage` and `ProjectsPage` which have inline role guards).
 
 ## Mock vs. real API
 

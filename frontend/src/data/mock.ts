@@ -380,6 +380,11 @@ export const mockProjects: Project[] = [
         riskStatus: 'resolved',
       },
     ],
+    approvals: [
+      { id: 'a1', role: 'technical_lead', status: 'approved', approver: 'Dan Brown', timestamp: '20 Mar 2026', icon: '' },
+      { id: 'a2', role: 'business_owner', status: 'approved', approver: 'Sarah Jenkins', timestamp: '21 Mar 2026', icon: '' },
+      { id: 'a3', role: 'platform_migration_lead', status: 'pending', icon: '' },
+    ],
   },
   {
     id: 'M-11029',

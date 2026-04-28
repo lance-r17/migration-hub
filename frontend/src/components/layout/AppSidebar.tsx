@@ -20,6 +20,7 @@ import {
   DollarSign,
   Mail,
   UserCog,
+  FolderOpen,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
@@ -38,6 +39,12 @@ const data = {
       title: "Dashboard",
       url: "/",
       icon: <LayoutDashboardIcon />,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      icon: <FolderOpen />,
+      requiresRole: "platform_migration_lead",
     },
     {
       title: "Waves",

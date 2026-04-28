@@ -28,7 +28,7 @@ Collapsible sidebar. Contains the app logo, `NavMain` (primary nav), and `NavSec
 Top navigation bar. Contains the sidebar trigger and breadcrumb.
 
 ### `NavMain`
-Primary navigation links (Home, Waves).
+Primary navigation links (Dashboard, Projects, Waves, Finance, Email, Settings, Admin).
 
 ### `NavSecondary`
 Secondary navigation links (Settings, Help).

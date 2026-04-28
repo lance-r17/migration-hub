@@ -36,4 +36,16 @@ test.describe('Home / Dashboard', () => {
   test('activity timeline shows "Recent Activity" heading', async ({ authenticatedPage: page }) => {
     await expect(page.getByText('Recent Activity')).toBeVisible()
   })
+
+  test('"View All Projects" card is visible for Platform Migration Lead', async ({ authenticatedPage: page }) => {
+    await expect(page.getByText('View All Projects')).toBeVisible()
+    await expect(page.getByText(/total projects/i)).toBeVisible()
+  })
+
+  test('clicking "View All Projects" navigates to /projects', async ({ authenticatedPage: page }) => {
+    await page.getByText('View All Projects').click()
+    await expect(page).toHaveURL('/projects')
+    await expect(page.locator('[data-testid="app-shell"]')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Projects/i })).toBeVisible()
+  })
 })

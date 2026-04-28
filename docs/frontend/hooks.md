@@ -12,7 +12,7 @@ import { useProjects } from '@/hooks/use-projects'
 const { projects, loading, error } = useProjects()
 ```
 
-Fetches all projects on mount. Used by `HomePage`.
+Fetches all projects on mount. Used by `HomePage` and `ProjectsPage`.
 
 **Returns:**
 

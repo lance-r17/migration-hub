@@ -79,6 +79,13 @@ At a high level:
 
 Defined in `frontend/src/App.tsx`. Auth guards are handled by `ProtectedRoute` (authentication only); role checks live inside page components.
 
+Key routes:
+- `/` — HomePage (dashboard)
+- `/projects` — Projects table (role-gated to Platform Migration Lead)
+- `/projects/:id` — Project details
+- `/waves` — Wave planning (role-gated)
+- `/finance`, `/email`, `/settings`, `/admin` — Lead/admin-only sections
+
 ## State management
 
 There is no global state library. State is local to each hook and flows down via props:

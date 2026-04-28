@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Download, Plus, CheckCircle2, Clock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Download, Plus, CheckCircle2, Clock, FolderOpen, ArrowRight } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { OverallProgressCard } from '@/components/home/OverallProgressCard'
 import { StatCard } from '@/components/home/StatCard'
@@ -17,6 +18,7 @@ type SortKey = 'progress' | 'status'
 
 export function HomePage() {
   const [sortKey, setSortKey] = useState<SortKey>('progress')
+  const navigate = useNavigate()
   const { user } = useCurrentUser()
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
@@ -59,6 +61,17 @@ export function HomePage() {
     if (sortKey === 'status') return a.status.localeCompare(b.status)
     return 0
   })
+
+  // For platform leads: show latest 5 active projects on the home grid
+  const homeProjects = useMemo(() => {
+    if (!isPlatformLead) return sortedProjects
+    const active = sortedProjects.filter(p => p.status !== 'completed')
+    // Sort by updatedAt descending for "latest"
+    const latestActive = [...active].sort((a, b) =>
+      (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '')
+    )
+    return latestActive.slice(0, 5)
+  }, [isPlatformLead, sortedProjects])
 
   // Security metrics for the Security Health widget
   const securityMetrics = useMemo(() => {
@@ -167,14 +180,34 @@ export function HomePage() {
                 <Skeleton className="h-40 rounded-xl" />
                 <Skeleton className="h-40 rounded-xl" />
               </>
-            ) : sortedProjects.length === 0 ? (
+            ) : homeProjects.length === 0 ? (
               <p className="text-sm text-muted-foreground col-span-3">
                 No projects are assigned to you yet.
               </p>
             ) : (
-              sortedProjects.map(project => (
-                <ProjectCard key={project.id} project={project} />
-              ))
+              <>
+                {homeProjects.map(project => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+                {isPlatformLead && projects.length > 0 && (
+                  <div
+                    onClick={() => navigate('/projects')}
+                    className="cursor-pointer rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 hover:bg-muted/50 hover:border-muted-foreground/50 transition-colors flex flex-col items-center justify-center gap-3 p-6 min-h-[160px]"
+                  >
+                    <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                      <FolderOpen className="size-6 text-muted-foreground" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-foreground">View All Projects</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{projects.length} total projects</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs font-semibold text-primary">
+                      <span>Go to Projects</span>
+                      <ArrowRight size={14} />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>

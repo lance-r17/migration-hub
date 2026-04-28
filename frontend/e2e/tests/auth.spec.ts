@@ -65,6 +65,11 @@ test.describe('Authentication', () => {
   })
 
   test('stale sessionStorage flag with 401 on load redirects to /login', async ({ page }) => {
+    // This test intercepts HTTP requests, which only works in real API mode.
+    // In mock mode the app talks to the in-memory store directly.
+    test.skip(process.env.TEST_MOCK_MODE === 'true', 'Requires real API mode')
+
+
     await page.route('**/api/v1/users/me', async (route) => {
       await route.fulfill({
         status: 401,
@@ -79,6 +84,10 @@ test.describe('Authentication', () => {
   })
 
   test('in-app API 401 redirects to /login', async ({ page }) => {
+    // This test intercepts HTTP requests, which only works in real API mode.
+    test.skip(process.env.TEST_MOCK_MODE === 'true', 'Requires real API mode')
+
+
     await page.route('**/api/v1/users/me', async (route) => {
       await route.fulfill({
         status: 200,

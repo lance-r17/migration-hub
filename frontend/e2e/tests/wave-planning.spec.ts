@@ -83,12 +83,11 @@ test.describe('Wave Planning', () => {
     await page.locator('[role="dialog"]').getByRole('button', { name: /^Create Wave$/i }).click()
 
     // Wait for the drawer to close after successful creation
-    await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('dialog', { name: 'Create Wave' })).not.toBeVisible({ timeout: 10000 })
 
     // Wait for the new wave to appear in the table (allow time for refetch after mock delay)
-    // Use exact match to avoid collision with the toast notification
-    // (toast also contains "E2E Test Wave" as part of a longer string)
-    await expect(page.getByText('E2E Test Wave', { exact: true })).toBeVisible({ timeout: 10000 })
+    // Use first() in case a previous test run left the wave in the mock store.
+    await expect(page.locator('table tbody').getByText('E2E Test Wave', { exact: true }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('can import a wave via Jira epic key', async ({ authenticatedPage: page }) => {

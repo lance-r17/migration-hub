@@ -21,6 +21,7 @@ import { ServiceAccountsPage } from './pages/ServiceAccountsPage'
 import { AdminAttachmentsPage } from './pages/AdminAttachmentsPage'
 import { AdminPage } from './pages/AdminPage'
 import { AdminHome } from './pages/AdminHome'
+import { ProjectsPage } from './pages/ProjectsPage'
 import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -44,6 +45,7 @@ function App() {
         <Route path="/email/new" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
         <Route path="/email/:id/edit" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
         <Route path="/email/:id/preview" element={<ProtectedRoute><EmailPreviewPage /></ProtectedRoute>} />
+        <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
           <Route index element={<AdminHome />} />
           <Route path="jobs" element={<AdminJiraJobsPage />} />

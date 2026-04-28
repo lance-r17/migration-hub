@@ -50,11 +50,12 @@ export const store = {
   // ─── Projects ──────────────────────────────────────────────────────────────
 
   getProjects(): Project[] {
-    return _projects
+    return _projects.map(p => ({ ...p, approvals: p.approvals ?? [], risks: p.risks ?? [] }))
   },
 
   getProject(id: string): Project | undefined {
-    return _projects.find(p => p.id === id)
+    const p = _projects.find(p => p.id === id)
+    return p ? { ...p, approvals: p.approvals ?? [], risks: p.risks ?? [] } : undefined
   },
 
   updateProject<K extends keyof Project>(id: string, key: K, value: Project[K]): Project {
