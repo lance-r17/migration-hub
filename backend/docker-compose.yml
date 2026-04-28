@@ -42,12 +42,14 @@ services:
 
   dex:
     image: dexidp/dex:latest
-    command: dex serve /etc/dex/config.yaml
+    entrypoint: ["/entrypoint.sh"]
     volumes:
-      - ../mock-oidc/config.yaml:/etc/dex/config.yaml:ro
+      - ../mock-oidc/entrypoint.sh:/entrypoint.sh:ro
       - dex_data:/var/dex
     ports:
       - "5556:5556"
+    environment:
+      MOCK_DEX_PASSWORD_HASH: ${MOCK_DEX_PASSWORD_HASH}
     restart: unless-stopped
 
   mock-oauth:

@@ -1,6 +1,6 @@
 # Data Model
 
-This document is the canonical reference for the core domain types. The frontend TypeScript interfaces in `frontend/src/types/` are the current source of truth. When the backend is built, its Pydantic schemas should match these shapes exactly.
+This document is the canonical reference for the core domain types. The frontend TypeScript interfaces in `frontend/src/types/` are the current source of truth. Backend Pydantic schemas mirror these shapes where possible, with two intentional deviations documented below.
 
 ---
 
@@ -9,12 +9,18 @@ This document is the canonical reference for the core domain types. The frontend
 ```ts
 type ProjectStatus    = 'migrating' | 'signed-off' | 'blocked' | 'planning' | 'in-progress' | 'completed'
 type ApprovalStatus   = 'approved' | 'pending' | 'waiting'
-type RiskSeverity     = 'critical' | 'medium' | 'low'
+type RiskSeverity     = 'critical' | 'high' | 'medium' | 'low'
 type SyncStatus       = 'synced' | 'out-of-sync' | 'provisioning'
 type ActivityType     = 'success' | 'info' | 'error'
-type ApplicationTier  = 'P1' | 'P2' | 'P3'
+type ApplicationTier  = 'T0' | 'T1' | 'T2' | 'T3'
 type WaveStatus       = 'planned' | 'active' | 'completed'
+type MigrationStrategy = 'Lift & Shift' | 'Refactor' | 'Deboard'
+type ResourceCategory = 'computing' | 'security' | 'networking' | 'database' | 'storage' | 'middleware' | 'analytics-computing' | 'monitoring'
+type TaskType         = 'onboarding' | 'migrate-computing' | 'migrate-database' | 'migrate-storage' | 'migrate-logs' | 'migrate-big-data' | 'custom'
+type TaskStatus       = 'todo' | 'in-progress' | 'done'
 ```
+
+> **Backend deviation:** `ApprovalStatus` in the backend is stored as `'pending' | 'approved' | 'rejected'`. The frontend type retains `'waiting'` for historical UI states but the backend never returns it.
 
 ---
 
@@ -28,11 +34,13 @@ interface User {
   department: string
   team?: string
   initials: string
-  role?: string         // e.g. 'Platform Migration Lead'
+  role: string[]          // e.g. ['platform_migration_lead']
 }
 ```
 
-`User.role` drives feature-level access control. Project-level visibility is controlled separately by the `ProjectUsers` association.
+`User.role` drives feature-level access control. Project-level visibility is controlled separately by `project_users` associations.
+
+> **Backend deviation:** The database stores `role` as a comma-separated string (e.g. `'platform_migration_lead,admin'`). The backend API returns it as a single nullable string; the frontend is responsible for splitting into an array if needed.
 
 ---
 
@@ -47,7 +55,7 @@ interface TeamMember {
 }
 ```
 
-A lightweight user reference embedded in `Project.team`. Populated from `User` data.
+A lightweight user reference embedded in `Project.team`. Populated from `project_users` at API serialization time; there is **no `team` column** on the `projects` table.
 
 ---
 
@@ -58,15 +66,19 @@ interface Project {
   id: string
   name: string
   status: ProjectStatus
-  progress: number          // 0–100 percentage
+  blockedReason?: string
+  progress: number               // 0–100; computed from stage_progress, not stored
+  stageProgress?: StageProgress   // computed from section completion, not stored
+  surveySubmittedAt?: string
   team: TeamMember[]
   description?: string
   // Header metadata
-  migrationWave?: string    // legacy display label; waveId takes precedence
+  migrationWave?: string         // legacy display label; waveId takes precedence
   profileOwner?: string
   jiraTicket?: string
-  lastUpdated?: string
-  // 10 register sections (all optional — filled in progressively)
+  jiraBaseUrl?: string
+  updatedAt?: string
+  // Register sections (all optional — filled in progressively)
   applicationOverview?: ApplicationOverview
   currentInfrastructure?: CurrentInfrastructure
   availability?: AvailabilityResilience
@@ -75,15 +87,19 @@ interface Project {
   nfrs?: NonFunctionalRequirements
   migrationConstraints?: MigrationConstraints
   targetArchitecture?: TargetArchitecture
+  migrationEffortEstimation?: MigrationEffortEstimation
   risks: Risk[]
   approvals: Approval[]
   // Wave planning
-  waveId?: string             // references Wave.id
+  waveId?: string
+  planning?: ProjectPlanning
   jiraSubtaskConfig?: JiraSubtaskConfig
-  jiraStoryKey?: string       // e.g. 'MIG-42', written by async Jira job
+  jiraStoryKey?: string
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
 }
 ```
+
+> **`progress` and `stageProgress` are computed fields.** The backend calculates them on every read from section completion state (`setup`, `survey`, `signoff`, `migration`). They are not database columns.
 
 ### Section 1 — ApplicationOverview
 
@@ -91,13 +107,18 @@ interface Project {
 interface ApplicationOverview {
   applicationName: string
   shortName?: string
-  businessOwnerId?: string    // User.id
-  technicalLeadId?: string    // User.id
-  dbaDataOwnerId?: string     // User.id
+  businessOwnerId?: string
+  technicalLeadId?: string
+  dbaDataOwnerId?: string
   businessFunction?: string
   userBase?: { type: 'Internal' | 'External' | 'Both'; count?: string }
   applicationTier?: ApplicationTier
-  eimId?: string
+  baId?: string
+  systemImportanceClassification?: ('IBS' | 'BPS')[]
+  iitaApplicability?: boolean
+  softwareOrigin?: 'in-house' | '3rd party'
+  migrationStrategy?: MigrationStrategy
+  serviceLine?: string
 }
 ```
 
@@ -106,30 +127,26 @@ interface ApplicationOverview {
 ```ts
 interface CurrentInfrastructure {
   resources: CloudResource[]
-  network?: NetworkConfig
 }
 
 interface CloudResource {
-  id: string
+  resourceId: string
   name: string
-  category: 'VM' | 'Database' | 'Buckets' | 'Network' | 'Other'
-  existingStatus: string
-  targetStatus: string
+  product?: string
+  resourceSet?: string
+  specs?: Record<string, unknown>
+  subApplication?: string
+  targetResourceId?: string
   syncStatus: SyncStatus
-  specs?: string
-  quantity?: number
-  availabilityZones?: string[]
-  needMigration?: boolean       // default true; false = excluded from migration scope
-  jiraSubtaskKey?: string       // populated by async Jira job after sign-off
+  needMigration?: boolean
+  jiraSubtaskKey?: string
+  migrationCompleted?: boolean
 }
 
-interface NetworkConfig {
-  loadBalancerType?: string
-  vipDnsNames?: string[]
-  firewallZones?: string[]
-  bandwidthRequirements?: string
-  hardcodedIps?: boolean
-  privateConnectivity?: string
+interface ProductCategoryEntry {
+  product: string
+  product_name: string
+  category: ResourceCategory
 }
 ```
 
@@ -139,13 +156,8 @@ interface NetworkConfig {
 interface AvailabilityResilience {
   rto: string
   rpo: string
-  availabilitySla: string
-  currentAzPattern?: string
-  azAwareToday?: boolean
-  azFailureBehaviour?: string
   azReadiness3Az?: string
   healthCheckEndpoints?: string[]
-  currentTopologyDescription?: string
 }
 ```
 
@@ -156,12 +168,10 @@ interface DataPersistence {
   databaseTypes: string[]
   totalDataVolume?: string
   dataGrowthRate?: string
-  replicationTopology?: string
-  backupMethod?: string
+  backupRequiredDuringMigration?: boolean
   lastRestoreTest?: string
   dataResidency?: string
   encryptionAtRest?: string
-  piiData?: boolean
   statefulComponents?: string[]
 }
 ```
@@ -172,23 +182,15 @@ interface DataPersistence {
 interface Dependencies {
   upstream: DependencyEntry[]
   downstream: DependencyEntry[]
-  certificatesSecrets?: CertificatesSecrets
 }
 
 interface DependencyEntry {
   id: string
   name: string
-  protocol?: string
-  port?: string
-  access?: 'Internal' | 'External'
-  owner?: string
+  baId?: string
+  contactEmail?: string
+  hosting?: string
   notes?: string
-}
-
-interface CertificatesSecrets {
-  tlsCertificates?: string
-  secretsManagement?: string
-  apiKeys?: string
 }
 ```
 
@@ -198,11 +200,6 @@ interface CertificatesSecrets {
 interface NonFunctionalRequirements {
   peakLoad: string
   autoscaling: string
-  seasonalPatterns: string
-  latencySensitivity: string
-  monitoring: string
-  logAggregation: string
-  compliance: string[]
   licensing: string
 }
 ```
@@ -211,20 +208,19 @@ interface NonFunctionalRequirements {
 
 ```ts
 interface MigrationConstraints {
-  migrationWindow: string
-  blackoutDates: DateRangeEntry[]
+  regularMigrationWindow: string
+  preferredMigrationWindow?: ('weekday' | 'weekend')[]
+  earliestStartDate?: string
+  latestEndDate?: string
+  crDurationHours?: number
+  snowCiGroups?: string[]
   changeFreezePeriods?: DateRangeEntry[]
-  maxCutoverWindow?: string
-  cutoverApproach: string
-  rollbackPlan: string
-  stakeholderComms: string
-  preMigrationTesting: string
 }
 
 interface DateRangeEntry {
   name: string
-  from: string    // ISO date string e.g. '2024-12-20'
-  to?: string     // ISO date string; omit for single-day events
+  from: string
+  to?: string
 }
 ```
 
@@ -232,14 +228,38 @@ interface DateRangeEntry {
 
 ```ts
 interface TargetArchitecture {
-  summary: string
-  constraints: string
   reArchitectureNeeded?: boolean
   topology3Az?: string
-  replicationChanges?: string
   dnsIpChanges?: string
   newServicesRequired?: string[]
   architectureDiagram?: string
+}
+```
+
+### Section 8.5 — MigrationEffortEstimation
+
+```ts
+interface MigrationEffortEstimation {
+  effortEstimate?: string
+  notes?: string
+  attachmentIds?: string[]
+  tables?: EffortTable[]
+  tableMode?: 'single' | 'multiple'
+}
+
+interface EffortTable {
+  baId?: string
+  tasks: EffortTask[]
+}
+
+interface EffortTask {
+  task: string
+  effortType?: string
+  effort?: number
+  effortTime?: number
+  rate?: number
+  thirdParty?: boolean
+  remarks?: string
 }
 ```
 
@@ -262,12 +282,12 @@ interface Risk {
 ```ts
 interface Approval {
   id: string
-  role: string            // e.g. 'Technical Lead'
-  approver?: string       // display name of the approver
+  role: string
+  approver?: string
   status: ApprovalStatus
-  timestamp?: string      // ISO 8601
-  icon: string            // icon name for display
-  userId?: string         // User.id of the approver
+  timestamp?: string
+  icon: string
+  userId?: string
 }
 ```
 
@@ -278,15 +298,54 @@ interface Approval {
 ```ts
 interface Wave {
   id: string
-  name: string            // e.g. 'Wave 3 – Q2 2026'
-  startDate: string       // ISO date string e.g. '2026-04-01'
-  cutoverDate: string     // ISO date string
+  name: string
+  startDate: string
+  cutoverDate: string
   description?: string
-  jiraProjectKey: string  // e.g. 'MIG' — set by backend/config
-  jiraEpicKey?: string    // e.g. 'MIG-42', populated after creation or import
+  jiraProjectKey: string
+  jiraEpicKey?: string
   source: 'created' | 'imported'
   status: WaveStatus
-  createdAt: string       // ISO 8601
+  createdAt: string
+}
+```
+
+---
+
+## ProjectPlanning
+
+Gantt-managed planning data stored as a JSONB blob:
+
+```ts
+interface ProjectPlanning {
+  startDate: string
+  endDate: string
+  tasks: PlanningTask[]
+}
+
+interface PlanningTask {
+  id: string
+  name: string
+  type: TaskType
+  start: string
+  end: string
+  status: TaskStatus
+  deps: string[]
+}
+```
+
+---
+
+## StageProgress
+
+Computed per-stage completion percentages returned by the API:
+
+```ts
+interface StageProgress {
+  setup: number      // 0 or 100
+  survey: number     // 0 or 100
+  signoff: number    // 0, 33, 67, or 100
+  migration: number  // 0–100
 }
 ```
 
@@ -294,27 +353,24 @@ interface Wave {
 
 ## JiraSubtaskConfig
 
-Controls how Jira sub-tasks are grouped when a project is signed off:
-
 ```ts
 interface JiraSubtaskConfig {
-  mode: 'resource-level' | 'category-level' | 'custom'
-  selectedResourceIds?: string[]   // used when mode === 'custom'
-  selectedCategories?: string[]    // used when mode === 'category-level'
+  mode: 'resource-level' | 'category-level' | 'product-level' | 'custom'
+  selectedResourceIds?: string[]
+  selectedCategories?: string[]
 }
 ```
 
 | Mode | Sub-task granularity |
 |---|---|
 | `resource-level` | One sub-task per `CloudResource` in scope |
-| `category-level` | One sub-task per unique resource category (VM, Database, etc.) |
+| `category-level` | One sub-task per unique `ResourceCategory` |
+| `product-level` | One sub-task per unique `product` |
 | `custom` | One sub-task per resource in `selectedResourceIds` |
 
 ---
 
 ## JiraJobRequest
-
-The async job record created when sign-off triggers Jira issue creation:
 
 ```ts
 interface JiraJobRequest {
@@ -322,22 +378,38 @@ interface JiraJobRequest {
   projectId: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   config: JiraSubtaskConfig
-  requestedAt: string         // ISO 8601
-  processedAt?: string        // ISO 8601, set on completion
-  storyKey?: string           // e.g. 'MIG-200'
+  requestedAt: string
+  processedAt?: string
+  storyKey?: string
   subtaskKeys: Record<string, string>
-  // Key semantics depend on config.mode:
-  //   resource-level → { [resourceId]: subtaskKey }
-  //   category-level → { [category]: subtaskKey }
-  //   custom         → { [resourceId]: subtaskKey } (selected IDs only)
+}
+```
+
+---
+
+## OperationJob
+
+Change-request jobs created after initial Jira story creation:
+
+```ts
+interface OperationJobOut {
+  id: string
+  projectId: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  config: {
+    type: 'operation'
+    selected_subtask_keys: string[]
+    summary: string
+  }
+  requestedAt: string | null
+  processedAt: string | null
+  crSubtaskKey: string | null
 }
 ```
 
 ---
 
 ## Audit types
-
-See [jira-integration.md](jira-integration.md) for Jira-specific audit events.
 
 ```ts
 type AuditEventType =
@@ -346,22 +418,25 @@ type AuditEventType =
   | 'approval_submitted'
   | 'risk_created' | 'risk_updated' | 'risk_deleted'
   | 'resource_updated' | 'resource_sync_completed'
+  | 'resource_added' | 'resource_removed'
   | 'wave_assigned' | 'wave_created' | 'wave_imported'
   | 'jira_story_created'
+  | 'survey_submitted'
+  | 'project_created'
 
 type AuditEntityType = 'project' | 'section' | 'approval' | 'risk' | 'cloud_resource' | 'wave'
 
 interface AuditLogEntry {
   id: string
   projectId: string
-  timestamp: string           // ISO 8601
+  timestamp: string
   actor: AuditActor
   eventType: AuditEventType
   entityType: AuditEntityType
-  entityId?: string           // risk.id, resource.id, approval.id
-  entityLabel?: string        // human-readable entity name
-  sectionKey?: string         // keyof Project being updated
-  sectionLabel?: string       // e.g. 'Application Overview'
+  entityId?: string
+  entityLabel?: string
+  sectionKey?: string
+  sectionLabel?: string
   changes: AuditChange[]
 }
 
@@ -372,8 +447,8 @@ interface AuditActor {
 }
 
 interface AuditChange {
-  field: string       // technical key e.g. 'rto'
-  label: string       // human-readable e.g. 'RTO'
+  field: string
+  label: string
   oldValue: unknown
   newValue: unknown
 }
@@ -385,7 +460,7 @@ interface AuditChange {
 
 ```ts
 interface OverallStats {
-  progress: number      // 0–100
+  progress: number
   totalAssets: number
   targetCloud: string
   completed: number
@@ -394,9 +469,11 @@ interface OverallStats {
 
 interface Activity {
   id: string
-  type: ActivityType    // 'success' | 'info' | 'error'
+  type: ActivityType
   message: string
-  time: string          // relative or absolute time string
+  time: string
   actor: string
+  projectId?: string
+  projectName?: string
 }
 ```

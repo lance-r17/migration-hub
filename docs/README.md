@@ -13,9 +13,9 @@
 | [frontend/best-practices.md](frontend/best-practices.md) | Patterns: section saves, drawers, audit logging, RBAC |
 | [frontend/testing.md](frontend/testing.md) | Playwright E2E test suite — structure, auth fixture, running tests, CI |
 | **backend/** | |
-| [backend/overview.md](backend/overview.md) | Backend structure (Python/FastAPI) — placeholder |
+| [backend/overview.md](backend/overview.md) | Backend structure and design principles (Python/FastAPI) |
 | [backend/api.md](backend/api.md) | REST API endpoint reference derived from frontend services |
-| [backend/database.md](backend/database.md) | Database schema and Alembic migrations — placeholder |
+| [backend/database.md](backend/database.md) | Database schema, indexes, and Alembic migrations |
 | **shared/** | |
 | [shared/data-model.md](shared/data-model.md) | Core domain types shared between frontend and backend |
 | [shared/jira-integration.md](shared/jira-integration.md) | Jira integration — epic/story/subtask flow, job queue |

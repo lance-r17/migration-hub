@@ -42,7 +42,7 @@ function CostTable({ table }: { table: EffortTable }) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-border">
-            {['Task', 'Effort Unit (FTE)', 'Effort Time (Month)', 'Rate (Monthly Cost USD)', 'Cost (USD)', 'Third party?', 'Remarks'].map(h => (
+            {['Task', 'Effort Type', 'Effort Unit (FTE)', 'Effort Time (Month)', 'Rate (Monthly Cost USD)', 'Cost (USD)', 'Third party?', 'Remarks'].map(h => (
               <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -53,6 +53,7 @@ function CostTable({ table }: { table: EffortTable }) {
             return (
               <tr key={task.task} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                 <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">{task.task}</td>
+                <td className="py-3 pr-4 text-muted-foreground whitespace-nowrap">{task.effortType || '—'}</td>
                 <td className="py-3 pr-4 text-muted-foreground text-center">{task.effort ?? '—'}</td>
                 <td className="py-3 pr-4 text-muted-foreground text-center">{task.effortTime ?? '—'}</td>
                 <td className="py-3 pr-4 text-muted-foreground text-right">{task.rate !== undefined ? formatCurrency(task.rate) : '—'}</td>
@@ -64,6 +65,7 @@ function CostTable({ table }: { table: EffortTable }) {
           })}
           <tr className="border-b border-border last:border-0 bg-muted/30">
             <td className="py-3 pr-4 font-bold text-foreground">Total</td>
+            <td className="py-3 pr-4" />
             <td className="py-3 pr-4" />
             <td className="py-3 pr-4" />
             <td className="py-3 pr-4" />
@@ -228,7 +230,7 @@ export function MigrationEffortEstimationSection({ data, projectId, projectBaId,
           title="Migration Effort Estimation"
           description="Provide a detailed effort breakdown for this migration."
           onSave={handleSave}
-          widthClass="w-[900px] sm:!max-w-[900px]"
+          widthClass="w-[1100px] sm:!max-w-[1100px]"
         >
           <FieldGroup>
             <Field>

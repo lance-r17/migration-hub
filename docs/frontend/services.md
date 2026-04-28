@@ -33,7 +33,7 @@ import { getProjects, getProject, updateProject } from '@/services/projects'
 |---|---|---|---|
 | `getProjects` | `() => Promise<Project[]>` | `GET /api/v1/projects` | Returns all projects |
 | `getProject` | `(id: string) => Promise<Project \| undefined>` | `GET /api/v1/projects/:id` | Returns a single project |
-| `updateProject` | `<K extends keyof Project>(id, key, value) => Promise<Project>` | `PUT /api/v1/projects/:id/sections/:key` | Updates one section key on a project; returns the full updated project |
+| `updateProject` | `<K extends keyof Project>(id, key, value) => Promise<Project>` | `PATCH /api/v1/projects/:id/sections/:key` | Updates one section key on a project; returns the full updated project |
 
 `updateProject` is generic — the key and value are type-safe against `keyof Project`.
 
@@ -122,17 +122,24 @@ import { getOverallStats, getRecentActivity } from '@/services/dashboard'
 
 ---
 
-## Jira job queue (`services/jiraJobs.ts`)
+## Jira jobs (`services/jiraJobs.ts`)
 
 ```ts
-import { createJiraJob } from '@/services/jiraJobs'
+import {
+  createJiraJob, getJiraJob, retryJiraJob, getJobLogs,
+  createOperationJob, getOperationJobs, getAllJobsAdmin,
+} from '@/services/jiraJobs'
 ```
 
-| Function | Signature | Description |
-|---|---|---|
-| `createJiraJob` | `(projectId, config, resources, waveEpicKey?) => JiraJobRequest` | Enqueues a Jira story + subtask creation job |
-
-This function is **synchronous** — it returns the initial job record immediately and schedules async state transitions via `setTimeout`. It directly mutates the mock store; it has no real-API equivalent (the backend will use a proper job queue).
+| Function | Mock behavior | Real API | Description |
+|---|---|---|---|
+| `createJiraJob` | `setTimeout` simulation | `POST /api/v1/jira/jobs` | Enqueues a story + sub-task creation job |
+| `getJiraJob` | Store lookup | `GET /api/v1/jira/jobs/:id` | Polls job state |
+| `retryJiraJob` | Throws | `POST /api/v1/jira/projects/:id/retry-job` | Retries a failed job |
+| `getJobLogs` | Empty array | `GET /api/v1/jira/jobs/:id/logs` | Fetches processing logs |
+| `createOperationJob` | N/A | `POST /api/v1/jira/projects/:id/operation-jobs` | Creates a change-request job |
+| `getOperationJobs` | N/A | `GET /api/v1/jira/projects/:id/operation-jobs` | Lists CR jobs |
+| `getAllJobsAdmin` | Empty array | `GET /api/v1/admin/jira-jobs` | Admin dashboard: all jobs with logs |
 
 See [../shared/jira-integration.md](../shared/jira-integration.md) for the full job lifecycle.
 

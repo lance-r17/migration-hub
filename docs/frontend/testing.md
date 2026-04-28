@@ -52,7 +52,7 @@ individual tests and shows results without needing a visible display.
 
 All test files import from `../fixtures/auth.fixture` which provides the `authenticatedPage` fixture.
 The fixture calls `page.addInitScript` to set `sessionStorage.setItem('auth', 'true')` before any
-navigation — matching `AUTH_KEY = 'auth'` in `src/contexts/UserContext.tsx`.
+navigation — matching `AUTH_KEY = 'auth'` in `src/context/UserContext.tsx`.
 
 ```typescript
 import { test, expect } from '../fixtures/auth.fixture'

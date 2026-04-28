@@ -8,7 +8,7 @@
 
 ## Design principles
 
-- Project sections (`application_overview`, `availability`, `data_persistence`, `dependencies`, `nfrs`, `migration_constraints`, `target_architecture`, `team`) are stored as JSONB columns on the `projects` table. This matches the section-at-a-time update pattern (`PATCH /api/v1/projects/:id/sections/:key`) and avoids complex joins for document-like structures.
+- Project sections (`application_overview`, `availability`, `data_persistence`, `dependencies`, `nfrs`, `migration_constraints`, `target_architecture`, `migration_effort_estimation`, `planning`) are stored as JSONB columns on the `projects` table. This matches the section-at-a-time update pattern (`PATCH /api/v1/projects/:id/sections/:key`) and avoids complex joins for document-like structures.
 - `cloud_resources`, `risks`, and `approvals` are **separate normalized tables** with FK to `projects`. Each can be queried, created, and updated individually.
 - The `audit_log_entries` table uses append-only inserts — never update or delete rows.
 - Wave–project association is a FK on the `projects` table (`wave_id`).
@@ -28,7 +28,9 @@
 | `department` | `TEXT NOT NULL` | |
 | `team` | `TEXT` | nullable |
 | `initials` | `TEXT NOT NULL` | |
-| `role` | `TEXT` | e.g. `'Platform Migration Lead'` |
+| `role` | `TEXT` | comma-separated roles; e.g. `'platform_migration_lead,admin'` |
+| `is_service_account` | `BOOLEAN NOT NULL` | default `false` |
+| `api_key_hash` | `TEXT` | nullable; SHA-256 of the issued API key |
 
 ### `waves`
 
@@ -53,7 +55,7 @@
 | `id` | `TEXT PK` | preserves frontend IDs (`PRJ-2024-ALPHA`, `M-11029`) |
 | `name` | `TEXT NOT NULL` | |
 | `status` | `TEXT NOT NULL` | `'planning'\|'in-progress'\|'migrating'\|'blocked'\|'signed-off'\|'completed'` |
-| `progress` | `INTEGER NOT NULL` | 0–100 |
+| `blocked_reason` | `TEXT` | nullable |
 | `description` | `TEXT` | nullable |
 | `migration_wave` | `TEXT` | nullable; legacy label |
 | `profile_owner` | `TEXT FK → users.id` | nullable |
@@ -70,9 +72,14 @@
 | `nfrs` | `JSONB` | nullable; `NonFunctionalRequirements` |
 | `migration_constraints` | `JSONB` | nullable; `MigrationConstraints` |
 | `target_architecture` | `JSONB` | nullable; `TargetArchitecture` |
-| `team` | `JSONB NOT NULL` | `TeamMember[]`; display cache (source of truth: `project_users`) |
+| `migration_effort_estimation` | `JSONB` | nullable; `MigrationEffortEstimation` |
+| `planning` | `JSONB` | nullable; `ProjectPlanning` |
+| `survey_submitted_at` | `TIMESTAMPTZ` | nullable |
 | `created_at` | `TIMESTAMPTZ NOT NULL` | |
 | `updated_at` | `TIMESTAMPTZ NOT NULL` | |
+
+> **`progress` and `stage_progress` are not stored.** They are computed on every API read from section completion state (`setup`, `survey`, `signoff`, `migration`). See `project_service.compute_stage_progress()`.  
+> **`team` is not stored.** It is derived from `project_users` at API serialization time.
 
 ### `project_users`
 
@@ -222,4 +229,4 @@ alembic revision --autogenerate -m "describe_the_change"
 alembic downgrade -1
 ```
 
-Migration scripts live in `backend/alembic/versions/`. The initial schema (`0001_initial_schema.py`) is hand-authored and creates all 13 tables in FK dependency order.
+Migration scripts live in `backend/alembic/versions/`. The initial schema (`0001_initial_schema.py`) is hand-authored and creates the core tables in FK dependency order.

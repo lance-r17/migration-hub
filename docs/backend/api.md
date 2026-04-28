@@ -44,16 +44,24 @@ Custom OAuth code exchange. The frontend calls this after receiving a one-time `
 
 **Flow:**
 1. Backend GETs `{OAUTH_SERVICE_URL}/api/v1/oauth/sso/userinfo` with `client_id`, `client_secret`, and `code` query parameters
-2. OAuth service returns user details JSON
-3. Backend looks up the user by `email` in the local database
-4. Backend issues a signed JWT session token
-5. Returns `{user: User, token: string}`
+2. OAuth service returns user details JSON (including `member_of` AD groups)
+3. Backend derives the user's global role from `OAUTH_ROLE_MAPPINGS` against AD groups
+4. Backend derives project memberships from `OAUTH_AD_GROUP_REGEX` against AD groups
+5. Backend looks up the user by `email`; if not found, **auto-provisions** a new user from the OAuth data
+6. Backend syncs `project_users` rows with `role='member'` for matched projects (governance roles are never touched)
+7. Backend issues a signed JWT session token
+8. Returns `{user: User, token: string}`
 
 **Response:** `SSOExchangeResponse` — `{ user: User, token: string }`
 
+**Side effects:**
+- `users.role` is overwritten from AD group mappings
+- `project_users` member rows are added/removed based on AD group matches
+- Governance roles (`technical_lead`, `business_owner`, etc.) are preserved
+
 **Errors:**
 - `503` — OAuth service not configured
-- `401` — Invalid/expired code, or user not found in database
+- `401` — Invalid/expired code, or user not found in database (OIDC mode only; Custom OAuth auto-provisions)
 
 ---
 
@@ -650,15 +658,13 @@ Sends a rendered test email to a recipient address.
 
 ### `POST /api/v1/jira/jobs`
 
-Creates a Jira job and starts background processing.
+Creates a Jira story job and starts background processing.
 
-**Request body:** `{ "projectId": "string", "config": "JiraSubtaskConfig" }`
+**Request body:** `{ "project_id": "string", "config": "JiraSubtaskConfig", "wave_epic_key": "string" }`
 
 **Response:** `202 Accepted` — `JiraJob` with `status: "pending"`
 
 Processing flow: `pending` → `processing` → generates story key + per-resource subtask keys → writes back to `projects` and `cloud_resources` → `completed` (or `failed`).
-
-> **Known gap:** `frontend/src/services/jiraJobs.ts` currently bypasses `apiClient` and calls the mock store directly. These endpoints are defined and functional but the frontend won't use them until that service is refactored.
 
 ---
 
@@ -667,6 +673,48 @@ Processing flow: `pending` → `processing` → generates story key + per-resour
 Returns a Jira job by ID.
 
 **Response:** `JiraJob`
+
+---
+
+### `GET /api/v1/jira/jobs/:id/logs`
+
+Returns processing logs for a Jira job.
+
+**Response:** `JiraJobLog[]`
+
+---
+
+### `POST /api/v1/jira/projects/:id/retry-job`
+
+Retries a failed Jira job for a project.
+
+**Response:** `JiraJob`
+
+---
+
+### `POST /api/v1/jira/projects/:id/operation-jobs`
+
+Creates a change-request (operation) job for selected sub-tasks.
+
+**Request body:** `{ "selected_subtask_keys": ["string"], "summary": "string" }`
+
+**Response:** `OperationJobOut`
+
+---
+
+### `GET /api/v1/jira/projects/:id/operation-jobs`
+
+Returns all change-request jobs for a project.
+
+**Response:** `OperationJobOut[]`
+
+---
+
+### `GET /api/v1/admin/jira-jobs`
+
+Admin endpoint: returns all Jira jobs across projects, including logs.
+
+**Response:** `AdminJiraJobRow[]`
 
 ---
 

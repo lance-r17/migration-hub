@@ -18,7 +18,7 @@ HTTP_CLIENT_VERIFY = _resolve_ca_bundle()
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    database_url: str = "postgresql+asyncpg://hub:hub_dev_secret@localhost/migration_hub"
+    database_url: str = ""
     cors_origins: str = "http://localhost:5173"
     jira_base_url: str = ""
     jira_api_token: str = ""
@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     # Custom enterprise OAuth service settings
     oauth_service_url: str = ""
     oauth_client_id: str = "migration-hub"
-    oauth_client_secret: str = "mock-secret-do-not-use-in-production"
-    session_secret_key: str = "change-me-in-production"
+    oauth_client_secret: str = ""
+    session_secret_key: str = ""
     session_max_age_minutes: int = 480  # 8 hours
 
     # AD group → project auto-assignment
@@ -52,3 +52,13 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Validate required secrets at startup
+if not settings.database_url:
+    raise ValueError("DATABASE_URL must be set")
+
+if settings.oauth_service_url:
+    if not settings.oauth_client_secret:
+        raise ValueError("OAUTH_CLIENT_SECRET must be set when OAUTH_SERVICE_URL is configured")
+    if not settings.session_secret_key:
+        raise ValueError("SESSION_SECRET_KEY must be set when OAUTH_SERVICE_URL is configured")

@@ -160,6 +160,7 @@ export interface TargetArchitecture {
 
 export interface EffortTask {
   task: string
+  effortType?: string
   effort?: number        // Effort Unit (FTE)
   effortTime?: number    // Effort Time (Month)
   rate?: number          // Rate (Monthly Cost USD)

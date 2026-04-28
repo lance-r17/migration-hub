@@ -59,37 +59,17 @@ import type { Project } from '@/types'
 
 ## Routing
 
-Defined in `src/App.tsx`:
+Defined in `src/App.tsx`. `ProtectedRoute` checks `isAuthenticated` from `useCurrentUser()`; unauthenticated requests redirect to `/login`.
 
-```
-/login              → LoginPage (public)
-/                   → HomePage (ProtectedRoute)
-/projects/:id       → ProjectDetailsPage (ProtectedRoute)
-/waves              → WavesPage (ProtectedRoute)
-/email              → EmailTemplatesPage (ProtectedRoute)
-/email/:id/edit     → EmailBuilderPage (ProtectedRoute)
-/email/:id/preview  → EmailPreviewPage (ProtectedRoute)
-```
-
-`ProtectedRoute` checks `isAuthenticated` from `useCurrentUser()`. Unauthenticated requests redirect to `/login`. While auth state is loading, `ProtectedRoute` renders nothing (no flash of redirect).
+See [shared/sso-configuration.md](../shared/sso-configuration.md) for auth flow diagrams and environment variables.
 
 ## Authentication
 
-`UserContext` (`src/context/UserContext.tsx`) is the single source of auth truth. It is provided at the root in `main.tsx` so every component can access it.
+`UserContext` (`src/context/UserContext.tsx`) is the single source of auth truth. Session is persisted in `sessionStorage` under the key `'auth'`. Three auth modes are supported (see SSO configuration for details):
 
-```ts
-const { user, isAuthenticated, login, logout, loading } = useCurrentUser()
-```
-
-Session is persisted in `sessionStorage` under the key `'auth'`. On mount, the context checks `sessionStorage` and, if authenticated, calls `getCurrentUser()` to hydrate the user object.
-
-Three auth modes are supported:
-
-1. **Custom OAuth** (`VITE_OAUTH_SERVICE_URL` set) — clicking "Login with Enterprise SSO" redirects to the OAuth service. After callback, `CallbackPage` exchanges the code with the backend and stores the returned backend JWT in `sessionStorage`.
-2. **Standard OIDC** (`VITE_OIDC_ISSUER` set) — `oidc-client-ts` handles the PKCE flow. The access token is stored by the library and injected into API calls.
-3. **Mock auth** (neither set) — no IdP involved; login always succeeds as the seeded dev user.
-
-In custom OAuth mode, the `backend_token` is stored in `sessionStorage` and sent as `Authorization: Bearer <token>` on every API call. Logout clears both `'auth'` and `'backend_token'`.
+1. **Custom OAuth** — backend-issued JWT stored in `sessionStorage`
+2. **Standard OIDC** — PKCE flow via `oidc-client-ts`
+3. **Mock auth** — no IdP; login always succeeds as the seeded dev user
 
 ## Role-based access
 

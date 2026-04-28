@@ -67,33 +67,17 @@ No code changes are needed to switch modes — set `VITE_API_BASE_URL` in `.env.
 
 ## Authentication
 
-Auth state is managed by `UserContext` (`src/context/UserContext.tsx`):
+Auth state is managed by `UserContext` (`src/context/UserContext.tsx`). See [shared/sso-configuration.md](shared/sso-configuration.md) for the full auth flow diagrams and environment variable reference.
 
-- On mount it reads `sessionStorage.getItem('auth')` to restore session
-- `login(user)` stores the user in state and writes `'true'` to `sessionStorage`
-- `logout()` clears both state and `sessionStorage` (including any `backend_token` or `oauth_state`)
+At a high level:
+- `sessionStorage` persists the session across reloads
 - `ProtectedRoute` in `App.tsx` redirects unauthenticated requests to `/login`
 - Role-based feature gating happens inside individual pages/components using `user.role`
-
-Three auth modes are supported (controlled by environment variables):
-
-1. **Custom OAuth** (`OAUTH_SERVICE_URL` / `VITE_OAUTH_SERVICE_URL` set) — backend exchanges one-time codes with the OAuth service and issues session JWTs
-2. **Standard OIDC** (`OIDC_ISSUER` / `VITE_OIDC_ISSUER` set) — frontend uses `oidc-client-ts` to exchange codes via PKCE; backend validates IdP JWTs via JWKS
-3. **Mock auth** (neither set) — no IdP; login button always signs in as the seeded dev user
+- Three modes: Custom Enterprise OAuth (recommended), Standard OIDC (legacy), Mock auth (dev)
 
 ## Routing
 
-Defined in `frontend/src/App.tsx`:
-
-| Route | Component | Guard |
-|---|---|---|
-| `/login` | `LoginPage` | None |
-| `/` | `HomePage` | `ProtectedRoute` |
-| `/projects/:id` | `ProjectDetailsPage` | `ProtectedRoute` |
-| `/waves` | `WavesPage` | `ProtectedRoute` + role check |
-| `/email` | `EmailTemplatesPage` | `ProtectedRoute` |
-| `/email/:id/edit` | `EmailBuilderPage` | `ProtectedRoute` |
-| `/email/:id/preview` | `EmailPreviewPage` | `ProtectedRoute` |
+Defined in `frontend/src/App.tsx`. Auth guards are handled by `ProtectedRoute` (authentication only); role checks live inside page components.
 
 ## State management
 
@@ -125,7 +109,7 @@ The FastAPI backend lives in `backend/` and exposes all `/api/v1/...` endpoints 
 **Stack:** Python 3.12, FastAPI (async), SQLAlchemy 2.0 (async, `asyncpg` driver), Alembic, PostgreSQL 16.
 
 **Key structural points:**
-- 13 SQLAlchemy models — project sections stored as JSONB columns; cloud resources, risks, approvals, and audit entries are separate normalized tables with FK to `projects`
+- ~16 SQLAlchemy models — project sections stored as JSONB columns; cloud resources, risks, approvals, audit entries, billing records, embargo records, email templates, Jira jobs, and attachments are separate normalized tables with FK to `projects`
 - Project PKs are TEXT (preserves frontend IDs like `PRJ-2024-ALPHA`)
 - `config_store` singleton table (key→JSONB) holds survey config, resource survey config, and billing thresholds
 - Audit entries are written as a transaction side-effect on every project write — never by the frontend

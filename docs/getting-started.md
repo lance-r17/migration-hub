@@ -130,7 +130,7 @@ The backend is a Python FastAPI application in `backend/`. The easiest way to ru
 ```bash
 cd backend
 docker compose up -d db        # start postgres:16-alpine on :5432
-alembic upgrade head           # create 13 tables
+alembic upgrade head           # apply all migrations
 python scripts/seed.py         # load seed data (projects, users, waves, etc.)
 uvicorn app.main:app --reload  # FastAPI on :8000
 ```
@@ -159,9 +159,9 @@ Copy `.env.example` to `.env` and adjust as needed:
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://hub:hub_dev_secret@localhost/migration_hub` | PostgreSQL connection string |
+| `DATABASE_URL` | `postgresql+asyncpg://hub:<YOUR_DB_PASSWORD>@localhost/migration_hub` | PostgreSQL connection string |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed CORS origins |
-| `CURRENT_USER_ID` | `u-current` | Fallback user returned by `GET /users/me` when no auth system is configured |
+| `CURRENT_USER_ID` | `u-current` | Fallback user returned by `GET /users/me` in mock auth mode |
 | `JIRA_BASE_URL` | _(empty)_ | Jira instance URL (optional for Jira job testing) |
 | `JIRA_API_TOKEN` | _(empty)_ | Jira API token |
 | `JIRA_USER_EMAIL` | _(empty)_ | Email for Jira API auth |
@@ -170,6 +170,9 @@ Copy `.env.example` to `.env` and adjust as needed:
 | `OAUTH_CLIENT_SECRET` | _(empty)_ | Client secret for backend-to-OAuth-service `/userinfo` calls. |
 | `SESSION_SECRET_KEY` | _(empty)_ | Secret key for signing backend session JWTs (HS256). |
 | `SESSION_MAX_AGE_MINUTES` | `480` | Session lifetime in minutes (default 8 hours). |
+| `OAUTH_AD_GROUP_REGEX` | `CN=([^,]+)-ResourceSetReadOnly` | Regex to extract project ID from AD group DN. |
+| `OAUTH_AD_GROUP_OU_FILTER` | `OU=Ali` | Substring filter for relevant AD groups. |
+| `OAUTH_ROLE_MAPPINGS` | _(empty)_ | JSON array of `{"regex": "...", "role": "..."}` for global role assignment. |
 | `OIDC_ISSUER` | _(empty)_ | OIDC issuer URL (legacy). See [SSO configuration](shared/sso-configuration.md). |
 | `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in OIDC JWTs. Must be set to your client ID for Azure AD. |
 | `ENVIRONMENT` | `development` | `development` or `production` |

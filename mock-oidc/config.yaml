@@ -1,7 +1,15 @@
 # dex OIDC provider configuration for local development
 # Simulates Azure AD enterprise SSO until real OIDC is ready.
 #
-# Mock users (all use password: Dev1234!):
+# SECURITY NOTICE:
+# The bcrypt hash below is a PUBLICLY KNOWN dev-only hash shared across all
+# mock users. It exists ONLY for local development convenience and must NEVER
+# be used in any staging or production environment. The corresponding plaintext
+# password is intentionally not documented here; generate a new hash with
+# `python -c "import bcrypt; print(bcrypt.hashpw(b'<pw>', bcrypt.gensalt()).decode())"`
+# if you need a different local password.
+#
+# Mock users:
 #   henry.wilson@corp.com  — Henry Wilson (Platform Migration Lead)
 #   alice.johnson@corp.com — Alice Johnson (Technical Lead)
 #   karen.lee@corp.com     — Karen Lee (Business Owner)

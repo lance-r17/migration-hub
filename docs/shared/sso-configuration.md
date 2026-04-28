@@ -172,6 +172,35 @@ This flow matches a real enterprise OAuth service that does **not** expose stand
 
 > **Security:** `SESSION_SECRET_KEY` must be a cryptographically random string of at least 32 bytes in production.
 
+### AD group synchronization
+
+On every Custom Enterprise OAuth login, the backend receives the user's AD group membership (`member_of`) from the OAuth service and performs two synchronizations:
+
+| Sync | What happens | Rows affected |
+|---|---|---|
+| **Global roles** | AD groups are matched against `OAUTH_ROLE_MAPPINGS`; the user's `users.role` is overwritten | `users` table |
+| **Project memberships** | AD groups are matched against `OAUTH_AD_GROUP_REGEX`; matching projects grant `role='member'` | `project_users` table |
+
+#### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OAUTH_AD_GROUP_REGEX` | `CN=([^,]+)-ResourceSetReadOnly` | Regex to extract a project ID from an AD group DN. The first capture group becomes the project ID. |
+| `OAUTH_AD_GROUP_OU_FILTER` | `OU=Ali` | If set, only AD groups containing this substring are considered. |
+| `OAUTH_ROLE_MAPPINGS` | _(empty)_ | JSON array of `{"regex": "...", "role": "..."}`. The first matching regex sets the global role. Role may be comma-separated for multiple roles. |
+
+#### Governance roles are protected
+
+**`sync_user_projects` only touches rows where `project_users.role = 'member'`**. Governance roles assigned through the project's **Application Overview** — `technical_lead`, `business_owner`, and `dba_data_owner` — are **never** revoked by SSO login, even if the user no longer belongs to the project's AD group.
+
+**Example:**
+- Alice is assigned as **Technical Lead** on project `PRJ-A123` via the Application Overview screen.
+- Alice also belongs to the AD group `CN=PRJ-A123-ResourceSetReadOnly`, so she gets `member` access on login.
+- Alice is removed from the AD group.
+- On her next SSO login, her `member` row for `PRJ-A123` is deleted, but her `technical_lead` row remains untouched.
+
+> **Operational note:** To remove a governance role, an admin or project editor must explicitly clear the corresponding field (e.g. `technicalLeadId`) in the project's Application Overview. The backend function `_sync_project_user_roles` runs only when that section is saved.
+
 ---
 
 ## Standard OIDC (Legacy)
@@ -282,15 +311,19 @@ Same pattern as Azure AD — replace values with your provider's issuer and clie
 
 ## User provisioning
 
-The backend looks up users by the `email` claim in the JWT. There is no auto-provisioning — every user who will log in must have a matching row in the `users` table before their first login attempt.
+Resolution behavior depends on the auth mode:
 
-Add users to `backend/seed_data/users.json` and re-run the seed script:
+| Mode | Provisioning |
+|---|---|
+| **Custom Enterprise OAuth** | **Auto-provisioning** — if the user is not found by email, a new row is created automatically from the OAuth userinfo (`staff_id`, `name`, `email`, `given_name`/`family_name` → initials). The global role and project memberships are derived from AD groups on the first login. |
+| **Standard OIDC** | **No auto-provisioning** — the user must exist in the `users` table before their first login. Returns `401` if not found. |
+| **Mock auth** | Returns the seeded `CURRENT_USER_ID` user. |
+
+For OIDC and mock modes, seed users via `backend/seed_data/users.json` and run:
 
 ```bash
 cd backend && python scripts/seed.py --force
 ```
-
-Or insert directly into the database.
 
 The `email` scope must be requested and the IdP must include the `email` claim in the issued tokens.
 
@@ -337,11 +370,11 @@ VITE_OAUTH_CLIENT_ID=migration-hub
 VITE_OAUTH_REDIRECT_URI=http://localhost:5173/callback
 
 # Backend env (backend/.env)
-DATABASE_URL=postgresql+asyncpg://hub:hub_dev_secret@localhost/migration_hub
+DATABASE_URL=postgresql+asyncpg://hub:<YOUR_DB_PASSWORD>@localhost/migration_hub
 OAUTH_SERVICE_URL=http://localhost:5557
 OAUTH_CLIENT_ID=migration-hub
-OAUTH_CLIENT_SECRET=mock-secret-do-not-use-in-production
-SESSION_SECRET_KEY=dev-secret-change-me
+OAUTH_CLIENT_SECRET=<YOUR_OAUTH_CLIENT_SECRET>
+SESSION_SECRET_KEY=<YOUR_SESSION_SECRET_KEY>
 SESSION_MAX_AGE_MINUTES=480
 ```
 
@@ -363,6 +396,25 @@ cd backend && docker compose up -d db dex
 ```
 
 Set `VITE_OIDC_ISSUER=http://localhost:5556/dex` and `OIDC_ISSUER=http://localhost:5556/dex`.
+
+### Customizing the mock password hash
+
+The dex container now generates its config at startup via `mock-oidc/entrypoint.sh`. The bcrypt hash for all mock users defaults to a publicly known dev-only value. To use a different password, set `MOCK_DEX_PASSWORD_HASH` in `backend/.env` (or your shell environment) before starting the container:
+
+```bash
+# backend/.env
+MOCK_DEX_PASSWORD_HASH='$2b$12$...your-hash...'
+```
+
+Generate a new hash with:
+
+```bash
+python -c "import bcrypt; print(bcrypt.hashpw(b'<pw>', bcrypt.gensalt()).decode())"
+```
+
+If `MOCK_DEX_PASSWORD_HASH` is unset, the container falls back to the default dev hash.
+
+> **Note:** The static file `mock-oidc/config.yaml` is no longer mounted by `docker-compose.yml`; it is kept in the repo only as a standalone reference for running dex directly without the entrypoint wrapper.
 
 ---
 
