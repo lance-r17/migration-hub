@@ -8,6 +8,7 @@
 			"TZ": "${localEnv:TZ:America/Los_Angeles}"
 		}
 	},
+	"runArgs": ["--env-file", ".devcontainer/.env"],
 	"mounts": [
 		{
 			"source": "migration-hub-home",

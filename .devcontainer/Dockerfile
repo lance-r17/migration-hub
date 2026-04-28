@@ -34,6 +34,9 @@ USER node
 # Install Claude
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
+# Install pi
+RUN npm install -g @mariozechner/pi-coding-agent
+
 # Install kimi
 # RUN curl -fsSL https://code.kimi.com/install.sh | bash
 
