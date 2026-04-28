@@ -49,22 +49,24 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
   return (
     <div className="bg-card p-6 rounded-xl border border-border">
       <h3 className="text-sm font-bold text-foreground mb-6 uppercase tracking-widest">Recent Activity</h3>
-      <div className="overflow-y-auto max-h-[600px] space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border pr-2">
-        {activities.map((activity) => (
-          <div key={activity.id} className="relative pl-8">
-            <ActivityDot type={activity.type} />
-            <div>
-              <p className="text-sm font-medium text-foreground">{activity.message}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {formatActivityTime(activity.time)}
-                {activity.projectName && (
-                  <span className="ml-1.5">• {activity.projectName}</span>
-                )}
-                <span className="ml-1.5">• By {activity.actor}</span>
-              </p>
+      <div className="overflow-y-auto max-h-[360px] pr-2">
+        <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border">
+          {activities.map((activity) => (
+            <div key={activity.id} className="relative pl-8">
+              <ActivityDot type={activity.type} />
+              <div>
+                <p className="text-sm font-medium text-foreground">{activity.message}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {formatActivityTime(activity.time)}
+                  {activity.projectName && (
+                    <span className="ml-1.5">• {activity.projectName}</span>
+                  )}
+                  <span className="ml-1.5">• By {activity.actor}</span>
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
