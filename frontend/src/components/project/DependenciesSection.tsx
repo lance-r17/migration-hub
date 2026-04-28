@@ -15,7 +15,7 @@ function DependencyTable({ entries }: { entries: DependencyEntry[] }) {
     return <p className="text-sm text-muted-foreground">None</p>
   }
   return (
-    <div className="overflow-x-auto -mx-6 px-6">
+    <div className="overflow-x-auto -mx-4 px-4">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-border">

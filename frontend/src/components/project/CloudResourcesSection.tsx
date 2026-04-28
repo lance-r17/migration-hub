@@ -114,7 +114,7 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
           {!data || data.resources.length === 0 ? (
             <p className="text-sm text-muted-foreground">No resources documented yet. Run a discovery scan to populate this section.</p>
           ) : (
-            <div className="overflow-x-auto -mx-6 px-6">
+            <div className="overflow-x-auto -mx-4 px-4">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border">

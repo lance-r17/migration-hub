@@ -98,8 +98,8 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
   const remaining = allApprovals.filter(a => a.status !== 'approved').length
 
   return (
-    <div className="bg-muted/40 rounded-lg px-4 py-3 border border-border/50">
-      <div className="flex items-center">
+    <div className="bg-muted/40 rounded-lg px-4 py-3 border border-border/50 overflow-x-auto">
+      <div className="flex items-center min-w-max">
         {stages.map((stage, i) => {
           const complete = sp[stage.key] === 100
           const partial = sp[stage.key] > 0 && sp[stage.key] < 100

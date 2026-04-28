@@ -39,7 +39,7 @@ export function SectionCard({
       )}
     >
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <div className="flex items-center gap-3">
             <div className={cn('w-10 h-10 rounded flex items-center justify-center', iconBg, iconColor)}>
               <Icon size={20} />

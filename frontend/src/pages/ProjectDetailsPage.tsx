@@ -278,7 +278,7 @@ export function ProjectDetailsPage() {
       <div className="max-w-screen-xl mx-auto w-full space-y-8">
         {/* Breadcrumb */}
         <Breadcrumb>
-          <BreadcrumbList>
+          <BreadcrumbList className="flex-wrap">
             <BreadcrumbItem>
               <BreadcrumbLink onClick={() => navigate('/')} className="cursor-pointer">
                 Home
