@@ -55,7 +55,7 @@ export function AuditLogDrawer({ projectId, open, onClose }: Props) {
         </SheetHeader>
 
         {/* Filter chips */}
-        <div className="flex gap-1.5 overflow-x-auto px-5 py-3 border-b scrollbar-none">
+        <div className="flex gap-1.5 overflow-x-auto px-5 py-3 border-b scrollbar-hidden">
           {FILTERS.map(f => (
             <button
               key={f.key}
