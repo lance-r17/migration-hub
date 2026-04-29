@@ -13,12 +13,13 @@ test.describe('Home / Dashboard', () => {
   test('overall progress card shows "Overall Migration Progress"', async ({ authenticatedPage: page }) => {
     await expect(page.getByText('Overall Migration Progress')).toBeVisible()
     await expect(page.getByText('Total Assets')).toBeVisible()
+    await expect(page.getByText('Migration Activity')).toBeVisible()
   })
 
-  test('stat cards show Completed Projects and In Progress metrics', async ({ authenticatedPage: page }) => {
-    await expect(page.getByText('Completed Projects')).toBeVisible()
-    // Scope to card-description to avoid collision with project status badges
-    await expect(page.locator('[data-slot="card-description"]').filter({ hasText: 'In Progress' })).toBeVisible()
+  test('project status chart card shows stage overview', async ({ authenticatedPage: page }) => {
+    await expect(page.getByText('Project Overview')).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Stages/i })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Surveys/i })).toBeVisible()
   })
 
   test('Active Projects section heading is visible', async ({ authenticatedPage: page }) => {

@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, Plus, CheckCircle2, Clock, FolderOpen, ArrowRight } from 'lucide-react'
+import { Download, Plus, FolderOpen, ArrowRight } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { OverallProgressCard } from '@/components/home/OverallProgressCard'
-import { StatCard } from '@/components/home/StatCard'
+import { ProjectStatusChartCard } from '@/components/home/ProjectStatusChartCard'
 import { ProjectCard } from '@/components/home/ProjectCard'
 import { ActivityTimeline } from '@/components/home/ActivityTimeline'
 import { SecurityHealthWidget } from '@/components/home/SecurityHealthWidget'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDashboard } from '@/hooks/use-dashboard'
 import { useProjects } from '@/hooks/use-projects'
+import { useWaves } from '@/hooks/use-waves'
 import { useEmbargos } from '@/hooks/use-embargos'
 import { useCurrentUser } from '@/context/UserContext'
 import type { OverallStats } from '@/types'
@@ -24,9 +25,10 @@ export function HomePage() {
 
   const { stats: globalStats, activity: allActivity, loading: dashLoading } = useDashboard()
   const { projects, loading: projectsLoading } = useProjects()
+  const { waves, loading: wavesLoading } = useWaves()
   const { embargos: allEmbargos, loading: embargosLoading } = useEmbargos()
 
-  const loading = dashLoading || projectsLoading || embargosLoading
+  const loading = dashLoading || projectsLoading || wavesLoading || embargosLoading
 
   // For non-platform-leads: filter activity to their assigned projects only
   const projectIds = useMemo(() => projects.map(p => p.id), [projects])
@@ -125,33 +127,21 @@ export function HomePage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {loading || !displayStats ? (
-              <>
-                <Skeleton className="h-32 rounded-xl" />
-                <Skeleton className="h-32 rounded-xl" />
-                <Skeleton className="h-32 rounded-xl" />
-              </>
-            ) : (
-              <>
-                <OverallProgressCard stats={displayStats} />
-                <StatCard
-                  label="Completed Projects"
-                  value={displayStats.completed}
-                  icon={CheckCircle2}
-                  iconBg="bg-emerald-100 dark:bg-emerald-900/30"
-                  iconColor="text-emerald-700 dark:text-emerald-300"
-                />
-                <StatCard
-                  label="In Progress"
-                  value={displayStats.inProgress}
-                  icon={Clock}
-                  iconBg="bg-secondary"
-                  iconColor="text-secondary-foreground"
-                />
-              </>
-            )}
-          </div>
+          {isPlatformLead && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {loading || !displayStats ? (
+                <>
+                  <Skeleton className="h-32 rounded-xl" />
+                  <Skeleton className="h-40 rounded-xl" />
+                </>
+              ) : (
+                <>
+                  <OverallProgressCard stats={displayStats} projects={projects} waves={waves} />
+                  <ProjectStatusChartCard projects={projects} />
+                </>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Section 2: Projects Grid */}
