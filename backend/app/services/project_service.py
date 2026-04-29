@@ -259,8 +259,10 @@ async def create(
         entity_type="project",
         actor=actor,
     )
-    await session.refresh(project)
-    return project
+    result = await session.execute(
+        select(Project).where(Project.id == project.id).options(*_project_options())
+    )
+    return result.scalar_one()
 
 
 async def update(
