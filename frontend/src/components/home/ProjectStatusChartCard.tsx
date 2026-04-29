@@ -100,32 +100,47 @@ export function ProjectStatusChartCard({ projects }: ProjectStatusChartCardProps
               Assets
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="stages" className="flex items-center justify-center">
-            {stageData.length > 0 ? (
-              <PieChart data={stageData} size={180} />
-            ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
-                No project data available
-              </div>
-            )}
+          <TabsContent value="stages" className="flex flex-col gap-2">
+            <div className="w-full flex justify-center">
+              {stageData.length > 0 ? (
+                <PieChart data={stageData} size={180} />
+              ) : (
+                <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
+                  No project data available
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Distribution of projects across migration stages
+            </p>
           </TabsContent>
-          <TabsContent value="surveys" className="flex items-center justify-center">
-            {surveyData.length > 0 ? (
-              <PieChart data={surveyData} size={180} />
-            ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
-                No project data available
-              </div>
-            )}
+          <TabsContent value="surveys" className="flex flex-col gap-2">
+            <div className="w-full flex justify-center">
+              {surveyData.length > 0 ? (
+                <PieChart data={surveyData} size={180} />
+              ) : (
+                <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
+                  No project data available
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Projects that have submitted their migration surveys
+            </p>
           </TabsContent>
-          <TabsContent value="assets" className="flex items-center justify-center">
-            {assetData.length > 0 ? (
-              <PieChart data={assetData} size={180} />
-            ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
-                No asset data available
-              </div>
-            )}
+          <TabsContent value="assets" className="flex flex-col gap-2">
+            <div className="w-full flex justify-center">
+              {assetData.length > 0 ? (
+                <PieChart data={assetData} size={180} />
+              ) : (
+                <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
+                  No asset data available
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Breakdown of cloud resources by resource category
+            </p>
           </TabsContent>
         </Tabs>
       </CardContent>
