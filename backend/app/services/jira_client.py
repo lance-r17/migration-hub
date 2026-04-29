@@ -12,9 +12,14 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def _jira_client() -> AsyncIterator[httpx.AsyncClient]:
     """Yield a reusable httpx client with auth, default headers, and SSL verify."""
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    auth: httpx.Auth | None = httpx.BasicAuth(settings.jira_user_email, settings.jira_api_token)
+    if settings.jira_api_version == "2":
+        auth = None
+        headers["Authorization"] = f"Bearer {settings.jira_api_token}"
     async with httpx.AsyncClient(
-        auth=httpx.BasicAuth(settings.jira_user_email, settings.jira_api_token),
-        headers={"Accept": "application/json", "Content-Type": "application/json"},
+        auth=auth,
+        headers=headers,
         verify=HTTP_CLIENT_VERIFY,
     ) as client:
         yield client

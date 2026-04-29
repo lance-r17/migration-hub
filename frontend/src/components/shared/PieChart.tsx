@@ -49,12 +49,18 @@ export function PieChart({ data, size = 160, strokeWidth = 0, className }: PieCh
       const end = polarToCartesian(cx, cy, r, endAngle)
       const largeArcFlag = angle > Math.PI ? 1 : 0
 
-      const path = [
-        `M ${cx} ${cy}`,
-        `L ${start.x} ${start.y}`,
-        `A ${r} ${r} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`,
-        'Z',
-      ].join(' ')
+      let path: string
+      if (Math.abs(angle - Math.PI * 2) < 0.0001) {
+        // Full circle: arc paths are degenerate, use a circle element instead
+        path = 'FULL_CIRCLE'
+      } else {
+        path = [
+          `M ${cx} ${cy}`,
+          `L ${start.x} ${start.y}`,
+          `A ${r} ${r} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`,
+          'Z',
+        ].join(' ')
+      }
 
       acc.push({ ...d, path, percentage: Math.round((d.value / total) * 100) })
       return acc
@@ -65,16 +71,29 @@ export function PieChart({ data, size = 160, strokeWidth = 0, className }: PieCh
   return (
     <div className={cn('flex items-center gap-6', className)}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Pie chart">
-        {slices.map((slice, i) => (
-          <path
-            key={i}
-            d={slice.path}
-            fill={slice.color}
-            stroke="var(--card)"
-            strokeWidth={strokeWidth || 2}
-            className="transition-opacity duration-200 hover:opacity-80"
-          />
-        ))}
+        {slices.map((slice, i) =>
+          slice.path === 'FULL_CIRCLE' ? (
+            <circle
+              key={i}
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill={slice.color}
+              stroke="var(--card)"
+              strokeWidth={strokeWidth || 2}
+              className="transition-opacity duration-200 hover:opacity-80"
+            />
+          ) : (
+            <path
+              key={i}
+              d={slice.path}
+              fill={slice.color}
+              stroke="var(--card)"
+              strokeWidth={strokeWidth || 2}
+              className="transition-opacity duration-200 hover:opacity-80"
+            />
+          ),
+        )}
         {/* centre hole for doughnut effect */}
         <circle cx={cx} cy={cy} r={holeR} fill="var(--card)" />
         {/* centre text */}
