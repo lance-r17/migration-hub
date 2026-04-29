@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, ClipboardList, FileText, ShieldCheck, Server } from 'lucide-react'
+import { AlertTriangle, ChevronRight, ClipboardList, FileText, ShieldCheck, Server, CalendarDays, Database } from 'lucide-react'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { TeamAvatars } from '@/components/shared/TeamAvatars'
@@ -11,6 +11,7 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from '@/component
 
 interface ProjectCardProps {
   project: Project
+  rich?: boolean
 }
 
 function getProgressVariant(project: Project) {
@@ -28,11 +29,21 @@ const STAGES = [
 ]
 
 
-export function ProjectCard({ project }: ProjectCardProps) {
+function formatDate(iso?: string | null) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return null
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+export function ProjectCard({ project, rich = false }: ProjectCardProps) {
   const navigate = useNavigate()
   const isBlocked = project.status === 'blocked'
   const ctaLabel = isBlocked ? 'Resolve Issues' : 'View Details'
   const sp: StageProgress = project.stageProgress ?? { setup: 0, survey: 0, signoff: 0, migration: 0 }
+  const resourceCount = project.currentInfrastructure?.resources?.length ?? 0
+  const migStart = project.migrationConstraints?.earliestStartDate ?? project.planning?.startDate
+  const migEnd = project.migrationConstraints?.latestEndDate ?? project.planning?.endDate
 
   return (
     <MotionCard
@@ -80,6 +91,36 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </TooltipContent>
             </Tooltip>
           </div>
+
+          {/* Rich details for non-lead users */}
+          {rich && (
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Database size={12} className="shrink-0" />
+                <span>{resourceCount} asset{resourceCount !== 1 ? 's' : ''}</span>
+              </div>
+              {project.migrationWave && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <CalendarDays size={12} className="shrink-0" />
+                  <span>{project.migrationWave}</span>
+                </div>
+              )}
+              {(migStart || migEnd) && (
+                <div className="col-span-2 flex items-center gap-1.5 text-muted-foreground">
+                  <CalendarDays size={12} className="shrink-0" />
+                  <span>
+                    {formatDate(migStart) ?? '—'} → {formatDate(migEnd) ?? '—'}
+                  </span>
+                </div>
+              )}
+              {isBlocked && project.blockedReason && (
+                <div className="col-span-2 flex items-start gap-1.5 text-destructive">
+                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                  <span className="line-clamp-2">{project.blockedReason}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-4">

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Download, Plus, FolderOpen, ArrowRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { AppShell } from '@/components/layout/AppShell'
 import { OverallProgressCard } from '@/components/home/OverallProgressCard'
 import { ProjectStatusChartCard } from '@/components/home/ProjectStatusChartCard'
@@ -101,7 +102,7 @@ export function HomePage() {
 
   return (
     <AppShell>
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl w-full mx-auto space-y-8">
         {/* Section 1: Global Progress */}
         <section className="space-y-6">
           <div className="flex justify-between items-end">
@@ -145,11 +146,11 @@ export function HomePage() {
         </section>
 
         {/* Section 2: Projects Grid */}
-        <section className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-foreground">
-              {isPlatformLead ? 'Active Projects' : 'Your Projects'}
-            </h2>
+        <section className="space-y-6 w-full">
+          <div className={cn('flex items-center', isPlatformLead ? 'justify-between' : 'justify-end')}>
+            {isPlatformLead && (
+              <h2 className="text-xl font-semibold text-foreground">Active Projects</h2>
+            )}
             <div className="flex items-center gap-3">
               <span className="text-xs font-medium text-muted-foreground">Sort by:</span>
               <select
@@ -163,21 +164,21 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className={cn('grid gap-6 w-full', isPlatformLead ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-2')}>
             {loading ? (
               <>
                 <Skeleton className="h-40 rounded-xl" />
                 <Skeleton className="h-40 rounded-xl" />
-                <Skeleton className="h-40 rounded-xl" />
+                {!isPlatformLead && <Skeleton className="h-40 rounded-xl" />}
               </>
             ) : homeProjects.length === 0 ? (
-              <p className="text-sm text-muted-foreground col-span-3">
+              <p className="text-sm text-muted-foreground col-span-full">
                 No projects are assigned to you yet.
               </p>
             ) : (
               <>
                 {homeProjects.map(project => (
-                  <ProjectCard key={project.id} project={project} />
+                  <ProjectCard key={project.id} project={project} rich={!isPlatformLead} />
                 ))}
                 {isPlatformLead && projects.length > 0 && (
                   <div
@@ -202,21 +203,23 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* Section 3: Secondary */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        {/* Section 3: Secondary — only for platform leads */}
+        {isPlatformLead && (
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              {loading ? (
+                <Skeleton className="h-48 rounded-xl" />
+              ) : (
+                <ActivityTimeline activities={activity} />
+              )}
+            </div>
             {loading ? (
               <Skeleton className="h-48 rounded-xl" />
             ) : (
-              <ActivityTimeline activities={activity} />
+              <SecurityHealthWidget {...securityMetrics} />
             )}
-          </div>
-          {loading ? (
-            <Skeleton className="h-48 rounded-xl" />
-          ) : (
-            <SecurityHealthWidget {...securityMetrics} />
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </AppShell>
   )

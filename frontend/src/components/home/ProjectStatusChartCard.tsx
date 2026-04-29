@@ -1,16 +1,30 @@
 import { useMemo } from 'react'
-import { BarChart3, ClipboardCheck } from 'lucide-react'
+import { PieChart as PieChartIcon, ClipboardCheck, Database } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PieChart } from '@/components/shared/PieChart'
 import { getProjectStage, STAGE_META } from '@/lib/project-stages'
+import { useProductCategoryMap } from '@/hooks/use-product-category'
 import type { Project } from '@/types'
 
 interface ProjectStatusChartCardProps {
   projects: Project[]
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  computing: '#3B82F6',
+  security: '#F43F5E',
+  networking: '#8B5CF6',
+  database: '#10B981',
+  storage: '#F59E0B',
+  middleware: '#06B6D4',
+  'analytics-computing': '#EC4899',
+  monitoring: '#6366F1',
+}
+
 export function ProjectStatusChartCard({ projects }: ProjectStatusChartCardProps) {
+  const { getCategoryForProduct } = useProductCategoryMap()
+
   const stageData = useMemo(() => {
     const counts = new Map<string, number>()
     for (const project of projects) {
@@ -43,6 +57,26 @@ export function ProjectStatusChartCard({ projects }: ProjectStatusChartCardProps
     ].filter((d) => d.value > 0)
   }, [projects])
 
+  const assetData = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const project of projects) {
+      for (const resource of project.currentInfrastructure?.resources ?? []) {
+        const cat = getCategoryForProduct(resource.product)
+        counts[cat] = (counts[cat] ?? 0) + 1
+      }
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([category, value]) => ({
+        label: category
+          .split('-')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' '),
+        value,
+        color: CATEGORY_COLORS[category] ?? '#94a3b8',
+      }))
+  }, [projects, getCategoryForProduct])
+
   return (
     <Card className="md:col-span-2">
       <CardHeader className="pb-2">
@@ -54,12 +88,16 @@ export function ProjectStatusChartCard({ projects }: ProjectStatusChartCardProps
         <Tabs defaultValue="stages">
           <TabsList variant="line" className="mb-4 w-full">
             <TabsTrigger value="stages" className="flex-1 gap-1.5">
-              <BarChart3 size={14} />
+              <PieChartIcon size={14} />
               Stages
             </TabsTrigger>
             <TabsTrigger value="surveys" className="flex-1 gap-1.5">
               <ClipboardCheck size={14} />
               Surveys
+            </TabsTrigger>
+            <TabsTrigger value="assets" className="flex-1 gap-1.5">
+              <Database size={14} />
+              Assets
             </TabsTrigger>
           </TabsList>
           <TabsContent value="stages" className="flex items-center justify-center">
@@ -77,6 +115,15 @@ export function ProjectStatusChartCard({ projects }: ProjectStatusChartCardProps
             ) : (
               <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
                 No project data available
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="assets" className="flex items-center justify-center">
+            {assetData.length > 0 ? (
+              <PieChart data={assetData} size={180} />
+            ) : (
+              <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
+                No asset data available
               </div>
             )}
           </TabsContent>

@@ -15,6 +15,7 @@ import { ProgressBar } from '@/components/shared/ProgressBar'
 import { TeamAvatars } from '@/components/shared/TeamAvatars'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
+import { getSignoffCompletionDate } from '@/utils/dates'
 import type { Project } from '@/types'
 
 function getProgressVariant(project: Project) {
@@ -81,6 +82,7 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Wave</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Profile Owner</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Team</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Signoff Date</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -88,14 +90,14 @@ export function ProjectsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : projects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -136,6 +138,17 @@ export function ProjectsPage() {
                     </TableCell>
                     <TableCell>
                       <TeamAvatars members={project.team} max={3} size="h-6 w-6" />
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {(() => {
+                        const d = getSignoffCompletionDate(project)
+                        if (!d) return '—'
+                        return d.toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      })()}
                     </TableCell>
                     <TableCell>
                       <button

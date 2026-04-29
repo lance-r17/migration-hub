@@ -161,7 +161,7 @@ export function ProjectDetailsPage() {
   }
 
   const applyApproval = async (approvedRole: string) => {
-    const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    const now = new Date().toISOString()
     const idx = APPROVAL_SEQUENCE.indexOf(approvedRole as typeof APPROVAL_SEQUENCE[number])
     const nextRole = idx >= 0 ? APPROVAL_SEQUENCE[idx + 1] : undefined
     const allApprovals = ensureAllRoles(project.approvals)

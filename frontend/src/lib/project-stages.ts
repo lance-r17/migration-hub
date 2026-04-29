@@ -9,11 +9,11 @@ export interface StageMeta {
 }
 
 export const STAGE_META: StageMeta[] = [
-  { key: 'setup', label: 'Setup', colorVar: 'var(--chart-1)' },
-  { key: 'survey', label: 'Survey', colorVar: 'var(--chart-2)' },
-  { key: 'sign-off', label: 'Sign-off', colorVar: 'var(--chart-3)' },
-  { key: 'migration', label: 'Migration', colorVar: 'var(--chart-4)' },
-  { key: 'completed', label: 'Completed', colorVar: 'var(--chart-5)' },
+  { key: 'setup', label: 'Setup', colorVar: '#3B82F6' },
+  { key: 'survey', label: 'Survey', colorVar: '#8B5CF6' },
+  { key: 'sign-off', label: 'Sign-off', colorVar: '#F59E0B' },
+  { key: 'migration', label: 'Migration', colorVar: '#10B981' },
+  { key: 'completed', label: 'Completed', colorVar: '#94a3b8' },
 ]
 
 export function getProjectStage(project: Project): ProjectStage {
