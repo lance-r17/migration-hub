@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     jira_subtask_issue_type: str = "Subtask"
     jira_subtask_issue_type_id: str = ""
     jira_issue_link_type: str = "Delivers"
+    jira_api_version: str = "3"
     current_user_id: str = "u2"
     environment: str = "development"
     oidc_issuer: str = ""
