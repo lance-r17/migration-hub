@@ -1,5 +1,6 @@
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, FolderOpen, ChevronRight } from 'lucide-react'
+import { Lock, FolderOpen, ChevronRight, ChevronLeft } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   Table,
@@ -10,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { useProjects } from '@/hooks/use-projects'
@@ -45,6 +47,17 @@ export function ProjectsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
   const { projects, loading } = useProjects()
+
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+
+  const totalPages = Math.ceil((projects?.length || 0) / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedProjects = useMemo(
+    () => (projects || []).slice(startIndex, endIndex),
+    [projects, startIndex, endIndex]
+  )
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
@@ -120,7 +133,7 @@ export function ProjectsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                projects.map((project) => (
+                paginatedProjects.map((project) => (
                   <TableRow
                     key={project.id}
                     className="cursor-pointer hover:bg-muted/40"
@@ -200,6 +213,53 @@ export function ProjectsPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {!loading && projects.length > 0 && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span>
+                Showing {startIndex + 1}-{Math.min(endIndex, projects.length)} of {projects.length}
+              </span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
+                className="h-8 rounded-md border border-border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+                <option value={50}>50 / page</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="size-4" />
+                Prev
+              </Button>
+              <span className="text-sm text-muted-foreground px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   )
