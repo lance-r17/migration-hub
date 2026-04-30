@@ -75,8 +75,6 @@ interface Project {
   // Header metadata
   migrationWave?: string         // legacy display label; waveId takes precedence
   itso?: string
-  jiraTicket?: string
-  jiraBaseUrl?: string
   updatedAt?: string
   // Register sections (all optional — filled in progressively)
   applicationOverview?: ApplicationOverview

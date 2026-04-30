@@ -17,8 +17,6 @@ class Project(Base, TimestampMixin):
     blocked_reason: Mapped[str | None] = mapped_column(String, nullable=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     migration_wave: Mapped[str | None] = mapped_column(String, nullable=True)
-    jira_ticket: Mapped[str | None] = mapped_column(String, nullable=True)
-    jira_base_url: Mapped[str | None] = mapped_column(String, nullable=True)
     wave_id: Mapped[str | None] = mapped_column(String, ForeignKey("waves.id"), nullable=True)
     jira_story_key: Mapped[str | None] = mapped_column(String, nullable=True)
     jira_job_status: Mapped[str | None] = mapped_column(String, nullable=True)

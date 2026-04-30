@@ -79,7 +79,6 @@ interface ProjectListItemApi {
   description: string | null
   migration_wave: string | null
   itso: string | null
-  jira_ticket: string | null
   jira_base_url: string | null
   updated_at: string | null
   wave_id: string | null
@@ -161,7 +160,6 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     description: raw.description ?? undefined,
     migrationWave: raw.migration_wave ?? undefined,
     itso: raw.itso ?? undefined,
-    jiraTicket: raw.jira_ticket ?? undefined,
     jiraBaseUrl: raw.jira_base_url ?? undefined,
     updatedAt: raw.updated_at ?? undefined,
     waveId: raw.wave_id ?? undefined,

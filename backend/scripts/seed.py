@@ -99,9 +99,6 @@ def seed(session: Session, force: bool = False) -> None:
             status=p["status"],
             description=p.get("description"),
             migration_wave=p.get("migration_wave"),
-
-            jira_ticket=p.get("jira_ticket"),
-            jira_base_url=p.get("jira_base_url"),
             wave_id=p.get("wave_id"),
             application_overview=p.get("application_overview"),
             availability=p.get("availability"),

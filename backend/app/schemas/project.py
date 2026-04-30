@@ -26,7 +26,6 @@ class ProjectListItem(BaseModel):
     description: str | None = None
     migration_wave: str | None = None
     itso: str | None = None
-    jira_ticket: str | None = None
     jira_base_url: str | None = None
     updated_at: str | None = None
     wave_id: str | None = None
@@ -54,7 +53,6 @@ class ProjectDetail(BaseModel):
     description: str | None = None
     migration_wave: str | None = None
     itso: str | None = None
-    jira_ticket: str | None = None
     jira_base_url: str | None = None
     updated_at: str | None = None
     wave_id: str | None = None
@@ -93,8 +91,6 @@ class ProjectPatch(BaseModel):
     description: str | None = None
     migration_wave: str | None = None
     itso: str | None = None
-    jira_ticket: str | None = None
-    jira_base_url: str | None = None
     wave_id: str | None = None
     jira_story_key: str | None = None
     jira_job_status: str | None = None

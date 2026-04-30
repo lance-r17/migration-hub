@@ -160,7 +160,7 @@
                   "buttonText": "View Jira Epic →"
                 },
                 "config": {
-                  "linkUrl": "{{jiraTicket.url}}",
+                  "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
                   "openInNewTab": true
                 }
               }
@@ -648,7 +648,7 @@
                   "buttonText": "View Jira Epic →"
                 },
                 "config": {
-                  "linkUrl": "{{jiraTicket.url}}",
+                  "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
                   "openInNewTab": true
                 }
               }
@@ -1272,7 +1272,7 @@
                   "buttonText": "View Jira Epic →"
                 },
                 "config": {
-                  "linkUrl": "{{jiraTicket.url}}",
+                  "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
                   "openInNewTab": true
                 }
               }
@@ -1702,7 +1702,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<p>Hi {{user.name}},</p><p>Migration tasks for <strong>{{project.name}}</strong> have been automatically created in Jira following the completed sign-off.</p><p>Each cloud resource now has a corresponding Jira subtask under epic <strong>{{jiraTicket.key}}</strong>. Assign tasks to your team and begin tracking migration progress in Jira.</p>"
+                  "html": "<p>Hi {{user.name}},</p><p>Migration tasks for <strong>{{project.name}}</strong> have been automatically created in Jira following the completed sign-off.</p><p>Each cloud resource now has a corresponding Jira subtask under epic <strong>{{jiraStoryKey}}</strong>. Assign tasks to your team and begin tracking migration progress in Jira.</p>"
                 },
                 "config": {}
               }
@@ -1825,7 +1825,7 @@
                   "buttonText": "Open in Jira →"
                 },
                 "config": {
-                  "linkUrl": "{{jiraTicket.url}}",
+                  "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
                   "openInNewTab": true
                 }
               }

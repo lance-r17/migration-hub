@@ -170,8 +170,7 @@ export const TEMPLATE_VARIABLES: TemplateVariable[] = [
   { key: 'risk.severityLabel', label: 'Risk Severity (Capitalised)', category: 'Risk', example: 'Critical' },
   { key: 'risk.description', label: 'Risk Description', category: 'Risk', example: 'The target RDS schema is missing 3 indexes.' },
   // Jira
-  { key: 'jiraTicket.key', label: 'Jira Ticket Key', category: 'Jira', example: 'MIG-101' },
-  { key: 'jiraTicket.url', label: 'Jira Ticket URL', category: 'Jira', example: 'https://jira.company.com/browse/MIG-101' },
+  { key: 'jiraStoryKey', label: 'Jira Story Key', category: 'Jira', example: 'MIG-101' },
   { key: 'jiraBaseUrl', label: 'Jira Base URL', category: 'Jira', example: 'https://jira.company.com' },
   // Platform
   { key: 'platform.name', label: 'Platform Name', category: 'Platform', example: 'Migration Hub' },

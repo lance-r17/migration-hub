@@ -405,7 +405,6 @@ export const mockProjects: Project[] = [
     migrationWave: 'Wave 1',
     waveId: 'wave-3',
     itso: 'Frank Miller, Platform Security',
-    jiraTicket: 'JIRA-1829',
     jiraBaseUrl: 'https://your-org.atlassian.net',
     jiraStoryKey: 'MIG-10203',
     updatedAt: '25 OCT 2025',

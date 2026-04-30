@@ -271,7 +271,7 @@ export function ProjectDetailsPage() {
     project.approvals.find(a => a.role === currentUserRole)?.status !== 'approved'
   const canSignOff = signoffEnabled && eligibleForSignoff
   const showSignoffDisabledNotice = !signoffEnabled && eligibleForSignoff
-  const hasMetadata = project.migrationWave || project.jiraTicket || project.itso || project.updatedAt
+  const hasMetadata = project.migrationWave || project.jiraStoryKey || project.itso || project.updatedAt
 
   return (
     <AppShell title={project.name}>
@@ -361,15 +361,6 @@ export function ProjectDetailsPage() {
                     <a href={`${project.jiraBaseUrl}/browse/${project.jiraStoryKey}`} target="_blank" rel="noopener noreferrer" className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline">{project.jiraStoryKey}</a>
                   ) : (
                     <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{project.jiraStoryKey}</code>
-                  )}
-                </span>
-              )}
-              {project.jiraTicket && (
-                <span>Jira:{' '}
-                  {project.jiraBaseUrl ? (
-                    <a href={`${project.jiraBaseUrl}/browse/${project.jiraTicket}`} target="_blank" rel="noopener noreferrer" className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline">{project.jiraTicket}</a>
-                  ) : (
-                    <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{project.jiraTicket}</code>
                   )}
                 </span>
               )}

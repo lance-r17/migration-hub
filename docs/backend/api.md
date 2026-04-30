@@ -130,7 +130,7 @@ Returns a single project by ID, with all sections, cloud resources, risks, and a
 
 ### `PATCH /api/v1/projects/:id`
 
-Updates top-level project fields (status, progress, waveId, jiraTicket, etc.).
+Updates top-level project fields (status, progress, waveId, etc.).
 
 **Request body:** partial `Project` (only included fields are updated)
 

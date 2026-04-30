@@ -1638,7 +1638,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
             const isDragging      = dragState?.projectId === p.id && dragState?.taskId === null
             const isProjDragging  = projRowDragState?.projectId === p.id
             const isSelected      = selectedBarId === p.id
-            const labelText       = p.jiraStoryKey ?? p.jiraTicket ?? null
+            const labelText       = p.jiraStoryKey ?? null
             const statusMeta      = PROJECT_STATUS_META[p.status]
             const pct             = p.progress ?? 0
 

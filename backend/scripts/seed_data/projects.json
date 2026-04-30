@@ -6,7 +6,6 @@
     "description": "Modernizing the legacy SAP environment to Azure Cloud Infrastructure with Zero-Downtime goals.",
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
-    "jira_base_url": "https://your-org.atlassian.net",
     "itso": "u2",
     "application_overview": {
       "applicationName": "Alpha Core ERP",
@@ -79,7 +78,7 @@
           "baId": "EIM-00089",
           "contactEmail": "it-ops@corp.com",
           "hosting": "On-Premise",
-          "notes": "TLS LDAP \u2014 server cert tied to current hostname"
+          "notes": "TLS LDAP — server cert tied to current hostname"
         }
       ],
       "downstream": [
@@ -97,7 +96,7 @@
           "baId": "EIM-00428",
           "contactEmail": "analytics@corp.com",
           "hosting": "On-Premise",
-          "notes": "Direct DB connection \u2014 hardcoded DB host IP in config"
+          "notes": "Direct DB connection — hardcoded DB host IP in config"
         },
         {
           "id": "d6",
@@ -110,12 +109,12 @@
       ]
     },
     "nfrs": {
-      "peakLoad": "15,000 TPS, 50k concurrent users; Peak 10:00 AM \u2013 2:00 PM EST.",
+      "peakLoad": "15,000 TPS, 50k concurrent users; Peak 10:00 AM – 2:00 PM EST.",
       "autoscaling": "Horizontal Pod Autoscaling (HPA) via K8s based on CPU/RAM.",
       "licensing": "Oracle DB per-socket; new instance type requires licensing reassessment with Oracle CSM."
     },
     "migration_constraints": {
-      "regularMigrationWindow": "Saturday 02:00\u201306:00 AM EST",
+      "regularMigrationWindow": "Saturday 02:00–06:00 AM EST",
       "preferredMigrationWindow": [
         "weekend"
       ],
@@ -142,7 +141,7 @@
     },
     "target_architecture": {
       "reArchitectureNeeded": true,
-      "topology3Az": "AZ-1: 2\u00d7 App active, Oracle primary. AZ-2: 2\u00d7 App active, Oracle replica. AZ-3: App standby, Oracle replica (3-node RAC). Traffic balanced across AZ-1 and AZ-2 via Azure Application Gateway.",
+      "topology3Az": "AZ-1: 2× App active, Oracle primary. AZ-2: 2× App active, Oracle replica. AZ-3: App standby, Oracle replica (3-node RAC). Traffic balanced across AZ-1 and AZ-2 via Azure Application Gateway.",
       "dnsIpChanges": "erp.corp.com and erp-api.corp.com will point to new Azure Application Gateway IPs. All downstream consumers using hardcoded IPs (BI platform) must update config.",
       "newServicesRequired": [
         "Azure Application Gateway (L7 LB)",
@@ -156,7 +155,7 @@
       {
         "id": "r1",
         "title": "Latency issues in DR region",
-        "description": "App servers in East-US are exceeding 50ms to DB \u2014 AZ round-trip sensitivity may cause SLA breach in 3AZ config.",
+        "description": "App servers in East-US are exceeding 50ms to DB — AZ round-trip sensitivity may cause SLA breach in 3AZ config.",
         "severity": "critical",
         "mitigation": "Network topology review scheduled with NetEng. Evaluate proximity placement groups in target AZs.",
         "owner": "Dan Brown",
@@ -165,7 +164,7 @@
       {
         "id": "r2",
         "title": "SSL Certificate Expiry",
-        "description": "Certs for dev environment expire in 14 days. Prod cert (erp.corp.com) expires 6 months post-migration \u2014 borderline.",
+        "description": "Certs for dev environment expire in 14 days. Prod cert (erp.corp.com) expires 6 months post-migration — borderline.",
         "severity": "medium",
         "mitigation": "Renew dev certs immediately. Schedule prod cert renewal as part of migration prep. Confirm Internal CA lead time.",
         "owner": "Alice Johnson",
@@ -419,8 +418,6 @@
     "migration_wave": "Wave 1",
     "wave_id": "wave-3",
     "itso": "u6",
-    "jira_ticket": "JIRA-1829",
-    "jira_base_url": "https://your-org.atlassian.net",
     "application_overview": {
       "applicationName": "User Auth Legacy",
       "shortName": "auth-svc",
@@ -488,11 +485,11 @@
     },
     "nfrs": {
       "peakLoad": "~120 req/s during business hours",
-      "autoscaling": "Not configured \u2014 single instance pre-migration; ECS service auto-scaling enabled post-migration.",
-      "licensing": "Node.js OSS \u2014 no licensing concerns"
+      "autoscaling": "Not configured — single instance pre-migration; ECS service auto-scaling enabled post-migration.",
+      "licensing": "Node.js OSS — no licensing concerns"
     },
     "migration_constraints": {
-      "regularMigrationWindow": "Saturdays 02:00\u201306:00 AEST",
+      "regularMigrationWindow": "Saturdays 02:00–06:00 AEST",
       "preferredMigrationWindow": [
         "weekend"
       ],
@@ -624,7 +621,6 @@
     "id": "M-88271",
     "name": "Data Warehouse Sync",
     "status": "planning",
-    "jira_base_url": "https://your-org.atlassian.net",
     "risks": [],
     "resources": [],
     "project_users": [
@@ -647,7 +643,6 @@
     "description": "Large-scale DNS infrastructure migration from on-prem BIND clusters to AWS Route 53 with Anycast edge. APAC and US regions live; EU cutover blocked on propagation TTL issue.",
     "migration_wave": "Wave 2",
     "wave_id": "wave-1",
-    "jira_base_url": "https://your-org.atlassian.net",
     "itso": "u9",
     "application_overview": {
       "applicationName": "Global Edge DNS",
@@ -688,7 +683,7 @@
       "backupRequiredDuringMigration": false,
       "lastRestoreTest": "https://brett.corp.com/tests/edge-dns-restore-2025-11-15",
       "dataResidency": "Zone data replicated across ap-southeast-1, eu-west-1, us-east-1",
-      "encryptionAtRest": "N/A \u2014 DNS zone data is public",
+      "encryptionAtRest": "N/A — DNS zone data is public",
       "statefulComponents": [
         "PostgreSQL zone authority DB",
         "DNSSEC key store"
@@ -746,7 +741,7 @@
       "licensing": "Route 53 pay-per-query. Custom zone DB on PostgreSQL OSS."
     },
     "migration_constraints": {
-      "regularMigrationWindow": "Rolling \u2014 region-by-region with no global maintenance window",
+      "regularMigrationWindow": "Rolling — region-by-region with no global maintenance window",
       "preferredMigrationWindow": [
         "weekday",
         "weekend"

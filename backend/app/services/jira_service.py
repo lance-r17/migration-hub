@@ -589,11 +589,9 @@ async def _complete_job(
     config = job.config or {}
     mode = config.get("mode", "resource-level")
 
-    project_key = "MIG"
+    project_key = settings.jira_project_key
     if job.wave_epic_key:
         project_key = job.wave_epic_key.split("-")[0]
-    elif project and project.jira_ticket:
-        project_key = project.jira_ticket.split("-")[0]
 
     logger.info("_complete_job config: mode=%s project_key=%s", mode, project_key)
 
