@@ -69,6 +69,13 @@ npm run dev
 
 See [docs/getting-started.md](docs/getting-started.md) for detailed setup, environment variables, and troubleshooting.
 
+**Documentation site (local):**
+
+```bash
+cd frontend
+npm run docs:dev     # http://localhost:4000
+```
+
 ## Documentation
 
 | Doc | Contents |
