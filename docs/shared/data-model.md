@@ -105,9 +105,6 @@ interface Project {
 interface ApplicationOverview {
   applicationName: string
   shortName?: string
-  businessOwnerId?: string
-  technicalLeadId?: string
-  dbaDataOwnerId?: string
   businessFunction?: string
   userBase?: { type: 'Internal' | 'External' | 'Both'; count?: string }
   applicationTier?: ApplicationTier

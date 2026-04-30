@@ -179,19 +179,20 @@ def seed(session: Session, force: bool = False) -> None:
             else:
                 session.add(ProjectUser(project_id=p["id"], user_id=itso_uid, role="itso"))
 
-        # Sync governance roles from applicationOverview into project_users
-        _GOVERNANCE_ROLE_FIELDS = {
-            "technicalLeadId": "technical_lead",
-            "businessOwnerId": "business_owner",
-            "dbaDataOwnerId": "dba_data_owner",
-        }
-        ao = p.get("application_overview", {})
-        for field, role in _GOVERNANCE_ROLE_FIELDS.items():
-            uid = ao.get(field)
+        # Sync governance roles from governance_roles into project_users
+        gr = p.get("governance_roles", {})
+        for role, uid in (
+            ("technical_lead", gr.get("technical_lead")),
+            ("business_owner", gr.get("business_owner")),
+            ("dba_data_owner", gr.get("dba_data_owner")),
+        ):
             if uid and session.get(User, uid):
                 existing_pu = session.get(ProjectUser, (p["id"], uid))
                 if existing_pu:
-                    existing_pu.role = role
+                    roles = {r.strip() for r in (existing_pu.role or "").split(",") if r.strip()}
+                    roles.discard("member")
+                    roles.add(role)
+                    existing_pu.role = ",".join(sorted(roles))
                 else:
                     session.add(ProjectUser(project_id=p["id"], user_id=uid, role=role))
 

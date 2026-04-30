@@ -9,14 +9,14 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { useProjectUsers } from '@/hooks/use-users'
-import type { ApplicationOverview, User } from '@/types'
+import type { GovernanceRoles, User } from '@/types'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  data: ApplicationOverview | undefined
+  governanceRoles?: GovernanceRoles
   projectId: string
-  onSave: (data: ApplicationOverview) => void
+  onSave: (payload: { technicalLeadId?: string; businessOwnerId?: string; dbaDataOwnerId?: string }) => void
 }
 
 const sectionLabel = 'text-xs font-semibold uppercase text-muted-foreground tracking-wide pt-2'
@@ -36,7 +36,7 @@ function isPlatformLead(u: User) {
   return u.role.includes('platform_migration_lead')
 }
 
-export function ContactsOwnershipDrawer({ open, onOpenChange, data, projectId, onSave }: Props) {
+export function ContactsOwnershipDrawer({ open, onOpenChange, governanceRoles, projectId, onSave }: Props) {
   const { users: availableUsers, loading: usersLoading } = useProjectUsers(projectId)
 
   const [draft, setDraft] = useState({ boUserId: '', tlUserId: '', dbaUserId: '' })
@@ -44,12 +44,12 @@ export function ContactsOwnershipDrawer({ open, onOpenChange, data, projectId, o
   useEffect(() => {
     if (open) {
       setDraft({
-        boUserId:  data?.businessOwnerId  ?? '',
-        tlUserId:  data?.technicalLeadId  ?? '',
-        dbaUserId: data?.dbaDataOwnerId   ?? '',
+        boUserId:  governanceRoles?.businessOwner?.id  ?? '',
+        tlUserId:  governanceRoles?.technicalLead?.id  ?? '',
+        dbaUserId: governanceRoles?.dbaDataOwner?.id   ?? '',
       })
     }
-  }, [open, data])
+  }, [open, governanceRoles])
 
   // Filtered option lists
   // BO: exclude TL, DBA, and Platform Migration Leads
@@ -82,11 +82,9 @@ export function ContactsOwnershipDrawer({ open, onOpenChange, data, projectId, o
   function handleSave() {
     if (validationError) return
     onSave({
-      ...data,
-      applicationName:  data?.applicationName ?? '',
-      businessOwnerId:  draft.boUserId  || undefined,
-      technicalLeadId:  draft.tlUserId  || undefined,
-      dbaDataOwnerId:   draft.dbaUserId || undefined,
+      technicalLeadId: draft.tlUserId || undefined,
+      businessOwnerId: draft.boUserId || undefined,
+      dbaDataOwnerId: draft.dbaUserId || undefined,
     })
     onOpenChange(false)
   }

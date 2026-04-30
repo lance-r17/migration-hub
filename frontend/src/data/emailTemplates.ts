@@ -78,8 +78,8 @@ const predefined: EmailTemplate[] = [
     eventType: 'wave_assigned',
     subject: 'Your project {{project.name}} has been assigned to {{wave.name}}',
     recipientList: [
-      { type: 'project_field', field: 'technicalLead' },
-      { type: 'project_field', field: 'businessOwner' },
+      { type: 'role', role: 'technical_lead' },
+      { type: 'role', role: 'business_owner' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
     isPredefined: true,
@@ -135,8 +135,8 @@ const predefined: EmailTemplate[] = [
     subject: '{{project.name}} has been fully signed off',
     recipientList: [
       { type: 'role', role: 'platform_migration_lead' },
-      { type: 'project_field', field: 'technicalLead' },
-      { type: 'project_field', field: 'businessOwner' },
+      { type: 'role', role: 'technical_lead' },
+      { type: 'role', role: 'business_owner' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
     isPredefined: true,
@@ -164,7 +164,7 @@ const predefined: EmailTemplate[] = [
     subject: '⚠ {{risk.severityLabel}} Risk Alert: {{risk.title}} in {{project.name}}',
     recipientList: [
       { type: 'role', role: 'platform_migration_lead' },
-      { type: 'project_field', field: 'technicalLead' },
+      { type: 'role', role: 'technical_lead' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
     isPredefined: true,
@@ -199,8 +199,8 @@ const predefined: EmailTemplate[] = [
     eventType: 'cutover_reminder',
     subject: 'Reminder: {{wave.name}} cutover in {{daysUntilCutover}} days',
     recipientList: [
-      { type: 'project_field', field: 'technicalLead' },
-      { type: 'project_field', field: 'businessOwner' },
+      { type: 'role', role: 'technical_lead' },
+      { type: 'role', role: 'business_owner' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
     isPredefined: true,
@@ -252,7 +252,7 @@ const predefined: EmailTemplate[] = [
     eventType: 'jira_stories_created',
     subject: 'Migration tasks for {{project.name}} are ready in Jira',
     recipientList: [
-      { type: 'project_field', field: 'technicalLead' },
+      { type: 'role', role: 'technical_lead' },
       { type: 'role', role: 'platform_migration_lead' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
@@ -295,7 +295,7 @@ const predefined: EmailTemplate[] = [
     subject: '{{project.name}} migration readiness survey completed',
     recipientList: [
       { type: 'role', role: 'platform_migration_lead' },
-      { type: 'project_field', field: 'technicalLead' },
+      { type: 'role', role: 'technical_lead' },
     ],
     templateStyle: { ...DEFAULT_TEMPLATE_STYLE },
     isPredefined: true,

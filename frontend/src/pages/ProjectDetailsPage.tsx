@@ -46,7 +46,7 @@ import { useProject } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
 import { createJiraJob } from '@/services/jiraJobs'
-import { markResourceSyncComplete, blockProject } from '@/services/projects'
+import { markResourceSyncComplete, blockProject, updateGovernanceRoles } from '@/services/projects'
 import { getSignoffConfig } from '@/services/signoffConfig'
 import { apiClient } from '@/services/client'
 import { ensureAllRoles } from '@/lib/approvals'
@@ -252,9 +252,9 @@ export function ProjectDetailsPage() {
   const assignedWave = waves.find(w => w.id === project.waveId)
 
   const preSignOffStatuses: ProjectStatus[] = ['planning', 'in-progress', 'blocked']
-  const overview = project.applicationOverview
-  const isAssignedTL = !!overview?.technicalLeadId && overview.technicalLeadId === user?.id
-  const isAssignedBO = !!overview?.businessOwnerId && overview.businessOwnerId === user?.id
+  const gr = project.governanceRoles
+  const isAssignedTL = !!gr?.technicalLead && gr.technicalLead.id === user?.id
+  const isAssignedBO = !!gr?.businessOwner && gr.businessOwner.id === user?.id
   const currentUserRole = isPlatformLead
     ? 'platform_migration_lead'
     : isAssignedTL ? 'technical_lead'
@@ -413,8 +413,14 @@ export function ProjectDetailsPage() {
         <div>
           <ApplicationOverviewSection
             data={project.applicationOverview}
+            governanceRoles={project.governanceRoles}
+            canEditGovernanceRoles={isPlatformLead}
             projectId={project.id}
             onSave={!isLocked ? (d) => handleSave('applicationOverview', d) : undefined}
+            onSaveGovernanceRoles={isPlatformLead ? async (payload) => {
+              await updateGovernanceRoles(project.id, payload)
+              await refreshProject()
+            } : undefined}
           />
           <RisksBlockersSection
             risks={project.risks}

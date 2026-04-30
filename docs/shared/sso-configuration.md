@@ -191,15 +191,15 @@ On every Custom Enterprise OAuth login, the backend receives the user's AD group
 
 #### Governance roles are protected
 
-**`sync_user_projects` only removes the `member` token from `project_users.role`**. Governance roles assigned through the project's **Application Overview** — `technical_lead`, `business_owner`, and `dba_data_owner` — plus the **ITSO** role assigned via API are **never** revoked by SSO login, even if the user no longer belongs to the project's AD group. The `member` token is stripped from comma-separated role strings; the row is deleted only when no roles remain.
+**`sync_user_projects` only removes the `member` token from `project_users.role`**. Governance roles (`technical_lead`, `business_owner`, `dba_data_owner`) plus the **ITSO** role assigned via API are **never** revoked by SSO login, even if the user no longer belongs to the project's AD group. The `member` token is stripped from comma-separated role strings; the row is deleted only when no roles remain.
 
 **Example:**
-- Alice is assigned as **Technical Lead** on project `PRJ-A123` via the Application Overview screen.
+- Alice is assigned as **Technical Lead** on project `PRJ-A123` via the governance-roles API.
 - Alice also belongs to the AD group `CN=PRJ-A123-ResourceSetReadOnly`, so she gets `member` access on login.
 - Alice is removed from the AD group.
 - On her next SSO login, the `member` token is stripped from her role (e.g. `member,itso` becomes `itso`). If she had only `member`, the row is deleted. Her `technical_lead` row remains untouched.
 
-> **Operational note:** To remove a governance role, an admin or project editor must explicitly clear the corresponding field (e.g. `technicalLeadId`) in the project's Application Overview. The backend function `_sync_project_user_roles` runs only when that section is saved.
+> **Operational note:** To remove a governance role, a Platform Migration Lead must call `PUT /api/v1/projects/{id}/governance-roles` with the role omitted or set to `null`.
 
 ---
 

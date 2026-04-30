@@ -34,12 +34,23 @@ export interface ProjectUsers {
 
 export type MigrationStrategy = 'Lift & Shift' | 'Refactor' | 'Deboard'
 
+export interface GovernanceRoleUser {
+  id: string
+  name: string
+  email: string
+  department: string
+  initials: string
+}
+
+export interface GovernanceRoles {
+  technicalLead?: GovernanceRoleUser
+  businessOwner?: GovernanceRoleUser
+  dbaDataOwner?: GovernanceRoleUser
+}
+
 export interface ApplicationOverview {
   applicationName: string
   shortName?: string
-  businessOwnerId?: string    // User.id
-  technicalLeadId?: string    // User.id
-  dbaDataOwnerId?: string     // User.id
   businessFunction?: string
   userBase?: {
     type: 'Internal' | 'External' | 'Both'
@@ -256,6 +267,7 @@ export interface Project {
   updatedAt?: string
   // Register sections
   applicationOverview?: ApplicationOverview
+  governanceRoles?: GovernanceRoles
   currentInfrastructure?: CurrentInfrastructure
   availability?: AvailabilityResilience
   dataPersistence?: DataPersistence

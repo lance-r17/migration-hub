@@ -10,9 +10,6 @@
     "application_overview": {
       "applicationName": "Alpha Core ERP",
       "shortName": "ALPHA-ERP",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Centralised ERP platform covering procurement, finance, HR, and supply chain for ~2,400 internal users. Mission-critical for daily financial close and regulatory reporting.",
       "userBase": {
         "type": "Internal",
@@ -408,7 +405,12 @@
       "planEndDate": "2026-09-30",
       "tasks": []
     },
-    "jira_story_key": "MIG-10421"
+    "jira_story_key": "MIG-10421",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u1",
+      "dba_data_owner": "u5"
+    }
   },
   {
     "id": "M-11029",
@@ -428,9 +430,6 @@
         "count": "~800 employees"
       },
       "businessFunction": "Centralised OAuth2 / JWT authentication and session management for internal tooling.",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u8",
       "systemImportanceClassification": [],
       "migrationStrategy": "Lift & Shift"
     },
@@ -645,7 +644,12 @@
         "user_id": null
       }
     ],
-    "survey_submitted_at": "2025-10-24T09:00:00.000Z"
+    "survey_submitted_at": "2025-10-24T09:00:00.000Z",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u6",
+      "dba_data_owner": "u8"
+    }
   },
   {
     "id": "M-88271",
@@ -684,8 +688,6 @@
         "count": "~4M end users globally"
       },
       "businessFunction": "Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u10",
       "systemImportanceClassification": [
         "IBS",
         "BPS"
@@ -885,7 +887,11 @@
       "planEndDate": "2026-08-15",
       "tasks": []
     },
-    "jira_story_key": "MIG-10088"
+    "jira_story_key": "MIG-10088",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u12"
+    }
   },
   {
     "id": "M-80001",
@@ -895,12 +901,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u5",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Helix CRM Migration",
       "shortName": "HELIX-CRM-MIGR",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise crm migration serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -1338,12 +1346,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u9",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Prism Identity Provider",
       "shortName": "PRISM-IDENTITY",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise identity provider serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -1784,12 +1794,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u15",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Flux File Storage",
       "shortName": "FLUX-FILE-STO",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -2203,12 +2215,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u4",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Fusion CRM Migration",
       "shortName": "FUSION-CRM-MIGR",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise crm migration serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -2561,12 +2575,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u10",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Cosmos Data Lake",
       "shortName": "COSMOS-DATA-LAK",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise data lake serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -3057,12 +3073,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u5",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Fusion ML Inference",
       "shortName": "FUSION-ML-INFER",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise ml inference serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -3520,12 +3538,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u10",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Cosmos Policy Engine",
       "shortName": "COSMOS-POLICY-E",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise policy engine serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -3944,12 +3964,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u6",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Arcadia Analytics Platform",
       "shortName": "ARCADIA-ANALYTIC",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise analytics platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -4389,12 +4411,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u11",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Meridian Message Queue",
       "shortName": "MERIDIAN-MESSAGE-",
-      "businessOwnerId": "u11",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise message queue serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -4844,12 +4868,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u3",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Fusion CI/CD Pipeline",
       "shortName": "FUSION-CI/CD-PI",
-      "businessOwnerId": "u3",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise ci/cd pipeline serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -5325,12 +5351,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u6",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Vortex Search Index",
       "shortName": "VORTEX-SEARCH-I",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise search index serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -5740,12 +5768,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u2",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Vertex Backup Service",
       "shortName": "VERTEX-BACKUP-S",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise backup service serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -6211,12 +6241,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u9",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Prism Stream Processor",
       "shortName": "PRISM-STREAM-P",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise stream processor serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -6558,12 +6590,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u4",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Equinox Policy Engine",
       "shortName": "EQUINOX-POLICY-E",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise policy engine serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -6935,12 +6969,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u6",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Pulsar CRM Migration",
       "shortName": "PULSAR-CRM-MIGR",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise crm migration serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -7328,12 +7364,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u12",
+    "governance_roles": {
+      "technical_lead": "u12",
+      "business_owner": "u11",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Nebula Cache Layer",
       "shortName": "NEBULA-CACHE-LA",
-      "businessOwnerId": "u11",
-      "technicalLeadId": "u12",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise cache layer serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -7733,12 +7771,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u14",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Vortex DNS Infrastructure",
       "shortName": "VORTEX-DNS-INFR",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise dns infrastructure serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -8227,12 +8267,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u8",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Hyperion Security Scanner",
       "shortName": "HYPERION-SECURITY",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise security scanner serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -8642,12 +8684,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u8",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Chronos Config Management",
       "shortName": "CHRONOS-CONFIG-M",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -9033,12 +9077,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u6",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Eclipse Auth Service",
       "shortName": "ECLIPSE-AUTH-SER",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -9494,12 +9540,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u5",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Prometheus Data Warehouse Sync",
       "shortName": "PROMETHEUS-DATA-WAR",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -9923,12 +9971,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u15",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Horizon Feature Store",
       "shortName": "HORIZON-FEATURE-",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise feature store serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -10328,12 +10378,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u6",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Torus File Storage",
       "shortName": "TORUS-FILE-STO",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -10738,12 +10790,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u9",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Horizon Data Warehouse Sync",
       "shortName": "HORIZON-DATA-WAR",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -11187,12 +11241,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u12",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Delta Payment Gateway",
       "shortName": "DELTA-PAYMENT-",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise payment gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -11621,12 +11677,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u9",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Sigma CRM Migration",
       "shortName": "SIGMA-CRM-MIGR",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise crm migration serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -11960,12 +12018,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u6",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Lambda ML Inference",
       "shortName": "LAMBDA-ML-INFER",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise ml inference serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -12314,12 +12374,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u8",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Quantum ERP Modernization",
       "shortName": "QUANTUM-ERP-MODE",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise erp modernization serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -12751,12 +12813,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u5",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Chronos Data Lake",
       "shortName": "CHRONOS-DATA-LAK",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise data lake serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -13180,12 +13244,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u14",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Pulsar Identity Provider",
       "shortName": "PULSAR-IDENTITY",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise identity provider serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -13546,12 +13612,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u9",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Nova Monitoring Stack",
       "shortName": "NOVA-MONITORI",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise monitoring stack serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -13912,12 +13980,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u5",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Solstice VPN Gateway",
       "shortName": "SOLSTICE-VPN-GATE",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -14362,12 +14432,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u9",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Equinox Auth Service",
       "shortName": "EQUINOX-AUTH-SER",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -14813,12 +14885,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u1",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Torus Data Lake",
       "shortName": "TORUS-DATA-LAK",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise data lake serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -15221,12 +15295,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u7",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Helix Monitoring Stack",
       "shortName": "HELIX-MONITORI",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise monitoring stack serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -15656,12 +15732,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u7",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Solstice API Gateway",
       "shortName": "SOLSTICE-API-GATE",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise api gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -16069,12 +16147,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u6",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Axiom File Storage",
       "shortName": "AXIOM-FILE-STO",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -16452,12 +16532,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u13",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Stratos ERP Modernization",
       "shortName": "STRATOS-ERP-MODE",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise erp modernization serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -16930,12 +17012,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u14",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Meridian CDN Edge",
       "shortName": "MERIDIAN-CDN-EDGE",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise cdn edge serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -17286,12 +17370,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u12",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Nebula Cache Layer",
       "shortName": "NEBULA-CACHE-LA",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise cache layer serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -17618,12 +17704,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u4",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Summit VPN Gateway",
       "shortName": "SUMMIT-VPN-GATE",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -18113,12 +18201,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u14",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Chronos CI/CD Pipeline",
       "shortName": "CHRONOS-CI/CD-PI",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise ci/cd pipeline serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -18506,12 +18596,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u10",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Titan File Storage",
       "shortName": "TITAN-FILE-STO",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -18868,12 +18960,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u2",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Prometheus Payment Gateway",
       "shortName": "PROMETHEUS-PAYMENT-",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise payment gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -19235,12 +19329,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u4",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Phoenix Workflow Orchestrator",
       "shortName": "PHOENIX-WORKFLOW",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -19725,12 +19821,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u8",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Meridian Load Balancer",
       "shortName": "MERIDIAN-LOAD-BAL",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise load balancer serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -20187,12 +20285,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u3",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Vector Config Management",
       "shortName": "VECTOR-CONFIG-M",
-      "businessOwnerId": "u3",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -20673,12 +20773,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u4",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Nexus Feature Store",
       "shortName": "NEXUS-FEATURE-",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise feature store serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -21101,12 +21203,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u4",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Titan Data Lake",
       "shortName": "TITAN-DATA-LAK",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise data lake serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -21539,12 +21643,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u14",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Helix VPN Gateway",
       "shortName": "HELIX-VPN-GATE",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -21973,12 +22079,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u10",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Eclipse File Storage",
       "shortName": "ECLIPSE-FILE-STO",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -22313,12 +22421,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u13",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Aurora Payment Gateway",
       "shortName": "AURORA-PAYMENT-",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise payment gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -22816,12 +22926,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u7",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Nexus Workflow Orchestrator",
       "shortName": "NEXUS-WORKFLOW",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -23196,12 +23308,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u4",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Torus VPN Gateway",
       "shortName": "TORUS-VPN-GATE",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -23625,12 +23739,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u10",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Solstice Data Warehouse Sync",
       "shortName": "SOLSTICE-DATA-WAR",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -24089,12 +24205,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u8",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Lambda Secret Vault",
       "shortName": "LAMBDA-SECRET-V",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise secret vault serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -24498,12 +24616,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u5",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Prism Backup Service",
       "shortName": "PRISM-BACKUP-S",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise backup service serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -24886,12 +25006,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u12",
+    "governance_roles": {
+      "technical_lead": "u12",
+      "business_owner": "u4",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Prometheus Config Management",
       "shortName": "PROMETHEUS-CONFIG-M",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u12",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -25358,12 +25480,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u1",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Torus Data Warehouse Sync",
       "shortName": "TORUS-DATA-WAR",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -25777,12 +25901,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u1",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Orion Message Queue",
       "shortName": "ORION-MESSAGE-",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise message queue serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -26136,12 +26262,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u8",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Zenith Message Queue",
       "shortName": "ZENITH-MESSAGE-",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise message queue serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -26524,12 +26652,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u3",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Nexus Workflow Orchestrator",
       "shortName": "NEXUS-WORKFLOW",
-      "businessOwnerId": "u3",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -26937,12 +27067,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u2",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Horizon Analytics Platform",
       "shortName": "HORIZON-ANALYTIC",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise analytics platform serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -27324,12 +27456,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u10",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Orion Load Balancer",
       "shortName": "ORION-LOAD-BAL",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise load balancer serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -27688,12 +27822,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u3",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Quantum ML Inference",
       "shortName": "QUANTUM-ML-INFER",
-      "businessOwnerId": "u3",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise ml inference serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -28157,12 +28293,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u5",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Cosmos File Storage",
       "shortName": "COSMOS-FILE-STO",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -28666,12 +28804,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u8",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Apollo Config Management",
       "shortName": "APOLLO-CONFIG-M",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -29029,12 +29169,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u5",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Vortex VPN Gateway",
       "shortName": "VORTEX-VPN-GATE",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -29392,12 +29534,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u12",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Matrix Workflow Orchestrator",
       "shortName": "MATRIX-WORKFLOW",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -29835,12 +29979,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u6",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Flux Feature Store",
       "shortName": "FLUX-FEATURE-",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise feature store serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -30247,12 +30393,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u7",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Delta CDN Edge",
       "shortName": "DELTA-CDN-EDGE",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise cdn edge serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -30706,12 +30854,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u15",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Torus Workflow Orchestrator",
       "shortName": "TORUS-WORKFLOW",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -31068,12 +31218,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u14",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Vector Container Platform",
       "shortName": "VECTOR-CONTAINE",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise container platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -31509,12 +31661,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u4",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Arcadia Analytics Platform",
       "shortName": "ARCADIA-ANALYTIC",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise analytics platform serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -31946,12 +32100,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u4",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Vertex Auth Service",
       "shortName": "VERTEX-AUTH-SER",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -32422,12 +32578,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u3",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Vector CI/CD Pipeline",
       "shortName": "VECTOR-CI/CD-PI",
-      "businessOwnerId": "u3",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise ci/cd pipeline serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -32887,12 +33045,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u12",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Matrix Auth Service",
       "shortName": "MATRIX-AUTH-SER",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -33270,12 +33430,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u12",
+    "governance_roles": {
+      "technical_lead": "u12",
+      "business_owner": "u6",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Aurora Stream Processor",
       "shortName": "AURORA-STREAM-P",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u12",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise stream processor serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -33705,12 +33867,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u6",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Torus DNS Infrastructure",
       "shortName": "TORUS-DNS-INFR",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise dns infrastructure serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -34106,12 +34270,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u13",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Aurora VPN Gateway",
       "shortName": "AURORA-VPN-GATE",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -34585,12 +34751,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u7",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Nova Data Lake",
       "shortName": "NOVA-DATA-LAK",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise data lake serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -34977,12 +35145,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u15",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Torus API Gateway",
       "shortName": "TORUS-API-GATE",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise api gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -35420,12 +35590,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u12",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Matrix Search Index",
       "shortName": "MATRIX-SEARCH-I",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise search index serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -35763,12 +35935,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u9",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Delta Stream Processor",
       "shortName": "DELTA-STREAM-P",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise stream processor serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -36236,12 +36410,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u4",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Stratos Auth Service",
       "shortName": "STRATOS-AUTH-SER",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -36654,12 +36830,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u13",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Vertex Workflow Orchestrator",
       "shortName": "VERTEX-WORKFLOW",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -37081,12 +37259,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u14",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Vector CDN Edge",
       "shortName": "VECTOR-CDN-EDGE",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise cdn edge serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -37497,12 +37677,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u15",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Cipher Cache Layer",
       "shortName": "CIPHER-CACHE-LA",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise cache layer serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -37889,12 +38071,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u11",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Vortex Message Queue",
       "shortName": "VORTEX-MESSAGE-",
-      "businessOwnerId": "u11",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise message queue serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -38249,12 +38433,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u13",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Stratos Load Balancer",
       "shortName": "STRATOS-LOAD-BAL",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise load balancer serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -38725,12 +38911,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u4",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Equinox Log Analytics",
       "shortName": "EQUINOX-LOG-ANAL",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise log analytics serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -39106,12 +39294,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u5",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Delta Data Warehouse Sync",
       "shortName": "DELTA-DATA-WAR",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -39584,12 +39774,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u2",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Nova API Gateway",
       "shortName": "NOVA-API-GATE",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise api gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -40068,12 +40260,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u6",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Omega Log Analytics",
       "shortName": "OMEGA-LOG-ANAL",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise log analytics serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -40507,12 +40701,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u11",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Cipher Log Analytics",
       "shortName": "CIPHER-LOG-ANAL",
-      "businessOwnerId": "u11",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise log analytics serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -40854,12 +41050,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u10",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Titan Data Lake",
       "shortName": "TITAN-DATA-LAK",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise data lake serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -41233,12 +41431,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u1",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Titan Data Warehouse Sync",
       "shortName": "TITAN-DATA-WAR",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -41594,12 +41794,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u8",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Horizon VPN Gateway",
       "shortName": "HORIZON-VPN-GATE",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -42043,12 +42245,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u8",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Summit Log Analytics",
       "shortName": "SUMMIT-LOG-ANAL",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise log analytics serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -42504,12 +42708,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u7",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Phoenix Backup Service",
       "shortName": "PHOENIX-BACKUP-S",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise backup service serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -42857,12 +43063,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u8",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Sigma Workflow Orchestrator",
       "shortName": "SIGMA-WORKFLOW",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -43316,12 +43524,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u8",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Stratos Backup Service",
       "shortName": "STRATOS-BACKUP-S",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise backup service serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -43789,12 +43999,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u2",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Vortex DNS Infrastructure",
       "shortName": "VORTEX-DNS-INFR",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise dns infrastructure serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -44263,12 +44475,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u9",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Solstice Load Balancer",
       "shortName": "SOLSTICE-LOAD-BAL",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise load balancer serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -44703,12 +44917,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u4",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Vertex Feature Store",
       "shortName": "VERTEX-FEATURE-",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise feature store serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -45067,12 +45283,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u1",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Quantum Container Platform",
       "shortName": "QUANTUM-CONTAINE",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise container platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -45498,12 +45716,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u10",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Nova Security Scanner",
       "shortName": "NOVA-SECURITY",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise security scanner serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -45852,12 +46072,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u15",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Atlas Data Warehouse Sync",
       "shortName": "ATLAS-DATA-WAR",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -46228,12 +46450,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u6",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Titan Payment Gateway",
       "shortName": "TITAN-PAYMENT-",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise payment gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -46693,12 +46917,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u12",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Eclipse Security Scanner",
       "shortName": "ECLIPSE-SECURITY",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise security scanner serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -47136,12 +47362,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u2",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Solstice CRM Migration",
       "shortName": "SOLSTICE-CRM-MIGR",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise crm migration serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -47479,12 +47707,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u8",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Nexus Search Index",
       "shortName": "NEXUS-SEARCH-I",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise search index serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -47868,12 +48098,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u13",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Delta ML Inference",
       "shortName": "DELTA-ML-INFER",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise ml inference serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -48335,12 +48567,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u9",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Solstice Auth Service",
       "shortName": "SOLSTICE-AUTH-SER",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -48806,12 +49040,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u12",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Hyperion Stream Processor",
       "shortName": "HYPERION-STREAM-P",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise stream processor serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -49265,12 +49501,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u14",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Atlas Stream Processor",
       "shortName": "ATLAS-STREAM-P",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise stream processor serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -49737,12 +49975,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u3",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Apollo Search Index",
       "shortName": "APOLLO-SEARCH-I",
-      "businessOwnerId": "u3",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise search index serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -50168,12 +50408,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u9",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Stratos Feature Store",
       "shortName": "STRATOS-FEATURE-",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise feature store serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -50524,12 +50766,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u15",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Nova Config Management",
       "shortName": "NOVA-CONFIG-M",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -50949,12 +51193,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u11",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Aurora Secret Vault",
       "shortName": "AURORA-SECRET-V",
-      "businessOwnerId": "u11",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise secret vault serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -51322,12 +51568,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u1",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Equinox Config Management",
       "shortName": "EQUINOX-CONFIG-M",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -51697,12 +51945,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u15",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Orion Auth Service",
       "shortName": "ORION-AUTH-SER",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -52073,12 +52323,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u10",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Cosmos Identity Provider",
       "shortName": "COSMOS-IDENTITY",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise identity provider serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -52518,12 +52770,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u10",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Vector Workflow Orchestrator",
       "shortName": "VECTOR-WORKFLOW",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -52913,12 +53167,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u13",
+      "dba_data_owner": "u11"
+    },
     "application_overview": {
       "applicationName": "Hyperion VPN Gateway",
       "shortName": "HYPERION-VPN-GATE",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u11",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -53270,12 +53526,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u1",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Summit Policy Engine",
       "shortName": "SUMMIT-POLICY-E",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise policy engine serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -53737,12 +53995,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u1",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Stratos Config Management",
       "shortName": "STRATOS-CONFIG-M",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -54212,12 +54472,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u7",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Arcadia API Gateway",
       "shortName": "ARCADIA-API-GATE",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise api gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -54678,12 +54940,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u4",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Horizon Policy Engine",
       "shortName": "HORIZON-POLICY-E",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise policy engine serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -55132,12 +55396,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u2",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Hyperion Analytics Platform",
       "shortName": "HYPERION-ANALYTIC",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise analytics platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -55606,12 +55872,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u6",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Cipher Log Analytics",
       "shortName": "CIPHER-LOG-ANAL",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise log analytics serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -55972,12 +56240,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u13",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Eclipse File Storage",
       "shortName": "ECLIPSE-FILE-STO",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -56390,12 +56660,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u7",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Sigma Monitoring Stack",
       "shortName": "SIGMA-MONITORI",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise monitoring stack serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -56812,12 +57084,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u12",
+    "governance_roles": {
+      "technical_lead": "u12",
+      "business_owner": "u4",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Meridian Config Management",
       "shortName": "MERIDIAN-CONFIG-M",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u12",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -57235,12 +57509,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u7",
+      "dba_data_owner": "u1"
+    },
     "application_overview": {
       "applicationName": "Delta ERP Modernization",
       "shortName": "DELTA-ERP-MODE",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u1",
       "businessFunction": "Enterprise erp modernization serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -57570,12 +57846,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u2",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Phoenix Workflow Orchestrator",
       "shortName": "PHOENIX-WORKFLOW",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -57992,12 +58270,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u10",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Helix Config Management",
       "shortName": "HELIX-CONFIG-M",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -58409,12 +58689,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u4",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Stratos Data Warehouse Sync",
       "shortName": "STRATOS-DATA-WAR",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -58815,12 +59097,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u1",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Vortex Config Management",
       "shortName": "VORTEX-CONFIG-M",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -59223,12 +59507,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u15",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Vertex Payment Gateway",
       "shortName": "VERTEX-PAYMENT-",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise payment gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -59601,12 +59887,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u14",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Chronos Cache Layer",
       "shortName": "CHRONOS-CACHE-LA",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise cache layer serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -60102,12 +60390,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u2",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Phoenix Load Balancer",
       "shortName": "PHOENIX-LOAD-BAL",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise load balancer serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -60555,12 +60845,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u10",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Meridian Secret Vault",
       "shortName": "MERIDIAN-SECRET-V",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise secret vault serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -60988,12 +61280,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u1",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Arcadia File Storage",
       "shortName": "ARCADIA-FILE-STO",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -61427,12 +61721,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u1",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Axiom Cache Layer",
       "shortName": "AXIOM-CACHE-LA",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise cache layer serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -61857,12 +62153,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u8",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Horizon Identity Provider",
       "shortName": "HORIZON-IDENTITY",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise identity provider serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -62288,12 +62586,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u8",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Pulsar CDN Edge",
       "shortName": "PULSAR-CDN-EDGE",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise cdn edge serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -62675,12 +62975,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u2",
+      "dba_data_owner": "u10"
+    },
     "application_overview": {
       "applicationName": "Sigma ERP Modernization",
       "shortName": "SIGMA-ERP-MODE",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u10",
       "businessFunction": "Enterprise erp modernization serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -63110,12 +63412,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u15",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Eclipse Cache Layer",
       "shortName": "ECLIPSE-CACHE-LA",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise cache layer serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -63512,12 +63816,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u13",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Cipher Workflow Orchestrator",
       "shortName": "CIPHER-WORKFLOW",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -63921,12 +64227,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u12",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Fusion Analytics Platform",
       "shortName": "FUSION-ANALYTIC",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise analytics platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -64321,12 +64629,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u15",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Titan CRM Migration",
       "shortName": "TITAN-CRM-MIGR",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise crm migration serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -64834,12 +65144,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u12",
+    "governance_roles": {
+      "technical_lead": "u12",
+      "business_owner": "u7",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Prism Log Analytics",
       "shortName": "PRISM-LOG-ANAL",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u12",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise log analytics serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -65337,12 +65649,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u14",
+    "governance_roles": {
+      "technical_lead": "u14",
+      "business_owner": "u2",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Nova Config Management",
       "shortName": "NOVA-CONFIG-M",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u14",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -65744,12 +66058,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u8",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Prism Message Queue",
       "shortName": "PRISM-MESSAGE-",
-      "businessOwnerId": "u8",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise message queue serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -66239,12 +66555,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u3",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Cosmos VPN Gateway",
       "shortName": "COSMOS-VPN-GATE",
-      "businessOwnerId": "u3",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -66720,12 +67038,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u5",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Flux Secret Vault",
       "shortName": "FLUX-SECRET-V",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise secret vault serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -67148,12 +67468,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u13",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Meridian Config Management",
       "shortName": "MERIDIAN-CONFIG-M",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -67591,12 +67913,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u1",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Chronos Analytics Platform",
       "shortName": "CHRONOS-ANALYTIC",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise analytics platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -68017,12 +68341,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u15",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Vortex DNS Infrastructure",
       "shortName": "VORTEX-DNS-INFR",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise dns infrastructure serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -68479,12 +68805,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u2",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Matrix Message Queue",
       "shortName": "MATRIX-MESSAGE-",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise message queue serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -68923,12 +69251,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u1",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Hyperion Backup Service",
       "shortName": "HYPERION-BACKUP-S",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise backup service serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -69321,12 +69651,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u15",
+    "governance_roles": {
+      "technical_lead": "u15",
+      "business_owner": "u7",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Nexus Stream Processor",
       "shortName": "NEXUS-STREAM-P",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u15",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise stream processor serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -69830,12 +70162,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u14",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Matrix API Gateway",
       "shortName": "MATRIX-API-GATE",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise api gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -70227,12 +70561,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u12",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Axiom Message Queue",
       "shortName": "AXIOM-MESSAGE-",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise message queue serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -70639,12 +70975,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u7",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Aurora DNS Infrastructure",
       "shortName": "AURORA-DNS-INFR",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise dns infrastructure serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -71109,12 +71447,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u1",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Chronos DNS Infrastructure",
       "shortName": "CHRONOS-DNS-INFR",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise dns infrastructure serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -71578,12 +71918,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u2",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Quantum Data Warehouse Sync",
       "shortName": "QUANTUM-DATA-WAR",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -71924,12 +72266,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u2",
+    "governance_roles": {
+      "technical_lead": "u2",
+      "business_owner": "u11",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Nova Data Warehouse Sync",
       "shortName": "NOVA-DATA-WAR",
-      "businessOwnerId": "u11",
-      "technicalLeadId": "u2",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise data warehouse sync serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -72314,12 +72658,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u6",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Aurora Secret Vault",
       "shortName": "AURORA-SECRET-V",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise secret vault serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -72706,12 +73052,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u5",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Quantum API Gateway",
       "shortName": "QUANTUM-API-GATE",
-      "businessOwnerId": "u5",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise api gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -73087,12 +73435,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u12",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Vector Feature Store",
       "shortName": "VECTOR-FEATURE-",
-      "businessOwnerId": "u12",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise feature store serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -73474,12 +73824,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u11",
+      "dba_data_owner": "u4"
+    },
     "application_overview": {
       "applicationName": "Atlas Data Lake",
       "shortName": "ATLAS-DATA-LAK",
-      "businessOwnerId": "u11",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u4",
       "businessFunction": "Enterprise data lake serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -73859,12 +74211,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u7",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Pulsar Search Index",
       "shortName": "PULSAR-SEARCH-I",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise search index serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -74267,12 +74621,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u2",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Orion Config Management",
       "shortName": "ORION-CONFIG-M",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise config management serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -74651,12 +75007,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u3",
+    "governance_roles": {
+      "technical_lead": "u3",
+      "business_owner": "u7",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Prometheus Secret Vault",
       "shortName": "PROMETHEUS-SECRET-V",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u3",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise secret vault serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -75067,12 +75425,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u6",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Atlas Policy Engine",
       "shortName": "ATLAS-POLICY-E",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise policy engine serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -75555,12 +75915,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u13",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Apollo Payment Gateway",
       "shortName": "APOLLO-PAYMENT-",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise payment gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -76007,12 +76369,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u6",
+    "governance_roles": {
+      "technical_lead": "u6",
+      "business_owner": "u9",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Apollo Analytics Platform",
       "shortName": "APOLLO-ANALYTIC",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u6",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise analytics platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -76437,12 +76801,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u11",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Fusion Log Analytics",
       "shortName": "FUSION-LOG-ANAL",
-      "businessOwnerId": "u11",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise log analytics serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -76794,12 +77160,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u1",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Prism Container Platform",
       "shortName": "PRISM-CONTAINE",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise container platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -77285,12 +77653,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u4",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Nexus Load Balancer",
       "shortName": "NEXUS-LOAD-BAL",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise load balancer serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -77701,12 +78071,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u14",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Solstice VPN Gateway",
       "shortName": "SOLSTICE-VPN-GATE",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -78105,12 +78477,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u9",
+    "governance_roles": {
+      "technical_lead": "u9",
+      "business_owner": "u4",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Torus CDN Edge",
       "shortName": "TORUS-CDN-EDGE",
-      "businessOwnerId": "u4",
-      "technicalLeadId": "u9",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise cdn edge serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -78517,12 +78891,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u15",
+      "dba_data_owner": "u6"
+    },
     "application_overview": {
       "applicationName": "Hyperion Auth Service",
       "shortName": "HYPERION-AUTH-SER",
-      "businessOwnerId": "u15",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u6",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -78904,12 +79280,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u4",
+    "governance_roles": {
+      "technical_lead": "u4",
+      "business_owner": "u7",
+      "dba_data_owner": "u5"
+    },
     "application_overview": {
       "applicationName": "Apollo Cache Layer",
       "shortName": "APOLLO-CACHE-LA",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u4",
-      "dbaDataOwnerId": "u5",
       "businessFunction": "Enterprise cache layer serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -79273,12 +79651,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u7",
+    "governance_roles": {
+      "technical_lead": "u7",
+      "business_owner": "u1",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Titan ERP Modernization",
       "shortName": "TITAN-ERP-MODE",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u7",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise erp modernization serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -79639,12 +80019,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u13",
+    "governance_roles": {
+      "technical_lead": "u13",
+      "business_owner": "u9",
+      "dba_data_owner": "u2"
+    },
     "application_overview": {
       "applicationName": "Hyperion Secret Vault",
       "shortName": "HYPERION-SECRET-V",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u13",
-      "dbaDataOwnerId": "u2",
       "businessFunction": "Enterprise secret vault serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -80046,12 +80428,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u14",
+      "dba_data_owner": "u3"
+    },
     "application_overview": {
       "applicationName": "Nebula API Gateway",
       "shortName": "NEBULA-API-GATE",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u3",
       "businessFunction": "Enterprise api gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -80413,12 +80797,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u2",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Orion Message Queue",
       "shortName": "ORION-MESSAGE-",
-      "businessOwnerId": "u2",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise message queue serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -80857,12 +81243,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u8",
+    "governance_roles": {
+      "technical_lead": "u8",
+      "business_owner": "u7",
+      "dba_data_owner": "u9"
+    },
     "application_overview": {
       "applicationName": "Prism Search Index",
       "shortName": "PRISM-SEARCH-I",
-      "businessOwnerId": "u7",
-      "technicalLeadId": "u8",
-      "dbaDataOwnerId": "u9",
       "businessFunction": "Enterprise search index serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -81230,12 +81618,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u13",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Zenith DNS Infrastructure",
       "shortName": "ZENITH-DNS-INFR",
-      "businessOwnerId": "u13",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise dns infrastructure serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -81638,12 +82028,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u5",
+    "governance_roles": {
+      "technical_lead": "u5",
+      "business_owner": "u14",
+      "dba_data_owner": "u7"
+    },
     "application_overview": {
       "applicationName": "Cosmos VPN Gateway",
       "shortName": "COSMOS-VPN-GATE",
-      "businessOwnerId": "u14",
-      "technicalLeadId": "u5",
-      "dbaDataOwnerId": "u7",
       "businessFunction": "Enterprise vpn gateway serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -82022,12 +82414,14 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u1",
+      "dba_data_owner": "u14"
+    },
     "application_overview": {
       "applicationName": "Nova Auth Service",
       "shortName": "NOVA-AUTH-SER",
-      "businessOwnerId": "u1",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u14",
       "businessFunction": "Enterprise auth service serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -82429,12 +82823,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u3",
+      "dba_data_owner": "u12"
+    },
     "application_overview": {
       "applicationName": "Summit Workflow Orchestrator",
       "shortName": "SUMMIT-WORKFLOW",
-      "businessOwnerId": "u3",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u12",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "External",
@@ -82781,12 +83177,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u10",
+    "governance_roles": {
+      "technical_lead": "u10",
+      "business_owner": "u6",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Zenith Stream Processor",
       "shortName": "ZENITH-STREAM-P",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u10",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise stream processor serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -83202,12 +83600,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u1",
+    "governance_roles": {
+      "technical_lead": "u1",
+      "business_owner": "u10",
+      "dba_data_owner": "u8"
+    },
     "application_overview": {
       "applicationName": "Sigma Stream Processor",
       "shortName": "SIGMA-STREAM-P",
-      "businessOwnerId": "u10",
-      "technicalLeadId": "u1",
-      "dbaDataOwnerId": "u8",
       "businessFunction": "Enterprise stream processor serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -83583,12 +83983,14 @@
     "migration_wave": "Wave 3 \u2013 Q2 2026",
     "wave_id": "wave-1",
     "itso": "u12",
+    "governance_roles": {
+      "technical_lead": "u12",
+      "business_owner": "u6",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Aurora File Storage",
       "shortName": "AURORA-FILE-STO",
-      "businessOwnerId": "u6",
-      "technicalLeadId": "u12",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise file storage serving internal and external stakeholders.",
       "userBase": {
         "type": "Internal",
@@ -84035,12 +84437,14 @@
     "migration_wave": "Wave 1 \u2013 Q4 2025",
     "wave_id": "wave-3",
     "itso": "u11",
+    "governance_roles": {
+      "technical_lead": "u11",
+      "business_owner": "u9",
+      "dba_data_owner": "u13"
+    },
     "application_overview": {
       "applicationName": "Torus Analytics Platform",
       "shortName": "TORUS-ANALYTIC",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u11",
-      "dbaDataOwnerId": "u13",
       "businessFunction": "Enterprise analytics platform serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",
@@ -84483,12 +84887,14 @@
     "migration_wave": "Wave 4 \u2013 Q3 2026",
     "wave_id": "wave-2",
     "itso": "u12",
+    "governance_roles": {
+      "technical_lead": "u12",
+      "business_owner": "u9",
+      "dba_data_owner": "u15"
+    },
     "application_overview": {
       "applicationName": "Equinox Workflow Orchestrator",
       "shortName": "EQUINOX-WORKFLOW",
-      "businessOwnerId": "u9",
-      "technicalLeadId": "u12",
-      "dbaDataOwnerId": "u15",
       "businessFunction": "Enterprise workflow orchestrator serving internal and external stakeholders.",
       "userBase": {
         "type": "Both",

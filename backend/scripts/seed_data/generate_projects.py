@@ -386,12 +386,14 @@ def generate_project(index: int) -> dict:
         "migration_wave": WAVE_NAMES[wave_id],
         "wave_id": wave_id,
         "itso": technical_lead,
+        "governance_roles": {
+            "technical_lead": technical_lead,
+            "business_owner": business_owner,
+            "dba_data_owner": dba_owner,
+        },
         "application_overview": {
             "applicationName": project_name,
             "shortName": f"{app_name.upper()}-{suffix.upper().replace(' ', '-')[:8]}",
-            "businessOwnerId": business_owner,
-            "technicalLeadId": technical_lead,
-            "dbaDataOwnerId": dba_owner,
             "businessFunction": f"Enterprise {suffix.lower()} serving internal and external stakeholders.",
             "userBase": {
                 "type": random.choice(["Internal", "External", "Both"]),

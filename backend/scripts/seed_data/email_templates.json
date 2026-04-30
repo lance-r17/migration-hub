@@ -7,12 +7,12 @@
     "subject": "Your project {{project.name}} has been assigned to {{wave.name}}",
     "recipient_list": [
       {
-        "type": "project_field",
-        "field": "technicalLead"
+        "type": "role",
+        "role": "technical_lead"
       },
       {
-        "type": "project_field",
-        "field": "businessOwner"
+        "type": "role",
+        "role": "business_owner"
       }
     ],
     "template_style": {
@@ -157,7 +157,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Jira Epic →"
+                  "buttonText": "View Jira Epic \u2192"
                 },
                 "config": {
                   "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
@@ -399,7 +399,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "Review & Approve →"
+                  "buttonText": "Review & Approve \u2192"
                 },
                 "config": {
                   "linkUrl": "{{platform.url}}/projects/{{project.id}}",
@@ -495,12 +495,12 @@
         "role": "platform_migration_lead"
       },
       {
-        "type": "project_field",
-        "field": "technicalLead"
+        "type": "role",
+        "role": "technical_lead"
       },
       {
-        "type": "project_field",
-        "field": "businessOwner"
+        "type": "role",
+        "role": "business_owner"
       }
     ],
     "template_style": {
@@ -552,7 +552,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Migration Sign-Off Complete ✓</span></h2>"
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Migration Sign-Off Complete \u2713</span></h2>"
                 },
                 "config": {}
               }
@@ -598,7 +598,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<p>Hi {{user.name}},</p><p>Great news — <strong>{{project.name}}</strong> has received all required approvals and is now officially signed off for migration.</p><p>Jira migration tasks have been automatically created. You can track progress through the Jira epic below.</p>"
+                  "html": "<p>Hi {{user.name}},</p><p>Great news \u2014 <strong>{{project.name}}</strong> has received all required approvals and is now officially signed off for migration.</p><p>Jira migration tasks have been automatically created. You can track progress through the Jira epic below.</p>"
                 },
                 "config": {}
               }
@@ -645,7 +645,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Jira Epic →"
+                  "buttonText": "View Jira Epic \u2192"
                 },
                 "config": {
                   "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
@@ -734,15 +734,15 @@
     "name": "Risk Alert",
     "description": "Notification when a risk is raised on a project, reflecting the severity of the risk item.",
     "event_type": "risk_alert",
-    "subject": "⚠ {{risk.severityLabel}} Risk Alert: {{risk.title}} in {{project.name}}",
+    "subject": "\u26a0 {{risk.severityLabel}} Risk Alert: {{risk.title}} in {{project.name}}",
     "recipient_list": [
       {
         "type": "role",
         "role": "platform_migration_lead"
       },
       {
-        "type": "project_field",
-        "field": "technicalLead"
+        "type": "role",
+        "role": "technical_lead"
       }
     ],
     "template_style": {
@@ -794,7 +794,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">⚠ {{risk.severityLabel}} Risk Identified</span></h2>"
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">\u26a0 {{risk.severityLabel}} Risk Identified</span></h2>"
                 },
                 "config": {}
               }
@@ -1027,7 +1027,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Project Risks →"
+                  "buttonText": "View Project Risks \u2192"
                 },
                 "config": {
                   "linkUrl": "{{platform.url}}/projects/{{project.id}}",
@@ -1119,12 +1119,12 @@
     "subject": "Reminder: {{wave.name}} cutover in {{daysUntilCutover}} days",
     "recipient_list": [
       {
-        "type": "project_field",
-        "field": "technicalLead"
+        "type": "role",
+        "role": "technical_lead"
       },
       {
-        "type": "project_field",
-        "field": "businessOwner"
+        "type": "role",
+        "role": "business_owner"
       }
     ],
     "template_style": {
@@ -1269,7 +1269,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Jira Epic →"
+                  "buttonText": "View Jira Epic \u2192"
                 },
                 "config": {
                   "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
@@ -1507,7 +1507,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Sign-Off Status →"
+                  "buttonText": "View Sign-Off Status \u2192"
                 },
                 "config": {
                   "linkUrl": "{{platform.url}}/projects/{{project.id}}",
@@ -1599,8 +1599,8 @@
     "subject": "Migration tasks for {{project.name}} are ready in Jira",
     "recipient_list": [
       {
-        "type": "project_field",
-        "field": "technicalLead"
+        "type": "role",
+        "role": "technical_lead"
       },
       {
         "type": "role",
@@ -1822,7 +1822,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "Open in Jira →"
+                  "buttonText": "Open in Jira \u2192"
                 },
                 "config": {
                   "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
@@ -1918,8 +1918,8 @@
         "role": "platform_migration_lead"
       },
       {
-        "type": "project_field",
-        "field": "technicalLead"
+        "type": "role",
+        "role": "technical_lead"
       }
     ],
     "template_style": {
@@ -1971,7 +1971,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Survey Completed ✓</span></h2>"
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Survey Completed \u2713</span></h2>"
                 },
                 "config": {}
               }
@@ -2064,7 +2064,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Project Details →"
+                  "buttonText": "View Project Details \u2192"
                 },
                 "config": {
                   "linkUrl": "{{platform.url}}/projects/{{project.id}}",

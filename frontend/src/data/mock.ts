@@ -81,6 +81,11 @@ export const mockProjects: Project[] = [
       { id: 'u5', name: 'Carol White', initials: 'CW' },
       { id: 'u2', name: 'Dan Brown', initials: 'DB' },
     ],
+    governanceRoles: {
+      technicalLead: { id: 'u2', name: 'Dan Brown', email: 'dan.brown@corp.com', department: 'Platform Engineering', initials: 'DB' },
+      businessOwner: { id: 'u1', name: 'Sarah Jenkins', email: 'sarah.jenkins@corp.com', department: 'Finance & Operations', initials: 'SJ' },
+      dbaDataOwner: { id: 'u5', name: 'Carol White', email: 'carol.white@corp.com', department: 'Data Engineering', initials: 'CW' },
+    },
     planning: {
       startDate: '2026-06-01',
       endDate: '2026-09-30',
@@ -93,9 +98,6 @@ export const mockProjects: Project[] = [
     applicationOverview: {
       applicationName: 'Alpha Core ERP',
       shortName: 'ALPHA-ERP',
-      businessOwnerId: 'u1',
-      technicalLeadId: 'u2',
-      dbaDataOwnerId: 'u5',
       businessFunction: 'Centralised ERP platform covering procurement, finance, HR, and supply chain for ~2,400 internal users. Mission-critical for daily financial close and regulatory reporting.',
       userBase: { type: 'Internal', count: '~2,400 users' },
       applicationTier: 'T0',
@@ -412,6 +414,11 @@ export const mockProjects: Project[] = [
       { id: 'u6', name: 'Eve Davis', initials: 'ED' },
       { id: 'u7', name: 'Frank Miller', initials: 'FM' },
     ],
+    governanceRoles: {
+      technicalLead: { id: 'u7', name: 'Frank Miller', email: 'frank.miller@company.com', department: 'Platform Security', initials: 'FM' },
+      businessOwner: { id: 'u6', name: 'Eve Davis', email: 'eve.davis@company.com', department: 'IT Operations', initials: 'ED' },
+      dbaDataOwner: { id: 'u8', name: 'Grace Lee', email: 'grace.lee@corp.com', department: 'Data Engineering', initials: 'GL' },
+    },
     planning: {
       startDate: '2025-03-01',
       endDate: '2025-08-15',
@@ -427,9 +434,6 @@ export const mockProjects: Project[] = [
       baId: 'EIM-0042',
       userBase: { type: 'Internal', count: '~800 employees' },
       businessFunction: 'Centralised OAuth2 / JWT authentication and session management for internal tooling.',
-      businessOwnerId: 'u6',
-      technicalLeadId: 'u7',
-      dbaDataOwnerId: 'u8',
       systemImportanceClassification: [],
       softwareOrigin: '3rd party',
       migrationStrategy: 'Lift & Shift',
@@ -587,6 +591,10 @@ export const mockProjects: Project[] = [
       { id: 'u9', name: 'Henry Wilson', initials: 'HW' },
       { id: 'u10', name: 'Irene Cho', initials: 'IC' },
     ],
+    governanceRoles: {
+      technicalLead: { id: 'u10', name: 'Irene Cho', email: 'irene.cho@company.com', department: 'Network Engineering', initials: 'IC' },
+      businessOwner: { id: 'u12', name: 'Karen Lee', email: 'karen.lee@corp.com', department: 'Compliance & Risk', initials: 'KL' },
+    },
     planning: {
       startDate: '2026-04-01',
       endDate: '2026-08-15',
@@ -602,8 +610,6 @@ export const mockProjects: Project[] = [
       baId: 'EIM-0088',
       userBase: { type: 'External', count: '~4M end users globally' },
       businessFunction: 'Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.',
-      businessOwnerId: 'u12',
-      technicalLeadId: 'u10',
       systemImportanceClassification: ['IBS', 'BPS'],
       iitaApplicability: false,
       softwareOrigin: 'in-house',

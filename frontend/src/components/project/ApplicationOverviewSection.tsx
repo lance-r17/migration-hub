@@ -4,13 +4,15 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { cn } from '@/lib/utils'
 import { ApplicationProfileDrawer } from '@/components/drawers/ApplicationProfileDrawer'
 import { ContactsOwnershipDrawer } from '@/components/drawers/ContactsOwnershipDrawer'
-import { useUsers } from '@/hooks/use-users'
-import type { ApplicationOverview, ApplicationTier, MigrationStrategy } from '@/types'
+import type { ApplicationOverview, ApplicationTier, GovernanceRoles, MigrationStrategy } from '@/types'
 
 interface ApplicationOverviewSectionProps {
   data?: ApplicationOverview
+  governanceRoles?: GovernanceRoles
+  canEditGovernanceRoles?: boolean
   projectId?: string
   onSave?: (data: ApplicationOverview) => void
+  onSaveGovernanceRoles?: (payload: { technicalLeadId?: string; businessOwnerId?: string; dbaDataOwnerId?: string }) => void
 }
 
 function YesNoBadge({ value }: { value: boolean }) {
@@ -58,13 +60,19 @@ function Label({ children }: { children: React.ReactNode }) {
   return <p className="text-xs uppercase text-muted-foreground font-bold tracking-widest mb-1">{children}</p>
 }
 
-export function ApplicationOverviewSection({ data, projectId, onSave }: ApplicationOverviewSectionProps) {
+export function ApplicationOverviewSection({
+  data,
+  governanceRoles,
+  canEditGovernanceRoles,
+  projectId,
+  onSave,
+  onSaveGovernanceRoles,
+}: ApplicationOverviewSectionProps) {
   const [editingCard, setEditingCard] = useState<'profile' | 'contacts' | null>(null)
-  const { users } = useUsers()
 
-  const businessOwner = users.find(u => u.id === data?.businessOwnerId)
-  const technicalLead = users.find(u => u.id === data?.technicalLeadId)
-  const dbaDataOwner  = users.find(u => u.id === data?.dbaDataOwnerId)
+  const technicalLead = governanceRoles?.technicalLead
+  const businessOwner = governanceRoles?.businessOwner
+  const dbaDataOwner  = governanceRoles?.dbaDataOwner
 
   return (
     <div>
@@ -179,7 +187,7 @@ export function ApplicationOverviewSection({ data, projectId, onSave }: Applicat
           title="Contacts & Ownership"
           iconBg="bg-secondary"
           iconColor="text-secondary-foreground"
-          onEdit={onSave ? () => setEditingCard('contacts') : undefined}
+          onEdit={canEditGovernanceRoles ? () => setEditingCard('contacts') : undefined}
         >
           {!data ? (
             <p className="text-sm text-muted-foreground">No contacts added yet.</p>
@@ -189,7 +197,7 @@ export function ApplicationOverviewSection({ data, projectId, onSave }: Applicat
                 <div>
                   <Label>Technical Lead</Label>
                   <p className="text-sm font-medium text-foreground">{technicalLead.name}</p>
-                  {technicalLead.team && <p className="text-xs text-muted-foreground">{technicalLead.team}</p>}
+                  <p className="text-xs text-muted-foreground">{technicalLead.department}</p>
                   <p className="text-xs text-muted-foreground">{technicalLead.email}</p>
                 </div>
               )}
@@ -214,21 +222,21 @@ export function ApplicationOverviewSection({ data, projectId, onSave }: Applicat
       </div>
 
       {onSave && (
-        <>
-          <ApplicationProfileDrawer
-            open={editingCard === 'profile'}
-            onOpenChange={(o) => !o && setEditingCard(null)}
-            data={data}
-            onSave={(updated) => { onSave(updated); setEditingCard(null) }}
-          />
-          <ContactsOwnershipDrawer
-            open={editingCard === 'contacts'}
-            onOpenChange={(o) => !o && setEditingCard(null)}
-            data={data}
-            projectId={projectId ?? ''}
-            onSave={(updated) => { onSave(updated); setEditingCard(null) }}
-          />
-        </>
+        <ApplicationProfileDrawer
+          open={editingCard === 'profile'}
+          onOpenChange={(o) => !o && setEditingCard(null)}
+          data={data}
+          onSave={(updated) => { onSave(updated); setEditingCard(null) }}
+        />
+      )}
+      {onSaveGovernanceRoles && (
+        <ContactsOwnershipDrawer
+          open={editingCard === 'contacts'}
+          onOpenChange={(o) => !o && setEditingCard(null)}
+          governanceRoles={governanceRoles}
+          projectId={projectId ?? ''}
+          onSave={(updated) => { onSaveGovernanceRoles(updated); setEditingCard(null) }}
+        />
       )}
     </div>
   )

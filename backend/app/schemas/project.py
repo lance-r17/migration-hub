@@ -15,6 +15,20 @@ class TeamMember(BaseModel):
     initials: str | None = None
 
 
+class GovernanceRoleUser(BaseModel):
+    id: str
+    name: str
+    email: str
+    department: str
+    initials: str
+
+
+class GovernanceRolesOut(BaseModel):
+    technical_lead: GovernanceRoleUser | None = None
+    business_owner: GovernanceRoleUser | None = None
+    dba_data_owner: GovernanceRoleUser | None = None
+
+
 class ProjectListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -64,6 +78,7 @@ class ProjectDetail(BaseModel):
     jira_subtask_config: dict[str, Any] | None = None
     migration_effort_estimation: dict[str, Any] | None = None
     team: list[dict[str, Any]] = []
+    governance_roles: GovernanceRolesOut | None = None
     application_overview: dict[str, Any] | None = None
     availability: dict[str, Any] | None = None
     data_persistence: dict[str, Any] | None = None
@@ -130,3 +145,9 @@ class SectionPatch(BaseModel):
 
 class PlanningPatch(BaseModel):
     planning: dict[str, Any]
+
+
+class GovernanceRolesPatch(BaseModel):
+    technicalLeadId: str | None = None
+    businessOwnerId: str | None = None
+    dbaDataOwnerId: str | None = None

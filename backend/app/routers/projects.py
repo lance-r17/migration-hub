@@ -16,6 +16,8 @@ from app.schemas.cloud_resource import (
 )
 from app.schemas.risk import RiskHomeOut
 from app.schemas.project import (
+    GovernanceRolesOut,
+    GovernanceRolesPatch,
     PlanningPatch,
     ProjectCreate,
     ProjectDetail,
@@ -58,6 +60,32 @@ def _team_from_project_users(p) -> list[dict]:
         for pu in (p.project_users or [])
         if pu.user is not None
     ]
+
+
+def _governance_roles_from_project_users(p) -> GovernanceRolesOut | None:
+    roles: dict[str, dict | None] = {
+        "technical_lead": None,
+        "business_owner": None,
+        "dba_data_owner": None,
+    }
+    for pu in (p.project_users or []):
+        if not pu.user:
+            continue
+        user_roles = {r.strip() for r in (pu.role or "").split(",") if r.strip()}
+        for role in ("technical_lead", "business_owner", "dba_data_owner"):
+            if role in user_roles:
+                roles[role] = {
+                    "id": pu.user.id,
+                    "name": pu.user.name,
+                    "email": pu.user.email,
+                    "department": pu.user.department,
+                    "initials": pu.user.initials,
+                }
+    return GovernanceRolesOut(
+        technical_lead=roles.get("technical_lead"),
+        business_owner=roles.get("business_owner"),
+        dba_data_owner=roles.get("dba_data_owner"),
+    )
 
 
 def _derive_status(p, stage_data: dict) -> str:
@@ -142,6 +170,7 @@ def _project_detail(p) -> ProjectDetail:
         stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
         jira_subtask_config=p.jira_subtask_config,
         team=_team_from_project_users(p),
+        governance_roles=_governance_roles_from_project_users(p),
         migration_effort_estimation=p.migration_effort_estimation,
         application_overview=p.application_overview,
         availability=p.availability,
@@ -199,6 +228,38 @@ async def get_project_users(project_id: str, db: AsyncSession = Depends(get_db))
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return await user_service.get_users_for_project(db, project_id)
+
+
+@router.put("/{project_id}/governance-roles", response_model=ProjectDetail)
+async def update_governance_roles(
+    project_id: str,
+    body: GovernanceRolesPatch,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update governance roles (technical_lead, business_owner, dba_data_owner).
+
+    Only Platform Migration Leads may assign or clear these roles.
+    """
+    if "platform_migration_lead" not in (current_user.role or ""):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Platform Migration Leads can manage governance roles.",
+        )
+
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    actor = _user_to_actor(current_user)
+    assignments = {
+        "technical_lead": body.technicalLeadId,
+        "business_owner": body.businessOwnerId,
+        "dba_data_owner": body.dbaDataOwnerId,
+    }
+    await project_service.update_governance_roles(db, project, assignments, actor)
+    await db.refresh(project)
+    return _project_detail(project)
 
 
 @router.put("/{project_id}/project-user-roles", response_model=ProjectDetail)

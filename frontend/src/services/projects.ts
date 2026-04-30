@@ -93,9 +93,16 @@ interface ProjectListItemApi {
   risks: RiskApi[]
 }
 
+interface GovernanceRolesApi {
+  technical_lead: { id: string; name: string; email: string; department: string; initials: string } | null
+  business_owner: { id: string; name: string; email: string; department: string; initials: string } | null
+  dba_data_owner: { id: string; name: string; email: string; department: string; initials: string } | null
+}
+
 interface ProjectApiResponse extends ProjectListItemApi {
   blocked_reason: string | null
   jira_subtask_config: JiraSubtaskConfig | null
+  governance_roles: GovernanceRolesApi | null
   application_overview: ApplicationOverview | null
   availability: AvailabilityResilience | null
   data_persistence: DataPersistence | null
@@ -180,10 +187,20 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
   }
 }
 
+function mapGovernanceRoles(raw: GovernanceRolesApi | null): Project['governanceRoles'] {
+  if (!raw) return undefined
+  return {
+    technicalLead: raw.technical_lead ?? undefined,
+    businessOwner: raw.business_owner ?? undefined,
+    dbaDataOwner: raw.dba_data_owner ?? undefined,
+  }
+}
+
 function fromApi(raw: ProjectApiResponse): Project {
   return {
     ...fromApiListItem(raw),
     jiraSubtaskConfig: raw.jira_subtask_config ?? undefined,
+    governanceRoles: mapGovernanceRoles(raw.governance_roles),
     applicationOverview: raw.application_overview ?? undefined,
     availability: raw.availability ?? undefined,
     dataPersistence: raw.data_persistence ?? undefined,
@@ -302,6 +319,34 @@ export async function markResourceSyncComplete(
   const raw = await apiClient.post<ProjectApiResponse>(
     ENDPOINTS.resourceSyncComplete(projectId, resourceId),
     {},
+  )
+  return fromApi(raw)
+}
+
+export async function updateGovernanceRoles(
+  projectId: string,
+  payload: { technicalLeadId?: string; businessOwnerId?: string; dbaDataOwnerId?: string },
+): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const p = store.getProject(projectId)
+    if (!p) throw new Error('Project not found')
+    store.updateProject(projectId, 'governanceRoles', {
+      technicalLead: payload.technicalLeadId
+        ? { id: payload.technicalLeadId, name: '', email: '', department: '', initials: '' }
+        : undefined,
+      businessOwner: payload.businessOwnerId
+        ? { id: payload.businessOwnerId, name: '', email: '', department: '', initials: '' }
+        : undefined,
+      dbaDataOwner: payload.dbaDataOwnerId
+        ? { id: payload.dbaDataOwnerId, name: '', email: '', department: '', initials: '' }
+        : undefined,
+    } as Project['governanceRoles'])
+    return store.getProject(projectId)!
+  }
+  const raw = await apiClient.put<ProjectApiResponse>(
+    `/api/v1/projects/${projectId}/governance-roles`,
+    payload,
   )
   return fromApi(raw)
 }
