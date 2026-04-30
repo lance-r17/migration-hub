@@ -247,7 +247,7 @@ export interface Project {
   description?: string
   // Header metadata
   migrationWave?: string
-  profileOwner?: string
+  itso?: string
   jiraTicket?: string
   jiraBaseUrl?: string              // e.g. "https://your-org.atlassian.net", returned by backend API
   updatedAt?: string

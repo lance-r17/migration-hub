@@ -379,6 +379,35 @@ sync_resources(PROJECT_ID, LOCAL_INVENTORY)
 
 ---
 
+## Sync ITSO Roles
+
+Use `PUT /projects/:id/project-user-roles` to assign or remove the ITSO role (and any other project user roles) in bulk for a single project. The payload replaces the role list for each listed user; unlisted users are untouched.
+
+```bash
+curl -s -X PUT "$BASE/projects/$PROJECT_ID/project-user-roles" \
+  -H "X-API-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '[
+    { "user_id": "u2", "roles": ["itso"] },
+    { "user_id": "u3", "roles": ["technical_lead", "itso"] }
+  ]' | jq '{id: .id, itso: .itso, team: .team}'
+```
+
+To remove a user from the project entirely, send an empty `roles` array:
+
+```bash
+curl -s -X PUT "$BASE/projects/$PROJECT_ID/project-user-roles" \
+  -H "X-API-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '[
+    { "user_id": "u2", "roles": [] }
+  ]'
+```
+
+> This endpoint is **service-account only**. It is intended for batch sync jobs and is not exposed in any frontend drawer.
+
+---
+
 ## Verifying the Audit Trail
 
 After any resource sync, confirm all operations were recorded:

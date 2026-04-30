@@ -271,7 +271,7 @@ export function ProjectDetailsPage() {
     project.approvals.find(a => a.role === currentUserRole)?.status !== 'approved'
   const canSignOff = signoffEnabled && eligibleForSignoff
   const showSignoffDisabledNotice = !signoffEnabled && eligibleForSignoff
-  const hasMetadata = project.migrationWave || project.jiraTicket || project.profileOwner || project.updatedAt
+  const hasMetadata = project.migrationWave || project.jiraTicket || project.itso || project.updatedAt
 
   return (
     <AppShell title={project.name}>
@@ -373,8 +373,8 @@ export function ProjectDetailsPage() {
                   )}
                 </span>
               )}
-              {project.profileOwner && (
-                <span>Profile Owner: <strong className="text-foreground">{project.profileOwner}</strong></span>
+              {project.itso && (
+                <span>ITSO: <strong className="text-foreground">{project.itso}</strong></span>
               )}
               {project.updatedAt && (
                 <span>Last Updated: <strong className="text-foreground">{project.updatedAt}</strong></span>

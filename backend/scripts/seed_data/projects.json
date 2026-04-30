@@ -7,7 +7,7 @@
     "migration_wave": "Wave 5 - Q1 2027",
     "wave_id": "104929ce-c0f8-41be-937d-6b5afc67458a",
     "jira_base_url": "https://your-org.atlassian.net",
-    "profile_owner": "u2",
+    "itso": "u2",
     "application_overview": {
       "applicationName": "Alpha Core ERP",
       "shortName": "ALPHA-ERP",
@@ -408,7 +408,7 @@
     "description": "Completed migration of the legacy Node.js OAuth2/JWT authentication service to an AZ-resilient ECS Fargate deployment with Multi-AZ RDS.",
     "migration_wave": "Wave 1",
     "wave_id": "wave-3",
-    "profile_owner": "u6",
+    "itso": "u6",
     "jira_ticket": "JIRA-1829",
     "jira_base_url": "https://your-org.atlassian.net",
     "application_overview": {
@@ -622,7 +622,7 @@
     "migration_wave": "Wave 2",
     "wave_id": "wave-1",
     "jira_base_url": "https://your-org.atlassian.net",
-    "profile_owner": "u9",
+    "itso": "u9",
     "application_overview": {
       "applicationName": "Global Edge DNS",
       "shortName": "edge-dns",

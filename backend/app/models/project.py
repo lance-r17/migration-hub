@@ -17,7 +17,6 @@ class Project(Base, TimestampMixin):
     blocked_reason: Mapped[str | None] = mapped_column(String, nullable=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     migration_wave: Mapped[str | None] = mapped_column(String, nullable=True)
-    profile_owner: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)
     jira_ticket: Mapped[str | None] = mapped_column(String, nullable=True)
     jira_base_url: Mapped[str | None] = mapped_column(String, nullable=True)
     wave_id: Mapped[str | None] = mapped_column(String, ForeignKey("waves.id"), nullable=True)
@@ -38,7 +37,6 @@ class Project(Base, TimestampMixin):
     jira_subtask_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships
-    profile_owner_user: Mapped["User | None"] = relationship("User")
     wave: Mapped["Wave | None"] = relationship("Wave", back_populates="projects")
     cloud_resources: Mapped[list["CloudResource"]] = relationship(
         "CloudResource", back_populates="project", cascade="all, delete-orphan"

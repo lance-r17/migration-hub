@@ -72,7 +72,7 @@ export const mockProjects: Project[] = [
     migrationWave: 'Wave 3',
     waveId: 'wave-1',
     jiraBaseUrl: 'https://your-org.atlassian.net',
-    profileOwner: 'Dan Brown, Platform Engineering',
+    itso: 'Dan Brown, Platform Engineering',
     updatedAt: '21 MAR 2026',
     team: [
       { id: 'u3', name: 'Alice Johnson', initials: 'AJ' },
@@ -396,7 +396,7 @@ export const mockProjects: Project[] = [
     description: 'Completed migration of the legacy Node.js OAuth2/JWT authentication service to an AZ-resilient ECS Fargate deployment with Multi-AZ RDS.',
     migrationWave: 'Wave 1',
     waveId: 'wave-3',
-    profileOwner: 'Frank Miller, Platform Security',
+    itso: 'Frank Miller, Platform Security',
     jiraTicket: 'JIRA-1829',
     jiraBaseUrl: 'https://your-org.atlassian.net',
     updatedAt: '25 OCT 2025',
@@ -557,7 +557,7 @@ export const mockProjects: Project[] = [
     migrationWave: 'Wave 2',
     waveId: 'wave-1',
     jiraBaseUrl: 'https://your-org.atlassian.net',
-    profileOwner: 'Henry Wilson, Network Operations',
+    itso: 'Henry Wilson, Network Operations',
     updatedAt: '20 MAR 2026',
     team: [
       { id: 'u9', name: 'Henry Wilson', initials: 'HW' },

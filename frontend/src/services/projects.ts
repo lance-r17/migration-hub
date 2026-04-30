@@ -78,7 +78,7 @@ interface ProjectListItemApi {
   team: TeamMember[]
   description: string | null
   migration_wave: string | null
-  profile_owner: string | null
+  itso: string | null
   jira_ticket: string | null
   jira_base_url: string | null
   updated_at: string | null
@@ -159,7 +159,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     team: raw.team ?? [],
     description: raw.description ?? undefined,
     migrationWave: raw.migration_wave ?? undefined,
-    profileOwner: raw.profile_owner ?? undefined,
+    itso: raw.itso ?? undefined,
     jiraTicket: raw.jira_ticket ?? undefined,
     jiraBaseUrl: raw.jira_base_url ?? undefined,
     updatedAt: raw.updated_at ?? undefined,

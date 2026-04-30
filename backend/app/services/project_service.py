@@ -208,7 +208,6 @@ def _project_options():
         selectinload(Project.risks),
         selectinload(Project.approvals),
         selectinload(Project.wave),
-        selectinload(Project.profile_owner_user),
         selectinload(Project.project_users).selectinload(ProjectUser.user),
     ]
 
@@ -222,7 +221,6 @@ async def get_all(
         selectinload(Project.approvals),
         selectinload(Project.cloud_resources),
         selectinload(Project.wave),
-        selectinload(Project.profile_owner_user),
         selectinload(Project.project_users).selectinload(ProjectUser.user),
     )
     if user_id:
@@ -467,12 +465,19 @@ async def _check_approval_authority(
             raise ValueError("Actor is not a Platform Migration Lead.")
     else:
         pu = await session.get(ProjectUser, (project.id, actor_id))
-        if not pu or pu.role != role:
+        if not pu:
+            raise ValueError(f"Actor is not authorized to approve as '{role}'.")
+        user_roles = {r.strip() for r in (pu.role or "").split(",") if r.strip()}
+        if role not in user_roles:
             raise ValueError(f"Actor is not authorized to approve as '{role}'.")
 
 
 async def _sync_project_user_roles(session: AsyncSession, project: Project) -> None:
-    """Sync governance roles from applicationOverview into project_users.role."""
+    """Sync governance roles from applicationOverview into project_users.role.
+
+    Preserves non-governance roles (e.g. itso) by merging them with the new
+    governance role set rather than overwriting the entire role string.
+    """
     from app.models.project_user import ProjectUser
     ao = project.application_overview or {}
     governed: dict[str, str] = {}
@@ -480,16 +485,25 @@ async def _sync_project_user_roles(session: AsyncSession, project: Project) -> N
         uid = ao.get(field)
         if uid:
             governed[uid] = role
+
     result = await session.execute(
         select(ProjectUser).where(ProjectUser.project_id == project.id)
     )
     existing_pus = result.scalars().all()
     existing_ids = {pu.user_id for pu in existing_pus}
+    governance_roles = set(GOVERNANCE_ROLE_FIELDS.values())
 
     for pu in existing_pus:
-        new_role = governed.get(pu.user_id, "member")
-        if pu.role != new_role:
-            pu.role = new_role
+        current_roles = {r.strip() for r in (pu.role or "").split(",") if r.strip()}
+        non_governance = current_roles - governance_roles
+        gov_role = governed.get(pu.user_id)
+        if gov_role:
+            new_roles = non_governance | {gov_role}
+        else:
+            new_roles = non_governance or {"member"}
+        new_role_str = ",".join(sorted(new_roles))
+        if pu.role != new_role_str:
+            pu.role = new_role_str
 
     # Insert a project_users row for governance-role holders who aren't yet members
     for uid, role in governed.items():
@@ -655,6 +669,69 @@ async def upsert_resources(
                 entity_id=resource.resource_id, entity_label=resource.name,
                 changes=[],
             )
+    await session.flush()
+
+
+async def update_project_user_roles(
+    session: AsyncSession,
+    project: Project,
+    assignments: list[dict[str, Any]],
+    actor: dict[str, Any],
+) -> None:
+    """Upsert project user roles for a single project.
+
+    Each assignment must contain ``user_id`` and ``roles`` (list of strings).
+    An empty ``roles`` list deletes the project_users row. Users not listed
+    are left untouched.
+    """
+    from app.models.project_user import ProjectUser
+
+    result = await session.execute(
+        select(ProjectUser).where(ProjectUser.project_id == project.id)
+    )
+    existing_map = {pu.user_id: pu for pu in result.scalars().all()}
+    changes: list[dict] = []
+
+    for a in assignments:
+        uid = a.get("user_id")
+        roles = a.get("roles", [])
+        if not uid:
+            continue
+        pu = existing_map.get(uid)
+        if not roles:
+            if pu is not None:
+                old = pu.role
+                await session.delete(pu)
+                changes.append(
+                    {"field": uid, "label": f"Remove {uid}", "old_value": old, "new_value": None}
+                )
+            continue
+        new_role_str = ",".join(sorted(roles))
+        if pu is None:
+            user = await session.get(User, uid)
+            if user is not None:
+                session.add(
+                    ProjectUser(project_id=project.id, user_id=uid, role=new_role_str)
+                )
+                changes.append(
+                    {"field": uid, "label": f"Add {uid}", "old_value": None, "new_value": new_role_str}
+                )
+        elif pu.role != new_role_str:
+            old = pu.role
+            pu.role = new_role_str
+            changes.append(
+                {"field": uid, "label": f"Update {uid}", "old_value": old, "new_value": new_role_str}
+            )
+
+    if changes:
+        await audit_service.append_entry(
+            session,
+            project_id=project.id,
+            event_type="section_updated",
+            entity_type="project",
+            actor=actor,
+            changes=changes,
+        )
     await session.flush()
 
 

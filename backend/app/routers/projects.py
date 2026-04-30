@@ -21,7 +21,7 @@ from app.schemas.project import (
     ProjectPatch,
     SectionPatch,
 )
-from app.schemas.user import UserOut
+from app.schemas.user import ProjectUserRoleAssignment, UserOut
 from app.schemas.risk import RiskOut
 from app.schemas.jira_job import JiraJobCreate
 from app.services import audit_service, attachment_service, jira_client, jira_service, project_service, user_service
@@ -40,6 +40,13 @@ def _user_to_actor(user: User) -> dict[str, Any]:
     if user.is_service_account:
         actor["type"] = "service_account"
     return actor
+
+
+def _itso_name(p) -> str | None:
+    for pu in (p.project_users or []):
+        if pu.user and pu.role and "itso" in {r.strip() for r in pu.role.split(",") if r.strip()}:
+            return pu.user.name
+    return None
 
 
 def _team_from_project_users(p) -> list[dict]:
@@ -66,7 +73,7 @@ def _project_list_item(p) -> ProjectListItem:
         progress=stage_data["overall"],
         description=p.description,
         migration_wave=p.migration_wave,
-        profile_owner=p.profile_owner_user.name if p.profile_owner_user else None,
+        itso=_itso_name(p),
         jira_ticket=p.jira_ticket,
         jira_base_url=settings.jira_base_url,
         updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
@@ -94,7 +101,7 @@ def _project_detail(p) -> ProjectDetail:
         progress=stage_data["overall"],
         description=p.description,
         migration_wave=p.migration_wave,
-        profile_owner=p.profile_owner_user.name if p.profile_owner_user else None,
+        itso=_itso_name(p),
         jira_ticket=p.jira_ticket,
         jira_base_url=settings.jira_base_url,
         updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
@@ -154,6 +161,36 @@ async def get_project_users(project_id: str, db: AsyncSession = Depends(get_db))
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return await user_service.get_users_for_project(db, project_id)
+
+
+@router.put("/{project_id}/project-user-roles", response_model=ProjectDetail)
+async def update_project_user_roles(
+    project_id: str,
+    body: list[ProjectUserRoleAssignment],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Upsert project user roles for a single project.
+
+    Each assignment replaces the roles for the specified user.
+    An empty `roles` list deletes the project_users row.
+    Users not in the payload are untouched.
+    """
+    if not current_user.is_service_account:
+        raise HTTPException(
+            status_code=403,
+            detail="Only service accounts can manage project user roles",
+        )
+
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    actor = _user_to_actor(current_user)
+    assignments = [a.model_dump() for a in body]
+    await project_service.update_project_user_roles(db, project, assignments, actor)
+    await db.refresh(project)
+    return _project_detail(project)
 
 
 def _require_platform_lead_for_block(user: User) -> None:

@@ -255,8 +255,11 @@ async def process_job(job_id: str) -> None:
                     return
 
                 job.status = "processing"
+                from app.models.project_user import ProjectUser
                 result = await session.execute(
-                    select(Project).where(Project.id == job.project_id).options(selectinload(Project.profile_owner_user))
+                    select(Project).where(Project.id == job.project_id).options(
+                        selectinload(Project.project_users).selectinload(ProjectUser.user)
+                    )
                 )
                 project = result.scalar_one_or_none()
                 job_type = (job.config or {}).get("type", "migration")
@@ -307,6 +310,15 @@ async def process_job(job_id: str) -> None:
 
 
 # ─── ADF description helpers ──────────────────────────────────────────────────
+
+def _itso_name(project: "Project") -> str | None:
+    """Derive the ITSO display name from project_users."""
+    from app.models.project_user import ProjectUser
+    for pu in (project.project_users or []):
+        if pu.user and pu.role and "itso" in {r.strip() for r in pu.role.split(",") if r.strip()}:
+            return pu.user.name
+    return None
+
 
 def _adf_text(text: str) -> dict:
     return {"type": "text", "text": str(text)}
@@ -399,7 +411,7 @@ def _build_story_description(
         ("System Importance Classification", ", ".join(ao.get("systemImportanceClassification") or []) or None),
         ("IITA Applicability", ("Yes" if ao.get("iitaApplicability") else "No") if ao.get("iitaApplicability") is not None else None),
         ("Software Origin", ao.get("softwareOrigin")),
-        ("Profile Owner", project.profile_owner_user.name if project.profile_owner_user else None),
+        ("ITSO", _itso_name(project)),
         ("Status", project.status),
     ]))
     content.append(_adf_rule())

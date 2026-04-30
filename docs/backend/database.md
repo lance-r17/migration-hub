@@ -58,7 +58,7 @@
 | `blocked_reason` | `TEXT` | nullable |
 | `description` | `TEXT` | nullable |
 | `migration_wave` | `TEXT` | nullable; legacy label |
-| `profile_owner` | `TEXT FK → users.id` | nullable |
+
 | `jira_ticket` | `TEXT` | nullable |
 | `jira_base_url` | `TEXT` | nullable |
 | `wave_id` | `TEXT FK → waves.id` | nullable |
@@ -87,7 +87,7 @@
 |---|---|---|
 | `project_id` | `TEXT FK → projects.id` | composite PK |
 | `user_id` | `TEXT FK → users.id` | composite PK |
-| `role` | `TEXT` | nullable |
+| `role` | `TEXT` | nullable; comma-separated roles (e.g. `itso,technical_lead`) |
 
 ### `cloud_resources`
 

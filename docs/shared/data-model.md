@@ -74,7 +74,7 @@ interface Project {
   description?: string
   // Header metadata
   migrationWave?: string         // legacy display label; waveId takes precedence
-  profileOwner?: string
+  itso?: string
   jiraTicket?: string
   jiraBaseUrl?: string
   updatedAt?: string

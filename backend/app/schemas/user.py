@@ -22,6 +22,11 @@ class ProjectUserOut(BaseModel):
     user: UserOut | None = None
 
 
+class ProjectUserRoleAssignment(BaseModel):
+    user_id: str
+    roles: list[str]
+
+
 class LoginRequest(BaseModel):
     email: str
     password: str

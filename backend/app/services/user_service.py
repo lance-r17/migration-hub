@@ -65,24 +65,30 @@ async def sync_user_projects(
     session: AsyncSession, user_id: str, project_ids: list[str]
 ) -> None:
     """Sync a user's AD-group-based project memberships (role='member').
-    Governance roles (business_owner, technical_lead, etc.) are left untouched."""
-    # Remove stale 'member' rows for projects no longer in AD groups
-    if project_ids:
-        await session.execute(
-            delete(ProjectUser).where(
-                (ProjectUser.user_id == user_id)
-                & (ProjectUser.role == "member")
-                & (ProjectUser.project_id.not_in(project_ids))
-            )
+    Non-member roles (governance roles, itso, etc.) are left untouched."""
+    # Remove stale 'member' associations — strip the 'member' token from multi-role
+    # strings and delete the row only when no roles remain.
+    stale_filter = (
+        (ProjectUser.user_id == user_id)
+        if not project_ids
+        else (
+            (ProjectUser.user_id == user_id)
+            & (ProjectUser.project_id.not_in(project_ids))
         )
-    else:
-        await session.execute(
-            delete(ProjectUser).where(
-                (ProjectUser.user_id == user_id) & (ProjectUser.role == "member")
-            )
-        )
+    )
+    result = await session.execute(
+        select(ProjectUser).where(stale_filter)
+    )
+    for pu in result.scalars().all():
+        roles = [r.strip() for r in (pu.role or "").split(",") if r.strip()]
+        if "member" in roles:
+            roles.remove("member")
+            if roles:
+                pu.role = ",".join(roles)
+            else:
+                await session.delete(pu)
 
-    # Add 'member' rows for new projects; skip if user already has a role there
+    # Add 'member' rows for new projects; skip if user already has a row there
     for project_id in project_ids:
         project = await session.get(Project, project_id)
         if project is None:

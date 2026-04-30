@@ -99,7 +99,7 @@ def seed(session: Session, force: bool = False) -> None:
             status=p["status"],
             description=p.get("description"),
             migration_wave=p.get("migration_wave"),
-            profile_owner=p.get("profile_owner"),
+
             jira_ticket=p.get("jira_ticket"),
             jira_base_url=p.get("jira_base_url"),
             wave_id=p.get("wave_id"),
@@ -162,6 +162,17 @@ def seed(session: Session, force: bool = False) -> None:
                 existing_pu = session.get(ProjectUser, (p["id"], user_id))
                 if not existing_pu:
                     session.add(ProjectUser(project_id=p["id"], user_id=user_id))
+
+        # Sync ITSO role from seed data
+        itso_uid = p.get("itso")
+        if itso_uid and session.get(User, itso_uid):
+            existing_pu = session.get(ProjectUser, (p["id"], itso_uid))
+            if existing_pu:
+                roles = {r.strip() for r in (existing_pu.role or "").split(",") if r.strip()}
+                roles.add("itso")
+                existing_pu.role = ",".join(sorted(roles))
+            else:
+                session.add(ProjectUser(project_id=p["id"], user_id=itso_uid, role="itso"))
 
         # Sync governance roles from applicationOverview into project_users
         _GOVERNANCE_ROLE_FIELDS = {

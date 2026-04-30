@@ -48,7 +48,7 @@ Custom OAuth code exchange. The frontend calls this after receiving a one-time `
 3. Backend derives the user's global role from `OAUTH_ROLE_MAPPINGS` against AD groups
 4. Backend derives project memberships from `OAUTH_AD_GROUP_REGEX` against AD groups
 5. Backend looks up the user by `email`; if not found, **auto-provisions** a new user from the OAuth data
-6. Backend syncs `project_users` rows with `role='member'` for matched projects (governance roles are never touched)
+6. Backend syncs `project_users` rows with `role='member'` for matched projects (governance roles and ITSO are never touched)
 7. Backend issues a signed JWT session token
 8. Returns `{user: User, token: string}`
 
@@ -56,8 +56,8 @@ Custom OAuth code exchange. The frontend calls this after receiving a one-time `
 
 **Side effects:**
 - `users.role` is overwritten from AD group mappings
-- `project_users` member rows are added/removed based on AD group matches
-- Governance roles (`technical_lead`, `business_owner`, etc.) are preserved
+- `project_users` member token is added/removed based on AD group matches
+- Governance roles and ITSO are preserved (non-member roles are never touched)
 
 **Errors:**
 - `503` — OAuth service not configured
@@ -176,6 +176,24 @@ Replaces one section on a project. `:key` is a camelCase section name (e.g. `app
 Returns users who are members of a project.
 
 **Response:** `User[]`
+
+---
+
+### `PUT /api/v1/projects/:id/project-user-roles`
+
+Upsert project user roles for a single project. Each item in the payload replaces the roles for the specified user. An empty `roles` array deletes the project_users row. Users not in the payload are untouched.
+
+**Request body:**
+```json
+[
+  { "user_id": "u1", "roles": ["itso"] },
+  { "user_id": "u2", "roles": ["technical_lead", "itso"] }
+]
+```
+
+**Response:** `Project`
+
+**Authorization:** Service account only (`X-API-Key`).
 
 ---
 

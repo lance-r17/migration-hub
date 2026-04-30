@@ -80,7 +80,7 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Progress</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Wave</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Profile Owner</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">ITSO</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Team</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Signoff Date</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
@@ -134,7 +134,7 @@ export function ProjectsPage() {
                       {project.migrationWave ?? project.waveId ?? '—'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {project.profileOwner ?? '—'}
+                      {project.itso ?? '—'}
                     </TableCell>
                     <TableCell>
                       <TeamAvatars members={project.team} max={3} size="h-6 w-6" />

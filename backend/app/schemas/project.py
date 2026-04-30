@@ -25,7 +25,7 @@ class ProjectListItem(BaseModel):
     progress: int
     description: str | None = None
     migration_wave: str | None = None
-    profile_owner: str | None = None
+    itso: str | None = None
     jira_ticket: str | None = None
     jira_base_url: str | None = None
     updated_at: str | None = None
@@ -52,7 +52,7 @@ class ProjectDetail(BaseModel):
     progress: int
     description: str | None = None
     migration_wave: str | None = None
-    profile_owner: str | None = None
+    itso: str | None = None
     jira_ticket: str | None = None
     jira_base_url: str | None = None
     updated_at: str | None = None
@@ -91,7 +91,7 @@ class ProjectPatch(BaseModel):
     blocked_reason: str | None = None
     description: str | None = None
     migration_wave: str | None = None
-    profile_owner: str | None = None
+    itso: str | None = None
     jira_ticket: str | None = None
     jira_base_url: str | None = None
     wave_id: str | None = None
