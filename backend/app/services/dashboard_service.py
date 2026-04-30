@@ -9,9 +9,6 @@ from app.services import project_service
 
 
 async def compute_stats(session: AsyncSession) -> OverallStatsOut:
-    total_result = await session.execute(select(func.count()).select_from(Project))
-    total = total_result.scalar() or 0
-
     completed_result = await session.execute(
         select(func.count()).select_from(Project).where(Project.status == "completed")
     )
@@ -25,7 +22,8 @@ async def compute_stats(session: AsyncSession) -> OverallStatsOut:
     in_progress = in_progress_result.scalar() or 0
 
     # Compute average progress from stage data (not a stored column)
-    projects = await project_service.get_all(session)
+    # Use lightweight loader that skips wave / project_users / risks
+    projects = await project_service.get_all_for_stats(session)
     if projects:
         avg_progress = sum(
             project_service.compute_stage_progress(p)["overall"] for p in projects

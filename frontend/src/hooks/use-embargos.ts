@@ -13,18 +13,20 @@ interface EmbargosState {
   error: string | null
 }
 
-export function useEmbargos(): EmbargosState & {
+export function useEmbargos(options?: { enabled?: boolean }): EmbargosState & {
   createEmbargo: (data: Omit<EmbargoRecord, 'id' | 'createdAt'>) => Promise<EmbargoRecord>
   updateEmbargo: (id: string, patch: Partial<Omit<EmbargoRecord, 'id' | 'createdAt'>>) => Promise<EmbargoRecord>
   deleteEmbargo: (id: string) => Promise<void>
 } {
+  const enabled = options?.enabled !== false
   const [state, setState] = useState<EmbargosState>({
     embargos: [],
-    loading: true,
+    loading: enabled,
     error: null,
   })
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     getEmbargos()
       .then(embargos => {
@@ -38,7 +40,7 @@ export function useEmbargos(): EmbargosState & {
         })
       })
     return () => { cancelled = true }
-  }, [])
+  }, [enabled])
 
   const handleCreate = useCallback(async (data: Omit<EmbargoRecord, 'id' | 'createdAt'>) => {
     const embargo = await svcCreate(data)

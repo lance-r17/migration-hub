@@ -14,6 +14,16 @@ class RiskOut(BaseModel):
     risk_status: str | None = None
 
 
+class RiskHomeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str
+    description: str
+    severity: str
+    risk_status: str | None = None
+
+
 class RiskCreate(BaseModel):
     id: str | None = None
     title: str

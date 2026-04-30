@@ -231,6 +231,36 @@ async def get_all(
     return list(result.scalars().all())
 
 
+async def get_all_home(
+    session: AsyncSession, user_id: str | None = None
+) -> list[Project]:
+    from app.models.project_user import ProjectUser
+
+    q = select(Project).options(
+        selectinload(Project.approvals),
+        selectinload(Project.cloud_resources),
+        selectinload(Project.risks),
+        selectinload(Project.project_users).selectinload(ProjectUser.user),
+    )
+    if user_id:
+        q = q.join(ProjectUser, ProjectUser.project_id == Project.id).where(
+            ProjectUser.user_id == user_id
+        )
+    result = await session.execute(q.order_by(Project.name))
+    return list(result.scalars().all())
+
+
+async def get_all_for_stats(
+    session: AsyncSession,
+) -> list[Project]:
+    q = select(Project).options(
+        selectinload(Project.approvals),
+        selectinload(Project.cloud_resources),
+    )
+    result = await session.execute(q.order_by(Project.name))
+    return list(result.scalars().all())
+
+
 async def get_by_id(session: AsyncSession, project_id: str) -> Project | None:
     result = await session.execute(
         select(Project).where(Project.id == project_id).options(*_project_options())

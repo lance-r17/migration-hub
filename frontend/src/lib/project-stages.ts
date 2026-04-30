@@ -18,8 +18,8 @@ export const STAGE_META: StageMeta[] = [
 
 export function getProjectStage(project: Project): ProjectStage {
   if (project.status === 'completed') return 'completed'
-  if (project.status === 'migrating' || (project.stageProgress?.migration ?? 0) > 0) return 'migration'
-  if (project.status === 'signed-off' || (project.stageProgress?.signoff ?? 0) > 0) return 'sign-off'
+  if (project.status === 'migrating' || ((project.stageProgress?.migration ?? 0) > 0 && (project.stageProgress?.migration ?? 0) < 100)) return 'migration'
+  if (project.status === 'signed-off' || (project.stageProgress?.signoff ?? 0) === 100) return 'sign-off'
   if ((project.stageProgress?.survey ?? 0) === 100 || project.surveySubmittedAt) return 'survey'
   return 'setup'
 }

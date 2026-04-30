@@ -8,15 +8,18 @@ from app.database import get_db
 from app.schemas.approval import ApprovalOut
 from app.schemas.audit_log import AuditLogEntryOut, AuditLogResponse
 from app.schemas.cloud_resource import (
+    CloudResourceHomeOut,
     CloudResourceOut,
     ResourceSpecsBatchUpdate,
     ResourcesBatchDelete,
     ResourcesBatchUpsert,
 )
+from app.schemas.risk import RiskHomeOut
 from app.schemas.project import (
     PlanningPatch,
     ProjectCreate,
     ProjectDetail,
+    ProjectHomeItem,
     ProjectListItem,
     ProjectPatch,
     SectionPatch,
@@ -91,6 +94,33 @@ def _project_list_item(p) -> ProjectListItem:
     )
 
 
+def _project_home_item(p) -> ProjectHomeItem:
+    stage_data = project_service.compute_stage_progress(p)
+    return ProjectHomeItem(
+        id=p.id,
+        name=p.name,
+        status=_derive_status(p, stage_data),
+        blocked_reason=p.blocked_reason,
+        progress=stage_data["overall"],
+        description=p.description,
+        migration_wave=p.migration_wave,
+        itso=_itso_name(p),
+        jira_base_url=settings.jira_base_url,
+        updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
+        wave_id=p.wave_id,
+        jira_story_key=p.jira_story_key,
+        jira_job_status=p.jira_job_status,
+        planning=p.planning,
+        survey_submitted_at=p.survey_submitted_at,
+        stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
+        team=_team_from_project_users(p),
+        migration_constraints=p.migration_constraints,
+        approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
+        cloud_resources=[CloudResourceHomeOut.model_validate(r) for r in (p.cloud_resources or [])],
+        risks=[RiskHomeOut.model_validate(r) for r in (p.risks or [])],
+    )
+
+
 def _project_detail(p) -> ProjectDetail:
     stage_data = project_service.compute_stage_progress(p)
     return ProjectDetail(
@@ -133,6 +163,15 @@ async def list_projects(
 ):
     projects = await project_service.get_all(db, user_id=userId)
     return [_project_list_item(p) for p in projects]
+
+
+@router.get("/home", response_model=list[ProjectHomeItem])
+async def list_projects_home(
+    userId: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    projects = await project_service.get_all_home(db, user_id=userId)
+    return [_project_home_item(p) for p in projects]
 
 
 @router.post("", response_model=ProjectDetail, status_code=201)

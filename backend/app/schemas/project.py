@@ -4,8 +4,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from app.schemas.approval import ApprovalOut
-from app.schemas.cloud_resource import CloudResourceOut
-from app.schemas.risk import RiskOut
+from app.schemas.cloud_resource import CloudResourceHomeOut, CloudResourceOut
+from app.schemas.risk import RiskHomeOut, RiskOut
 
 
 class TeamMember(BaseModel):
@@ -74,6 +74,32 @@ class ProjectDetail(BaseModel):
     cloud_resources: list[CloudResourceOut] = []
     risks: list[RiskOut] = []
     approvals: list[ApprovalOut] = []
+
+
+class ProjectHomeItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    status: str
+    blocked_reason: str | None = None
+    progress: int
+    description: str | None = None
+    migration_wave: str | None = None
+    itso: str | None = None
+    jira_base_url: str | None = None
+    updated_at: str | None = None
+    wave_id: str | None = None
+    jira_story_key: str | None = None
+    jira_job_status: str | None = None
+    planning: dict[str, Any] | None = None
+    survey_submitted_at: datetime | None = None
+    stage_progress: dict[str, int] | None = None
+    team: list[dict[str, Any]] = []
+    migration_constraints: dict[str, Any] | None = None
+    approvals: list[ApprovalOut] = []
+    cloud_resources: list[CloudResourceHomeOut] = []
+    risks: list[RiskHomeOut] = []
 
 
 class ProjectCreate(BaseModel):

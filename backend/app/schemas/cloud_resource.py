@@ -20,6 +20,17 @@ class CloudResourceOut(BaseModel):
     jira_subtask_key: str | None = None
 
 
+class CloudResourceHomeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    resource_id: str
+    name: str
+    product: str | None = None
+    sync_status: str
+    need_migration: bool = True
+    migration_completed: bool = False
+
+
 class CloudResourceCreate(BaseModel):
     resource_id: str
     name: str

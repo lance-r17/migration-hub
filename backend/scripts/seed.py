@@ -93,6 +93,10 @@ def seed(session: Session, force: bool = False) -> None:
 
     print("Seeding projects, resources, risks, approvals...")
     for p in load("projects.json"):
+        survey_submitted_at = p.get("survey_submitted_at")
+        if survey_submitted_at:
+            survey_submitted_at = datetime.fromisoformat(survey_submitted_at.replace("Z", "+00:00"))
+
         project = Project(
             id=p["id"],
             name=p["name"],
@@ -108,6 +112,9 @@ def seed(session: Session, force: bool = False) -> None:
             migration_constraints=p.get("migration_constraints"),
             target_architecture=p.get("target_architecture"),
             planning=p.get("planning"),
+            survey_submitted_at=survey_submitted_at,
+            jira_story_key=p.get("jira_story_key"),
+            jira_job_status=p.get("jira_job_status"),
         )
         session.add(project)
         session.flush()

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getProjects, getProjectsForUser, getProject, updateProject } from '@/services/projects'
+import { getProjects, getProjectsForUser, getProjectsHome, getProjectsHomeForUser, getProject, updateProject } from '@/services/projects'
 import { appendAuditEntryMock } from '@/services/auditLog'
 import { diffObjects } from '@/utils/diff'
 import { useCurrentUser } from '@/context/UserContext'
@@ -244,7 +244,7 @@ interface ProjectsState {
   error: string | null
 }
 
-export function useProjects(): ProjectsState {
+export function useProjects(options?: { home?: boolean }): ProjectsState {
   const [state, setState] = useState<ProjectsState>({
     projects: [],
     loading: true,
@@ -259,8 +259,8 @@ export function useProjects(): ProjectsState {
     let cancelled = false
 
     const fetch = isPlatformLead
-      ? getProjects()
-      : getProjectsForUser(user.id)
+      ? (options?.home ? getProjectsHome() : getProjects())
+      : (options?.home ? getProjectsHomeForUser(user.id) : getProjectsForUser(user.id))
 
     fetch
       .then(projects => {
@@ -275,7 +275,7 @@ export function useProjects(): ProjectsState {
       })
 
     return () => { cancelled = true }
-  }, [user?.id, user?.role]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role, options?.home]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return state
 }

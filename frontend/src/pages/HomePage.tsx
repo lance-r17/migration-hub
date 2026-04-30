@@ -24,10 +24,10 @@ export function HomePage() {
   const { user } = useCurrentUser()
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
-  const { stats: globalStats, activity: allActivity, loading: dashLoading } = useDashboard()
-  const { projects, loading: projectsLoading } = useProjects()
-  const { waves, loading: wavesLoading } = useWaves()
-  const { embargos: allEmbargos, loading: embargosLoading } = useEmbargos()
+  const { stats: globalStats, activity: allActivity, loading: dashLoading } = useDashboard({ enabled: isPlatformLead })
+  const { projects, loading: projectsLoading } = useProjects({ home: true })
+  const { waves, loading: wavesLoading } = useWaves({ enabled: isPlatformLead })
+  const { embargos: allEmbargos, loading: embargosLoading } = useEmbargos({ enabled: isPlatformLead })
 
   const loading = dashLoading || projectsLoading || wavesLoading || embargosLoading
 

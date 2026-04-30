@@ -90,6 +90,7 @@ interface ProjectListItemApi {
   application_overview: ApplicationOverview | null
   approvals: ApprovalApi[]
   cloud_resources: CloudResourceApi[]
+  risks: RiskApi[]
 }
 
 interface ProjectApiResponse extends ProjectListItemApi {
@@ -171,7 +172,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     migrationConstraints: raw.migration_constraints ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
     applicationOverview: raw.application_overview ?? undefined,
-    risks: [],
+    risks: (raw.risks ?? []).map(mapRisk),
     approvals: (raw.approvals ?? []).map(mapApproval),
     currentInfrastructure: raw.cloud_resources?.length
       ? { resources: raw.cloud_resources.map(mapResource) }
@@ -210,6 +211,18 @@ export async function getProjects(): Promise<Project[]> {
 export async function getProjectsForUser(userId: string): Promise<Project[]> {
   if (USE_MOCK) { await delay(); return store.getProjectsForUser(userId) }
   const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}?userId=${userId}`)
+  return items.map(fromApiListItem)
+}
+
+export async function getProjectsHome(): Promise<Project[]> {
+  if (USE_MOCK) { await delay(); return store.getProjects() }
+  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}/home`)
+  return items.map(fromApiListItem)
+}
+
+export async function getProjectsHomeForUser(userId: string): Promise<Project[]> {
+  if (USE_MOCK) { await delay(); return store.getProjectsForUser(userId) }
+  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}/home?userId=${userId}`)
   return items.map(fromApiListItem)
 }
 

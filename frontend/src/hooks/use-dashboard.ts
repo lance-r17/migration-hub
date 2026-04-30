@@ -9,15 +9,17 @@ interface DashboardState {
   error: string | null
 }
 
-export function useDashboard(): DashboardState {
+export function useDashboard(options?: { enabled?: boolean }): DashboardState {
+  const enabled = options?.enabled !== false
   const [state, setState] = useState<DashboardState>({
     stats: undefined,
     activity: [],
-    loading: true,
+    loading: enabled,
     error: null,
   })
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
 
     Promise.all([getOverallStats(), getRecentActivity()])
@@ -33,7 +35,7 @@ export function useDashboard(): DashboardState {
       })
 
     return () => { cancelled = true }
-  }, [])
+  }, [enabled])
 
   return state
 }

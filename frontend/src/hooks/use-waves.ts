@@ -8,17 +8,19 @@ interface WavesState {
   error: string | null
 }
 
-export function useWaves(): WavesState & {
+export function useWaves(options?: { enabled?: boolean }): WavesState & {
   createWave: (data: Omit<Wave, 'id' | 'createdAt' | 'jiraEpicKey'>) => Promise<Wave>
   importWave: (epicKey: string, color?: string) => Promise<Wave>
 } {
+  const enabled = options?.enabled !== false
   const [state, setState] = useState<WavesState>({
     waves: [],
-    loading: true,
+    loading: enabled,
     error: null,
   })
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     getWaves()
       .then(waves => {
@@ -32,7 +34,7 @@ export function useWaves(): WavesState & {
         })
       })
     return () => { cancelled = true }
-  }, [])
+  }, [enabled])
 
   const handleCreate = useCallback(async (data: Omit<Wave, 'id' | 'createdAt' | 'jiraEpicKey'>) => {
     const wave = await createWave(data)
