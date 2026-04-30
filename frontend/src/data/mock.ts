@@ -72,6 +72,7 @@ export const mockProjects: Project[] = [
     migrationWave: 'Wave 3',
     waveId: 'wave-1',
     jiraBaseUrl: 'https://your-org.atlassian.net',
+    jiraStoryKey: 'MIG-10421',
     itso: 'Dan Brown, Platform Engineering',
     updatedAt: '21 MAR 2026',
     team: [
@@ -80,6 +81,13 @@ export const mockProjects: Project[] = [
       { id: 'u5', name: 'Carol White', initials: 'CW' },
       { id: 'u2', name: 'Dan Brown', initials: 'DB' },
     ],
+    planning: {
+      startDate: '2026-06-01',
+      endDate: '2026-09-30',
+      planStartDate: '2026-06-01',
+      planEndDate: '2026-09-30',
+      tasks: [],
+    },
 
     // Section 1
     applicationOverview: {
@@ -399,11 +407,19 @@ export const mockProjects: Project[] = [
     itso: 'Frank Miller, Platform Security',
     jiraTicket: 'JIRA-1829',
     jiraBaseUrl: 'https://your-org.atlassian.net',
+    jiraStoryKey: 'MIG-10203',
     updatedAt: '25 OCT 2025',
     team: [
       { id: 'u6', name: 'Eve Davis', initials: 'ED' },
       { id: 'u7', name: 'Frank Miller', initials: 'FM' },
     ],
+    planning: {
+      startDate: '2025-03-01',
+      endDate: '2025-08-15',
+      planStartDate: '2025-03-01',
+      planEndDate: '2025-08-15',
+      tasks: [],
+    },
 
     applicationOverview: {
       applicationName: 'User Auth Legacy',
@@ -542,9 +558,17 @@ export const mockProjects: Project[] = [
     progress: 12,
     stageProgress: { setup: 0, survey: 0, signoff: 0, migration: 0 },
     jiraBaseUrl: 'https://your-org.atlassian.net',
+    jiraStoryKey: 'MIG-10871',
     team: [
       { id: 'u8', name: 'Grace Lee', initials: 'GL' },
     ],
+    planning: {
+      startDate: '2026-07-01',
+      endDate: '2026-12-31',
+      estimatedStartDate: '2026-07-01',
+      estimatedEndDate: '2026-12-31',
+      tasks: [],
+    },
     risks: [],
   },
   {
@@ -557,12 +581,20 @@ export const mockProjects: Project[] = [
     migrationWave: 'Wave 2',
     waveId: 'wave-1',
     jiraBaseUrl: 'https://your-org.atlassian.net',
+    jiraStoryKey: 'MIG-10088',
     itso: 'Henry Wilson, Network Operations',
     updatedAt: '20 MAR 2026',
     team: [
       { id: 'u9', name: 'Henry Wilson', initials: 'HW' },
       { id: 'u10', name: 'Irene Cho', initials: 'IC' },
     ],
+    planning: {
+      startDate: '2026-04-01',
+      endDate: '2026-08-15',
+      planStartDate: '2026-04-01',
+      planEndDate: '2026-08-15',
+      tasks: [],
+    },
 
     applicationOverview: {
       applicationName: 'Global Edge DNS',

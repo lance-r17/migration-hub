@@ -88,6 +88,7 @@ interface ProjectListItemApi {
   planning: ProjectPlanning | null
   migration_constraints: MigrationConstraints | null
   migration_effort_estimation: MigrationEffortEstimation | null
+  application_overview: ApplicationOverview | null
   approvals: ApprovalApi[]
   cloud_resources: CloudResourceApi[]
 }
@@ -171,6 +172,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     stageProgress: raw.stage_progress ?? undefined,
     migrationConstraints: raw.migration_constraints ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
+    applicationOverview: raw.application_overview ?? undefined,
     risks: [],
     approvals: (raw.approvals ?? []).map(mapApproval),
     currentInfrastructure: raw.cloud_resources?.length

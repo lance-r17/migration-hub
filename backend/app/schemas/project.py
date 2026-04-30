@@ -38,6 +38,7 @@ class ProjectListItem(BaseModel):
     team: list[dict[str, Any]] = []
     migration_constraints: dict[str, Any] | None = None
     migration_effort_estimation: dict[str, Any] | None = None
+    application_overview: dict[str, Any] | None = None
     approvals: list[ApprovalOut] = []
     cloud_resources: list[CloudResourceOut] = []
 

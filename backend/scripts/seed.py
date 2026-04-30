@@ -110,6 +110,7 @@ def seed(session: Session, force: bool = False) -> None:
             nfrs=p.get("nfrs"),
             migration_constraints=p.get("migration_constraints"),
             target_architecture=p.get("target_architecture"),
+            planning=p.get("planning"),
         )
         session.add(project)
         session.flush()

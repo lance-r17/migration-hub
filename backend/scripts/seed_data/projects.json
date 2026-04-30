@@ -21,7 +21,9 @@
       },
       "applicationTier": "T0",
       "baId": "EIM-00421",
-      "systemImportanceClassification": ["IBS"],
+      "systemImportanceClassification": [
+        "IBS"
+      ],
       "iitaApplicability": true,
       "migrationStrategy": "Lift & Shift",
       "serviceLine": "Finance & Operations"
@@ -399,7 +401,15 @@
       "u3",
       "u4",
       "u5"
-    ]
+    ],
+    "planning": {
+      "startDate": "2026-06-01",
+      "endDate": "2026-09-30",
+      "planStartDate": "2026-06-01",
+      "planEndDate": "2026-09-30",
+      "tasks": []
+    },
+    "jira_story_key": "MIG-10421"
   },
   {
     "id": "M-11029",
@@ -600,7 +610,15 @@
       "u7",
       "u8",
       "u9"
-    ]
+    ],
+    "planning": {
+      "startDate": "2025-03-01",
+      "endDate": "2025-08-15",
+      "planStartDate": "2025-03-01",
+      "planEndDate": "2025-08-15",
+      "tasks": []
+    },
+    "jira_story_key": "MIG-10203"
   },
   {
     "id": "M-88271",
@@ -612,7 +630,15 @@
     "project_users": [
       "u8",
       "u11"
-    ]
+    ],
+    "planning": {
+      "startDate": "2026-07-01",
+      "endDate": "2026-12-31",
+      "estimatedStartDate": "2026-07-01",
+      "estimatedEndDate": "2026-12-31",
+      "tasks": []
+    },
+    "jira_story_key": "MIG-10871"
   },
   {
     "id": "M-77122",
@@ -635,7 +661,10 @@
       "businessFunction": "Authoritative DNS resolution for all public-facing services across APAC, EU, and US regions.",
       "businessOwnerId": "u12",
       "technicalLeadId": "u10",
-      "systemImportanceClassification": ["IBS", "BPS"],
+      "systemImportanceClassification": [
+        "IBS",
+        "BPS"
+      ],
       "iitaApplicability": false,
       "migrationStrategy": "Refactor",
       "serviceLine": "Network Operations"
@@ -823,6 +852,14 @@
       "u10",
       "u11",
       "u12"
-    ]
+    ],
+    "planning": {
+      "startDate": "2026-04-01",
+      "endDate": "2026-08-15",
+      "planStartDate": "2026-04-01",
+      "planEndDate": "2026-08-15",
+      "tasks": []
+    },
+    "jira_story_key": "MIG-10088"
   }
 ]

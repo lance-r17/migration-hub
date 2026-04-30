@@ -86,6 +86,7 @@ def _project_list_item(p) -> ProjectListItem:
         team=_team_from_project_users(p),
         migration_constraints=p.migration_constraints,
         migration_effort_estimation=p.migration_effort_estimation,
+        application_overview=p.application_overview,
         approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
         cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
     )

@@ -223,6 +223,10 @@ export interface PlanningTask {
 export interface ProjectPlanning {
   startDate: string
   endDate: string
+  planStartDate?: string
+  planEndDate?: string
+  estimatedStartDate?: string
+  estimatedEndDate?: string
   tasks: PlanningTask[]
 }
 

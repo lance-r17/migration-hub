@@ -12,11 +12,27 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
-import { TeamAvatars } from '@/components/shared/TeamAvatars'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
-import { getSignoffCompletionDate } from '@/utils/dates'
 import type { Project } from '@/types'
+
+function formatDate(value: string | undefined) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function getMigrationDates(project: Project) {
+  const p = project.planning
+  const start = p?.planStartDate ?? p?.estimatedStartDate ?? p?.startDate
+  const end = p?.planEndDate ?? p?.estimatedEndDate ?? p?.endDate
+  return { start, end }
+}
 
 function getProgressVariant(project: Project) {
   if (project.progress === 100) return 'tertiary'
@@ -79,10 +95,12 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ID</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Progress</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Wave</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ITSO</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Team</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Signoff Date</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">BPS</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">IBS</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">IITA</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Period</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Story</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -90,14 +108,14 @@ export function ProjectsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 9 }).map((_, j) => (
+                    {Array.from({ length: 10 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : projects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={10} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -131,24 +149,38 @@ export function ProjectsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {project.migrationWave ?? project.waveId ?? '—'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
                       {project.itso ?? '—'}
                     </TableCell>
-                    <TableCell>
-                      <TeamAvatars members={project.team} max={3} size="h-6 w-6" />
+                    <TableCell className="text-sm text-muted-foreground">
+                      {project.applicationOverview?.systemImportanceClassification?.includes('BPS') ? 'Yes' : 'No'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {project.applicationOverview?.systemImportanceClassification?.includes('IBS') ? 'Yes' : 'No'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {project.applicationOverview?.iitaApplicability ? 'Yes' : 'No'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {(() => {
-                        const d = getSignoffCompletionDate(project)
-                        if (!d) return '—'
-                        return d.toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
+                        const { start, end } = getMigrationDates(project)
+                        if (!start && !end) return '—'
+                        return `${formatDate(start)} → ${formatDate(end)}`
                       })()}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {project.jiraStoryKey && project.jiraBaseUrl ? (
+                        <a
+                          href={`${project.jiraBaseUrl}/browse/${project.jiraStoryKey}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {project.jiraStoryKey}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <button
