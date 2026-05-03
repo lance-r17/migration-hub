@@ -18,6 +18,7 @@
   - [API Reference](backend/api.md)
   - [Database](backend/database.md)
   - [Samples](backend/samples.md)
+  - [Batch Integration Guide](backend/batch-integration-guide.md)
 
 - **Shared**
   - [Data Model](shared/data-model.md)
