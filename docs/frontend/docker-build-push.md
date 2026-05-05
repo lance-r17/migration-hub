@@ -9,6 +9,7 @@
 | Build & push to Nexus | `./build-push-nexus.sh` |
 | Build & push with custom tag | `./build-push-nexus.sh -t v1.2.3` |
 | Build only (skip push) | `./build-push-nexus.sh --build-only` |
+| Pass build args from env vars | `./build-push-nexus.sh --build-arg BUILD_IMAGE="$BUILD_IMAGE" --build-arg RUNTIME_IMAGE="$RUNTIME_IMAGE"` |
 
 ## Dockerfile
 
@@ -214,6 +215,11 @@ IMAGE_TAG=latest
 
 # Use a different env file
 ./build-push-nexus.sh -e /path/to/prod.env
+
+# Pass build arguments from environment variables
+export BUILD_IMAGE=node:22-alpine
+export RUNTIME_IMAGE=cgr.dev/chainguard/nginx:latest
+./build-push-nexus.sh --build-arg BUILD_IMAGE="$BUILD_IMAGE" --build-arg RUNTIME_IMAGE="$RUNTIME_IMAGE"
 ```
 
 ### What the script does

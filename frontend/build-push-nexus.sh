@@ -16,10 +16,11 @@ Usage: $(basename "$0") [OPTIONS]
 Build the frontend Docker image and push it to a Nexus Docker registry.
 
 Options:
-  -e, --env-file FILE   Path to environment file (default: .env.nexus)
-  -t, --tag TAG         Override the image tag
-  --build-only          Build the image only; do not push
-  -h, --help            Show this help message
+  -e, --env-file FILE      Path to environment file (default: .env.nexus)
+  -t, --tag TAG            Override the image tag
+  --build-arg KEY=VALUE    Pass a build argument to docker build (can be used multiple times)
+  --build-only             Build the image only; do not push
+  -h, --help               Show this help message
 
 Environment file variables (build-time / image config):
   BUILD_IMAGE           Build-stage base image (default: node:20-alpine)
@@ -48,6 +49,7 @@ EOF
 }
 
 # Parse CLI args
+CLI_BUILD_ARGS=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -e|--env-file)
@@ -56,6 +58,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -t|--tag)
             CLI_TAG="$2"
+            shift 2
+            ;;
+        --build-arg)
+            CLI_BUILD_ARGS+=("--build-arg" "$2")
             shift 2
             ;;
         --build-only)
@@ -177,6 +183,8 @@ BUILD_ARGS=()
 [[ -n "${VITE_OIDC_CLIENT_ID:-}" ]]     && BUILD_ARGS+=("--build-arg" "VITE_OIDC_CLIENT_ID=${VITE_OIDC_CLIENT_ID}")
 [[ -n "${VITE_OIDC_REDIRECT_URI:-}" ]]  && BUILD_ARGS+=("--build-arg" "VITE_OIDC_REDIRECT_URI=${VITE_OIDC_REDIRECT_URI}")
 [[ -n "${VITE_ALLOWED_HOSTS:-}" ]]     && BUILD_ARGS+=("--build-arg" "VITE_ALLOWED_HOSTS=${VITE_ALLOWED_HOSTS}")
+# Append CLI build args so they override env file values (last one wins in docker build)
+BUILD_ARGS+=("${CLI_BUILD_ARGS[@]}")
 
 echo ""
 echo "Building Docker image: ${FULL_IMAGE_REF} ..."

@@ -16,10 +16,11 @@ Usage: $(basename "$0") [OPTIONS]
 Build the backend Docker image and push it to a Nexus Docker registry.
 
 Options:
-  -e, --env-file FILE   Path to environment file (default: .env.nexus)
-  -t, --tag TAG         Override the image tag
-  --build-only          Build the image only; do not push
-  -h, --help            Show this help message
+  -e, --env-file FILE      Path to environment file (default: .env.nexus)
+  -t, --tag TAG            Override the image tag
+  --build-arg KEY=VALUE    Pass a build argument to docker build (can be used multiple times)
+  --build-only             Build the image only; do not push
+  -h, --help               Show this help message
 
 Environment file variables:
   BUILD_IMAGE           Build-stage base image (default: python:3.12-slim)
@@ -35,6 +36,7 @@ EOF
 }
 
 # Parse CLI args
+CLI_BUILD_ARGS=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -e|--env-file)
@@ -43,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -t|--tag)
             CLI_TAG="$2"
+            shift 2
+            ;;
+        --build-arg)
+            CLI_BUILD_ARGS+=("--build-arg" "$2")
             shift 2
             ;;
         --build-only)
@@ -155,6 +161,8 @@ fi
 BUILD_ARGS=()
 [[ -n "$BUILD_IMAGE" ]]   && BUILD_ARGS+=("--build-arg" "BUILD_IMAGE=${BUILD_IMAGE}")
 [[ -n "$RUNTIME_IMAGE" ]] && BUILD_ARGS+=("--build-arg" "RUNTIME_IMAGE=${RUNTIME_IMAGE}")
+# Append CLI build args so they override env file values (last one wins in docker build)
+BUILD_ARGS+=("${CLI_BUILD_ARGS[@]}")
 
 echo ""
 echo "Building Docker image: ${FULL_IMAGE_REF} ..."
