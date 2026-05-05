@@ -23,7 +23,8 @@ from app.schemas.service_account import (
     ServiceAccountTokenReset,
     ServiceAccountUpdate,
 )
-from app.services import attachment_service
+from app.schemas.user import BatchUserCreateRequest, BatchUserCreateResponse, UserOut
+from app.services import attachment_service, user_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -200,3 +201,38 @@ async def bulk_delete_attachments(
         deleted=result["deleted"],
         not_found=result["not_found"],
     )
+
+
+@router.post("/users/batch", response_model=BatchUserCreateResponse, status_code=201)
+async def batch_create_users(
+    body: BatchUserCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Batch create human users. Existing users (matched by email) are skipped,
+    but their records are still returned so callers can collect IDs.
+    """
+    created = 0
+    skipped = 0
+    result_users: list[User] = []
+    seen_emails: set[str] = set()
+
+    for u in body.users:
+        email = u.email.lower()
+        if email in seen_emails:
+            continue
+        seen_emails.add(email)
+
+        user, was_created = await user_service.ensure_user(db, u.model_dump())
+        result_users.append(user)
+        if was_created:
+            created += 1
+        else:
+            skipped += 1
+
+    return BatchUserCreateResponse(
+        created=created,
+        skipped=skipped,
+        users=[UserOut.model_validate(u) for u in result_users],
+    )
+

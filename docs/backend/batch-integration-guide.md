@@ -130,6 +130,54 @@ batch_create_projects(PROJECT_CSV)
 
 ---
 
+## Scenario 1b — Batch ensure users exist (one-off or regular refresh)
+
+Before governance roles can be assigned, the target users must exist in the Migration Hub directory. `POST /admin/users/batch` creates any missing users and returns the full user record for every entry — including those that were skipped because they already exist.
+
+> **Authorization:** This endpoint requires an **admin** role. If your service account is not an admin, perform this step with an admin user’s JWT or create an admin-scoped service account first.
+
+```python
+import csv
+
+USER_CSV = """
+name,email,department,team
+Alice Lead,alice.lead@example.com,Engineering,Platform
+Bob Owner,bob.owner@example.com,Product,Strategy
+Charlie ITSO,charlie.itso@example.com,Security,Compliance
+""".strip()
+
+
+def batch_ensure_users(csv_text: str) -> dict[str, dict]:
+    """Upsert users from CSV and return a mapping email -> user dict."""
+    rows = list(csv.DictReader(csv_text.splitlines()))
+    payload = {
+        "users": [
+            {
+                "name": r["name"],
+                "email": r["email"],
+                "department": r["department"],
+                "team": r.get("team") or None,
+            }
+            for r in rows
+        ]
+    }
+    result = client.post("/admin/users/batch", json=payload)
+    print(f"  USERS created={result['created']} skipped={result['skipped']}")
+    return {u["email"].lower(): u for u in result["users"]}
+
+
+user_map = batch_ensure_users(USER_CSV)
+```
+
+**Key points**
+- `id` is optional in the request; when omitted the backend generates one (`usr-{uuid}`).
+- `initials` are auto-derived from `name` if not supplied.
+- The `role` field on `User` is for **global roles** only (e.g. `admin`, `platform_migration_lead`). Governance roles such as `technical_lead`, `business_owner`, and `itso` are assigned per-project in Scenario 2 — do not set them here.
+- Duplicate emails within the same batch are deduplicated automatically.
+- The response `users` array preserves the same order as the request (minus duplicates), so you can reliably collect IDs for downstream governance assignment.
+
+---
+
 ## Scenario 2 — Batch update application overview and assign governance roles (regular refresh)
 
 Run this periodically to keep project metadata and team assignments in sync with your CMDB or identity store.
@@ -140,18 +188,12 @@ This scenario performs three operations per project:
 3. Assign project-level roles (`itso`, plus any additional roles) via `project-user-roles`.
 
 ```python
-def get_user_by_email(client: MigrationHubClient, email: str) -> dict | None:
-    users = client.get("/users")
-    for u in users:
-        if u["email"].lower() == email.lower():
-            return u
-    return None
-
-
-# Pre-resolve user IDs from email addresses
-lead_user = get_user_by_email(client, "alice.lead@example.com")
-owner_user = get_user_by_email(client, "bob.owner@example.com")
-itso_user = get_user_by_email(client, "charlie.itso@example.com")
+# Resolve users from the batch-ensure step (Scenario 1b)
+# If you skipped Scenario 1b because the users already exist, you can look them up
+# with GET /users and match by email instead.
+lead_user = user_map.get("alice.lead@example.com")
+owner_user = user_map.get("bob.owner@example.com")
+itso_user = user_map.get("charlie.itso@example.com")
 
 def refresh_project_metadata(project_id: str):
     print(f"Refreshing {project_id} ...")
@@ -371,6 +413,7 @@ Combine all four scenarios into a single runnable script:
 
 Scenario order:
   1. Create projects (one-off)
+  1b. Ensure users exist (one-off or regular)
   2. Refresh metadata + governance (regular)
   3. Add discovered resources (on-demand)
   4. Update resource state post-migration (on-demand)
@@ -436,6 +479,17 @@ def main():
                 else:
                     raise
 
+        # 1b. Ensure governance users exist (admin role required)
+        user_result = client.post("/admin/users/batch", json={
+            "users": [
+                {"name": "Alice Lead", "email": "alice.lead@example.com", "department": "Engineering"},
+                {"name": "Bob Owner", "email": "bob.owner@example.com", "department": "Product"},
+                {"name": "Charlie ITSO", "email": "charlie.itso@example.com", "department": "Security"},
+            ]
+        })
+        user_map = {u["email"].lower(): u for u in user_result["users"]}
+        print(f"USERS ensured: created={user_result['created']} skipped={user_result['skipped']}")
+
         # 2. Refresh metadata + governance
         for pid in ["acme-123456-appone-prod", "acme-123456-appone-dev"]:
             client.patch(
@@ -443,6 +497,27 @@ def main():
                 json={"value": {"applicationName": "App One", "baId": "123456"}},
             )
             print(f"OVERVIEW {pid}")
+
+            # Governance roles (requires platform_migration_lead role)
+            lead = user_map.get("alice.lead@example.com")
+            owner = user_map.get("bob.owner@example.com")
+            itso = user_map.get("charlie.itso@example.com")
+            if lead and owner:
+                client.put(
+                    f"/projects/{pid}/governance-roles",
+                    json={"technicalLeadId": lead["id"], "businessOwnerId": owner["id"]},
+                )
+            # Project-user roles (service-account only)
+            assignments = []
+            if itso:
+                assignments.append({"user_id": itso["id"], "roles": ["itso"]})
+            if lead:
+                assignments.append({"user_id": lead["id"], "roles": ["technical_lead", "itso"]})
+            if owner:
+                assignments.append({"user_id": owner["id"], "roles": ["business_owner"]})
+            if assignments:
+                client.put(f"/projects/{pid}/project-user-roles", json=assignments)
+            print(f"GOVERNANCE {pid}")
 
         # 3. Add resources
         client.patch(

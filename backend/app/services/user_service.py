@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,6 +60,37 @@ async def create_user(session: AsyncSession, user: User) -> User:
     await session.commit()
     await session.refresh(user)
     return user
+
+
+def _derive_initials(name: str) -> str:
+    """Derive initials from a full name (first letter of each word, uppercased)."""
+    return "".join(part[0].upper() for part in name.split() if part)
+
+
+async def ensure_user(session: AsyncSession, user_data: dict) -> tuple[User, bool]:
+    """Return existing user by email, or create a new one if not found.
+
+    Returns (user, was_created).
+    user_data keys: id, name, email, department, team, initials, role
+    """
+    email = user_data["email"]
+    existing = await get_by_email(session, email)
+    if existing:
+        return existing, False
+
+    name = user_data["name"]
+    initials = user_data.get("initials") or _derive_initials(name)
+    user = User(
+        id=user_data.get("id") or f"usr-{uuid.uuid4().hex[:8]}",
+        name=name,
+        email=email,
+        department=user_data["department"],
+        team=user_data.get("team"),
+        initials=initials,
+        role=user_data.get("role"),
+    )
+    created = await create_user(session, user)
+    return created, True
 
 
 async def sync_user_projects(

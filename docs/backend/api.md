@@ -389,6 +389,52 @@ Revokes a service account's API key by clearing its hash. The user row is retain
 
 ---
 
+### `POST /api/v1/admin/users/batch`
+
+Batch create human users. Existing users matched by `email` are skipped, but their full records (including `id`) are still returned so callers can use them for downstream governance assignment.
+
+**Request body:**
+```json
+{
+  "users": [
+    {
+      "id": "optional-custom-id",
+      "name": "Alice Lead",
+      "email": "alice.lead@example.com",
+      "department": "Engineering",
+      "team": "Platform",
+      "initials": "AL",
+      "role": "technical_lead"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "created": 1,
+  "skipped": 0,
+  "users": [
+    {
+      "id": "usr-a1b2c3d4",
+      "name": "Alice Lead",
+      "email": "alice.lead@example.com",
+      "department": "Engineering",
+      "team": "Platform",
+      "initials": "AL",
+      "role": "technical_lead"
+    }
+  ]
+}
+```
+
+**Authorization:** Admin role required (`require_admin`).
+
+**Idempotency:** Re-running the same payload increments `skipped` instead of failing.
+
+---
+
 ## Waves
 
 ### `GET /api/v1/waves`
