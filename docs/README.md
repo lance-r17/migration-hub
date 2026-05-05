@@ -12,6 +12,7 @@
 | [frontend/components.md](frontend/components.md) | Component inventory with props and usage guidance |
 | [frontend/best-practices.md](frontend/best-practices.md) | Patterns: section saves, drawers, audit logging, RBAC |
 | [frontend/testing.md](frontend/testing.md) | Playwright E2E test suite — structure, auth fixture, running tests, CI |
+| [frontend/docker-build-push.md](frontend/docker-build-push.md) | Docker image build, multi-stage Dockerfile, Nexus registry push |
 | **backend/** | |
 | [backend/overview.md](backend/overview.md) | Backend structure and design principles (Python/FastAPI) |
 | [backend/api.md](backend/api.md) | REST API endpoint reference derived from frontend services |

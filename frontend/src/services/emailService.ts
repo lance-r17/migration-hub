@@ -7,6 +7,7 @@ import {
   createBlankTemplate,
 } from '@/data/emailTemplates'
 import { USE_MOCK } from './client'
+import { getEmailServerUrl } from '@/runtimeConfig'
 
 const delay = (ms = 300) => new Promise(res => setTimeout(res, ms))
 
@@ -76,7 +77,7 @@ export interface SendTestEmailPayload {
 }
 
 export async function sendTestEmail(payload: SendTestEmailPayload): Promise<void> {
-  const emailServerUrl = import.meta.env.VITE_EMAIL_SERVER_URL as string | undefined
+  const emailServerUrl = getEmailServerUrl()
   if (emailServerUrl) {
     const res = await fetch(`${emailServerUrl}/api/v1/email-templates/send-test`, {
       method: 'POST',

@@ -12,6 +12,7 @@
   - [Components](frontend/components.md)
   - [Best Practices](frontend/best-practices.md)
   - [Testing](frontend/testing.md)
+  - [Docker Build & Push](frontend/docker-build-push.md)
 
 - **Backend**
   - [Overview](backend/overview.md)

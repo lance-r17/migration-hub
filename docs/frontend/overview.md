@@ -104,3 +104,23 @@ npm run build   # tsc -b && vite build → dist/
 ```
 
 TypeScript strict mode is enabled. The build fails on type errors. No `any` escape hatches in production code.
+
+## Docker build & push
+
+See [docker-build-push.md](docker-build-push.md) for building the frontend Docker image and pushing to a Nexus registry.
+
+Quick local build:
+
+```bash
+docker build -t migration-hub-frontend:latest .
+```
+
+Run locally:
+
+```bash
+docker run -d -p 8080:8080 migration-hub-frontend:latest
+```
+
+> **Note:** The Docker build uses `npx vite build` directly (skipping `tsc -b`) because the codebase currently has pre-existing TypeScript errors. Fix the type errors to restore `npm run build` in the Dockerfile.
+>
+> The builder stage installs nginx and copies it (binary + all shared libraries) into the runtime image, so you can use a distroless or hardened runtime. The builder and runtime must use the same C library (musl or glibc).
