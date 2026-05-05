@@ -1,35 +1,21 @@
 // ─── Runtime Configuration ───────────────────────────────────────────────────
 //
-// Fetches /config.json on startup and merges it with build-time VITE_* env vars.
-// Priority: runtime config.json > Vite build-time env > undefined.
+// Reads window.__ENV__ injected by the Go entrypoint binary at container startup.
+// Priority: runtime window.__ENV__ > Vite build-time env > undefined.
 //
+// The Go entrypoint reads environment variables and injects them into index.html
+// as a synchronous <script>window.__ENV__={...}</script> before nginx starts.
 // This allows a single Docker image to be deployed to any environment without
-// rebuilding. Set environment variables on the container; the entrypoint script
-// writes them to /usr/share/nginx/html/config.json before nginx starts.
+// rebuilding, and works in distroless images that have no shell.
 
-let runtimeConfig: Record<string, string> | null = null
-
-/** Fetch config.json from the server. Call once before rendering. */
-export async function loadRuntimeConfig(): Promise<void> {
-  try {
-    // Cache-bust to ensure we get the latest config.json
-    const res = await fetch(`/config.json?${Date.now()}`)
-    if (res.ok) {
-      const data = await res.json()
-      if (data && typeof data === 'object') {
-        runtimeConfig = data as Record<string, string>
-      }
-    }
-  } catch {
-    // config.json not available — fall back to build-time env vars only
+declare global {
+  interface Window {
+    __ENV__?: Record<string, string>
   }
 }
 
-/** Get a config value. Runtime config takes priority over build-time Vite env.
- *  null and empty strings are treated as "not set" so build-time values win.
- */
 function env(key: string): string | undefined {
-  const runtime = runtimeConfig?.[key]
+  const runtime = window.__ENV__?.[key]
   if (runtime !== undefined && runtime !== null && runtime !== '') {
     return runtime
   }

@@ -23,17 +23,9 @@ Options:
   -h, --help               Show this help message
 
 Environment file variables (build-time / image config):
-  BUILD_IMAGE           Build-stage base image (default: node:20-alpine)
-  RUNTIME_IMAGE         Runtime base image (default: nginx:alpine)
-  VITE_API_BASE_URL     Backend API base URL (baked into the bundle — legacy)
-  VITE_EMAIL_SERVER_URL Email server URL (baked into the bundle — legacy)
-  VITE_OAUTH_SERVICE_URL OAuth service URL (baked into the bundle — legacy)
-  VITE_OAUTH_CLIENT_ID  OAuth client ID (baked into the bundle — legacy)
-  VITE_OAUTH_REDIRECT_URI OAuth redirect URI (baked into the bundle — legacy)
-  VITE_OIDC_ISSUER      OIDC issuer URL (baked into the bundle — legacy)
-  VITE_OIDC_CLIENT_ID   OIDC client ID (baked into the bundle — legacy)
-  VITE_OIDC_REDIRECT_URI OIDC redirect URI (baked into the bundle — legacy)
-  VITE_ALLOWED_HOSTS    Comma-separated allowed hosts for Vite dev server
+  BUILD_IMAGE           Build-stage base image (default: node:20-slim)
+  RUNTIME_IMAGE         Runtime base image (default: gcr.io/distroless/base)
+  GO_BUILD_IMAGE        Go build-stage image (default: golang:1.22-bookworm)
   NEXUS_HOST            Nexus server hostname (required)
   NEXUS_REPO            Nexus Docker repository name (required)
   NEXUS_NAMESPACE       Optional namespace/path within the repository
@@ -44,7 +36,8 @@ Environment file variables (build-time / image config):
 
 Runtime config (no rebuild needed):
   Set API_BASE_URL, OAUTH_SERVICE_URL, etc. on `docker run`.
-  The entrypoint writes them to config.json on startup.
+  The Go entrypoint binary injects them into index.html as window.__ENV__
+  before starting nginx. Works in distroless images with no shell.
 EOF
 }
 
@@ -98,6 +91,7 @@ fi
 BUILD_ONLY="${BUILD_ONLY:-false}"
 BUILD_IMAGE="${BUILD_IMAGE:-}"
 RUNTIME_IMAGE="${RUNTIME_IMAGE:-}"
+GO_BUILD_IMAGE="${GO_BUILD_IMAGE:-}"
 NEXUS_HOST="${NEXUS_HOST:-}"
 NEXUS_REPO="${NEXUS_REPO:-}"
 NEXUS_NAMESPACE="${NEXUS_NAMESPACE:-}"
@@ -142,8 +136,9 @@ echo "========================================"
 echo "Docker Build & Push Configuration"
 echo "========================================"
 echo "  Build context:   ${SCRIPT_DIR}"
-[[ -n "$BUILD_IMAGE" ]]   && echo "  Build image:     ${BUILD_IMAGE}"
-[[ -n "$RUNTIME_IMAGE" ]] && echo "  Runtime image:   ${RUNTIME_IMAGE}"
+[[ -n "$BUILD_IMAGE" ]]     && echo "  Build image:     ${BUILD_IMAGE}"
+[[ -n "$RUNTIME_IMAGE" ]]   && echo "  Runtime image:   ${RUNTIME_IMAGE}"
+[[ -n "$GO_BUILD_IMAGE" ]]  && echo "  Go build image:  ${GO_BUILD_IMAGE}"
 echo "  Nexus host:      ${NEXUS_HOST}"
 echo "  Nexus repo:      ${NEXUS_REPO}"
 echo "  Image name:      ${FULL_IMAGE_NAME}"
@@ -174,15 +169,7 @@ fi
 BUILD_ARGS=()
 [[ -n "$BUILD_IMAGE" ]]           && BUILD_ARGS+=("--build-arg" "BUILD_IMAGE=${BUILD_IMAGE}")
 [[ -n "$RUNTIME_IMAGE" ]]         && BUILD_ARGS+=("--build-arg" "RUNTIME_IMAGE=${RUNTIME_IMAGE}")
-[[ -n "${VITE_API_BASE_URL:-}" ]]       && BUILD_ARGS+=("--build-arg" "VITE_API_BASE_URL=${VITE_API_BASE_URL}")
-[[ -n "${VITE_EMAIL_SERVER_URL:-}" ]]   && BUILD_ARGS+=("--build-arg" "VITE_EMAIL_SERVER_URL=${VITE_EMAIL_SERVER_URL}")
-[[ -n "${VITE_OAUTH_SERVICE_URL:-}" ]]  && BUILD_ARGS+=("--build-arg" "VITE_OAUTH_SERVICE_URL=${VITE_OAUTH_SERVICE_URL}")
-[[ -n "${VITE_OAUTH_CLIENT_ID:-}" ]]    && BUILD_ARGS+=("--build-arg" "VITE_OAUTH_CLIENT_ID=${VITE_OAUTH_CLIENT_ID}")
-[[ -n "${VITE_OAUTH_REDIRECT_URI:-}" ]] && BUILD_ARGS+=("--build-arg" "VITE_OAUTH_REDIRECT_URI=${VITE_OAUTH_REDIRECT_URI}")
-[[ -n "${VITE_OIDC_ISSUER:-}" ]]        && BUILD_ARGS+=("--build-arg" "VITE_OIDC_ISSUER=${VITE_OIDC_ISSUER}")
-[[ -n "${VITE_OIDC_CLIENT_ID:-}" ]]     && BUILD_ARGS+=("--build-arg" "VITE_OIDC_CLIENT_ID=${VITE_OIDC_CLIENT_ID}")
-[[ -n "${VITE_OIDC_REDIRECT_URI:-}" ]]  && BUILD_ARGS+=("--build-arg" "VITE_OIDC_REDIRECT_URI=${VITE_OIDC_REDIRECT_URI}")
-[[ -n "${VITE_ALLOWED_HOSTS:-}" ]]     && BUILD_ARGS+=("--build-arg" "VITE_ALLOWED_HOSTS=${VITE_ALLOWED_HOSTS}")
+[[ -n "$GO_BUILD_IMAGE" ]]        && BUILD_ARGS+=("--build-arg" "GO_BUILD_IMAGE=${GO_BUILD_IMAGE}")
 # Append CLI build args so they override env file values (last one wins in docker build)
 BUILD_ARGS+=("${CLI_BUILD_ARGS[@]}")
 

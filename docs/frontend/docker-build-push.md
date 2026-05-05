@@ -5,11 +5,11 @@
 | Step | Command |
 |---|---|
 | Build image locally | `docker build -t migration-hub-frontend:latest .` |
-| Build with custom base images | `docker build --build-arg BUILD_IMAGE=node:20-alpine --build-arg RUNTIME_IMAGE=nginx:alpine -t migration-hub-frontend:latest .` |
+| Build with custom base images | `docker build --build-arg BUILD_IMAGE=node:20-slim --build-arg RUNTIME_IMAGE=gcr.io/distroless/base --build-arg GO_BUILD_IMAGE=golang:1.22-bookworm -t migration-hub-frontend:latest .` |
 | Build & push to Nexus | `./build-push-nexus.sh` |
 | Build & push with custom tag | `./build-push-nexus.sh -t v1.2.3` |
 | Build only (skip push) | `./build-push-nexus.sh --build-only` |
-| Pass build args from env vars | `./build-push-nexus.sh --build-arg BUILD_IMAGE="$BUILD_IMAGE" --build-arg RUNTIME_IMAGE="$RUNTIME_IMAGE"` |
+| Pass build args from env vars | `./build-push-nexus.sh --build-arg BUILD_IMAGE="$BUILD_IMAGE" --build-arg RUNTIME_IMAGE="$RUNTIME_IMAGE" --build-arg GO_BUILD_IMAGE="$GO_BUILD_IMAGE"` |
 
 ## Dockerfile
 
@@ -18,61 +18,76 @@ The frontend `Dockerfile` uses a **multi-stage build** with configurable base im
 ```dockerfile
 # syntax=docker/dockerfile:1
 
-ARG BUILD_IMAGE=node:20-alpine
-ARG RUNTIME_IMAGE=nginx:alpine
+ARG BUILD_IMAGE=node:20-slim
+ARG RUNTIME_IMAGE=gcr.io/distroless/base
+ARG GO_BUILD_IMAGE=golang:1.22-bookworm
 
-FROM ${BUILD_IMAGE} AS builder
+FROM ${BUILD_IMAGE} AS frontend-builder
 WORKDIR /app
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nginx && \
+    rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-ARG VITE_API_BASE_URL=
-# ... other VITE_* args
 RUN npx vite build
 
+FROM ${GO_BUILD_IMAGE} AS go-builder
+WORKDIR /build
+COPY cmd/init/go.mod cmd/init/main.go ./
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /entrypoint .
+
 FROM ${RUNTIME_IMAGE}
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+COPY --from=go-builder /entrypoint /entrypoint
+COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 8080
+ENTRYPOINT ["/entrypoint"]
+CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
 ```
 
 Key points:
 - **Multi-stage**: the `builder` stage installs nginx, compiles the Vite bundle, and assembles a complete rootfs with nginx + all shared libraries. The runtime stage receives only the rootfs and static files — no Node.js, no package manager, no shell.
-- **Configurable base images**: both `BUILD_IMAGE` and `RUNTIME_IMAGE` are set via `ARG` and can be overridden at build time.
+- **Configurable base images**: `BUILD_IMAGE`, `RUNTIME_IMAGE`, and `GO_BUILD_IMAGE` are set via `ARG` and can be overridden at build time.
 - **Builder installs nginx**: nginx is installed in the builder (the only stage with a package manager) and copied — binary, config, mime.types, and every shared library — into the runtime. This lets you use a distroless or hardened runtime image that has no package manager.
+- **Go builder**: a separate stage compiles the `entrypoint` Go binary. The Go builder image is independent of the frontend builder and runtime, so you can use an internal Go mirror (e.g. `your-registry/golang:1.22-alpine`) without affecting nginx compatibility.
 - `package*.json` is copied and installed **before** the rest of the source so Docker layer caching works for dependency-only changes.
-- `VITE_*` environment variables are passed as `ARG` and baked into the bundle at **build time** (Vite replaces `import.meta.env` at compile time).
 - `.dockerignore` excludes `node_modules`, `dist`, `.env`, test files, and editor configs from the build context.
 
 ### Choosing base images
 
-**Critical compatibility rule:** `BUILD_IMAGE` and `RUNTIME_IMAGE` must use the **same C library** (libc). The nginx binary and shared libraries copied from the builder won't work in a runtime with a different libc.
+**Critical compatibility rule:** `BUILD_IMAGE` and `RUNTIME_IMAGE` must use the **same C library** (libc). The nginx binary and shared libraries copied from the builder won't work in a runtime with a different libc. `GO_BUILD_IMAGE` is **independent** — any Go image works because the binary is statically linked (`CGO_ENABLED=0`).
 
 | C library | Builder | Runtime |
 |---|---|---|
 | musl (Alpine) | `node:20-alpine` | `nginx:alpine`, `cgr.dev/chainguard/nginx`, or your Alpine-based `distroless-base` |
 | glibc (Debian) | `node:20-slim` | `gcr.io/distroless/cc`, or your Debian-based `distroless-base` |
 
-The default is Alpine (musl):
+The default is glibc (Debian) for distroless compatibility:
 
-| Build image | Runtime image |
-|---|---|
-| `node:20-alpine` | `nginx:alpine` |
-| `node:20-alpine` | `cgr.dev/chainguard/nginx:latest` |
-| `node:20-alpine` | `your-registry/distroless-base:latest` |
+| Build image | Runtime image | Go build image |
+|---|---|---|
+| `node:20-slim` | `gcr.io/distroless/base` | `golang:1.22-bookworm` |
+| `node:20-slim` | `gcr.io/distroless/cc` | `golang:1.22-alpine` |
+
+If you prefer Alpine (musl):
+
+| Build image | Runtime image | Go build image |
+|---|---|---|
+| `node:20-alpine` | `nginx:alpine` | `golang:1.22-alpine` |
+| `node:20-alpine` | `cgr.dev/chainguard/nginx:latest` | `golang:1.22-bookworm` |
 
 If your `distroless-base` is **glibc-based** (Debian), switch the builder to `node:20-slim` and install nginx via `apt-get` instead of `apk` (see Dockerfile comments).
 
 ## Runtime configuration (recommended)
 
-The frontend supports **runtime configuration** via `config.json`. Instead of baking `VITE_*` variables into the bundle at build time, the app fetches `/config.json` on startup and uses those values. This allows a **single Docker image** to be deployed to any environment without rebuilding.
+The frontend supports **runtime configuration** via a synchronous `window.__ENV__` object injected into `index.html` at container startup. Instead of baking `VITE_*` variables into the bundle at build time, the app reads the injected object directly. This allows a **single Docker image** to be deployed to any environment without rebuilding.
 
 ### How it works
 
-1. The `entrypoint.sh` script runs when the container starts, reading environment variables and writing them to `/usr/share/nginx/html/config.json`.
-2. The frontend fetches `config.json` before rendering and uses the values for all API, OAuth, and OIDC configuration.
-3. If `config.json` is missing or a key is absent, the app falls back to build-time `VITE_*` env vars (for backward compatibility during local dev).
+1. A small **Go init binary** (`/entrypoint`) runs when the container starts. It reads environment variables, serializes them to JSON, and injects a `<script>window.__ENV__={...}</script>` block into `/usr/share/nginx/html/index.html`.
+2. The frontend reads `window.__ENV__` synchronously — no async fetch, no race conditions, no loading state needed.
+3. The Go binary then `exec`s nginx, replacing itself so nginx becomes PID 1. This works in **distroless images that have no shell**.
 
 ### Environment variables (runtime)
 
@@ -98,37 +113,9 @@ docker run -d \
   migration-hub-frontend:latest
 ```
 
-### Example: mount config.json directly (distroless runtimes)
+### Why Go instead of a shell script?
 
-For runtime images without a shell, skip `entrypoint.sh` and mount `config.json` directly:
-
-```bash
-cat > config.json <<'EOF'
-{
-  "VITE_API_BASE_URL": "https://api.company.com",
-  "VITE_OAUTH_SERVICE_URL": "https://auth.company.com",
-  "VITE_OAUTH_CLIENT_ID": "migration-hub",
-  "VITE_OAUTH_REDIRECT_URI": "https://app.company.com/callback"
-}
-EOF
-
-docker run -d \
-  -v "$(pwd)/config.json:/usr/share/nginx/html/config.json:ro" \
-  -p 8080:8080 \
-  migration-hub-frontend:latest
-```
-
-## Build-time environment variables (legacy)
-
-If you prefer the traditional approach, `VITE_*` variables can still be baked into the bundle at build time via `--build-arg`. They cannot be changed after the image is built.
-
-```bash
-docker build \
-  --build-arg VITE_API_BASE_URL=http://localhost:8000 \
-  -t migration-hub-frontend:latest .
-```
-
-> **Recommendation:** Use runtime configuration (environment variables on `docker run`) for deployments. Use build-time args only for local development or CI pipelines where you want to validate the build with specific values.
+`gcr.io/distroless/base` has no `/bin/sh`, so a traditional `entrypoint.sh` cannot run. A statically-linked Go binary needs no shell, no libc, and no package manager — it is the standard pattern for init containers in distroless runtimes.
 
 ## Manual build
 
@@ -140,7 +127,7 @@ docker build -t migration-hub-frontend:latest .
 
 # Custom base images via --build-arg
 docker build \
-  --build-arg BUILD_IMAGE=node:20-alpine \
+  --build-arg BUILD_IMAGE=node:20-slim \
   --build-arg RUNTIME_IMAGE=cgr.dev/chainguard/nginx:latest \
   -t migration-hub-frontend:latest .
 ```
@@ -153,7 +140,7 @@ docker images migration-hub-frontend:latest
 
 ## Build & push script (`build-push-nexus.sh`)
 
-A helper script automates building the image and pushing it to an enterprise Nexus Docker registry. Configuration is loaded from an environment file so credentials, registry paths, base images, and Vite build variables are not hard-coded.
+A helper script automates building the image and pushing it to an enterprise Nexus Docker registry. Configuration is loaded from an environment file so credentials, registry paths, and base images are not hard-coded.
 
 ### Configuration file (`.env.nexus`)
 
@@ -165,16 +152,8 @@ cp .env.nexus.example .env.nexus
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `BUILD_IMAGE` | No | `node:20-alpine` | Build-stage base image |
-| `RUNTIME_IMAGE` | No | `nginx:alpine` | Runtime base image |
-| `VITE_API_BASE_URL` | No | _(empty)_ | Backend API URL (baked into bundle) |
-| `VITE_EMAIL_SERVER_URL` | No | _(empty)_ | Email server URL (baked into bundle) |
-| `VITE_OAUTH_SERVICE_URL` | No | _(empty)_ | OAuth service URL (baked into bundle) |
-| `VITE_OAUTH_CLIENT_ID` | No | _(empty)_ | OAuth client ID (baked into bundle) |
-| `VITE_OAUTH_REDIRECT_URI` | No | _(empty)_ | OAuth redirect URI (baked into bundle) |
-| `VITE_OIDC_ISSUER` | No | _(empty)_ | OIDC issuer URL (baked into bundle) |
-| `VITE_OIDC_CLIENT_ID` | No | _(empty)_ | OIDC client ID (baked into bundle) |
-| `VITE_ALLOWED_HOSTS` | No | _(empty)_ | Allowed hosts (baked into bundle) |
+| `BUILD_IMAGE` | No | `node:20-slim` | Build-stage base image |
+| `RUNTIME_IMAGE` | No | `gcr.io/distroless/base` | Runtime base image |
 | `NEXUS_HOST` | **Yes** | — | Nexus hostname |
 | `NEXUS_REPO` | **Yes** | — | Docker repository name in Nexus |
 | `NEXUS_NAMESPACE` | No | _(empty)_ | Optional namespace/path |
@@ -186,13 +165,8 @@ cp .env.nexus.example .env.nexus
 Example `.env.nexus`:
 
 ```bash
-BUILD_IMAGE=node:20-alpine
-RUNTIME_IMAGE=nginx:alpine
-
-VITE_API_BASE_URL=http://localhost:8000
-VITE_OAUTH_SERVICE_URL=http://localhost:5557
-VITE_OAUTH_CLIENT_ID=migration-hub
-VITE_OAUTH_REDIRECT_URI=http://localhost:5173/callback
+BUILD_IMAGE=node:20-slim
+RUNTIME_IMAGE=gcr.io/distroless/base
 
 NEXUS_HOST=nexus.company.com
 NEXUS_REPO=docker-hosted
@@ -224,10 +198,10 @@ export RUNTIME_IMAGE=cgr.dev/chainguard/nginx:latest
 
 ### What the script does
 
-1. Loads configuration from the env file (`BUILD_IMAGE`, `RUNTIME_IMAGE`, `VITE_*`, `NEXUS_HOST`, etc.).
+1. Loads configuration from the env file (`BUILD_IMAGE`, `RUNTIME_IMAGE`, `NEXUS_HOST`, etc.).
 2. Falls back to the git short SHA for the tag if `IMAGE_TAG` is not set.
 3. Logs in to the Nexus Docker registry if credentials are provided (skipped in `--build-only` mode).
-4. Builds the image with `--build-arg` for base images and all `VITE_*` variables (when set).
+4. Builds the image with `--build-arg` for base images.
 5. Tags the image as `latest` (in addition to the requested tag, when the tag is not already `latest`).
 6. Pushes both tags to Nexus (skipped in `--build-only` mode).
 
@@ -249,9 +223,8 @@ nexus.company.com/docker-hosted/migration-hub/frontend:<TAG>
 ```bash
 export NEXUS_HOST=nexus.company.com
 export NEXUS_REPO=docker-hosted
-export BUILD_IMAGE=node:20-alpine
-export RUNTIME_IMAGE=nginx:alpine
-export VITE_API_BASE_URL="https://api.company.com"
+export BUILD_IMAGE=node:20-slim
+export RUNTIME_IMAGE=gcr.io/distroless/base
 export NEXUS_USERNAME="$NEXUS_USER"
 export NEXUS_PASSWORD="$NEXUS_PASS"
 ./build-push-nexus.sh -t "$CI_COMMIT_SHORT_SHA"
