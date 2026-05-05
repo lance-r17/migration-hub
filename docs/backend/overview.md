@@ -52,6 +52,8 @@ backend/
 
 See [../getting-started.md](../getting-started.md) for the full environment variable reference. Key backend-specific variables:
 
+> **Note:** For Docker container runtime, use `.env.docker` (not `.env`). Inside a container, `localhost` refers to the container itself, so hostnames must be Docker service names (`db`, `mock-oauth`, `dex`). See [docker-build-push.md](docker-build-push.md) for details.
+
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
@@ -82,3 +84,7 @@ See [api.md](api.md) for the full endpoint reference.
 ## Database schema
 
 See [database.md](database.md) for the full table schema and index definitions.
+
+## Docker build & push
+
+See [docker-build-push.md](docker-build-push.md) for building the backend Docker image and pushing to a Nexus registry.

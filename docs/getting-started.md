@@ -177,6 +177,36 @@ Copy `.env.example` to `.env` and adjust as needed:
 | `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in OIDC JWTs. Must be set to your client ID for Azure AD. |
 | `ENVIRONMENT` | `development` | `development` or `production` |
 
+### Running the backend container
+
+When running the pre-built Docker image (e.g. from Nexus), **environment variables are injected at runtime** — the `.env` file is not baked into the image (excluded by `.dockerignore` for security).
+
+**Use `.env.docker`, not `.env`.** Inside a Docker container, `localhost` refers to the container itself. The `.env.docker` file replaces `localhost` with Docker Compose service names (`db` for PostgreSQL, `mock-oauth` for the OAuth service, etc.).
+
+```bash
+cd backend
+
+# Put the container on the same Docker network as PostgreSQL
+docker run -d \
+  --name backend-runtime \
+  --network backend_default \
+  --env-file .env.docker \
+  -p 8000:8000 \
+  nexus.company.com/docker-hosted/migration-hub/backend:latest
+```
+
+**Why `--network backend_default` is required:** Docker's internal DNS resolves service names (like `db`) only within containers on the same network. Without this, `db` won't resolve and you'll get `ConnectionRefusedError`.
+
+**Hostnames inside a container:**
+
+| Service | In `.env` (local dev) | In `.env.docker` (container) |
+|---|---|---|
+| PostgreSQL | `localhost:5432` | `db:5432` |
+| Mock OAuth | `localhost:5557` | `mock-oauth:5557` |
+| Dex (OIDC) | `localhost:5556` | `dex:5556` |
+
+Required: `DATABASE_URL`. Conditionally required: `OAUTH_CLIENT_SECRET` and `SESSION_SECRET_KEY` when `OAUTH_SERVICE_URL` is set. See `backend/.env.example` for all variables. See [Docker build & push](backend/docker-build-push.md) for the full runtime environment reference.
+
 ### Connect the frontend to the backend
 
 ```bash

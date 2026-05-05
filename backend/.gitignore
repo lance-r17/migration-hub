@@ -1,4 +1,6 @@
 .env
+.env.nexus
+.env.docker
 __pycache__/
 *.py[cod]
 *.egg-info/

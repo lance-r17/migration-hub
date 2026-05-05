@@ -16,6 +16,7 @@
 | [backend/overview.md](backend/overview.md) | Backend structure and design principles (Python/FastAPI) |
 | [backend/api.md](backend/api.md) | REST API endpoint reference derived from frontend services |
 | [backend/database.md](backend/database.md) | Database schema, indexes, and Alembic migrations |
+| [backend/docker-build-push.md](backend/docker-build-push.md) | Docker image build, multi-stage Dockerfile, Nexus registry push, and container runtime configuration |
 | **shared/** | |
 | [shared/data-model.md](shared/data-model.md) | Core domain types shared between frontend and backend |
 | [shared/jira-integration.md](shared/jira-integration.md) | Jira integration — epic/story/subtask flow, job queue |

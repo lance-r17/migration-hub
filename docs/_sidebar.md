@@ -17,6 +17,7 @@
   - [Overview](backend/overview.md)
   - [API Reference](backend/api.md)
   - [Database](backend/database.md)
+  - [Docker Build & Push](backend/docker-build-push.md)
   - [Samples](backend/samples.md)
   - [Batch Integration Guide](backend/batch-integration-guide.md)
 
