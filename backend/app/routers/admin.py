@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
+from app.auth import _user_has_admin_role, require_admin
 from app.database import get_db
 from app.models.project import Project
 from app.models.project_user import ProjectUser
@@ -58,6 +58,7 @@ async def create_service_account(
         initials=initials,
         is_service_account=True,
         api_key_hash=key_hash,
+        role="admin" if body.is_admin else None,
     )
     db.add(user)
     await db.flush()
@@ -67,6 +68,7 @@ async def create_service_account(
         email=user.email,
         department=user.department,
         initials=user.initials,
+        is_admin=_user_has_admin_role(user.role),
         api_key=plaintext,
     )
 
@@ -86,6 +88,7 @@ async def list_service_accounts(
             email=u.email,
             department=u.department,
             initials=u.initials,
+            is_admin=_user_has_admin_role(u.role),
         )
         for u in result.scalars().all()
     ]
@@ -116,6 +119,9 @@ async def update_service_account(
     if body.department is not None:
         user.department = body.department
 
+    if body.is_admin is not None:
+        user.role = "admin" if body.is_admin else None
+
     await db.flush()
     return ServiceAccountOut(
         id=user.id,
@@ -123,6 +129,7 @@ async def update_service_account(
         email=user.email,
         department=user.department,
         initials=user.initials,
+        is_admin=_user_has_admin_role(user.role),
     )
 
 

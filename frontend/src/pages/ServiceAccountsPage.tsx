@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -55,7 +56,7 @@ export function ServiceAccountsPage() {
 
   const [formOpen, setFormOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<ServiceAccount | undefined>(undefined)
-  const [formData, setFormData] = useState<ServiceAccountCreate>({ name: '', email: '', department: '' })
+  const [formData, setFormData] = useState<ServiceAccountCreate>({ name: '', email: '', department: '', is_admin: false })
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -70,14 +71,14 @@ export function ServiceAccountsPage() {
 
   const openNew = () => {
     setEditingAccount(undefined)
-    setFormData({ name: '', email: '', department: '' })
+    setFormData({ name: '', email: '', department: '', is_admin: false })
     setFormError(null)
     setFormOpen(true)
   }
 
   const openEdit = (account: ServiceAccount) => {
     setEditingAccount(account)
-    setFormData({ name: account.name, email: account.email, department: account.department })
+    setFormData({ name: account.name, email: account.email, department: account.department, is_admin: account.is_admin })
     setFormError(null)
     setFormOpen(true)
   }
@@ -94,6 +95,7 @@ export function ServiceAccountsPage() {
         if (formData.name !== editingAccount.name) patch.name = formData.name
         if (formData.email !== editingAccount.email) patch.email = formData.email
         if (formData.department !== editingAccount.department) patch.department = formData.department
+        if (formData.is_admin !== editingAccount.is_admin) patch.is_admin = formData.is_admin
         if (Object.keys(patch).length > 0) {
           await updateServiceAccount(editingAccount.id, patch)
           toast.success('Service account updated')
@@ -198,6 +200,7 @@ export function ServiceAccountsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Email</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Department</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Initials</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Admin</TableHead>
                 <TableHead className="w-[120px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -209,12 +212,13 @@ export function ServiceAccountsPage() {
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-10" /></TableCell>
                     <TableCell></TableCell>
                   </TableRow>
                 ))
               ) : serviceAccounts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground text-sm">
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground text-sm">
                     No service accounts found.
                   </TableCell>
                 </TableRow>
@@ -225,6 +229,7 @@ export function ServiceAccountsPage() {
                     <TableCell className="text-sm text-muted-foreground">{account.email}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{account.department}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{account.initials}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{account.is_admin ? 'Yes' : 'No'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 justify-end">
                         <Button
@@ -304,6 +309,16 @@ export function ServiceAccountsPage() {
                 onChange={(e) => setFormData((d) => ({ ...d, department: e.target.value }))}
                 placeholder="e.g. Platform Engineering"
               />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="sa-admin"
+                checked={formData.is_admin ?? false}
+                onCheckedChange={(checked) => setFormData((d) => ({ ...d, is_admin: checked === true }))}
+              />
+              <Label htmlFor="sa-admin" className="text-sm font-normal cursor-pointer">
+                Admin role
+              </Label>
             </div>
           </div>
           <DialogFooter>
