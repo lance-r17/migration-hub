@@ -5,5 +5,5 @@ interface LogoProps {
 }
 
 export function Logo({ className }: LogoProps) {
-  return <img src={logo} alt="Migration Hub" className={className} />
+  return <img src={logo} alt="Migration Engine" className={className} />
 }

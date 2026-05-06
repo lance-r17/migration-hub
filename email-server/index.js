@@ -28,7 +28,7 @@ app.post('/api/v1/email-templates/send-test', async (req, res) => {
     await transporter.sendMail({
       from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
       to: recipientEmail,
-      subject: subject ?? 'Test Email from Migration Hub',
+      subject: subject ?? 'Test Email from Migration Engine',
       html: htmlContent,
     })
     res.json({ ok: true })

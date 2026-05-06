@@ -101,7 +101,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <NavLink to="/">
                 <Logo className="size-5" />
-                <span className="text-base font-semibold">Migration Hub</span>
+                <span className="text-base font-semibold">Migration Engine</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>

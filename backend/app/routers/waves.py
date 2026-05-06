@@ -33,12 +33,18 @@ def _wave_out(wave) -> WaveOut:
 async def _validate_wave_dates(session: AsyncSession, start_date: str, cutover_date: str) -> None:
     mig = await migration_settings_service.get_migration_settings(session)
     pp = mig.platform_period
-    if not pp or not pp.start_date or not pp.end_date:
+    csp = mig.new_cloud_setup_period
+    pp_start = pp.start_date if pp else None
+    pp_end = pp.end_date if pp else None
+    csp_start = csp.start_date if csp else None
+    effective_start = csp_start or pp_start
+    effective_end = pp_end
+    if not effective_start or not effective_end:
         return
-    if start_date < pp.start_date or cutover_date > pp.end_date:
+    if start_date < effective_start or cutover_date > effective_end:
         raise HTTPException(
             status_code=422,
-            detail=f"Wave dates must fall within the platform migration period ({pp.start_date} to {pp.end_date}).",
+            detail=f"Wave dates must fall within {effective_start} to {effective_end}.",
         )
 
 

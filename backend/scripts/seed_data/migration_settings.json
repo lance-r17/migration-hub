@@ -3,5 +3,9 @@
     "start_date": "2027-01-01",
     "end_date": "2027-06-30"
   },
+  "new_cloud_setup_period": {
+    "start_date": "2026-04-01",
+    "end_date": "2026-12-12"
+  },
   "duration_options": [15, 30, 45]
 }

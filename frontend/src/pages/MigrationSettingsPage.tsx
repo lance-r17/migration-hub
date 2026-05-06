@@ -23,7 +23,19 @@ import { cn } from '@/lib/utils'
 import { getMigrationSettings, saveMigrationSettings } from '@/services/migrationSettings'
 import type { MigrationSettings } from '@/types/settings'
 
-const DEFAULTS: MigrationSettings = { durationOptions: [15, 30, 45] }
+const DEFAULTS: MigrationSettings = {
+  durationOptions: [15, 30, 45],
+  cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' },
+}
+
+function rangeLabel(range?: { startDate?: string; endDate?: string }): string {
+  const from = range?.startDate ? new Date(range.startDate) : undefined
+  const to = range?.endDate ? new Date(range.endDate) : undefined
+  if (!from && !to) return 'Pick a date range'
+  const f = format(from!, 'MMM d, y')
+  if (!to) return f
+  return `${f} – ${format(to, 'MMM d, y')}`
+}
 
 export function MigrationSettingsPage() {
   const navigate = useNavigate()
@@ -87,6 +99,21 @@ export function MigrationSettingsPage() {
     }))
   }
 
+  const selectedCloudSetupRange: DateRange = {
+    from: config.cloudSetupPeriod?.startDate ? new Date(config.cloudSetupPeriod.startDate) : undefined,
+    to: config.cloudSetupPeriod?.endDate ? new Date(config.cloudSetupPeriod.endDate) : undefined,
+  }
+
+  const handleCloudSetupRangeSelect = (range: DateRange | undefined) => {
+    setConfig(prev => ({
+      ...prev,
+      cloudSetupPeriod: {
+        startDate: range?.from ? format(range.from, 'yyyy-MM-dd') : undefined,
+        endDate: range?.to ? format(range.to, 'yyyy-MM-dd') : undefined,
+      },
+    }))
+  }
+
   return (
     <div className="space-y-8">
       <Breadcrumb>
@@ -109,7 +136,7 @@ export function MigrationSettingsPage() {
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Migration Settings</h1>
         </div>
         <p className="text-muted-foreground text-sm">
-          Configure the platform migration period and allowed migration durations.
+          Configure the platform migration period, new cloud setup period, and allowed migration durations.
         </p>
       </div>
 
@@ -122,6 +149,42 @@ export function MigrationSettingsPage() {
       ) : (
         <div className="space-y-6 max-w-lg">
           <div className="rounded-lg border border-border bg-card p-5 space-y-5">
+            {/* New Cloud Setup Period */}
+            <div className="space-y-1.5">
+              <Label>New Cloud Setup Period</Label>
+              <p className="text-xs text-muted-foreground">
+                The window for setting up the new cloud environment. Wave start dates can begin from this period.
+              </p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'h-9 w-full justify-start text-left text-sm font-normal',
+                      !config.cloudSetupPeriod?.startDate && !config.cloudSetupPeriod?.endDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon size={14} className="mr-2 shrink-0" />
+                    {rangeLabel(config.cloudSetupPeriod)}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    numberOfMonths={2}
+                    defaultMonth={selectedCloudSetupRange.from}
+                    selected={selectedCloudSetupRange}
+                    onSelect={handleCloudSetupRangeSelect}
+                  />
+                </PopoverContent>
+              </Popover>
+              {config.cloudSetupPeriod?.startDate && config.cloudSetupPeriod?.endDate &&
+                new Date(config.cloudSetupPeriod.startDate) > new Date(config.cloudSetupPeriod.endDate) && (
+                <p className="text-xs text-destructive">End date must be after start date.</p>
+              )}
+            </div>
+
             {/* Platform Period */}
             <div className="space-y-1.5">
               <Label>Platform Migration Period</Label>

@@ -50,7 +50,7 @@ const SAMPLE_DATA_SETS: { label: string; data: SampleData }[] = [
       'jiraStoryKey': 'MIG-101',
       'jiraStoryUrl': 'https://jira.company.com/browse/MIG-101',
       'jiraBaseUrl': 'https://jira.company.com',
-      'platform.name': 'Migration Hub',
+      'platform.name': 'Migration Engine',
       'platform.url': 'http://localhost:5173',
       'project.currentInfrastructure.resources': [
         { name: 'web-server-01', product: 'ecs',     category: 'computing',       jiraSubtaskKey: 'MIG-102', syncStatus: 'synced' },
@@ -81,7 +81,7 @@ const SAMPLE_DATA_SETS: { label: string; data: SampleData }[] = [
       'jiraStoryKey': 'MIG-55',
       'jiraStoryUrl': 'https://jira.company.com/browse/MIG-55',
       'jiraBaseUrl': 'https://jira.company.com',
-      'platform.name': 'Migration Hub',
+      'platform.name': 'Migration Engine',
       'platform.url': 'http://localhost:5173',
       'project.currentInfrastructure.resources': [
         { name: 'api-server-01',   product: 'ecs', category: 'computing',       jiraSubtaskKey: 'MIG-56', syncStatus: 'synced' },
@@ -112,7 +112,7 @@ const SAMPLE_DATA_SETS: { label: string; data: SampleData }[] = [
       'jiraStoryKey': 'MIG-82',
       'jiraStoryUrl': 'https://jira.company.com/browse/MIG-82',
       'jiraBaseUrl': 'https://jira.company.com',
-      'platform.name': 'Migration Hub',
+      'platform.name': 'Migration Engine',
       'platform.url': 'http://localhost:5173',
       'project.currentInfrastructure.resources': [
         { name: 'payment-gateway', product: 'ecs',     category: 'computing',       jiraSubtaskKey: 'MIG-83', syncStatus: 'synced' },

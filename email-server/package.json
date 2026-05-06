@@ -1,7 +1,7 @@
 {
   "name": "email-server",
   "version": "1.0.0",
-  "description": "Minimal email sending service for Migration Hub test emails",
+  "description": "Minimal email sending service for Migration Engine test emails",
   "type": "module",
   "scripts": {
     "start": "node index.js",

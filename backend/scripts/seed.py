@@ -330,7 +330,7 @@ def seed(session: Session, force: bool = False, targets: dict[str, bool] | None 
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed the Migration Hub database")
+    parser = argparse.ArgumentParser(description="Seed the Migration Engine database")
     parser.add_argument("--force", action="store_true", help="Clear and re-seed even if data exists")
     parser.add_argument("--users", action="store_true", help="Refresh users only")
     parser.add_argument("--waves", action="store_true", help="Refresh waves only")

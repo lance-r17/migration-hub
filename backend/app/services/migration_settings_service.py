@@ -7,6 +7,7 @@ from app.schemas.migration_settings import MigrationSettingsOut, MigrationSettin
 _KEY = "migration_settings"
 _DEFAULT = {
     "platform_period": None,
+    "new_cloud_setup_period": {"start_date": "2026-04-01", "end_date": "2026-12-12"},
     "duration_options": [15, 30, 45],
 }
 
@@ -16,6 +17,7 @@ async def get_migration_settings(session: AsyncSession) -> MigrationSettingsOut:
     data = row.value if row else dict(_DEFAULT)
     return MigrationSettingsOut(
         platform_period=data.get("platform_period"),
+        new_cloud_setup_period=data.get("new_cloud_setup_period"),
         duration_options=data.get("duration_options", _DEFAULT["duration_options"]),
     )
 
@@ -30,6 +32,10 @@ async def update_migration_settings(
         current["platform_period"] = (
             patch.platform_period.model_dump() if patch.platform_period else None
         )
+    if patch.new_cloud_setup_period is not None:
+        current["new_cloud_setup_period"] = (
+            patch.new_cloud_setup_period.model_dump() if patch.new_cloud_setup_period else None
+        )
     if patch.duration_options is not None:
         current["duration_options"] = patch.duration_options
 
@@ -42,5 +48,6 @@ async def update_migration_settings(
     await session.flush()
     return MigrationSettingsOut(
         platform_period=current.get("platform_period"),
+        new_cloud_setup_period=current.get("new_cloud_setup_period"),
         duration_options=current.get("duration_options", _DEFAULT["duration_options"]),
     )

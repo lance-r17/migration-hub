@@ -84,7 +84,7 @@ export function LoginPage() {
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="#" className="flex items-center gap-2 font-medium">
             <Logo className="size-6" />
-            <span>Migration Hub</span>
+            <span>Migration Engine</span>
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">

@@ -91,9 +91,9 @@ _OPENAPI_TAGS = [
 def create_app() -> FastAPI:
     _is_prod = settings.environment == "production"
     app = FastAPI(
-        title="Migration Hub API",
+        title="Migration Engine API",
         version="0.1.0",
-        description="Backend API for the Migration Hub cloud migration tracking platform",
+        description="Backend API for the Migration Engine cloud migration tracking platform",
         lifespan=lifespan,
         openapi_tags=_OPENAPI_TAGS,
         docs_url=None if _is_prod else "/docs",

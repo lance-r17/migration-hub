@@ -16,7 +16,7 @@ test.describe('Navigation', () => {
   test('sidebar logo links back to home', async ({ authenticatedPage: page }) => {
     await page.goto('/projects/PRJ-2024-ALPHA')
     await page.waitForSelector('[data-testid="app-shell"]')
-    await page.getByRole('link', { name: /migration hub/i }).click()
+    await page.getByRole('link', { name: /migration engine/i }).click()
     await expect(page).toHaveURL('/')
   })
 

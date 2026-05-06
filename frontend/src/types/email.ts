@@ -173,7 +173,7 @@ export const TEMPLATE_VARIABLES: TemplateVariable[] = [
   { key: 'jiraStoryKey', label: 'Jira Story Key', category: 'Jira', example: 'MIG-101' },
   { key: 'jiraBaseUrl', label: 'Jira Base URL', category: 'Jira', example: 'https://jira.company.com' },
   // Platform
-  { key: 'platform.name', label: 'Platform Name', category: 'Platform', example: 'Migration Hub' },
+  { key: 'platform.name', label: 'Platform Name', category: 'Platform', example: 'Migration Engine' },
   { key: 'platform.url', label: 'Platform URL', category: 'Platform', example: 'https://migration-hub.company.com' },
 ]
 

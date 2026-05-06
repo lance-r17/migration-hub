@@ -70,9 +70,12 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Pr
 
   const validateDates = (startDate: string, cutoverDate: string): string | null => {
     const pp = settings?.platformPeriod
-    if (!pp?.startDate || !pp?.endDate) return null
-    if (isBefore(new Date(startDate), new Date(pp.startDate)) || isAfter(new Date(cutoverDate), new Date(pp.endDate))) {
-      return `Wave dates must fall within platform period (${format(new Date(pp.startDate), 'MMM d, y')} – ${format(new Date(pp.endDate), 'MMM d, y')}).`
+    const csp = settings?.cloudSetupPeriod
+    const effectiveStart = csp?.startDate || pp?.startDate
+    const effectiveEnd = pp?.endDate
+    if (!effectiveStart || !effectiveEnd) return null
+    if (isBefore(new Date(startDate), new Date(effectiveStart)) || isAfter(new Date(cutoverDate), new Date(effectiveEnd))) {
+      return `Wave dates must fall within ${format(new Date(effectiveStart), 'MMM d, y')} – ${format(new Date(effectiveEnd), 'MMM d, y')}.`
     }
     return null
   }
@@ -115,10 +118,13 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Pr
   }
 
   const pp = settings?.platformPeriod
-  const disabledDates = pp?.startDate && pp?.endDate
+  const csp = settings?.cloudSetupPeriod
+  const effectiveStart = csp?.startDate || pp?.startDate
+  const effectiveEnd = pp?.endDate
+  const disabledDates = effectiveStart && effectiveEnd
     ? [
-        { before: new Date(pp.startDate) },
-        { after: new Date(pp.endDate) },
+        { before: new Date(effectiveStart) },
+        { after: new Date(effectiveEnd) },
       ]
     : undefined
 
@@ -167,7 +173,7 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Pr
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="range"
-                  defaultMonth={draft.startDate ? new Date(draft.startDate) : pp?.startDate ? new Date(pp.startDate) : undefined}
+                  defaultMonth={draft.startDate ? new Date(draft.startDate) : effectiveStart ? new Date(effectiveStart) : undefined}
                   selected={selectedRange}
                   onSelect={handleRangeSelect}
                   numberOfMonths={2}

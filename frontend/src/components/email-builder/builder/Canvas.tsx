@@ -107,7 +107,7 @@ export function Canvas({ rows, templateStyle, selectedComponentId, selectedRowId
         {/* Fixed branding banner — not editable, not part of rows */}
         <img
           src="/email-banner.png"
-          alt="Migration Hub"
+          alt="Migration Engine"
           style={{ display: 'block', width: '100%', height: 'auto' }}
         />
         {/* Rows content with padding */}

@@ -211,7 +211,7 @@ ${googleFontLink}
         >
           <tr>
             <td style="padding: 0; line-height: 0; font-size: 0;">
-              <img src="/email-banner.png" alt="Migration Hub" width="${maxWidth}" style="display: block; width: 100%; max-width: ${maxWidth}px; height: auto; border: 0;" />
+              <img src="/email-banner.png" alt="Migration Engine" width="${maxWidth}" style="display: block; width: 100%; max-width: ${maxWidth}px; height: auto; border: 0;" />
             </td>
           </tr>
           <tr>
