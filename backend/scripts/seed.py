@@ -4,7 +4,8 @@ Seed the database with mock data from scripts/seed_data/*.json.
 
 Usage:
     python scripts/seed.py            # skip if already seeded
-    python scripts/seed.py --force    # clear and re-seed
+    python scripts/seed.py --force    # clear and re-seed everything
+    python scripts/seed.py --projects --waves   # refresh only projects and waves
 """
 
 import argparse
@@ -48,33 +49,19 @@ def load(filename: str) -> dict | list:
         return json.load(f)
 
 
-def seed(session: Session, force: bool = False) -> None:
-    # Check if already seeded
-    count = session.execute(text("SELECT COUNT(*) FROM users")).scalar()
-    if count and not force:
-        print(f"Database already has {count} users. Use --force to re-seed.")
-        return
+def _clear_table(session: Session, table: str) -> None:
+    session.execute(text(f"DELETE FROM {table}"))
 
-    if force:
-        print("Force mode: clearing existing data...")
-        # Delete in reverse FK order
-        for table in [
-            "jira_jobs", "audit_log_entries", "approvals", "risks",
-            "cloud_resources", "project_users", "projects", "waves",
-            "users", "embargo_records", "billing_records", "config_store",
-            "email_templates",
-        ]:
-            session.execute(text(f"DELETE FROM {table}"))
-        session.flush()
 
+def seed_users(session: Session) -> None:
     print("Seeding users...")
-    users_data = load("users.json")
-    for u in users_data:
-        # Skip duplicate u-current (same email as u9 in mock)
+    for u in load("users.json"):
         existing = session.get(User, u["id"])
         if not existing:
             session.add(User(**{k: v for k, v in u.items() if v is not None or k in ("team", "role")}))
 
+
+def seed_waves(session: Session) -> None:
     print("Seeding waves...")
     for w in load("waves.json"):
         session.add(Wave(
@@ -89,8 +76,8 @@ def seed(session: Session, force: bool = False) -> None:
             status=w.get("status", "planned"),
         ))
 
-    session.flush()
 
+def seed_projects(session: Session) -> None:
     print("Seeding projects, resources, risks, approvals...")
     for p in load("projects.json"):
         survey_submitted_at = p.get("survey_submitted_at")
@@ -162,7 +149,6 @@ def seed(session: Session, force: bool = False) -> None:
 
         # Project users
         for user_id in p.get("project_users", []):
-            # Check user exists before creating association
             if session.get(User, user_id):
                 existing_pu = session.get(ProjectUser, (p["id"], user_id))
                 if not existing_pu:
@@ -196,8 +182,8 @@ def seed(session: Session, force: bool = False) -> None:
                 else:
                     session.add(ProjectUser(project_id=p["id"], user_id=uid, role=role))
 
-    session.flush()
 
+def seed_embargos(session: Session) -> None:
     print("Seeding embargos...")
     for e in load("embargos.json"):
         session.add(EmbargoRecord(
@@ -208,6 +194,8 @@ def seed(session: Session, force: bool = False) -> None:
             affected_service_lines=e.get("affected_service_lines", []),
         ))
 
+
+def seed_billing(session: Session) -> None:
     print("Seeding billing records...")
     billing = load("billing.json")
     for env, months in [("existing", billing["existing"]), ("target", billing["target"])]:
@@ -220,7 +208,9 @@ def seed(session: Session, force: bool = False) -> None:
                     amount=rec["amount"],
                 ))
 
-    print("Seeding config store (survey, billing thresholds)...")
+
+def seed_config(session: Session) -> None:
+    print("Seeding config store (survey, billing thresholds, migration settings)...")
     survey = load("survey_config.json")
     session.add(ConfigStore(key="survey_config", value=survey))
 
@@ -230,6 +220,11 @@ def seed(session: Session, force: bool = False) -> None:
     billing_config = load("billing_config.json")
     session.add(ConfigStore(key="billing_threshold_config", value=billing_config))
 
+    migration_settings = load("migration_settings.json")
+    session.add(ConfigStore(key="migration_settings", value=migration_settings))
+
+
+def seed_email_templates(session: Session) -> None:
     print("Seeding email templates...")
     for t in load("email_templates.json"):
         existing = session.get(EmailTemplate, t["id"])
@@ -246,6 +241,90 @@ def seed(session: Session, force: bool = False) -> None:
                 is_predefined=t.get("is_predefined", False),
             ))
 
+
+def _seed_all(session: Session) -> None:
+    seed_users(session)
+    seed_waves(session)
+    session.flush()
+    seed_projects(session)
+    session.flush()
+    seed_embargos(session)
+    seed_billing(session)
+    seed_config(session)
+    seed_email_templates(session)
+    session.commit()
+    print("Seed complete.")
+
+
+def seed(session: Session, force: bool = False, targets: dict[str, bool] | None = None) -> None:
+    # Determine which entities to seed
+    all_targets = {
+        "users": True,
+        "waves": True,
+        "projects": True,
+        "embargos": True,
+        "billing": True,
+        "config": True,
+        "email_templates": True,
+    }
+    active = {k: v for k, v in (targets or {}).items() if v} or all_targets
+    has_selective = bool(targets and any(targets.values()))
+
+    # Guard: skip if already seeded (unless force or selective flags are used)
+    if not force and not has_selective:
+        count = session.execute(text("SELECT COUNT(*) FROM users")).scalar()
+        if count:
+            print(f"Database already has {count} users. Use --force to re-seed.")
+            return
+
+    # Clear tables
+    if force or has_selective:
+        print("Force mode: clearing existing data..." if force else "Selective refresh: clearing requested tables...")
+        if has_selective:
+            if active.get("users"):
+                _clear_table(session, "users")
+            if active.get("waves"):
+                _clear_table(session, "waves")
+            if active.get("projects"):
+                _clear_table(session, "cloud_resources")
+                _clear_table(session, "project_users")
+                _clear_table(session, "approvals")
+                _clear_table(session, "risks")
+                _clear_table(session, "projects")
+            if active.get("embargos"):
+                _clear_table(session, "embargo_records")
+            if active.get("billing"):
+                _clear_table(session, "billing_records")
+            if active.get("config"):
+                _clear_table(session, "config_store")
+            if active.get("email_templates"):
+                _clear_table(session, "email_templates")
+        else:
+            for table in [
+                "jira_jobs", "audit_log_entries", "approvals", "risks",
+                "cloud_resources", "project_users", "projects", "waves",
+                "users", "embargo_records", "billing_records", "config_store",
+                "email_templates",
+            ]:
+                _clear_table(session, table)
+        session.flush()
+
+    # Seed requested entities
+    if active.get("users"):
+        seed_users(session)
+    if active.get("waves"):
+        seed_waves(session)
+    if active.get("projects"):
+        seed_projects(session)
+    if active.get("embargos"):
+        seed_embargos(session)
+    if active.get("billing"):
+        seed_billing(session)
+    if active.get("config"):
+        seed_config(session)
+    if active.get("email_templates"):
+        seed_email_templates(session)
+
     session.commit()
     print("Seed complete.")
 
@@ -253,18 +332,35 @@ def seed(session: Session, force: bool = False) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed the Migration Hub database")
     parser.add_argument("--force", action="store_true", help="Clear and re-seed even if data exists")
+    parser.add_argument("--users", action="store_true", help="Refresh users only")
+    parser.add_argument("--waves", action="store_true", help="Refresh waves only")
+    parser.add_argument("--projects", action="store_true", help="Refresh projects only")
+    parser.add_argument("--embargos", action="store_true", help="Refresh embargos only")
+    parser.add_argument("--billing", action="store_true", help="Refresh billing records only")
+    parser.add_argument("--config", action="store_true", help="Refresh config store only")
+    parser.add_argument("--email-templates", action="store_true", help="Refresh email templates only")
     args = parser.parse_args()
+
+    targets = {
+        "users": args.users,
+        "waves": args.waves,
+        "projects": args.projects,
+        "embargos": args.embargos,
+        "billing": args.billing,
+        "config": args.config,
+        "email_templates": args.email_templates,
+    }
+    has_selective = any(targets.values())
 
     try:
         engine = create_engine(SYNC_URL, echo=False)
     except Exception:
-        # Fallback: try asyncpg URL directly (will fail gracefully with a clear message)
         print("ERROR: Could not create sync engine. Install psycopg2: pip install psycopg2-binary")
         print(f"DATABASE_URL: {SYNC_URL}")
         sys.exit(1)
 
     with Session(engine) as session:
-        seed(session, force=args.force)
+        seed(session, force=args.force, targets=targets if has_selective else None)
 
 
 if __name__ == "__main__":

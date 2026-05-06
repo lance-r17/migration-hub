@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { format } from 'date-fns'
+import { format, addDays, isBefore, isAfter } from 'date-fns'
 import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, ClipboardList, Plus, CalendarIcon, Server, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,7 @@ import { MigrationWindowPicker } from '@/components/shared/MigrationWindowPicker
 import { SurveyFileUpload } from '@/components/survey/SurveyFileUpload'
 import { EffortTableSurveyInput } from '@/components/survey/EffortTableSurveyInput'
 import { deleteAttachment } from '@/services/attachments'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import type { SurveyConfig, SurveyQuestion, SurveyFieldDef, ResourceSurveyConfig, ResourceQuestionDef } from '@/types/survey'
 import type { Project, DependencyEntry, CloudResource, ResourceCategory, EffortTable } from '@/types'
 
@@ -182,6 +183,15 @@ function QuestionInput({
 }) {
   const def = getFieldById(question.fieldId)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { settings } = useMigrationSettings()
+  const platformStart = settings?.platformPeriod?.startDate
+  const platformEnd = settings?.platformPeriod?.endDate
+  const disabledDates = platformStart && platformEnd
+    ? [
+        { before: new Date(platformStart) },
+        { after: new Date(platformEnd) },
+      ]
+    : undefined
   useEffect(() => {
     if (autoFocus) setTimeout(() => inputRef.current?.focus(), 50)
   }, [autoFocus, question.fieldId])
@@ -324,7 +334,7 @@ function QuestionInput({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 z-[400]" align="start">
-            <Calendar mode="single" selected={dateStr ? new Date(dateStr) : undefined} onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : undefined)} />
+            <Calendar mode="single" defaultMonth={dateStr ? new Date(dateStr) : platformStart ? new Date(platformStart) : undefined} selected={dateStr ? new Date(dateStr) : undefined} onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : undefined)} disabled={disabledDates} />
           </PopoverContent>
         </Popover>
       )
@@ -341,11 +351,100 @@ function QuestionInput({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 z-[400]" align="start">
-            <Calendar mode="range" numberOfMonths={2} defaultMonth={from ? new Date(from) : undefined}
+            <Calendar mode="range" numberOfMonths={2} defaultMonth={from ? new Date(from) : platformStart ? new Date(platformStart) : undefined}
               selected={{ from: from ? new Date(from) : undefined, to: to ? new Date(to) : undefined }}
-              onSelect={(r) => onChange({ from: r?.from ? format(r.from, 'yyyy-MM-dd') : undefined, to: r?.to ? format(r.to, 'yyyy-MM-dd') : undefined })} />
+              onSelect={(r) => onChange({ from: r?.from ? format(r.from, 'yyyy-MM-dd') : undefined, to: r?.to ? format(r.to, 'yyyy-MM-dd') : undefined })}
+              disabled={disabledDates} />
           </PopoverContent>
         </Popover>
+      )
+    }
+    case 'migration_date_range': {
+      const range = (value as DateRangeValue | undefined) ?? {}
+      const durationOptions = settings?.durationOptions ?? [15, 30, 45]
+      const selectedDuration = range.from && range.to
+        ? String(Math.round((new Date(range.to).getTime() - new Date(range.from).getTime()) / (1000 * 60 * 60 * 24)))
+        : ''
+
+      function computeEndDate(start: string | undefined, dur: string): string | undefined {
+        if (!start || !dur) return undefined
+        const days = parseInt(dur, 10)
+        if (!Number.isFinite(days) || days <= 0) return undefined
+        return format(addDays(new Date(start), days), 'yyyy-MM-dd')
+      }
+
+      function isWithinPlatform(start?: string, end?: string): boolean {
+        if (!platformStart || !platformEnd) return true
+        if (!start || !end) return true
+        return !isBefore(new Date(start), new Date(platformStart)) && !isAfter(new Date(end), new Date(platformEnd))
+      }
+
+      const computedEnd = computeEndDate(range.from, selectedDuration)
+      const rangeError = range.from && computedEnd && !isWithinPlatform(range.from, computedEnd)
+        ? `Must be within platform period${platformStart && platformEnd ? ` (${format(new Date(platformStart), 'MMM d, y')} – ${format(new Date(platformEnd), 'MMM d, y')})` : ''}`
+        : null
+
+      return (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {durationOptions.map(days => {
+              const selected = selectedDuration === String(days)
+              return (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => {
+                    const val = selected ? '' : String(days)
+                    const end = computeEndDate(range.from, val)
+                    onChange({ from: range.from, to: end })
+                  }}
+                  className={cn(
+                    'inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium border transition-colors',
+                    selected
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-background text-foreground hover:bg-muted'
+                  )}
+                >
+                  {days} days
+                </button>
+              )
+            })}
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" className={cn('h-12 w-full max-w-xs justify-start text-left text-base font-normal border-0 border-b-2 rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary', !range.from && 'text-muted-foreground')}>
+                <CalendarIcon size={16} className="mr-2 shrink-0" />
+                {range.from ? format(new Date(range.from), 'MMM d, y') : 'Pick a start date…'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[400]" align="start">
+              <Calendar mode="single" defaultMonth={range.from ? new Date(range.from) : platformStart ? new Date(platformStart) : undefined} selected={range.from ? new Date(range.from) : undefined}
+                onSelect={(d) => {
+                  const start = d ? format(d, 'yyyy-MM-dd') : undefined
+                  const end = computeEndDate(start, selectedDuration)
+                  onChange({ from: start, to: end })
+                }}
+                disabled={(() => {
+                  if (!platformStart || !platformEnd) return undefined
+                  const startBound = { before: new Date(platformStart) }
+                  const days = parseInt(selectedDuration, 10)
+                  if (Number.isFinite(days) && days > 0) {
+                    const maxStart = addDays(new Date(platformEnd), -days)
+                    return [startBound, { after: maxStart }]
+                  }
+                  return [startBound, { after: new Date(platformEnd) }]
+                })()} />
+            </PopoverContent>
+          </Popover>
+
+          {computedEnd && (
+            <div className="text-sm text-muted-foreground">
+              End date: <span className="font-medium text-foreground">{format(new Date(computedEnd), 'MMM d, y')}</span>
+            </div>
+          )}
+          {rangeError && <p className="text-xs text-destructive">{rangeError}</p>}
+        </div>
       )
     }
     case 'effort_table': {
@@ -374,6 +473,15 @@ function ResourceQuestionInput({
   value: ResourceAnswerValue
   onChange: (v: ResourceAnswerValue) => void
 }) {
+  const { settings } = useMigrationSettings()
+  const platformStart = settings?.platformPeriod?.startDate
+  const platformEnd = settings?.platformPeriod?.endDate
+  const disabledDates = platformStart && platformEnd
+    ? [
+        { before: new Date(platformStart) },
+        { after: new Date(platformEnd) },
+      ]
+    : undefined
   switch (questionDef.inputType) {
     case 'short_text':
       return (
@@ -438,8 +546,10 @@ function ResourceQuestionInput({
           <PopoverContent className="w-auto p-0 z-[400]" align="start">
             <Calendar
               mode="single"
+              defaultMonth={dateVal ? new Date(dateVal) : platformStart ? new Date(platformStart) : undefined}
               selected={dateVal ? new Date(dateVal) : undefined}
               onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : undefined)}
+              disabled={disabledDates}
             />
           </PopoverContent>
         </Popover>
@@ -597,6 +707,9 @@ export function SurveyModal({
   open, onClose, surveyConfig, project, onSave, onSubmitted, resourceSurveyConfig, getCategoryForProduct,
 }: SurveyModalProps) {
   const { getFieldById } = useSurveyFieldDefs()
+  const { settings } = useMigrationSettings()
+  const platformStart = settings?.platformPeriod?.startDate
+  const platformEnd = settings?.platformPeriod?.endDate
   const orderedQuestions = [...surveyConfig.questions].sort((a, b) => a.order - b.order)
 
   // Determine visible app questions based on conditions
@@ -660,7 +773,7 @@ export function SurveyModal({
     for (const q of orderedQuestions) {
       const def = getFieldById(q.fieldId)
       if (!def) continue
-      if (def.inputType === 'date_range') {
+      if (def.inputType === 'date_range' || def.inputType === 'migration_date_range') {
         const from = getExistingValue(project, def.sectionKey, def.fieldPath) as string | undefined
         const to = def.toFieldPath ? getExistingValue(project, def.sectionKey, def.toFieldPath) as string | undefined : undefined
         if (from !== undefined || to !== undefined) prefilled.set(q.fieldId, { from, to })
@@ -739,6 +852,17 @@ export function SurveyModal({
       if (!tables || tables.length === 0) return false
       return tables.some(t => t.tasks.some(task => task.effort !== undefined && task.effort > 0))
     }
+    const def = currentQuestion ? getFieldById(currentQuestion.fieldId) : undefined
+    if (def?.inputType === 'date_range' || def?.inputType === 'migration_date_range') {
+      const range = currentAnswer as DateRangeValue | undefined
+      const hasBoth = !!range?.from && !!range?.to
+      if (!hasBoth) return false
+      if (def.inputType === 'migration_date_range' && platformStart && platformEnd) {
+        return !isBefore(new Date(range.from), new Date(platformStart)) &&
+          !isAfter(new Date(range.to), new Date(platformEnd))
+      }
+      return true
+    }
     return isAppAnswered
   })()
 
@@ -773,7 +897,7 @@ export function SurveyModal({
       const next = new Map(prev)
       const def = getFieldById(currentQuestion.fieldId)
       const isDependencyList = def?.inputType === 'dependency_list'
-      const isDateRange = def?.inputType === 'date_range'
+      const isDateRange = def?.inputType === 'date_range' || def?.inputType === 'migration_date_range'
       if (isDateRange) {
         const range = value as DateRangeValue | undefined
         if (!range?.from && !range?.to) next.delete(currentQuestion.fieldId)
@@ -838,7 +962,7 @@ export function SurveyModal({
         const sectionKey = def.sectionKey
         const existing = (project[sectionKey] ?? {}) as unknown as Record<string, unknown>
         let current = sectionUpdates.get(sectionKey) ?? { ...existing }
-        if (def.inputType === 'date_range' && def.toFieldPath) {
+        if ((def.inputType === 'date_range' || def.inputType === 'migration_date_range') && def.toFieldPath) {
           const range = value as DateRangeValue
           current = deepSet(current, def.fieldPath, range.from)
           current = deepSet(current, def.toFieldPath, range.to)

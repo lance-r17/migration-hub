@@ -9,8 +9,9 @@ from app.schemas.billing import (
     BillingThresholdConfigUpdate,
     BillingUpload,
 )
+from app.schemas.migration_settings import MigrationSettingsOut, MigrationSettingsUpdate
 from app.schemas.signoff import SignoffConfigOut, SignoffConfigUpdate
-from app.services import billing_service, signoff_service
+from app.services import billing_service, migration_settings_service, signoff_service
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 settings_router = APIRouter(prefix="/settings", tags=["settings"])
@@ -109,3 +110,15 @@ async def get_signoff(db: AsyncSession = Depends(get_db)):
 @settings_router.put("/signoff", response_model=SignoffConfigOut)
 async def update_signoff(body: SignoffConfigUpdate, db: AsyncSession = Depends(get_db)):
     return await signoff_service.update_signoff_config(db, body)
+
+
+@settings_router.get("/migration", response_model=MigrationSettingsOut)
+async def get_migration_settings(db: AsyncSession = Depends(get_db)):
+    return await migration_settings_service.get_migration_settings(db)
+
+
+@settings_router.put("/migration", response_model=MigrationSettingsOut)
+async def update_migration_settings(
+    body: MigrationSettingsUpdate, db: AsyncSession = Depends(get_db)
+):
+    return await migration_settings_service.update_migration_settings(db, body)

@@ -7,7 +7,7 @@ from app.database import get_db
 from pydantic import BaseModel
 
 from app.schemas.wave import WaveCreate, WaveImportRequest, WaveOut, WavePatch
-from app.services import jira_client, wave_service
+from app.services import jira_client, migration_settings_service, wave_service
 
 router = APIRouter(prefix="/waves", tags=["waves"])
 
@@ -30,6 +30,18 @@ def _wave_out(wave) -> WaveOut:
     )
 
 
+async def _validate_wave_dates(session: AsyncSession, start_date: str, cutover_date: str) -> None:
+    mig = await migration_settings_service.get_migration_settings(session)
+    pp = mig.platform_period
+    if not pp or not pp.start_date or not pp.end_date:
+        return
+    if start_date < pp.start_date or cutover_date > pp.end_date:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Wave dates must fall within the platform migration period ({pp.start_date} to {pp.end_date}).",
+        )
+
+
 @router.get("", response_model=list[WaveOut])
 async def list_waves(db: AsyncSession = Depends(get_db)):
     waves = await wave_service.get_all(db)
@@ -38,6 +50,7 @@ async def list_waves(db: AsyncSession = Depends(get_db)):
 
 @router.post("", response_model=WaveOut, status_code=201)
 async def create_wave(body: WaveCreate, db: AsyncSession = Depends(get_db)):
+    await _validate_wave_dates(db, body.start_date, body.cutover_date)
     if body.jira_project_key is None:
         body.jira_project_key = settings.jira_project_key
     try:
@@ -78,6 +91,9 @@ async def update_wave(wave_id: str, body: WavePatch, db: AsyncSession = Depends(
     wave = await wave_service.get_by_id(db, wave_id)
     if not wave:
         raise HTTPException(status_code=404, detail="Wave not found")
+    start = body.start_date or wave.start_date
+    cutover = body.cutover_date or wave.cutover_date
+    await _validate_wave_dates(db, start, cutover)
     wave = await wave_service.update(db, wave, body)
     return _wave_out(wave)
 

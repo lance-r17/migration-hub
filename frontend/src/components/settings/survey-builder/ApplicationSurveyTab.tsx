@@ -52,6 +52,7 @@ const INPUT_TYPE_LABELS: Record<string, string> = {
   dependency_list: 'Dependency List',
   date: 'Date',
   date_range: 'Date Range',
+  migration_date_range: 'Migration Date Range',
   checkbox_select: 'Checkboxes',
   file_upload: 'File upload',
   effort_estimate: 'Effort estimate',

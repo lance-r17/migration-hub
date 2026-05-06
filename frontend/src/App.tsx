@@ -12,6 +12,7 @@ import { SurveyBuilderPage } from './pages/SurveyBuilderPage'
 import { EmbargoPage } from './pages/EmbargoPage'
 import { BillingSettingsPage } from './pages/BillingSettingsPage'
 import { SignoffSettingsPage } from './pages/SignoffSettingsPage'
+import { MigrationSettingsPage } from './pages/MigrationSettingsPage'
 import { EmailTemplatesPage } from './pages/EmailTemplatesPage'
 import { EmailBuilderPage } from './pages/EmailBuilderPage'
 import { EmailPreviewPage } from './pages/EmailPreviewPage'
@@ -58,6 +59,7 @@ function App() {
           <Route path="embargo" element={<EmbargoPage />} />
           <Route path="billing" element={<BillingSettingsPage />} />
           <Route path="signoff" element={<SignoffSettingsPage />} />
+          <Route path="migration" element={<MigrationSettingsPage />} />
         </Route>
       </Routes>
       <Toaster />

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Waves, Download, Plus, Lock, GanttChart } from 'lucide-react'
+import { Waves, Download, Plus, Lock, GanttChart, AlertTriangle } from 'lucide-react'
+import { isBefore, isAfter } from 'date-fns'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +18,7 @@ import { CreateWaveDrawer } from '@/components/drawers/CreateWaveDrawer'
 import { ImportWaveDrawer } from '@/components/drawers/ImportWaveDrawer'
 import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { useCurrentUser } from '@/context/UserContext'
 import { WaveGanttModal } from '@/components/waves/WaveGanttModal'
 import { EditWaveDrawer } from '@/components/drawers/EditWaveDrawer'
@@ -42,8 +44,15 @@ function formatDate(iso: string) {
   return `${day} ${months[parseInt(month, 10) - 1]} ${year}`
 }
 
+function isWaveOutOfPeriod(wave: Wave, platformPeriod?: { startDate?: string; endDate?: string }): boolean {
+  if (!platformPeriod?.startDate || !platformPeriod?.endDate) return false
+  return isBefore(new Date(wave.startDate), new Date(platformPeriod.startDate)) ||
+    isAfter(new Date(wave.cutoverDate), new Date(platformPeriod.endDate))
+}
+
 export function WavesPage() {
   const { user } = useCurrentUser()
+  const { settings } = useMigrationSettings()
   const { waves, loading, createWave, importWave } = useWaves()
   const { projects: initialProjects } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
@@ -257,7 +266,14 @@ export function WavesPage() {
                       {projectCountByWave(wave.id)}
                     </TableCell>
                     <TableCell>
-                      <WaveStatusBadge status={wave.status} />
+                      <div className="flex items-center gap-2">
+                        <WaveStatusBadge status={wave.status} />
+                        {isWaveOutOfPeriod(wave, settings?.platformPeriod) && (
+                          <span title="Wave dates fall outside the platform migration period" className="inline-flex items-center text-amber-600">
+                            <AlertTriangle size={14} />
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -16,6 +16,19 @@ async def get_by_id(session: AsyncSession, wave_id: str) -> Wave | None:
     return await session.get(Wave, wave_id)
 
 
+async def _validate_dates(session: AsyncSession, start_date: str, cutover_date: str) -> None:
+    from app.services import migration_settings_service
+
+    mig = await migration_settings_service.get_migration_settings(session)
+    pp = mig.platform_period
+    if not pp or not pp.start_date or not pp.end_date:
+        return
+    if start_date < pp.start_date or cutover_date > pp.end_date:
+        raise ValueError(
+            f"Wave dates must fall within the platform migration period ({pp.start_date} to {pp.end_date})."
+        )
+
+
 async def create(session: AsyncSession, data: WaveCreate) -> Wave:
     wave = Wave(
         id=str(uuid.uuid4()),
@@ -71,6 +84,8 @@ async def sync_from_jira(session: AsyncSession, wave_id: str) -> Wave:
     else:
         wave.status = "planned"
 
+    await _validate_dates(session, wave.start_date, wave.cutover_date)
+
     await session.flush()
     await session.refresh(wave)
     return wave
@@ -88,11 +103,15 @@ async def import_from_jira(session: AsyncSession, epic_key: str, color: str | No
     epic_data = await jira_client.get_epic(epic_key)
     project_key = epic_data.get("jira_project_key") or (epic_key.split("-")[0] if "-" in epic_key else "MIG")
 
+    start_date = epic_data.get("start_date") or "2026-01-01"
+    cutover_date = epic_data.get("cutover_date") or "2026-12-31"
+    await _validate_dates(session, start_date, cutover_date)
+
     wave = Wave(
         id=str(uuid.uuid4()),
         name=epic_data.get("name") or f"Wave imported from {epic_key}",
-        start_date=epic_data.get("start_date") or "2026-01-01",
-        cutover_date=epic_data.get("cutover_date") or "2026-12-31",
+        start_date=start_date,
+        cutover_date=cutover_date,
         description=epic_data.get("description") or None,
         jira_project_key=project_key,
         jira_epic_key=epic_key,

@@ -29,7 +29,7 @@ from app.schemas.project import (
 from app.schemas.user import ProjectUserRoleAssignment, UserOut
 from app.schemas.risk import RiskOut
 from app.schemas.jira_job import JiraJobCreate
-from app.services import audit_service, attachment_service, jira_client, jira_service, project_service, user_service
+from app.services import audit_service, attachment_service, jira_client, jira_service, migration_settings_service, project_service, user_service
 from app.config import settings
 from app.auth import get_current_user
 from app.models.user import User
@@ -292,6 +292,23 @@ async def update_project_user_roles(
     return _project_detail(project)
 
 
+async def _validate_migration_constraints(session: AsyncSession, value: dict[str, Any]) -> None:
+    mc = value or {}
+    start = mc.get("earliestStartDate")
+    end = mc.get("latestEndDate")
+    if not start or not end:
+        return
+    mig = await migration_settings_service.get_migration_settings(session)
+    pp = mig.platform_period
+    if not pp or not pp.start_date or not pp.end_date:
+        return
+    if start < pp.start_date or end > pp.end_date:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Migration constraints must fall within the platform migration period ({pp.start_date} to {pp.end_date}).",
+        )
+
+
 def _require_platform_lead_for_block(user: User) -> None:
     if "platform_migration_lead" not in (user.role or ""):
         raise HTTPException(
@@ -362,6 +379,9 @@ async def update_section(
         if old_status == "blocked" or new_status == "blocked":
             _require_platform_lead_for_block(current_user)
             value = _resolve_status_if_unblocking(project, new_status)
+
+    if section_key == "migrationConstraints":
+        await _validate_migration_constraints(db, value)
 
     actor = _user_to_actor(current_user)
     try:

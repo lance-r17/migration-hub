@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { format, isBefore, isAfter } from 'date-fns'
 import { Loader2, CalendarIcon } from 'lucide-react'
 import type { DateRange } from 'react-day-picker'
 import {
@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { createWave } from '@/services/waves'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import type { Wave } from '@/types/wave'
 import { WAVE_COLORS } from '@/types/wave'
 
@@ -43,6 +44,7 @@ function formatRange(start: string, end: string): string {
 }
 
 export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Props) {
+  const { settings } = useMigrationSettings()
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [calOpen, setCalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -66,9 +68,23 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Pr
     onOpenChange(false)
   }
 
+  const validateDates = (startDate: string, cutoverDate: string): string | null => {
+    const pp = settings?.platformPeriod
+    if (!pp?.startDate || !pp?.endDate) return null
+    if (isBefore(new Date(startDate), new Date(pp.startDate)) || isAfter(new Date(cutoverDate), new Date(pp.endDate))) {
+      return `Wave dates must fall within platform period (${format(new Date(pp.startDate), 'MMM d, y')} – ${format(new Date(pp.endDate), 'MMM d, y')}).`
+    }
+    return null
+  }
+
   const handleSave = async () => {
     if (!draft.name || !draft.startDate || !draft.cutoverDate) {
       setError('Please fill in all required fields.')
+      return
+    }
+    const dateError = validateDates(draft.startDate, draft.cutoverDate)
+    if (dateError) {
+      setError(dateError)
       return
     }
     setError(null)
@@ -97,6 +113,14 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Pr
     from: draft.startDate ? new Date(draft.startDate) : undefined,
     to: draft.cutoverDate ? new Date(draft.cutoverDate) : undefined,
   }
+
+  const pp = settings?.platformPeriod
+  const disabledDates = pp?.startDate && pp?.endDate
+    ? [
+        { before: new Date(pp.startDate) },
+        { after: new Date(pp.endDate) },
+      ]
+    : undefined
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
@@ -143,10 +167,11 @@ export function CreateWaveDrawer({ open, onOpenChange, onCreated, onCreate }: Pr
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="range"
-                  defaultMonth={draft.startDate ? new Date(draft.startDate) : undefined}
+                  defaultMonth={draft.startDate ? new Date(draft.startDate) : pp?.startDate ? new Date(pp.startDate) : undefined}
                   selected={selectedRange}
                   onSelect={handleRangeSelect}
                   numberOfMonths={2}
+                  disabled={disabledDates}
                 />
               </PopoverContent>
             </Popover>

@@ -1,6 +1,6 @@
 import type { Project, ResourceCategory } from '@/types'
 
-export type SurveyInputType = 'short_text' | 'long_text' | 'long_text_with_upload' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'checkbox_select' | 'file_upload' | 'effort_estimate' | 'effort_table'
+export type SurveyInputType = 'short_text' | 'long_text' | 'long_text_with_upload' | 'select' | 'boolean' | 'string_array' | 'migration_window' | 'dependency_list' | 'date' | 'date_range' | 'migration_date_range' | 'checkbox_select' | 'file_upload' | 'effort_estimate' | 'effort_table'
 
 export interface SurveyFieldDef {
   id: string                      // stable unique ID e.g. "appoverview__applicationName"
@@ -35,7 +35,7 @@ export interface SurveyConfig {
 // ─── Resource Survey ──────────────────────────────────────────────────────────
 
 // Input types supported for resource-level questions (simpler subset of SurveyInputType)
-export type ResourceSurveyInputType = 'select' | 'short_text' | 'boolean' | 'string_array' | 'checkbox_select' | 'date' | 'date_range'
+export type ResourceSurveyInputType = 'select' | 'short_text' | 'boolean' | 'string_array' | 'checkbox_select' | 'date' | 'date_range' | 'migration_date_range'
 
 // A single question whose answer is written to resource.specs[specsKey]
 export interface ResourceQuestionDef {

@@ -322,7 +322,7 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     toFieldPath: 'latestEndDate',
     label: 'Migration Date Range',
     sectionLabel: 'Migration Constraints',
-    inputType: 'date_range',
+    inputType: 'migration_date_range',
     defaultQuestion: 'What is the allowed migration window?',
     defaultHint: 'Select the earliest start date and latest end date for the migration.',
   },

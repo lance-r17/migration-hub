@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BadgeCheck, ClipboardList, DollarSign, Settings2, ShieldAlert } from 'lucide-react'
+import { BadgeCheck, CalendarRange, ClipboardList, DollarSign, Settings2, ShieldAlert } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const SETTINGS_SECTIONS = [
@@ -8,6 +8,12 @@ const SETTINGS_SECTIONS = [
     description: 'Configure the project survey questions shown to application owners.',
     icon: <ClipboardList size={20} className="text-primary" />,
     href: '/settings/survey',
+  },
+  {
+    title: 'Migration Settings',
+    description: 'Set the platform migration period and configurable duration options for migration windows.',
+    icon: <CalendarRange size={20} className="text-primary" />,
+    href: '/settings/migration',
   },
   {
     title: 'Embargo Periods',

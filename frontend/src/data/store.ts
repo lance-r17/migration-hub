@@ -21,7 +21,7 @@ import type { Wave, JiraJobRequest } from '@/types/wave'
 import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
 import type { BillingBreakdownRecord, BillingRecord, BillingThresholdConfig } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
-import type { SignoffConfig } from '@/types/settings'
+import type { SignoffConfig, MigrationSettings } from '@/types/settings'
 
 // Mutable in-memory session store — deep copy of mock data.
 // Writes persist for the lifetime of the browser tab (resets on page refresh).
@@ -41,6 +41,7 @@ let _resourceSurveyConfig: ResourceSurveyConfig = structuredClone(mockResourceSu
 let _embargos: EmbargoRecord[] = structuredClone(mockEmbargos)
 let _billingThresholdConfig: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120, currency: 'CNY', baselineMonth: undefined, ytdStartMonth: undefined }
 let _signoffConfig: SignoffConfig = { enabled: true }
+let _migrationSettings: MigrationSettings = { platformPeriod: undefined, durationOptions: [15, 30, 45] }
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
@@ -261,6 +262,17 @@ export const store = {
   setSignoffConfig(config: SignoffConfig): SignoffConfig {
     _signoffConfig = { ...config }
     return _signoffConfig
+  },
+
+  // ─── Migration Settings ────────────────────────────────────────────────────
+
+  getMigrationSettings(): MigrationSettings {
+    return _migrationSettings
+  },
+
+  setMigrationSettings(config: MigrationSettings): MigrationSettings {
+    _migrationSettings = { ...config }
+    return _migrationSettings
   },
 
   // ─── Product-Category Map ──────────────────────────────────────────────────

@@ -1,0 +1,46 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
+
+from app.models.config_store import ConfigStore
+from app.schemas.migration_settings import MigrationSettingsOut, MigrationSettingsUpdate
+
+_KEY = "migration_settings"
+_DEFAULT = {
+    "platform_period": None,
+    "duration_options": [15, 30, 45],
+}
+
+
+async def get_migration_settings(session: AsyncSession) -> MigrationSettingsOut:
+    row = await session.get(ConfigStore, _KEY)
+    data = row.value if row else dict(_DEFAULT)
+    return MigrationSettingsOut(
+        platform_period=data.get("platform_period"),
+        duration_options=data.get("duration_options", _DEFAULT["duration_options"]),
+    )
+
+
+async def update_migration_settings(
+    session: AsyncSession, patch: MigrationSettingsUpdate
+) -> MigrationSettingsOut:
+    row = await session.get(ConfigStore, _KEY)
+    current = row.value if row else dict(_DEFAULT)
+
+    if patch.platform_period is not None:
+        current["platform_period"] = (
+            patch.platform_period.model_dump() if patch.platform_period else None
+        )
+    if patch.duration_options is not None:
+        current["duration_options"] = patch.duration_options
+
+    if row:
+        row.value = current
+        flag_modified(row, "value")
+    else:
+        session.add(ConfigStore(key=_KEY, value=current))
+
+    await session.flush()
+    return MigrationSettingsOut(
+        platform_period=current.get("platform_period"),
+        duration_options=current.get("duration_options", _DEFAULT["duration_options"]),
+    )
