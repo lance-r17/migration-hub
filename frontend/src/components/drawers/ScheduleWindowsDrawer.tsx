@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { format, addDays, isBefore, isAfter } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import { SectionEditDrawer } from './SectionEditDrawer'
@@ -37,8 +37,9 @@ export function ScheduleWindowsDrawer({ open, onOpenChange, data, onSave }: Prop
     selectedDuration: '',
   })
 
+  const wasOpenRef = useRef(false)
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpenRef.current) {
       const start = data?.earliestStartDate ?? ''
       const end = data?.latestEndDate ?? ''
       let duration = ''
@@ -57,6 +58,7 @@ export function ScheduleWindowsDrawer({ open, onOpenChange, data, onSave }: Prop
         selectedDuration: duration,
       })
     }
+    wasOpenRef.current = open
   }, [open, data])
 
   const platformStart = settings?.platformPeriod?.startDate

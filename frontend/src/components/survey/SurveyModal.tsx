@@ -29,7 +29,7 @@ interface SurveyModalProps {
   getCategoryForProduct?: (product?: string) => ResourceCategory
 }
 
-type DateRangeValue = { from?: string; to?: string }
+type DateRangeValue = { from?: string; to?: string; duration?: string }
 type AnswerValue = string | boolean | string[] | DependencyEntry[] | DateRangeValue | { tables: EffortTable[]; tableMode: 'single' | 'multiple' } | undefined
 type ResourceAnswerValue = string | boolean | string[] | undefined
 
@@ -362,9 +362,9 @@ function QuestionInput({
     case 'migration_date_range': {
       const range = (value as DateRangeValue | undefined) ?? {}
       const durationOptions = settings?.durationOptions ?? [15, 30, 45]
-      const selectedDuration = range.from && range.to
+      const selectedDuration = range.duration ?? (range.from && range.to
         ? String(Math.round((new Date(range.to).getTime() - new Date(range.from).getTime()) / (1000 * 60 * 60 * 24)))
-        : ''
+        : '')
 
       function computeEndDate(start: string | undefined, dur: string): string | undefined {
         if (!start || !dur) return undefined
@@ -396,7 +396,7 @@ function QuestionInput({
                   onClick={() => {
                     const val = selected ? '' : String(days)
                     const end = computeEndDate(range.from, val)
-                    onChange({ from: range.from, to: end })
+                    onChange({ from: range.from, to: end, duration: val || undefined })
                   }}
                   className={cn(
                     'inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium border transition-colors',
@@ -423,7 +423,7 @@ function QuestionInput({
                 onSelect={(d) => {
                   const start = d ? format(d, 'yyyy-MM-dd') : undefined
                   const end = computeEndDate(start, selectedDuration)
-                  onChange({ from: start, to: end })
+                  onChange({ from: start, to: end, duration: selectedDuration || undefined })
                 }}
                 disabled={(() => {
                   if (!platformStart || !platformEnd) return undefined
@@ -900,7 +900,7 @@ export function SurveyModal({
       const isDateRange = def?.inputType === 'date_range' || def?.inputType === 'migration_date_range'
       if (isDateRange) {
         const range = value as DateRangeValue | undefined
-        if (!range?.from && !range?.to) next.delete(currentQuestion.fieldId)
+        if (!range?.from && !range?.to && !range?.duration) next.delete(currentQuestion.fieldId)
         else next.set(currentQuestion.fieldId, value)
       } else if (value === undefined || value === '' || (!isDependencyList && Array.isArray(value) && value.length === 0)) {
         next.delete(currentQuestion.fieldId)
@@ -1155,7 +1155,7 @@ export function SurveyModal({
                     Ready to migrate <span className="text-primary">{project.name}</span>?
                   </h2>
                   <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-                    This survey helps us understand your application's architecture and requirements to create a seamless migration path.
+                    This survey covers your application's profile, migration planning, and cloud resource configuration.
                   </p>
                 </div>
               </div>
@@ -1163,18 +1163,18 @@ export function SurveyModal({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left max-w-5xl mx-auto">
                 <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 space-y-3">
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">1</div>
-                  <h3 className="font-semibold">App Architecture</h3>
-                  <p className="text-xs text-muted-foreground">Versions, platform details, and business criticality.</p>
+                  <h3 className="font-semibold">Application Profile</h3>
+                  <p className="text-xs text-muted-foreground">Business function, tier, strategy, user base, availability targets, data architecture, and system dependencies.</p>
                 </div>
                 <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 space-y-3">
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">2</div>
-                  <h3 className="font-semibold">Dependencies</h3>
-                  <p className="text-xs text-muted-foreground">Upstream/downstream systems and integrations.</p>
+                  <h3 className="font-semibold">Migration Planning</h3>
+                  <p className="text-xs text-muted-foreground">Maintenance windows, migration constraints, target architecture, non-functional requirements, and effort estimation.</p>
                 </div>
                 <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 space-y-3">
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">3</div>
-                  <h3 className="font-semibold">Infrastructure</h3>
-                  <p className="text-xs text-muted-foreground">Specific configuration for your cloud resources.</p>
+                  <h3 className="font-semibold">Cloud Resources</h3>
+                  <p className="text-xs text-muted-foreground">Configuration questions for your specific cloud resources (databases, caches, storage, etc.).</p>
                 </div>
               </div>
 

@@ -104,7 +104,7 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     sectionLabel: 'Application Overview',
     inputType: 'boolean',
     defaultQuestion: 'Is IITA (Important IT Asset) applicable for this application?',
-    defaultHint: 'Select Yes if this application is classified as an Important IT Asset. Required when IBS is selected.',
+    defaultHint: 'Select Yes if this application is classified as an Important IT Asset.',
   },
   {
     id: 'appoverview__softwareOrigin',
@@ -302,7 +302,7 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     sectionLabel: 'Migration Constraints',
     inputType: 'migration_window',
     defaultQuestion: 'What is the regular maintenance window?',
-    defaultHint: 'Select weekdays and specify start/end times in HKT (UTC+8).',
+    defaultHint: 'Select one or more days, then set start and end times in HKT (UTC+8).',
   },
   {
     id: 'constraints__preferredMigrationWindow',
@@ -313,7 +313,7 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     inputType: 'checkbox_select',
     options: ['weekday', 'weekend'],
     defaultQuestion: 'What is your preferred migration window?',
-    defaultHint: 'Select all that apply.',
+    defaultHint: 'Select weekday (Mon–Fri) and/or weekend (Sat–Sun). Both can be chosen.',
   },
   {
     id: 'constraints__migrationDateRange',
@@ -323,8 +323,8 @@ export const SURVEY_FIELD_DEFS: SurveyFieldDef[] = [
     label: 'Migration Date Range',
     sectionLabel: 'Migration Constraints',
     inputType: 'migration_date_range',
-    defaultQuestion: 'What is the allowed migration window?',
-    defaultHint: 'Select the earliest start date and latest end date for the migration.',
+    defaultQuestion: 'When should this migration take place?',
+    defaultHint: 'Select a duration, then pick an earliest start date. The end date is calculated automatically and must fall within the platform migration period.',
   },
   {
     id: 'constraints__crDurationHours',
