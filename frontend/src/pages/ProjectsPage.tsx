@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, FolderOpen, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   Table,
@@ -10,6 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -37,6 +44,16 @@ function getMigrationDates(project: Project) {
   return { start, end }
 }
 
+function getMigrationPeriodDays(project: Project): number | null {
+  const { start, end } = getMigrationDates(project)
+  if (!start || !end) return null
+  const s = new Date(start)
+  const e = new Date(end)
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
+  const diffTime = e.getTime() - s.getTime()
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+}
+
 function getProgressVariant(project: Project) {
   if (project.progress === 100) return 'tertiary'
   if (project.status === 'blocked') return 'error'
@@ -51,13 +68,36 @@ export function ProjectsPage() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const [migrationRange, setMigrationRange] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
 
-  const totalPages = Math.ceil((projects?.length || 0) / pageSize)
+  const filteredProjects = useMemo(() => {
+    return (projects || []).filter((p) => {
+      if (statusFilter !== 'all' && p.status !== statusFilter) return false
+      if (migrationRange === 'all') return true
+      const days = getMigrationPeriodDays(p)
+      if (days === null) return false
+      switch (migrationRange) {
+        case 'lt30':
+          return days < 30
+        case '30to90':
+          return days >= 30 && days < 90
+        case '90to180':
+          return days >= 90 && days < 180
+        case 'gte180':
+          return days >= 180
+        default:
+          return true
+      }
+    })
+  }, [projects, migrationRange, statusFilter])
+
+  const totalPages = Math.ceil(filteredProjects.length / pageSize)
   const startIndex = (currentPage - 1) * pageSize
   const endIndex = startIndex + pageSize
   const paginatedProjects = useMemo(
-    () => (projects || []).slice(startIndex, endIndex),
-    [projects, startIndex, endIndex]
+    () => filteredProjects.slice(startIndex, endIndex),
+    [filteredProjects, startIndex, endIndex]
   )
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
@@ -100,6 +140,52 @@ export function ProjectsPage() {
           </p>
         </div>
 
+        {/* Filters (left) — right side reserved for export button */}
+        <div className="flex justify-between items-center">
+          <div className="flex gap-3">
+            <Select
+              value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-[180px]" size="sm">
+              <ListFilter className="size-4 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="planning">Planning</SelectItem>
+              <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="signed-off">Signed Off</SelectItem>
+              <SelectItem value="migrating">Migrating</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={migrationRange}
+            onValueChange={(value) => {
+              setMigrationRange(value)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-[220px]" size="sm">
+              <Calendar className="size-4 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Filter by migration period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All migration periods</SelectItem>
+              <SelectItem value="lt30">{'< 30 days'}</SelectItem>
+              <SelectItem value="30to90">30–90 days</SelectItem>
+              <SelectItem value="90to180">90–180 days</SelectItem>
+              <SelectItem value="gte180">{'≥ 180 days'}</SelectItem>
+            </SelectContent>
+          </Select>
+          </div>
+        </div>
+
         {/* Projects Table */}
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>
@@ -127,7 +213,7 @@ export function ProjectsPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : projects.length === 0 ? (
+              ) : filteredProjects.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
@@ -178,7 +264,8 @@ export function ProjectsPage() {
                       {(() => {
                         const { start, end } = getMigrationDates(project)
                         if (!start && !end) return '—'
-                        return `${formatDate(start)} → ${formatDate(end)}`
+                        const days = getMigrationPeriodDays(project)
+                        return `${formatDate(start)} → ${formatDate(end)}${days !== null ? ` (${days} days)` : ''}`
                       })()}
                     </TableCell>
                     <TableCell className="text-sm">
@@ -216,11 +303,11 @@ export function ProjectsPage() {
         </div>
 
         {/* Pagination */}
-        {!loading && projects.length > 0 && (
+        {!loading && filteredProjects.length > 0 && (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span>
-                Showing {startIndex + 1}-{Math.min(endIndex, projects.length)} of {projects.length}
+                Showing {startIndex + 1}-{Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length}
               </span>
               <select
                 value={pageSize}
