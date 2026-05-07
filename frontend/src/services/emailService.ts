@@ -6,7 +6,7 @@ import {
   deleteTemplate as storeDelete,
   createBlankTemplate,
 } from '@/data/emailTemplates'
-import { USE_MOCK } from './client'
+import { USE_MOCK, apiClient } from './client'
 import { getEmailServerUrl } from '@/runtimeConfig'
 
 const delay = (ms = 300) => new Promise(res => setTimeout(res, ms))
@@ -16,8 +16,7 @@ export async function getEmailTemplates(): Promise<EmailTemplate[]> {
     await delay()
     return getAllTemplates()
   }
-  const res = await fetch('/api/v1/email-templates')
-  return res.json()
+  return apiClient.get<EmailTemplate[]>('/api/v1/email-templates')
 }
 
 export async function getEmailTemplate(id: string): Promise<EmailTemplate> {
@@ -27,8 +26,7 @@ export async function getEmailTemplate(id: string): Promise<EmailTemplate> {
     if (!t) throw new Error(`Template ${id} not found`)
     return t
   }
-  const res = await fetch(`/api/v1/email-templates/${id}`)
-  return res.json()
+  return apiClient.get<EmailTemplate>(`/api/v1/email-templates/${id}`)
 }
 
 export async function saveEmailTemplate(template: EmailTemplate): Promise<EmailTemplate> {
@@ -36,12 +34,7 @@ export async function saveEmailTemplate(template: EmailTemplate): Promise<EmailT
     await delay(400)
     return upsertTemplate(template)
   }
-  const res = await fetch(`/api/v1/email-templates/${template.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(template),
-  })
-  return res.json()
+  return apiClient.put<EmailTemplate>(`/api/v1/email-templates/${template.id}`, template)
 }
 
 export async function createEmailTemplate(): Promise<EmailTemplate> {
@@ -51,12 +44,7 @@ export async function createEmailTemplate(): Promise<EmailTemplate> {
     upsertTemplate(blank)
     return blank
   }
-  const res = await fetch('/api/v1/email-templates', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
-  })
-  return res.json()
+  return apiClient.post<EmailTemplate>('/api/v1/email-templates', {})
 }
 
 export async function deleteEmailTemplate(id: string): Promise<void> {
@@ -65,7 +53,7 @@ export async function deleteEmailTemplate(id: string): Promise<void> {
     storeDelete(id)
     return
   }
-  await fetch(`/api/v1/email-templates/${id}`, { method: 'DELETE' })
+  await apiClient.delete<void>(`/api/v1/email-templates/${id}`)
 }
 
 export interface SendTestEmailPayload {
@@ -101,10 +89,5 @@ export async function sendTestEmail(payload: SendTestEmailPayload): Promise<void
     return
   }
 
-  const res = await fetch('/api/v1/email-templates/send-test', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) throw new Error('Failed to send test email')
+  await apiClient.post<void>('/api/v1/email-templates/send-test', payload)
 }
