@@ -226,4 +226,77 @@ alembic revision --autogenerate -m "describe_the_change"
 alembic downgrade -1
 ```
 
+## Seeding
+
+The `backend/scripts/seed.py` script populates the database with mock data from `backend/scripts/seed_data/*.json`.
+
+### Usage
+
+```bash
+# Skip if already seeded (default)
+python scripts/seed.py
+
+# Clear and re-seed everything
+python scripts/seed.py --force
+
+# Refresh only specific entities
+python scripts/seed.py --projects --waves
+```
+
+### Supported flags
+
+| Flag | Description |
+|---|---|
+| `--force` | Clear and re-seed even if data exists |
+| `--users` | Refresh users only |
+| `--waves` | Refresh waves only |
+| `--projects` | Refresh projects (and related resources, risks, approvals) only |
+| `--embargos` | Refresh embargo records only |
+| `--billing` | Refresh billing records only |
+| `--config` | Refresh **all** config store entries |
+| `--config-survey-config` | Refresh survey config only |
+| `--config-resource-survey-config` | Refresh resource survey config only |
+| `--config-billing-threshold-config` | Refresh billing threshold config only |
+| `--config-migration-settings` | Refresh migration settings only |
+| `--email-templates` | Refresh email templates only |
+
+### Config seeding behavior
+
+- `--config` always clears the entire `config_store` table before reseeding (existing behavior).
+- Individual `--config-{key}` flags perform an **upsert** by default: they update the existing row if present, or insert a new one. Other config entries are left untouched.
+- To force-delete before reseeding a specific config entry, combine with `--force`:
+  ```bash
+  python scripts/seed.py --force --config-migration-settings
+  ```
+
+### Data files
+
+| File | Entity | Config key (if applicable) |
+|---|---|---|
+| `users.json` | `users` | — |
+| `waves.json` | `waves` | — |
+| `projects.json` | `projects`, `cloud_resources`, `risks`, `approvals`, `project_users` | — |
+| `embargos.json` | `embargo_records` | — |
+| `billing.json` | `billing_records` | — |
+| `survey_config.json` | `config_store` | `survey_config` |
+| `resource_survey_config.json` | `config_store` | `resource_survey_config` |
+| `billing_config.json` | `config_store` | `billing_threshold_config` |
+| `migration_settings.json` | `config_store` | `migration_settings` |
+| `email_templates.json` | `email_templates` | — |
+
+## Migrations
+
+All schema changes go through Alembic. Never modify the database schema directly.
+
+```bash
+# Apply all migrations
+alembic upgrade head
+
+# Generate a new migration (after model changes)
+alembic revision --autogenerate -m "describe_the_change"
+
+# Downgrade one step
+alembic downgrade -1
+```
+
 Migration scripts live in `backend/alembic/versions/`. The initial schema (`0001_initial_schema.py`) is hand-authored and creates the core tables in FK dependency order.

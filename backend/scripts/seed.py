@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""
-Seed the database with mock data from scripts/seed_data/*.json.
+"""Seed the database with mock data from scripts/seed_data/*.json.
 
 Usage:
     python scripts/seed.py            # skip if already seeded
     python scripts/seed.py --force    # clear and re-seed everything
     python scripts/seed.py --projects --waves   # refresh only projects and waves
+    python scripts/seed.py --config   # refresh all config data
+    python scripts/seed.py --config-migration-settings   # refresh only migration settings
 """
 
 import argparse
@@ -209,19 +210,26 @@ def seed_billing(session: Session) -> None:
                 ))
 
 
-def seed_config(session: Session) -> None:
-    print("Seeding config store (survey, billing thresholds, migration settings)...")
-    survey = load("survey_config.json")
-    session.add(ConfigStore(key="survey_config", value=survey))
-
-    resource_survey = load("resource_survey_config.json")
-    session.add(ConfigStore(key="resource_survey_config", value=resource_survey))
-
-    billing_config = load("billing_config.json")
-    session.add(ConfigStore(key="billing_threshold_config", value=billing_config))
-
-    migration_settings = load("migration_settings.json")
-    session.add(ConfigStore(key="migration_settings", value=migration_settings))
+def seed_config(session: Session, keys: list[str] | None = None) -> None:
+    CONFIG_FILES: dict[str, tuple[str, str]] = {
+        "survey_config": ("survey_config.json", "survey_config"),
+        "resource_survey_config": ("resource_survey_config.json", "resource_survey_config"),
+        "billing_threshold_config": ("billing_config.json", "billing_threshold_config"),
+        "migration_settings": ("migration_settings.json", "migration_settings"),
+    }
+    to_seed = keys if keys else list(CONFIG_FILES.keys())
+    for key in to_seed:
+        if key not in CONFIG_FILES:
+            print(f"Warning: unknown config key '{key}', skipping.")
+            continue
+        filename, store_key = CONFIG_FILES[key]
+        print(f"Seeding config: {store_key}...")
+        data = load(filename)
+        existing = session.get(ConfigStore, store_key)
+        if existing:
+            existing.value = data
+        else:
+            session.add(ConfigStore(key=store_key, value=data))
 
 
 def seed_email_templates(session: Session) -> None:
@@ -256,7 +264,13 @@ def _seed_all(session: Session) -> None:
     print("Seed complete.")
 
 
-def seed(session: Session, force: bool = False, targets: dict[str, bool] | None = None) -> None:
+def seed(
+    session: Session,
+    force: bool = False,
+    targets: dict[str, bool] | None = None,
+    config_targets: dict[str, bool] | None = None,
+    config_all: bool = False,
+) -> None:
     # Determine which entities to seed
     all_targets = {
         "users": True,
@@ -295,8 +309,13 @@ def seed(session: Session, force: bool = False, targets: dict[str, bool] | None 
                 _clear_table(session, "embargo_records")
             if active.get("billing"):
                 _clear_table(session, "billing_records")
-            if active.get("config"):
-                _clear_table(session, "config_store")
+            if active.get("config") and force:
+                if not config_all and config_targets and any(config_targets.values()):
+                    for key, selected in config_targets.items():
+                        if selected:
+                            session.execute(text("DELETE FROM config_store WHERE key = :key"), {"key": key})
+                else:
+                    _clear_table(session, "config_store")
             if active.get("email_templates"):
                 _clear_table(session, "email_templates")
         else:
@@ -321,7 +340,10 @@ def seed(session: Session, force: bool = False, targets: dict[str, bool] | None 
     if active.get("billing"):
         seed_billing(session)
     if active.get("config"):
-        seed_config(session)
+        if not config_all and config_targets and any(config_targets.values()):
+            seed_config(session, keys=[k for k, v in config_targets.items() if v])
+        else:
+            seed_config(session)
     if active.get("email_templates"):
         seed_email_templates(session)
 
@@ -337,9 +359,20 @@ def main() -> None:
     parser.add_argument("--projects", action="store_true", help="Refresh projects only")
     parser.add_argument("--embargos", action="store_true", help="Refresh embargos only")
     parser.add_argument("--billing", action="store_true", help="Refresh billing records only")
-    parser.add_argument("--config", action="store_true", help="Refresh config store only")
+    parser.add_argument("--config", action="store_true", help="Refresh all config store entries")
+    parser.add_argument("--config-survey-config", action="store_true", help="Refresh survey config only")
+    parser.add_argument("--config-resource-survey-config", action="store_true", help="Refresh resource survey config only")
+    parser.add_argument("--config-billing-threshold-config", action="store_true", help="Refresh billing threshold config only")
+    parser.add_argument("--config-migration-settings", action="store_true", help="Refresh migration settings only")
     parser.add_argument("--email-templates", action="store_true", help="Refresh email templates only")
     args = parser.parse_args()
+
+    config_targets = {
+        "survey_config": args.config_survey_config,
+        "resource_survey_config": args.config_resource_survey_config,
+        "billing_threshold_config": args.config_billing_threshold_config,
+        "migration_settings": args.config_migration_settings,
+    }
 
     targets = {
         "users": args.users,
@@ -347,7 +380,7 @@ def main() -> None:
         "projects": args.projects,
         "embargos": args.embargos,
         "billing": args.billing,
-        "config": args.config,
+        "config": args.config or any(config_targets.values()),
         "email_templates": args.email_templates,
     }
     has_selective = any(targets.values())
@@ -360,7 +393,13 @@ def main() -> None:
         sys.exit(1)
 
     with Session(engine) as session:
-        seed(session, force=args.force, targets=targets if has_selective else None)
+        seed(
+            session,
+            force=args.force,
+            targets=targets if has_selective else None,
+            config_targets=config_targets,
+            config_all=args.config,
+        )
 
 
 if __name__ == "__main__":
