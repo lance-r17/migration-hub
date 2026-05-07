@@ -31,8 +31,9 @@ function formatDate(value: string | undefined) {
 
 function getMigrationDates(project: Project) {
   const p = project.planning
-  const start = p?.planStartDate ?? p?.estimatedStartDate ?? p?.startDate
-  const end = p?.planEndDate ?? p?.estimatedEndDate ?? p?.endDate
+  const mc = project.migrationConstraints
+  const start = p?.startDate || mc?.earliestStartDate
+  const end = p?.endDate || mc?.latestEndDate
   return { start, end }
 }
 
