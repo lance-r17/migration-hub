@@ -4,7 +4,7 @@ import { SectionCard } from '@/components/shared/SectionCard'
 import { SectionEditDrawer } from '@/components/drawers/SectionEditDrawer'
 import { Field, FieldGroup } from '@/components/ui/field'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { EffortTableEditor } from '@/components/project/EffortTableEditor'
+import { EffortTableEditor, getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getAttachments, deleteAttachment } from '@/services/attachments'
 import type { MigrationEffortEstimation, EffortTable } from '@/types'
 import type { Attachment } from '@/services/attachments'
@@ -42,18 +42,17 @@ function CostTable({ table }: { table: EffortTable }) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-border">
-            {['Task', 'Effort Type', 'Effort Unit (FTE)', 'Effort Time (Month)', 'Rate (Monthly Cost USD)', 'Cost (USD)', 'Third party?', 'Remarks'].map(h => (
+            {['Effort Type', 'Effort Unit (FTE)', 'Effort Time (Month)', 'Rate (Monthly Cost USD)', 'Cost (USD)', 'Third party?', 'Remarks'].map(h => (
               <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {table.tasks.map(task => {
+          {table.tasks.map((task, idx) => {
             const cost = (task.effort ?? 0) * (task.effortTime ?? 0) * (task.rate ?? 0)
             return (
-              <tr key={task.task} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">{task.task}</td>
-                <td className="py-3 pr-4 text-muted-foreground whitespace-nowrap">{task.effortType || '—'}</td>
+              <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">{getEffortTypeLabel(task.effortType) || '—'}</td>
                 <td className="py-3 pr-4 text-muted-foreground text-center">{task.effort ?? '—'}</td>
                 <td className="py-3 pr-4 text-muted-foreground text-center">{task.effortTime ?? '—'}</td>
                 <td className="py-3 pr-4 text-muted-foreground text-right">{task.rate !== undefined ? formatCurrency(task.rate) : '—'}</td>
@@ -65,7 +64,6 @@ function CostTable({ table }: { table: EffortTable }) {
           })}
           <tr className="border-b border-border last:border-0 bg-muted/30">
             <td className="py-3 pr-4 font-bold text-foreground">Total</td>
-            <td className="py-3 pr-4" />
             <td className="py-3 pr-4" />
             <td className="py-3 pr-4" />
             <td className="py-3 pr-4" />

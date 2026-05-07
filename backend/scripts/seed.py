@@ -50,7 +50,7 @@ def load(filename: str) -> dict | list:
 
 
 def _clear_table(session: Session, table: str) -> None:
-    session.execute(text(f"DELETE FROM {table}"))
+    session.execute(text(f"TRUNCATE TABLE {table} CASCADE"))
 
 
 def seed_users(session: Session) -> None:

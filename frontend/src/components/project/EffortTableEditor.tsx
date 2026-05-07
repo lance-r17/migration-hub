@@ -4,39 +4,31 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import type { EffortTable, EffortTask } from '@/types'
 
-const EFFORT_TYPE_OPTIONS = [
-  'App specific',
-  'Third party license',
-  'Third party services',
-  'Dependency',
-  'Other items',
-]
+export const EFFORT_TYPE_OPTIONS = [
+  { key: 'app_specific', label: 'App specific migration effort' },
+  { key: 'third_party_license', label: 'Third party license' },
+  { key: 'third_party_services', label: 'Third party services' },
+  { key: 'dependency', label: 'Dependency effort' },
+  { key: 'new_cloud_consumption', label: 'New cloud consumption outside waiver period' },
+  { key: 'miscellaneous', label: 'Miscellaneous' },
+] as const
 
-const PREDEFINED_TASKS = [
-  'Analysis and mapping',
-  'Coding review',
-  'Code change',
-  'Data and schema change and testing',
-  'Data validation',
-  'Compliance and security',
-  'Testing & QA',
-  'Cutover',
-]
+export function getEffortTypeLabel(key: string): string {
+  const found = EFFORT_TYPE_OPTIONS.find((o) => o.key === key)
+  if (found) return found.label
+  // Fallback for legacy data stored with the full label string
+  const legacy = EFFORT_TYPE_OPTIONS.find((o) => o.label === key)
+  if (legacy) return legacy.label
+  return key
+}
 
 function createEmptyTable(softwareOrigin?: string): EffortTable {
   const defaultThirdParty = softwareOrigin === '3rd party' ? true : false
   return {
-    tasks: PREDEFINED_TASKS.map((task) => ({ task, effortType: EFFORT_TYPE_OPTIONS[0], thirdParty: defaultThirdParty })),
+    tasks: EFFORT_TYPE_OPTIONS.map(({ key }) => ({ effortType: key, thirdParty: defaultThirdParty })),
   }
 }
 
@@ -68,7 +60,6 @@ function TableTotals({ tasks }: { tasks: EffortTask[] }) {
   return (
     <tr className="bg-muted/50 font-semibold">
       <td className="px-3 py-1 text-xs border-t">Total</td>
-      <td className="px-3 py-1 text-xs border-t" />
       <td className="px-3 py-1 text-xs border-t text-center">—</td>
       <td className="px-3 py-1 text-xs border-t text-center">—</td>
       <td className="px-3 py-1 text-xs border-t text-center">—</td>
@@ -92,22 +83,8 @@ function SingleTableRow({
 
   return (
     <tr className="hover:bg-muted/30">
-      <td className="px-3 py-1 text-xs border-t">{task.task}</td>
-      <td className="px-2 py-1 border-t">
-        <Select
-          value={task.effortType ?? ''}
-          onValueChange={(v) => onUpdate({ effortType: v || undefined })}
-          disabled={disabled}
-        >
-          <SelectTrigger className="h-7 text-xs px-2 w-full">
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent className="z-[400]">
-            {EFFORT_TYPE_OPTIONS.map(opt => (
-              <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <td className="px-3 py-1 text-xs border-t font-medium text-foreground whitespace-nowrap">
+        {getEffortTypeLabel(task.effortType)}
       </td>
       <td className="px-2 py-1 border-t">
         <Input
@@ -245,8 +222,7 @@ function EffortTableCard({
       <table className="w-full text-xs">
         <thead>
           <tr className="bg-muted/30 text-[11px] text-muted-foreground uppercase tracking-wide">
-            <th className="px-3 py-1.5 text-left font-medium">Task</th>
-            <th className="px-3 py-1.5 text-left font-medium min-w-[200px]">Effort Type</th>
+            <th className="px-3 py-1.5 text-left font-medium">Effort Type</th>
             <th className="px-3 py-1.5 text-center font-medium w-20">Effort Unit (FTE)</th>
             <th className="px-3 py-1.5 text-center font-medium w-20">Effort Time (Month)</th>
             <th className="px-3 py-1.5 text-center font-medium w-28">Rate (Monthly Cost USD)</th>
@@ -258,7 +234,7 @@ function EffortTableCard({
         <tbody>
           {table.tasks.map((task, i) => (
             <SingleTableRow
-              key={task.task}
+              key={i}
               task={task}
               onUpdate={(patch) => updateTask(i, patch)}
               disabled={disabled}
