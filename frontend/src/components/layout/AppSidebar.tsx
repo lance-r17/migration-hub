@@ -21,6 +21,7 @@ import {
   Mail,
   UserCog,
   FolderOpen,
+  GanttChart,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
@@ -31,6 +32,7 @@ interface NavItem {
   url: string
   icon: React.ReactNode
   requiresRole?: string
+  excludesRole?: string
 }
 
 const data = {
@@ -76,6 +78,12 @@ const data = {
       icon: <UserCog />,
       requiresRole: "admin",
     },
+    {
+      title: "Wave Gantt",
+      url: "/waves/gantt",
+      icon: <GanttChart />,
+      excludesRole: "platform_migration_lead",
+    },
   ] satisfies NavItem[],
   navSecondary: [
     {
@@ -109,7 +117,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain
-          items={data.navMain.filter(item => !item.requiresRole || (user?.role.includes(item.requiresRole) ?? false))}
+          items={data.navMain.filter(item => {
+            if (item.requiresRole && !(user?.role.includes(item.requiresRole) ?? false)) return false
+            if (item.excludesRole && (user?.role.includes(item.excludesRole) ?? false)) return false
+            return true
+          })}
           pathname={location.pathname}
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />

@@ -215,19 +215,19 @@ export interface Approval {
   userId?: string
 }
 
-// ─── Wave planning tasks ──────────────────────────────────────────────────────
+// ─── Wave planning milestones ─────────────────────────────────────────────────
 
-export type TaskType = 'onboarding' | 'migrate-computing' | 'migrate-database' | 'migrate-storage' | 'migrate-logs' | 'migrate-big-data' | 'custom'
-export type TaskStatus = 'todo' | 'in-progress' | 'done'
+export type MilestoneType = 'env-provision' | 'dev-resource-provision' | 'dev-data-migration' | 'dev-cutover' | 'prd-resource-provision' | 'prd-data-migration' | 'prd-cutover' | 'custom'
+export type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 
-export interface PlanningTask {
+export interface PlanningMilestone {
   id: string
   name: string
-  type: TaskType
+  type: MilestoneType
   start: string      // ISO date
   end: string        // ISO date
-  status: TaskStatus
-  deps: string[]     // other PlanningTask ids
+  status: MilestoneStatus
+  deps: string[]     // other PlanningMilestone ids
 }
 
 export interface ProjectPlanning {
@@ -237,7 +237,7 @@ export interface ProjectPlanning {
   planEndDate?: string
   estimatedStartDate?: string
   estimatedEndDate?: string
-  tasks: PlanningTask[]
+  milestones: PlanningMilestone[]
 }
 
 // ─── Project ─────────────────────────────────────────────────────────────────

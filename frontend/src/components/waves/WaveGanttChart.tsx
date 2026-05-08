@@ -1,17 +1,25 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { ChevronDown, ChevronRight, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, ScrollText, BarChart2, Cpu, Lock, FileText } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
+import { ChevronDown, ChevronRight, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, FileText, Info, Search, X, Circle, CheckCircle2, Loader2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import type { Project, ProjectPlanning, PlanningTask, TaskType, MigrationEffortEstimation } from '@/types'
+import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, MilestoneStatus, MigrationEffortEstimation } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { EmbargoRecord } from '@/types/embargo'
 import { useEmbargos } from '@/hooks/use-embargos'
 import { getAttachments } from '@/services/attachments'
 import type { Attachment } from '@/services/attachments'
 import { Button } from '../ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,12 +44,12 @@ type DragType = 'move' | 'resize-start' | 'resize-end' | 'create'
 
 interface DragState {
   projectId: string
-  taskId: string | null
+  milestoneId: string | null
   type: DragType
   startX: number
   originalStart: string
   originalEnd: string
-  originalTasks?: { id: string; start: string; end: string }[]
+  originalMilestones?: { id: string; start: string; end: string }[]
 }
 
 interface ConnState {
@@ -55,7 +63,7 @@ interface ConnState {
 
 interface RowDragState {
   projectId: string
-  taskId: string
+  milestoneId: string
   sourceIndex: number
   overIndex: number
 }
@@ -70,24 +78,26 @@ const HEADER_H     = 40
 const ZOOM_COL_PX: Record<ZoomLevel, number>      = { days: 28, weeks: 80, months: 120 }
 const ZOOM_DAYS_PER_COL: Record<ZoomLevel, number> = { days: 1,  weeks: 7,  months: 30  }
 
-const TASK_PRESETS: { type: TaskType; label: string; icon: LucideIcon }[] = [
-  { type: 'onboarding',        label: 'Onboard to New Cloud', icon: CloudUpload },
-  { type: 'migrate-computing', label: 'Migrate Computing',   icon: Cpu         },
-  { type: 'migrate-database',  label: 'Migrate Database',    icon: Database    },
-  { type: 'migrate-storage',  label: 'Migrate Storage',      icon: HardDrive   },
-  { type: 'migrate-logs',     label: 'Migrate Logs',         icon: ScrollText  },
-  { type: 'migrate-big-data', label: 'Migrate Big Data',     icon: BarChart2   },
-  { type: 'custom',           label: 'Custom Task',          icon: Pencil      },
+const MILESTONE_PRESETS: { type: MilestoneType; label: string; icon: LucideIcon }[] = [
+  { type: 'env-provision',          label: 'Environment Provision Stage', icon: CloudUpload },
+  { type: 'dev-resource-provision', label: 'DEV Resource Provision Stage', icon: Cpu         },
+  { type: 'dev-data-migration',     label: 'DEV Data Migration Stage',    icon: Database    },
+  { type: 'dev-cutover',            label: 'DEV Cutover',                 icon: ArrowRight  },
+  { type: 'prd-resource-provision', label: 'PRD Resource Provision Stage', icon: HardDrive   },
+  { type: 'prd-data-migration',     label: 'PRD Data Migration Stage',    icon: BarChart2   },
+  { type: 'prd-cutover',            label: 'PRD Cutover',                 icon: Sparkles    },
+  { type: 'custom',                 label: 'Custom Milestone',            icon: Pencil      },
 ]
 
-const TASK_TYPE_META: Record<TaskType, { bg: string; color: string; label: string; icon: LucideIcon }> = {
-  'onboarding':        { bg: 'oklch(0.88 0.05 185)', color: 'oklch(0.35 0.10 185)', label: 'Onboard', icon: CloudUpload },
-  'migrate-computing': { bg: 'oklch(0.91 0.05 200)', color: 'oklch(0.35 0.12 200)', label: 'Compute', icon: Cpu         },
-  'migrate-database':  { bg: 'oklch(0.90 0.06 220)', color: 'oklch(0.35 0.13 260)', label: 'DB',      icon: Database    },
-  'migrate-storage':  { bg: 'oklch(0.92 0.04 290)', color: 'oklch(0.35 0.12 300)', label: 'Storage', icon: HardDrive   },
-  'migrate-logs':     { bg: 'oklch(0.91 0.05 20)',  color: 'oklch(0.40 0.14 20)',  label: 'Logs',    icon: ScrollText  },
-  'migrate-big-data': { bg: 'oklch(0.92 0.04 240)', color: 'oklch(0.35 0.15 260)', label: 'BigData', icon: BarChart2   },
-  'custom':           { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'Custom',  icon: Pencil      },
+const MILESTONE_TYPE_META: Record<MilestoneType, { bg: string; color: string; label: string; icon: LucideIcon }> = {
+  'env-provision':          { bg: 'oklch(0.88 0.05 185)', color: 'oklch(0.35 0.10 185)', label: 'Env',    icon: CloudUpload },
+  'dev-resource-provision': { bg: 'oklch(0.91 0.05 200)', color: 'oklch(0.35 0.12 200)', label: 'DevRes', icon: Cpu         },
+  'dev-data-migration':     { bg: 'oklch(0.90 0.06 220)', color: 'oklch(0.35 0.13 260)', label: 'DevData', icon: Database    },
+  'dev-cutover':            { bg: 'oklch(0.92 0.04 290)', color: 'oklch(0.35 0.12 300)', label: 'DevCut', icon: ArrowRight  },
+  'prd-resource-provision': { bg: 'oklch(0.91 0.05 20)',  color: 'oklch(0.40 0.14 20)',  label: 'PrdRes', icon: HardDrive   },
+  'prd-data-migration':     { bg: 'oklch(0.92 0.04 240)', color: 'oklch(0.35 0.15 260)', label: 'PrdData', icon: BarChart2   },
+  'prd-cutover':            { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'PrdCut', icon: Sparkles    },
+  'custom':                 { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'Custom', icon: Pencil      },
 }
 
 const WAVE_STATUS_META: Record<string, { bg: string; color: string }> = {
@@ -105,9 +115,167 @@ const PROJECT_STATUS_META: Record<string, { bg: string; color: string }> = {
   'signed-off':  { bg: 'oklch(0.90 0.05 140)',     color: 'oklch(0.35 0.12 150)' },
 }
 
-const TASK_STATUS_PROGRESS: Record<string, number> = { 'todo': 0, 'in-progress': 50, 'done': 100 }
+const MILESTONE_STATUS_PROGRESS: Record<string, number> = { 'todo': 0, 'in-progress': 50, 'done': 100 }
+
+const MILESTONE_STATUS_META: Record<MilestoneStatus, { label: string; icon: LucideIcon; color: string; bg: string }> = {
+  'todo':        { label: 'To Do',       icon: Circle,       color: 'var(--g-text-subtle)',          bg: 'var(--g-bg-alt)' },
+  'in-progress': { label: 'In Progress', icon: Loader2,      color: 'oklch(0.55 0.15 260)',          bg: 'oklch(0.96 0.02 260)' },
+  'done':        { label: 'Completed',   icon: CheckCircle2, color: 'oklch(0.40 0.12 150)',          bg: 'oklch(0.90 0.05 140)' },
+}
 
 const DEFAULT_WAVE_COLOR = '#6366F1'
+
+const LP_GRID = '40px minmax(160px,1fr) 100px 80px 80px 32px'
+const CELL_CLASS = 'h-full flex items-center px-2 border-r min-w-0'
+
+// ─── Memoized sub-components ───────────────────────────────────────────────────
+
+interface TimelineHeaderProps {
+  zoom: ZoomLevel
+  colPx: number
+  totalTimelineWidth: number
+  todayOffset: number
+  monthLabels: { key: string; label: string; widthPx: number }[]
+  yearLabels: { key: string; label: string; widthPx: number }[]
+  monthOnlyLabels: { key: string; label: string; widthPx: number }[]
+  subHeaderCells: { key: string; label: string; className: string }[]
+}
+
+interface LeftPanelHeaderProps {
+  searchQuery: string
+  onSearchChange: (q: string) => void
+}
+
+const LeftPanelHeader = memo(function LeftPanelHeader({ searchQuery, onSearchChange }: LeftPanelHeaderProps) {
+  const [isSearching, setIsSearching] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isSearching) inputRef.current?.focus()
+  }, [isSearching])
+
+  return (
+    <div
+      className="border-b sticky left-0 z-20 grid shrink-0 h-[40px] w-[680px] bg-background border-r"
+      style={{ gridTemplateColumns: LP_GRID }}
+    >
+      {['', 'Project / Milestones', 'Status', 'Labels', 'Effort', ''].map((col, i) => (
+        <div
+          key={i}
+          className={cn(
+            CELL_CLASS,
+            'text-[11.5px] font-semibold text-[var(--g-text-muted)] uppercase tracking-[0.02em]',
+            (i === 2 || i === 3 || i === 4) && 'justify-center',
+            i === 5 && 'border-r-0',
+          )}
+        >
+          {i === 1 && isSearching ? (
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={e => onSearchChange(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Escape') { onSearchChange(''); setIsSearching(false) } }}
+                placeholder="Search projects..."
+                className="flex-1 min-w-0 bg-transparent border-b border-[var(--g-accent)] outline-none text-[13px] text-[var(--g-text)] placeholder:text-[var(--g-text-subtle)]"
+              />
+              <button
+                onClick={() => { onSearchChange(''); setIsSearching(false) }}
+                className="shrink-0 p-0.5 rounded-full hover:bg-muted text-[var(--g-text-subtle)] hover:text-[var(--g-text)] transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : i === 1 ? (
+            <div className="flex items-center justify-between flex-1 min-w-0">
+              <span className="truncate">{col}</span>
+              <button
+                onClick={() => setIsSearching(true)}
+                className="shrink-0 p-0.5 rounded-[4px] hover:bg-muted text-[var(--g-text-subtle)] hover:text-[var(--g-text)] transition-colors ml-1"
+              >
+                <Search size={14} />
+              </button>
+            </div>
+          ) : (
+            col
+          )}
+        </div>
+      ))}
+    </div>
+  )
+})
+
+const TimelineHeader = memo(function TimelineHeader({
+  zoom, colPx, totalTimelineWidth, todayOffset, monthLabels, yearLabels, monthOnlyLabels, subHeaderCells,
+}: TimelineHeaderProps) {
+  return (
+    <div className="border-b relative flex flex-col" style={{ width: totalTimelineWidth }}>
+        <div className="flex items-end pb-0.5 h-[18px] border-b bg-background">
+          {(zoom === 'months' ? yearLabels : monthLabels).map(col => (
+            <div
+              key={col.key}
+              className="shrink-0 text-[10.5px] font-semibold text-[var(--g-text-muted)] uppercase tracking-[0.03em] px-2 overflow-hidden whitespace-nowrap border-l"
+              style={{ width: col.widthPx }}
+            >
+              {col.label}
+            </div>
+          ))}
+          <div className="absolute top-0.5 flex flex-col items-center pointer-events-none" style={{ left: todayOffset }}>
+            <span className="bg-[var(--g-today)] text-white text-[9px] font-bold py-px px-1.5 rounded-[4px] whitespace-nowrap uppercase tracking-[0.03em]">
+              Today
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center h-[22px] relative bg-card">
+          {zoom === 'months' ? monthOnlyLabels.map(col => (
+            <div
+              key={col.key}
+              className="shrink-0 border-r overflow-hidden whitespace-nowrap text-center px-0.5 text-[11px] text-[var(--g-text-muted)] font-normal"
+              style={{ width: col.widthPx }}
+            >
+              {col.label}
+            </div>
+          )) : subHeaderCells.map(cell => (
+            <div key={cell.key} className={cell.className} style={{ width: colPx }}>
+              {cell.label}
+            </div>
+          ))}
+          <div className="absolute top-0 bottom-0 w-0.5 bg-[var(--g-today)] pointer-events-none" style={{ left: todayOffset }} />
+        </div>
+      </div>
+    )
+  })
+
+interface TimelineBackgroundProps {
+  zoom: ZoomLevel
+  colPx: number
+  totalTimelineWidth: number
+  totalBodyH: number
+  weekendSet: Set<number>
+  todayOffset: number
+}
+
+const TimelineBackground = memo(function TimelineBackground({
+  zoom, colPx, totalTimelineWidth, totalBodyH, weekendSet, todayOffset,
+}: TimelineBackgroundProps) {
+  if (zoom !== 'days') {
+    return (
+      <div className="absolute pointer-events-none z-[1]" style={{ top: HEADER_H, left: LEFT_PANEL_W, width: totalTimelineWidth, height: totalBodyH }}>
+        <div className="absolute top-0 bottom-0 w-0.5" style={{ background: 'oklch(0.62 0.18 20 / 0.15)', left: todayOffset }} />
+      </div>
+    )
+  }
+  const weekendCols = Array.from(weekendSet)
+  return (
+    <div className="absolute pointer-events-none z-[1]" style={{ top: HEADER_H, left: LEFT_PANEL_W, width: totalTimelineWidth, height: totalBodyH }}>
+      {weekendCols.map(ci => (
+        <div key={ci} className="absolute top-0 bottom-0 bg-muted/25" style={{ left: ci * colPx, width: colPx }} />
+      ))}
+      <div className="absolute top-0 bottom-0 w-0.5" style={{ background: 'oklch(0.62 0.18 20 / 0.15)', left: todayOffset }} />
+    </div>
+  )
+})
 
 // ─── Date helpers ───────────────────────────────────────────────────────────────
 
@@ -245,12 +413,13 @@ interface Props {
   onUpdatePlanning: (projectId: string, planning: ProjectPlanning) => Promise<void>
   onUpdateProjectOrder?: (waveId: string, projectIds: string[]) => Promise<void>
   onAssign?: (projectId: string, waveId: string | undefined) => void
+  readOnly?: boolean
 }
 
-export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProjectOrder, onAssign }: Props) {
+export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly }: Props) {
   const [showCompleted, setShowCompleted] = useState(true)
   const scrollRef    = useRef<HTMLDivElement>(null)
-  const ghostRef     = useRef<HTMLDivElement>(null)
+  const milestoneGhostRef     = useRef<HTMLDivElement>(null)
   const projGhostRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState<ZoomLevel>('weeks')
 
@@ -266,10 +435,12 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   const [selectedBarId, setSelectedBarId] = useState<string | null>(null)
   const [conn, setConn]                   = useState<ConnState | null>(null)
   const [hoveredArrow, setHoveredArrow]   = useState<{ fromId: string; toId: string } | null>(null)
-  const [editingTaskId, setEditingTaskId]     = useState<string | null>(null)
-  const [editingTaskName, setEditingTaskName] = useState('')
-  const [rowDragState, setRowDragState]         = useState<RowDragState | null>(null)
+  const [editingTaskId, setEditingMilestoneId]     = useState<string | null>(null)
+  const [editingTaskName, setEditingMilestoneName] = useState('')
+  const [rowMilestoneDragState, setRowMilestoneDragState]         = useState<RowDragState | null>(null)
   const [projRowDragState, setProjRowDragState] = useState<ProjRowDragState | null>(null)
+  const [searchQuery, setSearchQuery]           = useState('')
+  const [statusDialog, setStatusDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; nextStatus: MilestoneStatus } | null>(null)
 
   const colPx      = ZOOM_COL_PX[zoom]
   const daysPerCol = ZOOM_DAYS_PER_COL[zoom]
@@ -359,10 +530,10 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     return null
   }
 
-  function effectiveTaskDates(projectId: string, task: PlanningTask): { start: string; end: string } {
-    const t = (localPlanning[projectId]?.tasks ?? []).find(lt => lt.id === task.id)
+  function effectiveMilestoneDates(projectId: string, milestone: PlanningMilestone): { start: string; end: string } {
+    const t = (localPlanning[projectId]?.milestones ?? []).find(lt => lt.id === milestone.id)
     if (t) return { start: t.start, end: t.end }
-    return { start: task.start, end: task.end }
+    return { start: milestone.start, end: milestone.end }
   }
 
   function getEffectivePlanning(p: Project): ProjectPlanning {
@@ -370,7 +541,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     if (p.planning) return p.planning
     const wave = p.waveId ? waveMap.get(p.waveId) : undefined
     const today = toIso(new Date())
-    return { startDate: wave?.startDate ?? today, endDate: wave?.cutoverDate ?? addDays(today, 30), tasks: [] }
+    return { startDate: wave?.startDate ?? today, endDate: wave?.cutoverDate ?? addDays(today, 30), milestones: [] }
   }
 
   // ─── Client X → ISO date ─────────────────────────────────────────────────────
@@ -387,18 +558,102 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
   // ─── Drag handlers ────────────────────────────────────────────────────────────
 
-  function onPointerDown(e: React.PointerEvent, projectId: string, taskId: string | null, type: DragType, start: string, end: string) {
+  function onPointerDown(e: React.PointerEvent, projectId: string, milestoneId: string | null, type: DragType, start: string, end: string) {
+    if (readOnly && milestoneId === null) return
     e.preventDefault(); e.stopPropagation()
-    setDragState({ projectId, taskId, type, startX: e.clientX, originalStart: start, originalEnd: end })
+    setDragState({ projectId, milestoneId, type, startX: e.clientX, originalStart: start, originalEnd: end })
     document.body.style.cursor = type === 'move' ? 'grabbing' : 'col-resize'
   }
 
+  function waveBoundsForProject(projectId: string): { start?: string; end?: string } {
+    const p = projects.find(x => x.id === projectId)
+    if (!p?.waveId) return {}
+    const wave = waveMap.get(p.waveId)
+    return { start: wave?.startDate, end: wave?.cutoverDate }
+  }
+
+  function clampProjectDatesToWave(projectId: string, start: string, end: string): { start: string; end: string } {
+    const bounds = waveBoundsForProject(projectId)
+    if (!bounds.start && !bounds.end) return { start, end }
+
+    const duration = daysBetween(parseDate(start), parseDate(end))
+    let clampedStart = start
+    let clampedEnd = end
+
+    // Lower bound: start >= waveStart
+    if (bounds.start && clampedStart < bounds.start) {
+      clampedStart = bounds.start
+      clampedEnd = addDays(clampedStart, duration)
+    }
+
+    // Upper bound: start <= waveEnd - 1
+    if (bounds.end) {
+      const maxStart = addDays(bounds.end, -1)
+      if (clampedStart > maxStart) {
+        clampedStart = maxStart
+        clampedEnd = addDays(clampedStart, duration)
+      }
+    }
+
+    // Ensure start < end (minimum 1 day); end may extend beyond waveEnd
+    if (clampedStart >= clampedEnd) {
+      clampedEnd = addDays(clampedStart, 1)
+    }
+
+    return { start: clampedStart, end: clampedEnd }
+  }
+
+  function projectDatesForMilestone(projectId: string): { start: string; end: string } | null {
+    const p = projects.find(x => x.id === projectId)
+    if (!p) return null
+    return effectiveProjectDates(p) ?? null
+  }
+
+  function clampMilestoneDatesToProject(projectId: string, start: string, end: string): { start: string; end: string } {
+    const pd = projectDatesForMilestone(projectId)
+    if (!pd) return { start, end }
+
+    let clampedStart = start
+    let clampedEnd = end
+
+    // Lower bound: start >= projectStart
+    if (clampedStart < pd.start) {
+      const duration = daysBetween(parseDate(start), parseDate(end))
+      clampedStart = pd.start
+      clampedEnd = addDays(clampedStart, duration)
+    }
+
+    // Upper bound: end <= projectEnd
+    if (clampedEnd > pd.end) {
+      const duration = daysBetween(parseDate(start), parseDate(end))
+      clampedEnd = pd.end
+      clampedStart = addDays(clampedEnd, -duration)
+      if (clampedStart < pd.start) clampedStart = pd.start
+    }
+
+    // Ensure start < end (minimum 1 day)
+    if (clampedStart >= clampedEnd) {
+      clampedEnd = addDays(clampedStart, 1)
+      if (clampedEnd > pd.end) {
+        clampedEnd = pd.end
+        clampedStart = addDays(clampedEnd, -1)
+        if (clampedStart < pd.start) clampedStart = pd.start
+      }
+    }
+
+    return { start: clampedStart, end: clampedEnd }
+  }
+
   function onPointerDownCreate(e: React.PointerEvent, project: Project) {
+    if (readOnly) return
     e.preventDefault(); e.stopPropagation()
-    const clickDate = clientXToDate(e.clientX)
+    let clickDate = clientXToDate(e.clientX)
+    const bounds = waveBoundsForProject(project.id)
+    if (bounds.start && clickDate < bounds.start) clickDate = bounds.start
+    if (bounds.end && clickDate >= bounds.end) clickDate = addDays(bounds.end, -1)
     const base = getEffectivePlanning(project)
     setLocalPlanning(prev => ({ ...prev, [project.id]: { ...base, startDate: clickDate, endDate: clickDate } }))
-    setDragState({ projectId: project.id, taskId: null, type: 'create', startX: e.clientX, originalStart: clickDate, originalEnd: clickDate })
+    setDragState({ projectId: project.id, milestoneId: null, type: 'create', startX: e.clientX, originalStart: clickDate, originalEnd: clickDate })
     document.body.style.cursor = 'crosshair'
   }
 
@@ -420,23 +675,35 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
       else                                        { newEnd   = addDays(dragState.originalEnd, deltaDays);   if (newEnd <= dragState.originalStart) return }
     }
 
+    // Clamp project-level dates to wave bounds
+    if (dragState.milestoneId === null) {
+      const clamped = clampProjectDatesToWave(dragState.projectId, newStart, newEnd)
+      newStart = clamped.start
+      newEnd   = clamped.end
+    } else {
+      // Clamp milestone dates to parent project range
+      const clamped = clampMilestoneDatesToProject(dragState.projectId, newStart, newEnd)
+      newStart = clamped.start
+      newEnd   = clamped.end
+    }
+
     setLocalPlanning(prev => {
-      const { projectId, taskId } = dragState
-      const base = prev[projectId] ?? projects.find(p => p.id === projectId)?.planning ?? { startDate: newStart, endDate: newEnd, tasks: [] }
-      if (taskId === null) {
-        if (dragState.type === 'move' && dragState.originalTasks) {
-          const moveDelta = Math.round((e.clientX - dragState.startX) / (colPx / daysPerCol))
-          const tasks = (base.tasks ?? []).map(t => {
-            const orig = dragState.originalTasks!.find(ot => ot.id === t.id)
+      const { projectId, milestoneId } = dragState
+      const base = prev[projectId] ?? projects.find(p => p.id === projectId)?.planning ?? { startDate: newStart, endDate: newEnd, milestones: [] }
+      if (milestoneId === null) {
+        if (dragState.type === 'move' && dragState.originalMilestones) {
+          const actualMoveDelta = daysBetween(parseDate(dragState.originalStart), parseDate(newStart))
+          const milestones = (base.milestones ?? []).map(t => {
+            const orig = dragState.originalMilestones!.find(ot => ot.id === t.id)
             if (!orig) return t
-            return { ...t, start: addDays(orig.start, moveDelta), end: addDays(orig.end, moveDelta) }
+            return { ...t, start: addDays(orig.start, actualMoveDelta), end: addDays(orig.end, actualMoveDelta) }
           })
-          return { ...prev, [projectId]: { ...base, startDate: newStart, endDate: newEnd, tasks } }
+          return { ...prev, [projectId]: { ...base, startDate: newStart, endDate: newEnd, milestones } }
         }
         return { ...prev, [projectId]: { ...base, startDate: newStart, endDate: newEnd } }
       } else {
-        const tasks = (base.tasks ?? []).map(t => t.id === taskId ? { ...t, start: newStart, end: newEnd } : t)
-        return { ...prev, [projectId]: { ...base, tasks } }
+        const milestones = (base.milestones ?? []).map(t => t.id === milestoneId ? { ...t, start: newStart, end: newEnd } : t)
+        return { ...prev, [projectId]: { ...base, milestones } }
       }
     })
     setTooltip({ start: newStart, end: newEnd })
@@ -465,52 +732,52 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     }
   }, [dragState, onPointerMove, onPointerUp])
 
-  // ─── Row drag (task reorder) ──────────────────────────────────────────────────
+  // ─── Row drag (milestone reorder) ──────────────────────────────────────────────────
 
-  const onRowPointerMove = useCallback((e: PointerEvent) => {
-    if (!rowDragState) return
-    if (ghostRef.current) {
-      ghostRef.current.style.top = `${e.clientY - ROW_H / 2}px`
+  const onRowMilestonePointerMove = useCallback((e: PointerEvent) => {
+    if (!rowMilestoneDragState) return
+    if (milestoneGhostRef.current) {
+      milestoneGhostRef.current.style.top = `${e.clientY - ROW_H / 2}px`
     }
-    const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-task-row-project]') as HTMLElement | null
+    const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-milestone-row-project]') as HTMLElement | null
     if (!el) return
-    if (el.dataset.taskRowProject !== rowDragState.projectId) return
-    const idx = parseInt(el.dataset.taskRowIndex ?? '0', 10)
+    if (el.dataset.milestoneRowProject !== rowMilestoneDragState.projectId) return
+    const idx = parseInt(el.dataset.milestoneRowIndex ?? '0', 10)
     const rect = el.getBoundingClientRect()
     const overIndex = e.clientY < rect.top + rect.height / 2 ? idx : idx + 1
-    setRowDragState(prev => prev ? { ...prev, overIndex } : null)
-  }, [rowDragState])
+    setRowMilestoneDragState(prev => prev ? { ...prev, overIndex } : null)
+  }, [rowMilestoneDragState])
 
-  const onRowPointerUp = useCallback(async () => {
-    if (!rowDragState) return
+  const onRowMilestonePointerUp = useCallback(async () => {
+    if (!rowMilestoneDragState) return
     document.body.style.cursor = ''
-    const { projectId, sourceIndex, overIndex } = rowDragState
-    setRowDragState(null)
+    const { projectId, sourceIndex, overIndex } = rowMilestoneDragState
+    setRowMilestoneDragState(null)
     if (overIndex === sourceIndex || overIndex === sourceIndex + 1) return
     const project = projects.find(p => p.id === projectId)
     if (!project) return
     const base = getEffectivePlanning(project)
-    const tasks = [...(base.tasks ?? [])]
-    const [moved] = tasks.splice(sourceIndex, 1)
+    const milestones = [...(base.milestones ?? [])]
+    const [moved] = milestones.splice(sourceIndex, 1)
     if (!moved) return
     const insertAt = overIndex > sourceIndex ? overIndex - 1 : overIndex
-    tasks.splice(insertAt, 0, moved)
-    const updated = { ...base, tasks }
+    milestones.splice(insertAt, 0, moved)
+    const updated = { ...base, milestones }
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
     try { await onUpdatePlanning(projectId, updated) }
     catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rowDragState, projects, onUpdatePlanning])
+  }, [rowMilestoneDragState, projects, onUpdatePlanning])
 
   useEffect(() => {
-    if (!rowDragState) return
-    window.addEventListener('pointermove', onRowPointerMove)
-    window.addEventListener('pointerup', onRowPointerUp)
+    if (!rowMilestoneDragState) return
+    window.addEventListener('pointermove', onRowMilestonePointerMove)
+    window.addEventListener('pointerup', onRowMilestonePointerUp)
     return () => {
-      window.removeEventListener('pointermove', onRowPointerMove)
-      window.removeEventListener('pointerup', onRowPointerUp)
+      window.removeEventListener('pointermove', onRowMilestonePointerMove)
+      window.removeEventListener('pointerup', onRowMilestonePointerUp)
     }
-  }, [rowDragState, onRowPointerMove, onRowPointerUp])
+  }, [rowMilestoneDragState, onRowMilestonePointerMove, onRowMilestonePointerUp])
 
   // ─── Connector drag ───────────────────────────────────────────────────────────
 
@@ -563,7 +830,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
   // ─── Task helpers ─────────────────────────────────────────────────────────────
 
-  async function addTask(projectId: string, type: TaskType, label: string) {
+  async function addMilestone(projectId: string, type: MilestoneType, label: string) {
     const project = projects.find(p => p.id === projectId)
     if (!project) return
     const base  = getEffectivePlanning(project)
@@ -571,27 +838,27 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     const projDates  = effectiveProjectDates(project)
     const rangeStart = projDates?.start ?? today
     const rangeEnd   = projDates?.end   ?? addDays(today, 30)
-    const taskStart  = today < rangeStart ? rangeStart : today > rangeEnd ? rangeStart : today
-    const taskEnd    = (() => { const e = addDays(taskStart, 7); return e > rangeEnd ? rangeEnd : e })()
-    const task: PlanningTask = {
+    const milestoneStart  = today < rangeStart ? rangeStart : today > rangeEnd ? rangeStart : today
+    const milestoneEnd    = (() => { const e = addDays(milestoneStart, 7); return e > rangeEnd ? rangeEnd : e })()
+    const milestone: PlanningMilestone = {
       id: crypto.randomUUID(), name: label, type,
-      start: taskStart, end: taskEnd, status: 'todo', deps: [],
+      start: milestoneStart, end: milestoneEnd, status: 'todo', deps: [],
     }
-    const updated: ProjectPlanning = { ...base, tasks: [...(base.tasks ?? []), task] }
+    const updated: ProjectPlanning = { ...base, milestones: [...(base.milestones ?? []), milestone] }
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
     try { await onUpdatePlanning(projectId, updated) }
     catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
   }
 
-  async function deleteTask(projectId: string, taskId: string) {
+  async function deleteMilestone(projectId: string, milestoneId: string) {
     const project = projects.find(p => p.id === projectId)
     if (!project) return
     const base = getEffectivePlanning(project)
     const updated: ProjectPlanning = {
       ...base,
-      tasks: (base.tasks ?? [])
-        .filter(t => t.id !== taskId)
-        .map(t => ({ ...t, deps: t.deps.filter(d => d !== taskId) })),
+      milestones: (base.milestones ?? [])
+        .filter(t => t.id !== milestoneId)
+        .map(t => ({ ...t, deps: t.deps.filter(d => d !== milestoneId) })),
     }
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
     try { await onUpdatePlanning(projectId, updated) }
@@ -600,19 +867,19 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
   function isDAGSafe(fromId: string, toId: string): boolean {
     if (fromId === toId) return false
-    const taskMap = new Map<string, PlanningTask>()
+    const milestoneMap = new Map<string, PlanningMilestone>()
     for (const p of projects) {
-      const tasks = (localPlanning[p.id] ?? p.planning)?.tasks ?? []
-      for (const t of tasks) taskMap.set(t.id, t)
+      const milestones = (localPlanning[p.id] ?? p.planning)?.milestones ?? []
+      for (const t of milestones) milestoneMap.set(t.id, t)
     }
     const visited = new Set<string>()
-    const queue = [...(taskMap.get(fromId)?.deps ?? [])]
+    const queue = [...(milestoneMap.get(fromId)?.deps ?? [])]
     while (queue.length) {
       const id = queue.shift()!
       if (id === toId) return false
       if (visited.has(id)) continue
       visited.add(id)
-      queue.push(...(taskMap.get(id)?.deps ?? []))
+      queue.push(...(milestoneMap.get(id)?.deps ?? []))
     }
     return true
   }
@@ -621,10 +888,10 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     if (!isDAGSafe(fromId, toId)) return
     for (const p of projects) {
       const planning = localPlanning[p.id] ?? p.planning
-      if (!planning?.tasks) continue
-      const task = planning.tasks.find(t => t.id === toId)
-      if (task && !task.deps.includes(fromId)) {
-        const updated = { ...planning, tasks: planning.tasks.map(t => t.id === toId ? { ...t, deps: [...t.deps, fromId] } : t) }
+      if (!planning?.milestones) continue
+      const milestone = planning.milestones.find(t => t.id === toId)
+      if (milestone && !milestone.deps.includes(fromId)) {
+        const updated = { ...planning, milestones: planning.milestones.map(t => t.id === toId ? { ...t, deps: [...t.deps, fromId] } : t) }
         setLocalPlanning(prev => ({ ...prev, [p.id]: updated }))
         try { await onUpdatePlanning(p.id, updated) }
         catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[p.id]; return n }) }
@@ -633,16 +900,35 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     }
   }
 
-  async function saveTaskName(projectId: string, taskId: string, name: string) {
+  async function saveMilestoneName(projectId: string, milestoneId: string, name: string) {
     const project = projects.find(p => p.id === projectId)
     if (!project) return
     const base = getEffectivePlanning(project)
     const updated: ProjectPlanning = {
       ...base,
-      tasks: (base.tasks ?? []).map(t => t.id === taskId ? { ...t, name } : t),
+      milestones: (base.milestones ?? []).map(t => t.id === milestoneId ? { ...t, name } : t),
     }
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
-    setEditingTaskId(null)
+    setEditingMilestoneId(null)
+    try { await onUpdatePlanning(projectId, updated) }
+    catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
+  }
+
+  function nextMilestoneStatus(status: MilestoneStatus): MilestoneStatus | null {
+    if (status === 'todo') return 'in-progress'
+    if (status === 'in-progress') return 'done'
+    return null
+  }
+
+  async function changeMilestoneStatus(projectId: string, milestoneId: string, status: MilestoneStatus) {
+    const project = projects.find(p => p.id === projectId)
+    if (!project) return
+    const base = getEffectivePlanning(project)
+    const updated: ProjectPlanning = {
+      ...base,
+      milestones: (base.milestones ?? []).map(t => t.id === milestoneId ? { ...t, status } : t),
+    }
+    setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
     try { await onUpdatePlanning(projectId, updated) }
     catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
   }
@@ -650,12 +936,12 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   async function removeDep(fromId: string, toId: string) {
     for (const p of projects) {
       const planning = localPlanning[p.id] ?? p.planning
-      if (!planning?.tasks) continue
-      const task = planning.tasks.find(t => t.id === toId)
-      if (task) {
+      if (!planning?.milestones) continue
+      const milestone = planning.milestones.find(t => t.id === toId)
+      if (milestone) {
         const updated = {
           ...planning,
-          tasks: planning.tasks.map(t =>
+          milestones: planning.milestones.map(t =>
             t.id === toId ? { ...t, deps: t.deps.filter(d => d !== fromId) } : t
           ),
         }
@@ -767,7 +1053,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   }
   async function resetPlanning(p: Project) {
     setLocalPlanning(prev => { const n = { ...prev }; delete n[p.id]; return n })
-    await onUpdatePlanning(p.id, { startDate: '', endDate: '', tasks: [] })
+    await onUpdatePlanning(p.id, { startDate: '', endDate: '', milestones: [] })
   }
 
   function findBestWave(p: Project): Wave | null {
@@ -791,7 +1077,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
   // ─── Column header labels ────────────────────────────────────────────────────
 
-  const { monthLabels, subLabels, yearLabels, monthOnlyLabels } = useMemo(() => {
+  const { monthLabels, yearLabels, monthOnlyLabels, weekendSet, subHeaderCells } = useMemo(() => {
     const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
     const months: { key: string; label: string; widthPx: number }[] = []
     const cursor = new Date(timelineStart)
@@ -827,20 +1113,32 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
       colIndex++
     }
 
-    return { monthLabels: months, subLabels: sub, yearLabels, monthOnlyLabels }
-  }, [zoom, timelineStart, timelineEnd, totalCols, colPx, daysPerCol])
-
-  // Weekend day keys for highlighting
-  const weekendCols = useMemo(() => {
-    if (zoom !== 'days') return []
-    const result: number[] = []
-    const d = new Date(timelineStart)
-    for (let i = 0; i < totalCols; i++) {
-      if (isWeekend(toIso(d))) result.push(i)
-      d.setUTCDate(d.getUTCDate() + 1)
+    const weekendSet = new Set<number>()
+    if (zoom === 'days') {
+      const d = new Date(timelineStart)
+      for (let i = 0; i < totalCols; i++) {
+        if (isWeekend(toIso(d))) weekendSet.add(i)
+        d.setUTCDate(d.getUTCDate() + 1)
+      }
     }
-    return result
-  }, [zoom, timelineStart, totalCols])
+
+    const todayIso = toIso(new Date())
+    const subHeaderCells = zoom === 'months'
+      ? []
+      : sub.map((col, i) => {
+          const isCurrentPeriod = zoom === 'weeks'
+            ? col.key <= todayIso && todayIso <= addDays(col.key, 6)
+            : col.key === todayIso
+          const isWeekendCol = zoom === 'days' && weekendSet.has(i)
+          const base = 'shrink-0 border-r overflow-hidden whitespace-nowrap text-center px-0.5 text-[11px]'
+          const className = isCurrentPeriod
+            ? base + ' text-[var(--g-today)] font-bold' + (isWeekendCol ? ' bg-muted/25' : '')
+            : base + ' text-[var(--g-text-muted)] font-normal' + (isWeekendCol ? ' bg-muted/25' : '')
+          return { key: col.key, label: col.label, className }
+        })
+
+    return { monthLabels: months, yearLabels, monthOnlyLabels, weekendSet, subHeaderCells }
+  }, [zoom, timelineStart, timelineEnd, totalCols, colPx, daysPerCol])
 
   // ─── Flat row list ───────────────────────────────────────────────────────────
 
@@ -849,43 +1147,85 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     | { type: 'embargo';          embargo: EmbargoRecord }
     | { type: 'wave';             wave: Wave }
     | { type: 'project';          wave: Wave | null; project: Project; projectIndex: number; waveProjectIndex: number }
-    | { type: 'task';             wave: Wave | null; project: Project; task: PlanningTask; projectIndex: number; taskIndex: number }
+    | { type: 'milestone';             wave: Wave | null; project: Project; milestone: PlanningMilestone; projectIndex: number; milestoneIndex: number }
     | { type: 'unassigned-header' }
 
-  function getTasksForProject(p: Project): PlanningTask[] {
-    let tasks = (localPlanning[p.id] ?? p.planning)?.tasks ?? []
-    if (rowDragState?.projectId === p.id && tasks.length > 0) {
-      const arr = [...tasks]
-      const [moved] = arr.splice(rowDragState.sourceIndex, 1)
+  function getMilestonesForProject(p: Project): PlanningMilestone[] {
+    let milestones = (localPlanning[p.id] ?? p.planning)?.milestones ?? []
+    if (rowMilestoneDragState?.projectId === p.id && milestones.length > 0) {
+      const arr = [...milestones]
+      const [moved] = arr.splice(rowMilestoneDragState.sourceIndex, 1)
       if (moved) {
-        const insertAt = rowDragState.overIndex > rowDragState.sourceIndex
-          ? rowDragState.overIndex - 1
-          : rowDragState.overIndex
+        const insertAt = rowMilestoneDragState.overIndex > rowMilestoneDragState.sourceIndex
+          ? rowMilestoneDragState.overIndex - 1
+          : rowMilestoneDragState.overIndex
         arr.splice(Math.min(insertAt, arr.length), 0, moved)
-        tasks = arr
+        milestones = arr
       }
     }
-    return tasks
+    return milestones
   }
+
+  // ─── Search filter ───────────────────────────────────────────────────────────
+  const searchLower = searchQuery.trim().toLowerCase()
+  const hasSearch = searchLower.length > 0
+
+  const matchingProjectIds = useMemo(() => {
+    if (!hasSearch) return new Set<string>()
+    const set = new Set<string>()
+    for (const p of projects) {
+      if (p.id.toLowerCase().includes(searchLower) || p.name.toLowerCase().includes(searchLower)) {
+        set.add(p.id)
+      }
+      const milestones = (localPlanning[p.id] ?? p.planning)?.milestones ?? []
+      for (const t of milestones) {
+        if (t.name.toLowerCase().includes(searchLower)) {
+          set.add(p.id)
+        }
+      }
+    }
+    return set
+  }, [hasSearch, searchLower, projects, localPlanning])
+
+  const matchingEmbargoIds = useMemo(() => {
+    if (!hasSearch) return new Set<string>()
+    const set = new Set<string>()
+    for (const e of embargos) {
+      if (e.name.toLowerCase().includes(searchLower)) set.add(e.id)
+    }
+    return set
+  }, [hasSearch, searchLower, embargos])
 
   const rows = useMemo<RowItem[]>(() => {
     const result: RowItem[] = []
     let projectCounter = 0
 
     if (embargos.length > 0) {
-      result.push({ type: 'embargo-header' })
-      if (!embargosCollapsed) {
-        for (const e of embargos) {
-          result.push({ type: 'embargo', embargo: e })
+      const anyEmbargoMatch = !hasSearch || embargos.some(e => matchingEmbargoIds.has(e.id))
+      if (anyEmbargoMatch) {
+        result.push({ type: 'embargo-header' })
+        if (!embargosCollapsed) {
+          for (const e of embargos) {
+            if (!hasSearch || matchingEmbargoIds.has(e.id)) {
+              result.push({ type: 'embargo', embargo: e })
+            }
+          }
         }
       }
     }
 
     for (const wave of sortedWaves) {
+      const waveProjectsRaw = projectsByWave.get(wave.id) ?? []
+      const visibleWaveProjects = hasSearch
+        ? waveProjectsRaw.filter(p => matchingProjectIds.has(p.id))
+        : waveProjectsRaw
+
+      if (hasSearch && visibleWaveProjects.length === 0) continue
+
       result.push({ type: 'wave', wave })
       if (!collapsedWaves.has(wave.id)) {
-        let waveProjects = projectsByWave.get(wave.id) ?? []
-        if (projRowDragState?.waveId === wave.id && waveProjects.length > 0) {
+        let waveProjects = visibleWaveProjects
+        if (!hasSearch && projRowDragState?.waveId === wave.id && waveProjects.length > 0) {
           const arr = [...waveProjects]
           const [moved] = arr.splice(projRowDragState.sourceIndex, 1)
           if (moved) {
@@ -901,24 +1241,28 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
           const projectIndex = projectCounter
           result.push({ type: 'project', wave, project: p, projectIndex, waveProjectIndex: wpi })
           if (!collapsedProjects.has(p.id)) {
-            getTasksForProject(p).forEach((task, ti) => {
-              result.push({ type: 'task', wave, project: p, task, projectIndex, taskIndex: ti + 1 })
+            getMilestonesForProject(p).forEach((milestone, ti) => {
+              result.push({ type: 'milestone', wave, project: p, milestone, projectIndex, milestoneIndex: ti + 1 })
             })
           }
         }
       }
     }
 
-    if (unassignedProjects.length > 0) {
+    const visibleUnassigned = hasSearch
+      ? unassignedProjects.filter(p => matchingProjectIds.has(p.id))
+      : unassignedProjects
+
+    if (visibleUnassigned.length > 0) {
       result.push({ type: 'unassigned-header' })
       if (!collapsedWaves.has('__unassigned__')) {
-        for (const [wpi, p] of unassignedProjects.entries()) {
+        for (const [wpi, p] of visibleUnassigned.entries()) {
           projectCounter++
           const projectIndex = projectCounter
           result.push({ type: 'project', wave: null, project: p, projectIndex, waveProjectIndex: wpi })
           if (!collapsedProjects.has(p.id)) {
-            getTasksForProject(p).forEach((task, ti) => {
-              result.push({ type: 'task', wave: null, project: p, task, projectIndex, taskIndex: ti + 1 })
+            getMilestonesForProject(p).forEach((milestone, ti) => {
+              result.push({ type: 'milestone', wave: null, project: p, milestone, projectIndex, milestoneIndex: ti + 1 })
             })
           }
         }
@@ -926,7 +1270,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     }
     return result
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowDragState, projRowDragState, embargos, embargosCollapsed])
+  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds])
 
   // ─── Row height helpers ──────────────────────────────────────────────────────
 
@@ -947,37 +1291,44 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
   // ─── Dep arrow data ──────────────────────────────────────────────────────────
 
+  const milestoneRowIndexMap = useMemo(() => {
+    const map = new Map<string, number>()
+    rows.forEach((row, i) => {
+      if (row.type === 'milestone') map.set(row.milestone.id, i)
+    })
+    return map
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows])
+
   const depArrows = useMemo(() => {
     const arrows: { sx: number; sy: number; tx: number; ty: number; color: string; fromId: string; toId: string }[] = []
     rows.forEach((row, ri) => {
-      if (row.type !== 'task') return
-      const { project, task, wave } = row
-      if (!task.deps?.length) return
-      const { start: ts, end: te } = effectiveTaskDates(project.id, task)
+      if (row.type !== 'milestone') return
+      const { project, milestone, wave } = row
+      if (!milestone.deps?.length) return
+      const { start: ts, end: te } = effectiveMilestoneDates(project.id, milestone)
       if (!ts || !te) return
       const tx = barLeft(ts)
       const ty = rowTops[ri] + ROW_H / 2
 
-      for (const depId of task.deps) {
-        const srcIdx = rows.findIndex(r => r.type === 'task' && r.task.id === depId)
-        if (srcIdx < 0) continue
+      for (const depId of milestone.deps) {
+        const srcIdx = milestoneRowIndexMap.get(depId)
+        if (srcIdx === undefined) continue
         const srcRow = rows[srcIdx]
-        if (srcRow.type !== 'task') continue
-        const { start: ss, end: se } = effectiveTaskDates(srcRow.project.id, srcRow.task)
+        if (srcRow.type !== 'milestone') continue
+        const { start: ss, end: se } = effectiveMilestoneDates(srcRow.project.id, srcRow.milestone)
         if (!ss || !se) continue
         const sx = barLeft(ss) + barWidth(ss, se)
         const sy = rowTops[srcIdx] + ROW_H / 2
-        arrows.push({ sx, sy, tx, ty, color: wave?.color ?? DEFAULT_WAVE_COLOR, fromId: depId, toId: task.id })
+        arrows.push({ sx, sy, tx, ty, color: wave?.color ?? DEFAULT_WAVE_COLOR, fromId: depId, toId: milestone.id })
       }
     })
     return arrows
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, rowTops, colPx, daysPerCol])
+  }, [rows, rowTops, colPx, daysPerCol, milestoneRowIndexMap])
 
   // ─── Left panel column grid ───────────────────────────────────────────────────
-  const LP_GRID = '40px minmax(160px,1fr) 100px 80px 80px 32px'
-
-  const cellClass = 'h-full flex items-center px-2 border-r min-w-0'
+  const cellClass = CELL_CLASS
 
   const totalContentWidth = LEFT_PANEL_W + totalTimelineWidth
 
@@ -1062,90 +1413,31 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
       >
         <div className="relative" style={{ width: totalContentWidth, minWidth: totalContentWidth }}>
 
-          {/* Sticky header */}
           <div className="sticky top-0 z-30 flex h-[40px]">
-            {/* Left panel header */}
-            <div
-              className="border-b sticky left-0 z-20 grid shrink-0 h-[40px] w-[680px] bg-background border-r "
-              style={{ gridTemplateColumns: LP_GRID }}
-            >
-              {['', 'Project / Tasks', 'Status', 'Labels', 'Effort', ''].map((col, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    cellClass,
-                    'text-[11.5px] font-semibold text-[var(--g-text-muted)] uppercase tracking-[0.02em] ',
-                    (i === 2 || i === 3 || i === 4) && 'justify-center',
-                    i === 5 && 'border-r-0',
-                  )}
-                >
-                  {col}
-                </div>
-              ))}
-            </div>
-
-            {/* Timeline header */}
-            <div
-              className="border-b relative flex flex-col"
-              style={{ width: totalTimelineWidth }}
-            >
-              {/* Top row: year (months mode) or month+year (days/weeks mode) */}
-              <div className="flex items-end pb-0.5 h-[18px] border-b bg-background">
-                {(zoom === 'months' ? yearLabels : monthLabels).map(col => (
-                  <div
-                    key={col.key}
-                    className="shrink-0 text-[10.5px] font-semibold text-[var(--g-text-muted)] uppercase tracking-[0.03em] px-2 overflow-hidden whitespace-nowrap border-l"
-                    style={{ width: col.widthPx }}
-                  >
-                    {col.label}
-                  </div>
-                ))}
-                {/* Today flag */}
-                <div
-                  className="absolute top-0.5 flex flex-col items-center pointer-events-none"
-                  style={{ left: todayOffset }}
-                >
-                  <span className="bg-[var(--g-today)] text-white text-[9px] font-bold py-px px-1.5 rounded-[4px] whitespace-nowrap uppercase tracking-[0.03em]">
-                    Today
-                  </span>
-                </div>
-              </div>
-              {/* Bottom row: always rendered */}
-              <div className="flex items-center h-[22px] relative bg-card">
-                {zoom === 'months' ? monthOnlyLabels.map(col => (
-                  <div
-                    key={col.key}
-                    className="shrink-0 border-r overflow-hidden whitespace-nowrap text-center px-0.5 text-[11px] text-[var(--g-text-muted)] font-normal"
-                    style={{ width: col.widthPx }}
-                  >
-                    {col.label}
-                  </div>
-                )) : subLabels.map((col, i) => {
-                  const todayIso = toIso(new Date())
-                  const isCurrentPeriod = zoom === 'weeks'
-                    ? col.key <= todayIso && todayIso <= addDays(col.key, 6)
-                    : col.key === todayIso
-                  return (
-                    <div
-                      key={col.key}
-                      className={cn(
-                        'shrink-0 border-r overflow-hidden whitespace-nowrap text-center px-0.5 text-[11px]',
-                        isCurrentPeriod ? 'text-[var(--g-today)] font-bold' : 'text-[var(--g-text-muted)] font-normal',
-                        zoom === 'days' && weekendCols.includes(i) && 'bg-muted/25',
-                      )}
-                      style={{ width: colPx }}
-                    >
-                      {col.label}
-                    </div>
-                  )
-                })}
-                <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-[var(--g-today)] pointer-events-none"
-                  style={{ left: todayOffset }}
-                />
-              </div>
-            </div>
+            <LeftPanelHeader
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+            />
+            <TimelineHeader
+              zoom={zoom}
+              colPx={colPx}
+              totalTimelineWidth={totalTimelineWidth}
+              todayOffset={todayOffset}
+              monthLabels={monthLabels}
+              yearLabels={yearLabels}
+              monthOnlyLabels={monthOnlyLabels}
+              subHeaderCells={subHeaderCells}
+            />
           </div>
+
+          <TimelineBackground
+            zoom={zoom}
+            colPx={colPx}
+            totalTimelineWidth={totalTimelineWidth}
+            totalBodyH={totalBodyH}
+            weekendSet={weekendSet}
+            todayOffset={todayOffset}
+          />
 
           {/* Content rows */}
           {rows.map((row, rowIdx) => {
@@ -1154,7 +1446,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
               : row.type === 'embargo'           ? `embargo-${row.embargo.id}`
               : row.type === 'wave'              ? row.wave.id
               : row.type === 'unassigned-header' ? '__unassigned__'
-              : row.type === 'task'              ? `task-${row.task.id}`
+              : row.type === 'milestone'              ? `milestone-${row.milestone.id}`
               : row.project.id
 
             const rh = rowHeight(row)
@@ -1187,15 +1479,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                     <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'border-r-0')} />
                   </div>
-                  <div
-                    className="relative bg-background"
-                    style={{ width: totalTimelineWidth }}
-                  >
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 pointer-events-none"
-                      style={{ background: 'oklch(0.62 0.18 20 / 0.15)', left: todayOffset }}
-                    />
-                  </div>
+                  <div className="relative bg-background" style={{ width: totalTimelineWidth }} />
                 </div>
               )
             }
@@ -1246,10 +1530,6 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                     <div className={cn(cellClass, 'border-r-0')} />
                   </div>
                   <div className="relative flex items-center bg-card" style={{ width: totalTimelineWidth }}>
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 pointer-events-none"
-                      style={{ background: 'oklch(0.62 0.18 20 / 0.15)', left: todayOffset }}
-                    />
                     <div
                       className="absolute top-1 inline-flex items-baseline pointer-events-none whitespace-nowrap z-[2]"
                       style={{ left: barLeft(embargo.startDate) }}
@@ -1349,10 +1629,6 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
                   {/* Bar cell */}
                   <div className="relative flex items-center bg-muted" style={{ width: totalTimelineWidth }}>
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 pointer-events-none"
-                      style={{ background: 'oklch(0.62 0.18 20 / 0.15)', left: todayOffset }}
-                    />
 
                     {/* Group title: name + date range */}
                     <div
@@ -1421,29 +1697,24 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0')} />
                   </div>
-                  <div className="relative" style={{ width: totalTimelineWidth }}>
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 pointer-events-none"
-                      style={{ background: 'oklch(0.62 0.18 20 / 0.15)', left: todayOffset }}
-                    />
-                  </div>
+                  <div className="relative" style={{ width: totalTimelineWidth }} />
                 </div>
               )
             }
 
             // ── Task row ───────────────────────────────────────────────────────
-            if (row.type === 'task') {
-              const { project, task, wave, projectIndex, taskIndex } = row
+            if (row.type === 'milestone') {
+              const { project, milestone, wave, projectIndex, milestoneIndex } = row
               const waveColor  = wave?.color ?? DEFAULT_WAVE_COLOR
               const softColor  = hexToRgba(waveColor, 0.25)
-              const { start, end } = effectiveTaskDates(project.id, task)
-              const progress   = TASK_STATUS_PROGRESS[task.status] ?? 0
-              const isDragging = dragState?.projectId === project.id && dragState?.taskId === task.id
-              const isSelected = selectedBarId === task.id
-              const isConnTarget = conn?.overId === task.id
-              const taskMeta      = TASK_TYPE_META[task.type]
-              const taskIdx0      = taskIndex - 1
-              const isDraggedTask = rowDragState?.taskId === task.id
+              const { start, end } = effectiveMilestoneDates(project.id, milestone)
+              const progress   = MILESTONE_STATUS_PROGRESS[milestone.status] ?? 0
+              const isDragging = dragState?.projectId === project.id && dragState?.milestoneId === milestone.id
+              const isSelected = selectedBarId === milestone.id
+              const isConnTarget = conn?.overId === milestone.id
+              const taskMeta      = MILESTONE_TYPE_META[milestone.type]
+              const milestoneIdx0      = milestoneIndex - 1
+              const isDraggedMilestone = rowMilestoneDragState?.milestoneId === milestone.id
 
               return (
                 <div
@@ -1451,11 +1722,11 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                   className="flex border-b"
                   style={{
                     height: rh,
-                    opacity: isDraggedTask ? 0.3 : 1,
-                    background: isDraggedTask ? 'var(--g-accent-soft)' : undefined,
+                    opacity: isDraggedMilestone ? 0.3 : 1,
+                    background: isDraggedMilestone ? 'var(--g-accent-soft)' : undefined,
                   }}
-                  data-task-row-project={project.id}
-                  data-task-row-index={taskIdx0}
+                  data-milestone-row-project={project.id}
+                  data-milestone-row-index={milestoneIdx0}
                 >
                   {/* Left panel */}
                   <div
@@ -1470,7 +1741,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                       className={cn(cellClass, 'justify-end text-[12px] text-[var(--g-text-subtle)]')}
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}
                     >
-                      {projectIndex}.{taskIndex}
+                      {projectIndex}.{milestoneIndex}
                     </div>
                     {/* Name col */}
                     <div className={cn(cellClass, 'pl-6 group/taskname gap-[5px] text-[13px] text-[var(--g-text)]')}>
@@ -1478,37 +1749,37 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                         className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-grab"
                         onPointerDown={e => {
                           e.preventDefault(); e.stopPropagation()
-                          setRowDragState({ projectId: project.id, taskId: task.id, sourceIndex: taskIdx0, overIndex: taskIdx0 })
+                          setRowMilestoneDragState({ projectId: project.id, milestoneId: milestone.id, sourceIndex: milestoneIdx0, overIndex: milestoneIdx0 })
                           document.body.style.cursor = 'grabbing'
                         }}
                       />
-                      {editingTaskId === task.id ? (
+                      {editingTaskId === milestone.id ? (
                         <input
                           autoFocus
                           className="flex-1 min-w-0 bg-transparent border-b border-[var(--g-accent)] outline-none text-[13px] text-[var(--g-text)]"
                           value={editingTaskName}
-                          onChange={e => setEditingTaskName(e.target.value)}
+                          onChange={e => setEditingMilestoneName(e.target.value)}
                           onKeyDown={e => {
-                            if (e.key === 'Enter') void saveTaskName(project.id, task.id, editingTaskName)
-                            if (e.key === 'Escape') setEditingTaskId(null)
+                            if (e.key === 'Enter') void saveMilestoneName(project.id, milestone.id, editingTaskName)
+                            if (e.key === 'Escape') setEditingMilestoneId(null)
                           }}
-                          onBlur={() => setEditingTaskId(null)}
+                          onBlur={() => setEditingMilestoneId(null)}
                           onClick={e => e.stopPropagation()}
                         />
                       ) : (
                         <>
                           <span
                             className="overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer flex-1 min-w-0"
-                            onClick={() => scrollToBar(task.id)}
+                            onClick={() => scrollToBar(milestone.id)}
                           >
-                            {task.name}
+                            {milestone.name}
                           </span>
                           <button
                             className="opacity-0 group-hover/taskname:opacity-100 shrink-0 bg-transparent border-none cursor-pointer text-[var(--g-text-subtle)] p-0.5 rounded-[4px] flex items-center transition-[opacity] duration-[100ms]"
                             onClick={e => {
                               e.stopPropagation()
-                              setEditingTaskId(task.id)
-                              setEditingTaskName(task.name)
+                              setEditingMilestoneId(milestone.id)
+                              setEditingMilestoneName(milestone.name)
                             }}
                           >
                             <Pencil className="w-3 h-3" />
@@ -1516,8 +1787,23 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                         </>
                       )}
                     </div>
-                    {/* Status col — removed */}
-                    <div className={cn(cellClass, 'justify-center')} />
+                    {/* Status col */}
+                    <div className={cn(cellClass, 'justify-center')}>
+                      {(() => {
+                        const sMeta = MILESTONE_STATUS_META[milestone.status]
+                        if (!sMeta) return null
+                        const StatusIcon = sMeta.icon
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1 py-0.5 px-[7px] rounded-full text-[10px] font-medium whitespace-nowrap border border-transparent"
+                            style={{ background: sMeta.bg, color: sMeta.color }}
+                          >
+                            <StatusIcon size={11} />
+                            {sMeta.label}
+                          </span>
+                        )
+                      })()}
+                    </div>
                     {/* Labels col */}
                     <div className={cn(cellClass, 'justify-center')}>
                       {taskMeta && (
@@ -1529,7 +1815,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                         </span>
                       )}
                     </div>
-                    {/* Effort col (task: empty) */}
+                    {/* Effort col (milestone: empty) */}
                     <div className={cn(cellClass, 'justify-center')} />
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
@@ -1539,13 +1825,28 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                             <MoreHorizontal className="w-3.5 h-3.5" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="min-w-[160px]">
+                        <DropdownMenuContent align="end" className="min-w-[240px]">
+                          {(() => {
+                            const nextStatus = nextMilestoneStatus(milestone.status)
+                            if (!nextStatus) return null
+                            const nextMeta = MILESTONE_STATUS_META[nextStatus]
+                            const NextIcon = nextMeta.icon
+                            return (
+                              <DropdownMenuItem
+                                onClick={() => setStatusDialog({ open: true, projectId: project.id, milestoneId: milestone.id, nextStatus })}
+                              >
+                                <NextIcon className="w-[13px] h-[13px] mr-1.5" />
+                                Mark as {nextMeta.label}
+                              </DropdownMenuItem>
+                            )
+                          })()}
+                          {nextMilestoneStatus(milestone.status) && <DropdownMenuSeparator />}
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
-                            onClick={() => void deleteTask(project.id, task.id)}
+                            onClick={() => void deleteMilestone(project.id, milestone.id)}
                           >
-                            <Trash2 className="w-[13px] h-[13px]" />
-                            Remove task
+                            <Trash2 className="w-[13px] h-[13px] mr-1.5" />
+                            Remove
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1556,23 +1857,12 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                   <div
                     className={cn('relative flex items-center bg-card', isSelected && 'bg-[var(--g-accent-soft)]')}
                     style={{ width: totalTimelineWidth }}
-                    onClick={() => { setSelectedBarId(task.id); }}
+                    onClick={() => { setSelectedBarId(milestone.id); }}
                   >
-                    {zoom === 'days' && weekendCols.map(ci => (
-                      <div
-                        key={ci}
-                        className="absolute top-0 bottom-0 bg-muted/25 pointer-events-none z-0"
-                        style={{ left: ci * colPx, width: colPx }}
-                      />
-                    ))}
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 pointer-events-none"
-                      style={{ background: 'oklch(0.62 0.18 20 / 0.15)', left: todayOffset }}
-                    />
 
                     {start && end ? (
                       <div
-                        data-bar-id={task.id}
+                        data-bar-id={milestone.id}
                         className="group absolute top-1/2 -translate-y-1/2 cursor-grab select-none z-[1] rounded-[3px]"
                         style={{
                           left: barLeft(start),
@@ -1588,27 +1878,40 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                                 : undefined,
                           opacity: isDragging ? 0.9 : 1,
                         }}
-                        onPointerDown={e => { onPointerDown(e, project.id, task.id, 'move', start, end); setSelectedBarId(task.id) }}
+                        onPointerDown={e => { onPointerDown(e, project.id, milestone.id, 'move', start, end); setSelectedBarId(milestone.id) }}
                       >
-                        {/* Progress fill */}
+                        {/* Progress fill — status background color */}
                         <div
                           className="absolute left-0 top-0 bottom-0 pointer-events-none"
-                          style={{ width: `${progress}%`, background: taskMeta?.color ?? waveColor, borderRadius: '3px 0 0 3px' }}
+                          style={{ width: `${progress}%`, background: milestone.status !== 'todo'
+                            ? MILESTONE_STATUS_META[milestone.status].bg
+                            : (taskMeta?.color ?? waveColor), borderRadius: '3px 0 0 3px' }}
                         />
+                        {/* Status icon */}
+                        {(() => {
+                          const sMeta = MILESTONE_STATUS_META[milestone.status]
+                          if (!sMeta || milestone.status === 'todo') return null
+                          const StatusIcon = sMeta.icon
+                          return (
+                            <div className="absolute left-1 top-1/2 -translate-y-1/2 pointer-events-none z-[2]">
+                              <StatusIcon size={12} style={{ color: sMeta.color }} />
+                            </div>
+                          )
+                        })()}
                         {/* Resize handles */}
                         <div
                           className={cn(
                             'absolute left-0 top-0 bottom-0 w-[5px] cursor-ew-resize z-[2] rounded-tl-[3px] rounded-bl-[3px]',
                             isSelected ? 'bg-[rgba(0,0,0,0.18)]' : 'bg-transparent',
                           )}
-                          onPointerDown={e => onPointerDown(e, project.id, task.id, 'resize-start', start, end)}
+                          onPointerDown={e => onPointerDown(e, project.id, milestone.id, 'resize-start', start, end)}
                         />
                         <div
                           className={cn(
                             'absolute right-0 top-0 bottom-0 w-[5px] cursor-ew-resize z-[2] rounded-tr-[3px] rounded-br-[3px]',
                             isSelected ? 'bg-[rgba(0,0,0,0.18)]' : 'bg-transparent',
                           )}
-                          onPointerDown={e => onPointerDown(e, project.id, task.id, 'resize-end', start, end)}
+                          onPointerDown={e => onPointerDown(e, project.id, milestone.id, 'resize-end', start, end)}
                         />
                         {/* Connector dot (right = outward only) */}
                         <div
@@ -1618,7 +1921,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                             'bg-[var(--g-bg)] border-2 border-[var(--g-accent)] w-[10px] h-[10px] top-1/2 -translate-y-1/2',
                           )}
                           style={{ left: 'calc(100% + 2px)' }}
-                          onPointerDown={e => beginConn(task.id, barLeft(start) + barWidth(start, end), rowTops[rowIdx] + ROW_H / 2, e)}
+                          onPointerDown={e => beginConn(milestone.id, barLeft(start) + barWidth(start, end), rowTops[rowIdx] + ROW_H / 2, e)}
                         />
                       </div>
                     ) : null}
@@ -1635,7 +1938,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
             const isExpanded   = !collapsedProjects.has(p.id)
             const projectDates = effectiveProjectDates(p)
             const isDraft      = projectDates?.isDraft ?? false
-            const isDragging      = dragState?.projectId === p.id && dragState?.taskId === null
+            const isDragging      = dragState?.projectId === p.id && dragState?.milestoneId === null
             const isProjDragging  = projRowDragState?.projectId === p.id
             const isSelected      = selectedBarId === p.id
             const labelText       = p.jiraStoryKey ?? null
@@ -1688,8 +1991,18 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                       className="overflow-hidden text-ellipsis whitespace-nowrap text-[var(--g-text)] cursor-pointer"
                       onClick={() => scrollToBar(p.id)}
                     >
-                      {p.name}
+                      {p.id}
                     </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="shrink-0 inline-flex items-center justify-center cursor-help text-[var(--g-text-subtle)] hover:text-[var(--g-text-muted)]">
+                          <Info size={13} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p className="text-xs font-medium">{p.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   {/* Status col */}
                   <div className={cn(cellClass, 'justify-center')}>
@@ -1756,12 +2069,12 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                           <DropdownMenuSub>
                             <DropdownMenuSubTrigger>
                               <Plus className="w-[13px] h-[13px] text-[var(--g-text-muted)]" />
-                              Add task
+                              Add milestone
                             </DropdownMenuSubTrigger>
                             <DropdownMenuPortal>
                               <DropdownMenuSubContent>
-                                {TASK_PRESETS.map(preset => (
-                                  <DropdownMenuItem key={preset.type} onClick={() => void addTask(p.id, preset.type, preset.label)}>
+                                {MILESTONE_PRESETS.map(preset => (
+                                  <DropdownMenuItem key={preset.type} onClick={() => void addMilestone(p.id, preset.type, preset.label)}>
                                     <preset.icon size={14} />
                                     {preset.label}
                                   </DropdownMenuItem>
@@ -1817,7 +2130,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                             </DropdownMenuSub>
                           )
                         })()}
-                        {!p.waveId && !!(p.planning || localPlanning[p.id]) && (
+                        {!readOnly && !p.waveId && !!(p.planning || localPlanning[p.id]) && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => void resetPlanning(p)}>
@@ -1837,17 +2150,6 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                   style={{ width: totalTimelineWidth }}
                   onClick={() => setSelectedBarId(p.id)}
                 >
-                  {zoom === 'days' && weekendCols.map(ci => (
-                    <div
-                      key={ci}
-                      className="absolute top-0 bottom-0 bg-muted/25 pointer-events-none z-0"
-                      style={{ left: ci * colPx, width: colPx }}
-                    />
-                  ))}
-                  <div
-                    className="absolute top-0 bottom-0 w-0.5 pointer-events-none"
-                    style={{ background: 'oklch(0.62 0.18 20 / 0.15)', left: todayOffset }}
-                  />
 
                   {projectDates ? (
                     <div
@@ -1866,9 +2168,10 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                             : undefined,
                       }}
                       onPointerDown={e => {
+                        if (readOnly) return
                         e.preventDefault(); e.stopPropagation()
-                        const origTasks = (getEffectivePlanning(p).tasks ?? []).map(t => ({ id: t.id, start: t.start, end: t.end }))
-                        setDragState({ projectId: p.id, taskId: null, type: 'move', startX: e.clientX, originalStart: projectDates.start, originalEnd: projectDates.end, originalTasks: origTasks })
+                        const origTasks = (getEffectivePlanning(p).milestones ?? []).map(t => ({ id: t.id, start: t.start, end: t.end }))
+                        setDragState({ projectId: p.id, milestoneId: null, type: 'move', startX: e.clientX, originalStart: projectDates.start, originalEnd: projectDates.end, originalMilestones: origTasks })
                         document.body.style.cursor = 'grabbing'
                         setSelectedBarId(p.id)
                       }}
@@ -1969,14 +2272,14 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
       )}
 
       {/* Drag ghost */}
-      {rowDragState && (() => {
-        const ghostRow = rows.find(r => r.type === 'task' && r.task.id === rowDragState.taskId)
-        if (!ghostRow || ghostRow.type !== 'task') return null
-        const { task, projectIndex, taskIndex } = ghostRow
-        const taskMeta = TASK_TYPE_META[task.type]
+      {rowMilestoneDragState && (() => {
+        const milestoneGhostRow = rows.find(r => r.type === 'milestone' && r.milestone.id === rowMilestoneDragState.milestoneId)
+        if (!milestoneGhostRow || milestoneGhostRow.type !== 'milestone') return null
+        const { milestone, projectIndex, milestoneIndex } = milestoneGhostRow
+        const taskMeta = MILESTONE_TYPE_META[milestone.type]
         return (
           <div
-            ref={ghostRef}
+            ref={milestoneGhostRef}
             className="fixed pointer-events-none z-[100] overflow-hidden"
             style={{
               width: LEFT_PANEL_W,
@@ -1993,11 +2296,11 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
             }}
           >
             <div className={cn(cellClass, 'justify-end text-[12px] text-[var(--g-text-subtle)]')} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              {projectIndex}.{taskIndex}
+              {projectIndex}.{milestoneIndex}
             </div>
             <div className={cn(cellClass, 'gap-[5px] text-[13px] text-[var(--g-text)]')}>
               <GripVertical className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)]" />
-              <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0">{task.name}</span>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0">{milestone.name}</span>
             </div>
             <div className={cellClass} />
             <div className={cellClass}>
@@ -2016,9 +2319,9 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
       {/* Project row drag ghost */}
       {projRowDragState && (() => {
-        const ghostRow = rows.find(r => r.type === 'project' && r.project.id === projRowDragState.projectId)
-        if (!ghostRow || ghostRow.type !== 'project') return null
-        const { project: gp } = ghostRow
+        const milestoneGhostRow = rows.find(r => r.type === 'project' && r.project.id === projRowDragState.projectId)
+        if (!milestoneGhostRow || milestoneGhostRow.type !== 'project') return null
+        const { project: gp } = milestoneGhostRow
         const gStatusMeta = PROJECT_STATUS_META[gp.status]
         return (
           <div
@@ -2039,7 +2342,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
             }}
           >
             <div className={cn(cellClass, 'justify-end text-[12px] text-[var(--g-text-subtle)] font-semibold')} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              {ghostRow.projectIndex}
+              {milestoneGhostRow.projectIndex}
             </div>
             <div className={cn(cellClass, 'gap-[5px] text-[13px] text-[var(--g-text)]')}>
               <GripVertical className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)]" />
@@ -2058,6 +2361,33 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
           </div>
         )
       })()}
+
+      {/* Status change confirmation dialog */}
+      {statusDialog && (
+        <Dialog open={statusDialog.open} onOpenChange={open => { if (!open) setStatusDialog(null) }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Milestone Status</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to mark this milestone as{' '}
+                <strong>{MILESTONE_STATUS_META[statusDialog.nextStatus].label}</strong>?
+                This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStatusDialog(null)}>Cancel</Button>
+              <Button
+                onClick={() => {
+                  void changeMilestoneStatus(statusDialog.projectId, statusDialog.milestoneId, statusDialog.nextStatus)
+                  setStatusDialog(null)
+                }}
+              >
+                Confirm
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
     </div>
   )

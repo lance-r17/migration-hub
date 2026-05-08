@@ -5,6 +5,7 @@ import { HomePage } from './pages/HomePage'
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
 import { LoginPage } from './pages/LoginPage'
 import { WavesPage } from './pages/WavesPage'
+import { WaveGanttPage } from './pages/WaveGanttPage'
 import { FinancePage } from './pages/FinancePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SettingsHome } from './pages/SettingsHome'
@@ -41,6 +42,7 @@ function App() {
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
         <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
+        <Route path="/waves/gantt" element={<ProtectedRoute><WaveGanttPage /></ProtectedRoute>} />
         <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
         <Route path="/email" element={<ProtectedRoute><EmailTemplatesPage /></ProtectedRoute>} />
         <Route path="/email/new" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />

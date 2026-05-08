@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Waves, Download, Plus, Lock, GanttChart, AlertTriangle } from 'lucide-react'
 import { isBefore, isAfter } from 'date-fns'
 import { toast } from 'sonner'
@@ -20,7 +21,6 @@ import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { useCurrentUser } from '@/context/UserContext'
-import { WaveGanttModal } from '@/components/waves/WaveGanttModal'
 import { EditWaveDrawer } from '@/components/drawers/EditWaveDrawer'
 import { updateProject } from '@/services/projects'
 import { appendAuditEntryMock } from '@/services/auditLog'
@@ -55,9 +55,9 @@ export function WavesPage() {
   const { settings } = useMigrationSettings()
   const { waves, loading, createWave, importWave } = useWaves()
   const { projects: initialProjects } = useProjects()
+  const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [isGanttOpen, setIsGanttOpen] = useState(false)
   const [selectedWave, setSelectedWave] = useState<Wave | null>(null)
   const [editOpen, setEditOpen] = useState(false)
 
@@ -171,7 +171,7 @@ export function WavesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsGanttOpen(true)} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
+            <Button variant="outline" size="sm" onClick={() => navigate('/waves/gantt')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
               <GanttChart className="size-4 mr-2" />
               Gantt Chart
             </Button>
@@ -294,14 +294,6 @@ export function WavesPage() {
         onOpenChange={setImportOpen}
         onImported={handleImported}
         onImport={importWave}
-      />
-
-      <WaveGanttModal
-        open={isGanttOpen}
-        onClose={() => setIsGanttOpen(false)}
-        waves={sortedWaves}
-        projects={liveProjects}
-        onAssign={(projectId, waveId) => handleAssign([projectId], waveId)}
       />
 
       <EditWaveDrawer
