@@ -6,6 +6,14 @@ import { setOnUnauthorized } from '@/services/client'
 import type { User } from '@/types'
 
 const AUTH_KEY = 'auth'
+const REDIRECT_KEY = 'post_login_redirect'
+
+function saveRedirect() {
+  const path = window.location.pathname + window.location.search
+  if (path !== '/login' && path !== '/callback') {
+    localStorage.setItem(REDIRECT_KEY, path)
+  }
+}
 
 interface UserContextValue {
   user: User | null
@@ -26,9 +34,17 @@ const UserContext = createContext<UserContextValue>({
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => sessionStorage.getItem(AUTH_KEY) === 'true'
-  )
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const local = localStorage.getItem(AUTH_KEY)
+    if (local) return local === 'true'
+    const session = sessionStorage.getItem(AUTH_KEY)
+    if (session) {
+      localStorage.setItem(AUTH_KEY, session)
+      return session === 'true'
+    }
+    return false
+  })
+
   useEffect(() => {
     if (!isAuthenticated) {
       setLoading(false)
@@ -36,18 +52,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     // Check custom OAuth backend token expiry first
-    const backendToken = sessionStorage.getItem('backend_token')
+    let backendToken = localStorage.getItem('backend_token')
+    if (!backendToken) {
+      backendToken = sessionStorage.getItem('backend_token')
+      if (backendToken) {
+        localStorage.setItem('backend_token', backendToken)
+      }
+    }
     if (backendToken) {
       try {
         const payload = JSON.parse(atob(backendToken.split('.')[1]))
         if (payload.exp && payload.exp * 1000 < Date.now()) {
           logout()
+          saveRedirect()
           window.location.assign('/login')
           return
         }
       } catch {
         // malformed token — treat as expired
         logout()
+        saveRedirect()
         window.location.assign('/login')
         return
       }
@@ -58,6 +82,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {
           logout()
+          saveRedirect()
           window.location.assign('/login')
         })
         .finally(() => setLoading(false))
@@ -68,6 +93,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     Promise.resolve(oidcManager?.getUser()).then((oidcUser) => {
       if (oidcUser?.expired) {
         logout()
+        saveRedirect()
         window.location.assign('/login')
         return
       }
@@ -78,6 +104,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {
           logout()
+          saveRedirect()
           window.location.assign('/login')
         })
         .finally(() => setLoading(false))
@@ -87,16 +114,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const login = useCallback((loggedInUser: User) => {
     setUser(loggedInUser)
     setIsAuthenticated(true)
-    sessionStorage.setItem(AUTH_KEY, 'true')
+    localStorage.setItem(AUTH_KEY, 'true')
   }, [])
 
   const logout = useCallback(() => {
     setUser(null)
     setIsAuthenticated(false)
-    sessionStorage.removeItem(AUTH_KEY)
-    sessionStorage.removeItem('backend_token')
+    localStorage.removeItem(AUTH_KEY)
+    localStorage.removeItem('backend_token')
+    localStorage.removeItem(REDIRECT_KEY)
     sessionStorage.removeItem('oauth_state')
-    sessionStorage.removeItem('oauth_redirect')
     // Clear OIDC session without redirecting (silent local logout)
     oidcManager?.removeUser()
   }, [])
@@ -106,6 +133,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setOnUnauthorized(() => {
       logout()
+      saveRedirect()
       window.location.assign('/login')
     })
     return () => setOnUnauthorized(null)

@@ -32,7 +32,7 @@ export function LoginForm({
       // Remember where the user was trying to go (optional)
       const currentPath = location.pathname + location.search
       if (currentPath !== '/login') {
-        sessionStorage.setItem('oauth_redirect', currentPath)
+        localStorage.setItem('post_login_redirect', currentPath)
       }
       window.location.assign(buildOAuthLoginUrl(state))
       return
@@ -48,7 +48,9 @@ export function LoginForm({
     try {
       const user = await loginService("", "")
       login(user)
-      navigate("/", { replace: true })
+      const redirectPath = localStorage.getItem('post_login_redirect') || '/'
+      localStorage.removeItem('post_login_redirect')
+      navigate(redirectPath, { replace: true })
     } catch {
       toast.error("Login failed. Please try again.")
     } finally {

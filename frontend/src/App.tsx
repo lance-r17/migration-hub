@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { HomePage } from './pages/HomePage'
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
@@ -28,8 +28,15 @@ import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, loading } = useCurrentUser()
+  const location = useLocation()
   if (loading) return null
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isAuthenticated) {
+    const path = location.pathname + location.search
+    if (path !== '/login' && path !== '/callback') {
+      localStorage.setItem('post_login_redirect', path)
+    }
+    return <Navigate to="/login" replace />
+  }
   return <>{children}</>
 }
 

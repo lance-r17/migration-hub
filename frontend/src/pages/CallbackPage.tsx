@@ -29,7 +29,7 @@ export function CallbackPage() {
       const code = url.searchParams.get('code')
       const state = url.searchParams.get('state')
       const savedState = sessionStorage.getItem('oauth_state')
-      const redirectPath = sessionStorage.getItem('oauth_redirect') || '/'
+      const redirectPath = localStorage.getItem('post_login_redirect') || '/'
 
       if (!code || state !== savedState) {
         console.error('OAuth callback missing code or invalid state')
@@ -38,11 +38,11 @@ export function CallbackPage() {
       }
 
       sessionStorage.removeItem('oauth_state')
-      sessionStorage.removeItem('oauth_redirect')
 
       exchangeCodeForSession(code)
         .then(({ user, token }) => {
-          sessionStorage.setItem('backend_token', token)
+          localStorage.setItem('backend_token', token)
+          localStorage.removeItem('post_login_redirect')
           login(user)
           navigate(redirectPath, { replace: true })
         })
@@ -59,12 +59,15 @@ export function CallbackPage() {
       return
     }
 
+    const redirectPath = localStorage.getItem('post_login_redirect') || '/'
+
     oidcManager
       .signinRedirectCallback()
       .then(() => getCurrentUser())
       .then((user) => {
+        localStorage.removeItem('post_login_redirect')
         login(user)
-        navigate('/', { replace: true })
+        navigate(redirectPath, { replace: true })
       })
       .catch((err) => {
         console.error('OIDC callback failed:', err)

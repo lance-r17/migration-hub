@@ -18,7 +18,7 @@ export const delay = (ms = MOCK_DELAY_MS): Promise<void> =>
 /** Returns Authorization header for the active auth mode. */
 async function authHeader(): Promise<HeadersInit> {
   // 1. Custom OAuth mode: backend-issued JWT
-  const backendToken = sessionStorage.getItem('backend_token')
+  const backendToken = localStorage.getItem('backend_token')
   if (backendToken) {
     return { Authorization: `Bearer ${backendToken}` }
   }
