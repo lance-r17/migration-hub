@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migration-hub-config
+  namespace: migration-hub
+data:
+  # Backend
+  ENVIRONMENT: "production"
+  CORS_ORIGINS: "https://migration-hub.example.com"
+  JIRA_PROJECT_KEY: "MIG"
+  JIRA_SUBTASK_ISSUE_TYPE: "Subtask"
+  JIRA_API_VERSION: "3"
+  SESSION_MAX_AGE_MINUTES: "480"
+  OAUTH_AD_GROUP_REGEX: "CN=([^,]+)-ResourceSetReadOnly"
+  OAUTH_AD_GROUP_OU_FILTER: "OU=Ali"
+  # Worker flag: only the worker deployment processes background tasks
+  DISABLE_BACKGROUND_TASKS: "false"
+
+  # Frontend runtime config (injected by Go entrypoint)
+  VITE_API_BASE_URL: "https://migration-hub.example.com/api"
+  VITE_OAUTH_REDIRECT_URI: "https://migration-hub.example.com/callback"
+  VITE_OIDC_REDIRECT_URI: "https://migration-hub.example.com/callback"

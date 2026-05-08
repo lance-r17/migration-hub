@@ -17,8 +17,9 @@ if not _app_logger.handlers:
     _app_logger.addHandler(_h)
 _app_logger.propagate = False
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import settings
 
@@ -30,47 +31,55 @@ async def lifespan(app: FastAPI):
     from app.database import AsyncSessionLocal
     from app.services import jira_service
 
-    # Reset stale 'processing' jobs (resume those with progress, fail the rest)
-    logger.info("lifespan startup: resetting stale jobs")
-    async with AsyncSessionLocal() as session:
-        job_ids_to_resume = await jira_service.reset_stale_jobs(session)
-        await session.commit()
-    logger.info("lifespan startup: %d stale job(s) queued for resume", len(job_ids_to_resume))
-    for job_id in job_ids_to_resume:
-        asyncio.create_task(jira_service.process_job(job_id))
+    monitor_task: asyncio.Task | None = None
+    cleanup_task: asyncio.Task | None = None
 
-    # Sweep any 'pending' jobs that survived a crash before dispatch
-    logger.info("lifespan startup: sweeping pending jobs")
-    async with AsyncSessionLocal() as session:
-        dispatched = await jira_service.dispatch_pending_jobs(session)
-        await session.commit()
-    logger.info("lifespan startup: startup sweep dispatched %d job(s)", len(dispatched))
+    if settings.disable_background_tasks:
+        logger.info("lifespan startup: DISABLE_BACKGROUND_TASKS=true — skipping background monitors")
+    else:
+        # Reset stale 'processing' jobs (resume those with progress, fail the rest)
+        logger.info("lifespan startup: resetting stale jobs")
+        async with AsyncSessionLocal() as session:
+            job_ids_to_resume = await jira_service.reset_stale_jobs(session)
+            await session.commit()
+        logger.info("lifespan startup: %d stale job(s) queued for resume", len(job_ids_to_resume))
+        for job_id in job_ids_to_resume:
+            asyncio.create_task(jira_service.process_job(job_id))
 
-    # Start the periodic monitor (sleeps first, so the startup sweep above runs immediately)
-    logger.info("lifespan startup: starting background job monitor (interval=30s)")
-    monitor_task = asyncio.create_task(jira_service.start_pending_job_monitor())
+        # Sweep any 'pending' jobs that survived a crash before dispatch
+        logger.info("lifespan startup: sweeping pending jobs")
+        async with AsyncSessionLocal() as session:
+            dispatched = await jira_service.dispatch_pending_jobs(session)
+            await session.commit()
+        logger.info("lifespan startup: startup sweep dispatched %d job(s)", len(dispatched))
 
-    # Start the attachment cleanup monitor (interval=1h)
-    logger.info("lifespan startup: starting attachment cleanup monitor (interval=1h)")
-    from app.services import attachment_service
-    cleanup_task = asyncio.create_task(attachment_service.start_cleanup_monitor())
+        # Start the periodic monitor (sleeps first, so the startup sweep above runs immediately)
+        logger.info("lifespan startup: starting background job monitor (interval=30s)")
+        monitor_task = asyncio.create_task(jira_service.start_pending_job_monitor())
+
+        # Start the attachment cleanup monitor (interval=1h)
+        logger.info("lifespan startup: starting attachment cleanup monitor (interval=1h)")
+        from app.services import attachment_service
+        cleanup_task = asyncio.create_task(attachment_service.start_cleanup_monitor())
 
     yield
 
-    # Shutdown: cancel monitors gracefully
-    logger.info("lifespan shutdown: cancelling background job monitor")
-    monitor_task.cancel()
-    try:
-        await monitor_task
-    except asyncio.CancelledError:
-        logger.info("lifespan shutdown: monitor stopped")
+    # Shutdown: cancel monitors gracefully (only if they were started)
+    if monitor_task is not None:
+        logger.info("lifespan shutdown: cancelling background job monitor")
+        monitor_task.cancel()
+        try:
+            await monitor_task
+        except asyncio.CancelledError:
+            logger.info("lifespan shutdown: monitor stopped")
 
-    logger.info("lifespan shutdown: cancelling attachment cleanup monitor")
-    cleanup_task.cancel()
-    try:
-        await cleanup_task
-    except asyncio.CancelledError:
-        logger.info("lifespan shutdown: attachment cleanup monitor stopped")
+    if cleanup_task is not None:
+        logger.info("lifespan shutdown: cancelling attachment cleanup monitor")
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            logger.info("lifespan shutdown: attachment cleanup monitor stopped")
 
 
 _OPENAPI_TAGS = [
@@ -145,6 +154,14 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health():
+        # Readiness probe: verify DB connectivity before declaring healthy
+        try:
+            from app.database import engine
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+        except Exception as exc:
+            logger.warning("health check failed: %s", exc)
+            raise HTTPException(status_code=503, detail="database unavailable")
         return {"status": "ok"}
 
     return app

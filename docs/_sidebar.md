@@ -5,6 +5,9 @@
   - [Getting Started](getting-started.md)
   - [Architecture](architecture.md)
 
+- **Deployment**
+  - [K8s Architecture](deployment/k8s-architecture.md)
+
 - **Frontend**
   - [Overview](frontend/overview.md)
   - [Hooks](frontend/hooks.md)

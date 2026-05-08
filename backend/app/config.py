@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # AD group → global role mapping (JSON array of {"regex": "...", "role": "..."})
     oauth_role_mappings: str = ""
 
+    # Kubernetes deployment: API pods should not run background tasks
+    disable_background_tasks: bool = False
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

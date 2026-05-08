@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: migration-hub
+  namespace: migration-hub
+  annotations:
+    # Higress is the ingress gateway (Envoy-based, WASM-plugin capable).
+    # Nginx-specific annotations are intentionally removed.
+    #
+    # Higress-specific features (SSL redirect, body size, rate limiting,
+    # CORS, auth) should be configured via Higress CRDs (WasmPlugin,
+    # McpBridge) or the Higress console, not Ingress annotations.
+    #
+    # CORS is handled by FastAPI; do not let the gateway add conflicting headers.
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: higress
+  tls:
+    - hosts:
+        - migration-hub.example.com
+      secretName: migration-hub-tls
+  rules:
+    - host: migration-hub.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-api
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

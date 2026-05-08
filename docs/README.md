@@ -5,6 +5,7 @@
 | [../README.md](../README.md) | Project introduction, quick-start, route map |
 | [architecture.md](architecture.md) | Full system architecture — layers, data flow, key decisions |
 | [getting-started.md](getting-started.md) | Prerequisites, install, run, environment setup |
+| [deployment/k8s-architecture.md](deployment/k8s-architecture.md) | Resilient Kubernetes deployment design — Higress ingress, split API/worker, HPA, PDB |
 | **frontend/** | |
 | [frontend/overview.md](frontend/overview.md) | Structure, routing, auth, mock vs real API |
 | [frontend/hooks.md](frontend/hooks.md) | Custom React hooks — signatures and usage |
