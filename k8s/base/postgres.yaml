@@ -1,3 +1,6 @@
+# NOTE: This PostgreSQL StatefulSet is for LOCAL / DEV environments only.
+# Production uses Alibaba Cloud PolarDB PostgreSQL (clustered mode),
+# provisioned externally. Do NOT deploy this in production.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
