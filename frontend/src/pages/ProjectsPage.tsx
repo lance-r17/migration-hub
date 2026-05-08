@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter } from 'lucide-react'
+import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   Table,
@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
@@ -70,10 +71,17 @@ export function ProjectsPage() {
   const [pageSize, setPageSize] = useState(20)
   const [migrationRange, setMigrationRange] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const filteredProjects = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
     return (projects || []).filter((p) => {
       if (statusFilter !== 'all' && p.status !== statusFilter) return false
+      if (query) {
+        const matchesName = p.name.toLowerCase().includes(query)
+        const matchesId = p.id.toLowerCase().includes(query)
+        if (!matchesName && !matchesId) return false
+      }
       if (migrationRange === 'all') return true
       const days = getMigrationPeriodDays(p)
       if (days === null) return false
@@ -90,7 +98,7 @@ export function ProjectsPage() {
           return true
       }
     })
-  }, [projects, migrationRange, statusFilter])
+  }, [projects, migrationRange, statusFilter, searchQuery])
 
   const totalPages = Math.ceil(filteredProjects.length / pageSize)
   const startIndex = (currentPage - 1) * pageSize
@@ -142,7 +150,7 @@ export function ProjectsPage() {
 
         {/* Filters (left) — right side reserved for export button */}
         <div className="flex justify-between items-center">
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
             <Select
               value={statusFilter}
             onValueChange={(value) => {
@@ -183,6 +191,19 @@ export function ProjectsPage() {
               <SelectItem value="gte180">{'≥ 180 days'}</SelectItem>
             </SelectContent>
           </Select>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Search name / ID"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-[220px] pl-9 h-7"
+            />
+          </div>
           </div>
         </div>
 
