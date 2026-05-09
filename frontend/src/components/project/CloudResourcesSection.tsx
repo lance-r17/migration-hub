@@ -114,108 +114,110 @@ export function CurrentInfrastructureSection({ data, onSave, projectStatus, isPr
           {!data || data.resources.length === 0 ? (
             <p className="text-sm text-muted-foreground">No resources documented yet. Run a discovery scan to populate this section.</p>
           ) : (
-            <div className="overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-border">
-                    {['Resource ID', 'Resource Name', 'Product', 'Category', 'Resource Set', 'Sub Application', 'Target Resource ID', 'Sync', 'Jira Sub-task', ...(jiraJobStatus === 'completed' ? ['Done'] : [])].map(h => (
-                      <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedResources.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((resource) => {
-                    const inScope = resource.needMigration !== false
-                    const isProcessing = jiraJobStatus === 'pending' || jiraJobStatus === 'processing'
-                    const specsEntries = resource.specs ? Object.entries(resource.specs) : []
-                    return (
-                    <tr
-                      key={resource.resourceId}
-                      className={cn(
-                        'hover:bg-muted/30 transition-colors border-b border-border last:border-0 cursor-pointer',
-                        resource.needMigration === false && 'opacity-40 line-through',
-                      )}
-                      onClick={() => setEditingResource(resource)}
-                    >
-                      <td className="py-3 pr-4">
-                        {resource.resourceId
-                          ? <code className="font-mono text-xs text-muted-foreground">{resource.resourceId}</code>
-                          : <span className="text-muted-foreground/40">—</span>}
-                      </td>
-                      <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">
-                        <span className="flex items-center gap-1.5">
-                          {resource.name}
-                          {specsEntries.length > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info size={13} className="text-muted-foreground/60 shrink-0 cursor-default" onClick={e => e.stopPropagation()} />
-                              </TooltipTrigger>
-                              <TooltipContent side="right" className="font-mono text-xs max-w-xs">
-                                {specsEntries.map(([k, v]) => (
-                                  <div key={k}>{k}: {String(v)}</div>
-                                ))}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 text-sm text-muted-foreground">{resource.product ? getNameForProduct(resource.product) : <span className="text-muted-foreground/40">—</span>}</td>
-                      <td className="py-3 pr-4 text-sm text-muted-foreground">{getCategoryForProduct(resource.product)}</td>
-                      <td className="py-3 pr-4 text-sm">
-                        {resource.resourceSet
-                          ? <code className="px-1.5 py-0.5 bg-muted text-muted-foreground text-xs rounded font-mono whitespace-nowrap">{resource.resourceSet}</code>
-                          : <span className="text-muted-foreground/40">—</span>}
-                      </td>
-                      <td className="py-3 pr-4 text-sm text-muted-foreground">
-                        {resource.subApplication ?? <span className="text-muted-foreground/40">—</span>}
-                      </td>
-                      <td className="py-3 pr-4">
-                        {resource.targetResourceId
-                          ? <code className="font-mono text-xs text-muted-foreground">{resource.targetResourceId}</code>
-                          : <span className="text-muted-foreground/40">—</span>}
-                      </td>
-                      <td className="py-3 pr-4"><SyncIcon status={resource.syncStatus} /></td>
-                      <td className="py-3 pr-4">
-                        {resource.jiraSubtaskKey ? (
-                          jiraBaseUrl ? (
-                            <a href={`${jiraBaseUrl}/browse/${resource.jiraSubtaskKey}`} target="_blank" rel="noopener noreferrer" className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline">{resource.jiraSubtaskKey}</a>
-                          ) : (
-                            <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{resource.jiraSubtaskKey}</code>
-                          )
-                        ) : isProcessing && inScope ? (
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Loader2 size={13} className="animate-spin shrink-0" />
-                            Creating…
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/40">—</span>
+            <div className="-mx-4 px-4 flex flex-col">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {['Resource ID', 'Resource Name', 'Product', 'Category', 'Resource Set', 'Sub Application', 'Target Resource ID', 'Sync', 'Jira Sub-task', ...(jiraJobStatus === 'completed' ? ['Done'] : [])].map(h => (
+                        <th key={h} className="pb-3 pr-4 text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedResources.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((resource) => {
+                      const inScope = resource.needMigration !== false
+                      const isProcessing = jiraJobStatus === 'pending' || jiraJobStatus === 'processing'
+                      const specsEntries = resource.specs ? Object.entries(resource.specs) : []
+                      return (
+                      <tr
+                        key={resource.resourceId}
+                        className={cn(
+                          'hover:bg-muted/30 transition-colors border-b border-border last:border-0 cursor-pointer',
+                          resource.needMigration === false && 'opacity-40 line-through',
                         )}
-                      </td>
-                      {jiraJobStatus === 'completed' && (
-                        <td className="py-3" onClick={e => e.stopPropagation()}>
-                          {resource.jiraSubtaskKey && onMarkMigrationComplete ? (
-                            <button
-                              onClick={() => onMarkMigrationComplete(resource.resourceId, !resource.migrationCompleted)}
-                              className="flex items-center justify-center"
-                              title={resource.migrationCompleted ? 'Mark as incomplete' : 'Mark migration complete'}
-                            >
-                              <CheckCircle2
-                                size={18}
-                                className={resource.migrationCompleted
-                                  ? 'text-emerald-600 dark:text-emerald-400'
-                                  : 'text-muted-foreground/30 hover:text-muted-foreground transition-colors'}
-                              />
-                            </button>
+                        onClick={() => setEditingResource(resource)}
+                      >
+                        <td className="py-3 pr-4">
+                          {resource.resourceId
+                            ? <code className="font-mono text-xs text-muted-foreground">{resource.resourceId}</code>
+                            : <span className="text-muted-foreground/40">—</span>}
+                        </td>
+                        <td className="py-3 pr-4 font-medium text-foreground whitespace-nowrap">
+                          <span className="flex items-center gap-1.5">
+                            {resource.name}
+                            {specsEntries.length > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info size={13} className="text-muted-foreground/60 shrink-0 cursor-default" onClick={e => e.stopPropagation()} />
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="font-mono text-xs max-w-xs">
+                                  {specsEntries.map(([k, v]) => (
+                                    <div key={k}>{k}: {String(v)}</div>
+                                  ))}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-sm text-muted-foreground">{resource.product ? getNameForProduct(resource.product) : <span className="text-muted-foreground/40">—</span>}</td>
+                        <td className="py-3 pr-4 text-sm text-muted-foreground">{getCategoryForProduct(resource.product)}</td>
+                        <td className="py-3 pr-4 text-sm">
+                          {resource.resourceSet
+                            ? <code className="px-1.5 py-0.5 bg-muted text-muted-foreground text-xs rounded font-mono whitespace-nowrap">{resource.resourceSet}</code>
+                            : <span className="text-muted-foreground/40">—</span>}
+                        </td>
+                        <td className="py-3 pr-4 text-sm text-muted-foreground">
+                          {resource.subApplication ?? <span className="text-muted-foreground/40">—</span>}
+                        </td>
+                        <td className="py-3 pr-4">
+                          {resource.targetResourceId
+                            ? <code className="font-mono text-xs text-muted-foreground">{resource.targetResourceId}</code>
+                            : <span className="text-muted-foreground/40">—</span>}
+                        </td>
+                        <td className="py-3 pr-4"><SyncIcon status={resource.syncStatus} /></td>
+                        <td className="py-3 pr-4">
+                          {resource.jiraSubtaskKey ? (
+                            jiraBaseUrl ? (
+                              <a href={`${jiraBaseUrl}/browse/${resource.jiraSubtaskKey}`} target="_blank" rel="noopener noreferrer" className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded hover:underline">{resource.jiraSubtaskKey}</a>
+                            ) : (
+                              <code className="text-primary font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{resource.jiraSubtaskKey}</code>
+                            )
+                          ) : isProcessing && inScope ? (
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Loader2 size={13} className="animate-spin shrink-0" />
+                              Creating…
+                            </span>
                           ) : (
                             <span className="text-muted-foreground/40">—</span>
                           )}
                         </td>
-                      )}
-                    </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                        {jiraJobStatus === 'completed' && (
+                          <td className="py-3" onClick={e => e.stopPropagation()}>
+                            {resource.jiraSubtaskKey && onMarkMigrationComplete ? (
+                              <button
+                                onClick={() => onMarkMigrationComplete(resource.resourceId, !resource.migrationCompleted)}
+                                className="flex items-center justify-center"
+                                title={resource.migrationCompleted ? 'Mark as incomplete' : 'Mark migration complete'}
+                              >
+                                <CheckCircle2
+                                  size={18}
+                                  className={resource.migrationCompleted
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-muted-foreground/30 hover:text-muted-foreground transition-colors'}
+                                />
+                              </button>
+                            ) : (
+                              <span className="text-muted-foreground/40">—</span>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
               {sortedResources.length > PAGE_SIZE && (
                 <div className="flex items-center justify-between pt-3 text-sm text-muted-foreground">
                   <span>
