@@ -31,7 +31,7 @@ from app.schemas.risk import RiskOut
 from app.schemas.jira_job import JiraJobCreate
 from app.services import audit_service, attachment_service, jira_client, jira_service, migration_settings_service, project_service, user_service
 from app.config import settings
-from app.auth import get_current_user
+from app.auth import get_current_user, require_admin
 from app.models.user import User
 from app.models.cloud_resource import CloudResource
 from app.models.project_attachment import ProjectAttachment
@@ -537,17 +537,12 @@ async def mark_survey_submitted(
 async def reset_project(
     project_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     """Reset a project, preserving application overview, team, resources, and attachments.
 
-    Requires platform_migration_lead role.
+    Requires admin role.
     """
-    if "platform_migration_lead" not in (current_user.role or ""):
-        raise HTTPException(
-            status_code=403,
-            detail="Only Platform Migration Leads can reset projects.",
-        )
 
     project = await project_service.get_by_id(db, project_id)
     if not project:
