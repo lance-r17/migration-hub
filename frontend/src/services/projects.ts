@@ -350,3 +350,12 @@ export async function updateGovernanceRoles(
   )
   return fromApi(raw)
 }
+
+export async function resetProject(id: string): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    return store.resetProject(id)
+  }
+  const raw = await apiClient.post<ProjectApiResponse>(`/api/v1/projects/${id}/reset`, {})
+  return fromApi(raw)
+}

@@ -1,6 +1,6 @@
 # Batch Integration Guide
 
-Practical Python recipes for automating project onboarding, governance assignment, and resource management via the Migration Hub REST API. All examples use `httpx` and target `http://localhost:8000/api/v1` — replace with your deployed backend URL.
+Practical Python recipes for automating project onboarding, governance assignment, and resource management via the Migration Hub REST API. All examples use `httpx` and target `http://localhost:8000/api/v1` - replace with your deployed backend URL.
 
 For the full endpoint reference see [api.md](api.md). For cURL-based resource recipes see [samples.md](samples.md).
 
@@ -9,7 +9,7 @@ For the full endpoint reference see [api.md](api.md). For cURL-based resource re
 ## Prerequisites
 
 1. **Service account with API key**
-   Create one via `POST /admin/service-accounts` (admin role required). Save the returned `api_key` — it is shown **once only**.
+   Create one via `POST /admin/service-accounts` (admin role required). Save the returned `api_key` - it is shown **once only**.
 
 2. **Python dependencies**
    ```bash
@@ -32,7 +32,7 @@ For the full endpoint reference see [api.md](api.md). For cURL-based resource re
 > **Auth notes for automation**
 > - `PUT /projects/{id}/project-user-roles` is **service-account only**.
 > - `PUT /projects/{id}/governance-roles` requires the caller to have `platform_migration_lead` in their `role` string.
-> - If your service account does not have the lead role, split scenario 2 into two passes: one with a lead’s JWT for governance roles, and one with the service account key for project-user roles.
+> - If your service account does not have the lead role, split scenario 2 into two passes: one with a lead's JWT for governance roles, and one with the service account key for project-user roles.
 
 ---
 
@@ -78,11 +78,11 @@ client = MigrationHubClient(BASE_URL, API_KEY)
 
 ---
 
-## Scenario 1 — Batch create projects (one-off)
+## Scenario 1 - Batch create projects (one-off)
 
 Create many projects up-front, using your own series ID as the project primary key. The ID follows the resource-set naming convention `{org}-{ba_id}-{app_name}-{env}` (e.g. `acme-123456-appone-prod`). The `name` field holds the human-readable application title.
 
-Only `id` and `name` are required. `description` and `wave_id` are intentionally omitted here — they are filled in later (see Scenario 2 for description, and wave allocation is a manual decision by the Platform Migration Lead).
+Only `id` and `name` are required. `description` and `wave_id` are intentionally omitted here - they are filled in later (see Scenario 2 for description, and wave allocation is a manual decision by the Platform Migration Lead).
 
 ```python
 import csv
@@ -99,7 +99,7 @@ def ensure_project(client: MigrationHubClient, project_id: str, name: str):
     """Create a project if it does not already exist."""
     try:
         existing = client.get(f"/projects/{project_id}")
-        print(f"  SKIP {project_id} — already exists")
+        print(f"  SKIP {project_id} - already exists")
         return existing
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
@@ -130,11 +130,11 @@ batch_create_projects(PROJECT_CSV)
 
 ---
 
-## Scenario 1b — Batch ensure users exist (one-off or regular refresh)
+## Scenario 1b - Batch ensure users exist (one-off or regular refresh)
 
-Before governance roles can be assigned, the target users must exist in the Migration Hub directory. `POST /admin/users/batch` creates any missing users and returns the full user record for every entry — including those that were skipped because they already exist.
+Before governance roles can be assigned, the target users must exist in the Migration Hub directory. `POST /admin/users/batch` creates any missing users and returns the full user record for every entry - including those that were skipped because they already exist.
 
-> **Authorization:** This endpoint requires an **admin** role. If your service account is not an admin, perform this step with an admin user’s JWT or create an admin-scoped service account first.
+> **Authorization:** This endpoint requires an **admin** role. If your service account is not an admin, perform this step with an admin user's JWT or create an admin-scoped service account first.
 
 ```python
 import csv
@@ -172,13 +172,13 @@ user_map = batch_ensure_users(USER_CSV)
 **Key points**
 - `id` is optional in the request; when omitted the backend generates one (`usr-{uuid}`).
 - `initials` are auto-derived from `name` if not supplied.
-- The `role` field on `User` is for **global roles** only (e.g. `admin`, `platform_migration_lead`). Governance roles such as `technical_lead`, `business_owner`, and `itso` are assigned per-project in Scenario 2 — do not set them here.
+- The `role` field on `User` is for **global roles** only (e.g. `admin`, `platform_migration_lead`). Governance roles such as `technical_lead`, `business_owner`, and `itso` are assigned per-project in Scenario 2 - do not set them here.
 - Duplicate emails within the same batch are deduplicated automatically.
 - The response `users` array preserves the same order as the request (minus duplicates), so you can reliably collect IDs for downstream governance assignment.
 
 ---
 
-## Scenario 2 — Batch update application overview and assign governance roles (regular refresh)
+## Scenario 2 - Batch update application overview and assign governance roles (regular refresh)
 
 Run this periodically to keep project metadata and team assignments in sync with your CMDB or identity store.
 
@@ -260,7 +260,7 @@ for pid in ["acme-123456-appone-prod", "acme-123456-appone-dev", "acme-123457-ap
 
 ---
 
-## Scenario 3 — Batch add resources to projects (on-demand)
+## Scenario 3 - Batch add resources to projects (on-demand)
 
 Import a discovered inventory into existing projects without touching resources that are already tracked. `PATCH /projects/{id}/resources` is an **upsert**: existing `resource_id`s are updated, missing ones are created, and anything not in the payload is left alone.
 
@@ -312,7 +312,7 @@ batch_upsert_resources(RESOURCE_CSV)
 
 ---
 
-## Scenario 4 — Partially update resources (target resource ID, sync status)
+## Scenario 4 - Partially update resources (target resource ID, sync status)
 
 After migration work completes, push back the target resource identifier and sync state without resending the full resource list.
 
@@ -398,8 +398,47 @@ patch_resource_specs("acme-123456-appone-prod", [
 
 **Key points**
 - Only the fields you include in the payload are changed; everything else on that resource stays as-is.
-- `sync-complete` is the preferred endpoint when a resource finishes migration. It also derives the parent project’s status from the latest stage progress.
+- `sync-complete` is the preferred endpoint when a resource finishes migration. It also derives the parent project's status from the latest stage progress.
 - `POST /projects/{id}/resources/specs` merges the `specs` dict deeply (existing keys are overwritten, missing keys are preserved).
+
+---
+
+## Scenario 5 — Reset a project (administrative)
+
+When a project needs to restart from scratch — for example, after a failed migration pilot or a major scope change — you can reset it without losing its identity, team assignments, cloud resources, or attachments.
+
+**Authorization:** Requires `platform_migration_lead` role.
+
+```python
+def reset_project(project_id: str):
+    result = client.post(f"/projects/{project_id}/reset", json=None)
+    print(f"  RESET {project_id} -> status={result['status']}")
+    return result
+
+
+reset_project("acme-123456-appone-prod")
+```
+
+**What is preserved**
+- `name`, `description`
+- `applicationOverview` (the project's identity and BA metadata)
+- `project_users` (governance roles and ITSO assignments)
+- `cloud_resources` (current infrastructure inventory)
+- `attachments`
+- `wave_id` / `migration_wave`
+
+**What is cleared**
+- `status` → `"planning"`
+- `blocked_reason`, `survey_submitted_at`, `planning`
+- All other JSONB sections: `availability`, `data_persistence`, `dependencies`, `nfrs`, `migration_constraints`, `target_architecture`, `migration_effort_estimation`, `jira_subtask_config`
+- `jira_story_key`, `jira_job_status`
+- All `risks` and `approvals`
+- The **entire audit history** for the project (a single `project_reset` event remains)
+
+**Key points**
+- This is a destructive administrative action. The confirmation dialog in the UI warns users that the change history will also be removed.
+- After a reset, the project behaves like a freshly created project: stage progress reverts to `setup` only, and sign-off must be re-collected from the beginning.
+- Because `cloud_resources` are preserved, any already-discovered inventory does not need to be re-imported.
 
 ---
 
@@ -417,6 +456,7 @@ Scenario order:
   2. Refresh metadata + governance (regular)
   3. Add discovered resources (on-demand)
   4. Update resource state post-migration (on-demand)
+  5. Reset project (administrative — optional)
 """
 import csv
 import httpx
@@ -551,6 +591,12 @@ def main():
             },
         )
         print("RESOURCE patched")
+
+        # 5. Reset project (administrative — optional)
+        # Uncomment to restart a project from scratch while preserving
+        # application overview, team, resources, and attachments.
+        # client.post("/projects/acme-123456-appone-prod/reset", json=None)
+        # print("PROJECT reset")
     finally:
         client.close()
 

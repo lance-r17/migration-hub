@@ -533,6 +533,31 @@ async def mark_survey_submitted(
     return _project_detail(project)
 
 
+@router.post("/{project_id}/reset", response_model=ProjectDetail)
+async def reset_project(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reset a project, preserving application overview, team, resources, and attachments.
+
+    Requires platform_migration_lead role.
+    """
+    if "platform_migration_lead" not in (current_user.role or ""):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Platform Migration Leads can reset projects.",
+        )
+
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    actor = _user_to_actor(current_user)
+    project = await project_service.reset_project(db, project, actor)
+    return _project_detail(project)
+
+
 @router.patch("/{project_id}/planning", response_model=ProjectDetail)
 async def update_planning(
     project_id: str,

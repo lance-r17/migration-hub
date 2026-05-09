@@ -207,6 +207,32 @@ Marks the project's survey as submitted (sets `surveySubmittedAt` timestamp). Ad
 
 ---
 
+### `POST /api/v1/projects/:id/reset`
+
+Resets a project's record to its initial state while preserving application overview, team assignments, cloud resources, and attachments.
+
+**Authorization:** Requires `platform_migration_lead` role.
+
+**Cleared fields:**
+- `status` → `"planning"`
+- `blocked_reason` → `null`
+- `survey_submitted_at` → `null`
+- `planning` → `null`
+- `availability`, `data_persistence`, `dependencies`, `nfrs`, `migration_constraints`, `target_architecture`, `migration_effort_estimation`, `jira_subtask_config` → `null`
+- `jira_story_key` → `null`
+- `jira_job_status` → `null`
+- All `risks` → deleted
+- All `approvals` → deleted
+- All prior `audit_log_entries` → deleted
+
+**Preserved:** `name`, `description`, `application_overview`, `project_users`, `cloud_resources`, `attachments`, `wave_id`, `migration_wave`.
+
+**Response:** `Project`
+
+**Audit:** the project's entire audit history is wiped, then a single `project_reset` event is recorded with a summary of all cleared fields.
+
+---
+
 ### `PATCH /api/v1/projects/:id/planning`
 
 Replaces the project's planning JSONB (start date, end date, task list). Requires authentication.

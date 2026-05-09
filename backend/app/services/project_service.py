@@ -807,6 +807,93 @@ async def delete_resources_by_ids(
     return deleted
 
 
+async def reset_project(
+    session: AsyncSession,
+    project: Project,
+    actor: dict[str, Any],
+) -> Project:
+    """Reset a project, preserving application overview, team, resources, and attachments.
+
+    Clears: availability, data_persistence, dependencies, nfrs, migration_constraints,
+    target_architecture, migration_effort_estimation, jira_subtask_config, planning,
+    survey_submitted_at, blocked_reason, jira_story_key, jira_job_status, risks, approvals.
+    Resets status to 'planning'.
+    Also clears the project's full audit history and records a single `project_reset` event.
+    """
+    changes: list[dict] = []
+
+    section_labels = {
+        "availability": "Availability & Resilience",
+        "data_persistence": "Data & Persistence",
+        "dependencies": "Dependencies",
+        "nfrs": "Non-Functional Requirements",
+        "migration_constraints": "Migration Constraints",
+        "target_architecture": "Target Architecture",
+        "migration_effort_estimation": "Migration Effort Estimation",
+        "jira_subtask_config": "Jira Subtask Config",
+    }
+
+    for col, label in section_labels.items():
+        old = getattr(project, col, None)
+        if old is not None:
+            changes.append({"field": col, "label": label, "old_value": old, "new_value": None})
+        setattr(project, col, None)
+
+    if project.blocked_reason is not None:
+        changes.append({"field": "blocked_reason", "label": "Blocked Reason", "old_value": project.blocked_reason, "new_value": None})
+        project.blocked_reason = None
+
+    if project.survey_submitted_at is not None:
+        changes.append({"field": "survey_submitted_at", "label": "Survey Submitted At", "old_value": project.survey_submitted_at.isoformat() if project.survey_submitted_at else None, "new_value": None})
+        project.survey_submitted_at = None
+
+    if project.planning is not None:
+        changes.append({"field": "planning", "label": "Planning", "old_value": project.planning, "new_value": None})
+        project.planning = None
+        attributes.flag_modified(project, "planning")
+
+    if project.jira_story_key is not None:
+        changes.append({"field": "jira_story_key", "label": "Jira Story Key", "old_value": project.jira_story_key, "new_value": None})
+        project.jira_story_key = None
+
+    if project.jira_job_status is not None:
+        changes.append({"field": "jira_job_status", "label": "Jira Job Status", "old_value": project.jira_job_status, "new_value": None})
+        project.jira_job_status = None
+
+    risk_count = len(project.risks or [])
+    for risk in list(project.risks or []):
+        await session.delete(risk)
+    if risk_count:
+        changes.append({"field": "risks", "label": "Risks", "old_value": f"{risk_count} risk(s)", "new_value": None})
+
+    approval_count = len(project.approvals or [])
+    for approval in list(project.approvals or []):
+        await session.delete(approval)
+    if approval_count:
+        changes.append({"field": "approvals", "label": "Approvals", "old_value": f"{approval_count} approval(s)", "new_value": None})
+
+    old_status = project.status
+    if old_status != "planning":
+        changes.append({"field": "status", "label": "Status", "old_value": old_status, "new_value": "planning"})
+    project.status = "planning"
+
+    # Wipe the project's audit history, then record the reset itself
+    await audit_service.clear_by_project(session, project.id)
+
+    await audit_service.append_entry(
+        session,
+        project_id=project.id,
+        event_type="project_reset",
+        entity_type="project",
+        actor=actor,
+        changes=changes,
+    )
+
+    await session.flush()
+    await session.refresh(project)
+    return project
+
+
 async def _check_wave_completed(session: AsyncSession, wave_id: str | None) -> None:
     if not wave_id:
         return

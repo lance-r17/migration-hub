@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { BadgeCheck, Ban, ClipboardList, History, Lock } from 'lucide-react'
+import { BadgeCheck, Ban, ClipboardList, History, Lock, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -46,7 +46,7 @@ import { useProject } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
 import { createJiraJob } from '@/services/jiraJobs'
-import { markResourceSyncComplete, blockProject, updateGovernanceRoles } from '@/services/projects'
+import { markResourceSyncComplete, blockProject, updateGovernanceRoles, resetProject } from '@/services/projects'
 import { getSignoffConfig } from '@/services/signoffConfig'
 import { apiClient } from '@/services/client'
 import { ensureAllRoles } from '@/lib/approvals'
@@ -72,6 +72,7 @@ export function ProjectDetailsPage() {
   const [assignWaveOpen, setAssignWaveOpen] = useState(false)
   const [surveyOpen, setSurveyOpen] = useState(false)
   const [operationsOpen, setOperationsOpen] = useState(false)
+  const [resetDialogOpen, setResetDialogOpen] = useState(false)
 
   // Fire completion toast when jiraJobStatus transitions to 'completed'
   const prevJiraStatus = useRef(project?.jiraJobStatus)
@@ -157,6 +158,20 @@ export function ProjectDetailsPage() {
       setBlockReason('')
     } catch {
       toast.error('Failed to block project. Please try again.')
+    }
+  }
+
+  const handleResetConfirm = async () => {
+    if (!id) return
+    try {
+      await resetProject(id)
+      await refreshProject()
+      toast.success('Project reset', {
+        description: 'All sections except Application Overview, team, and resources have been cleared.',
+      })
+      setResetDialogOpen(false)
+    } catch {
+      toast.error('Failed to reset project. Please try again.')
     }
   }
 
@@ -387,6 +402,14 @@ export function ProjectDetailsPage() {
                 <BadgeCheck size={16} /> Unblock Project
               </button>
             )}
+            {isPlatformLead && (
+              <button
+                onClick={() => setResetDialogOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-semibold rounded shadow-sm hover:opacity-90 transition-all text-sm flex-shrink-0"
+              >
+                <RotateCcw size={16} /> Reset Project
+              </button>
+            )}
             {canSignOff && (
               <button
                 onClick={() => setModalOpen(true)}
@@ -548,6 +571,30 @@ export function ProjectDetailsPage() {
             </Button>
             <Button variant="destructive" onClick={handleBlockConfirm} disabled={!blockReason.trim()}>
               Block Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={resetDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) setResetDialogOpen(false)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Project</DialogTitle>
+            <DialogDescription>
+              This will clear all sections except Application Overview, Contact & Ownership, Current Infrastructure, and Attachments. Risks, approvals, planning, all other documentation, and the full change history will be removed. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleResetConfirm}>
+              Reset Project
             </Button>
           </DialogFooter>
         </DialogContent>

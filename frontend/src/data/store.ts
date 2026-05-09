@@ -66,6 +66,33 @@ export const store = {
     return _projects[idx]
   },
 
+  resetProject(id: string): Project {
+    const idx = _projects.findIndex(p => p.id === id)
+    if (idx === -1) throw new Error(`Project not found: ${id}`)
+    const p = _projects[idx]
+    _projects[idx] = {
+      ...p,
+      status: 'planning',
+      blockedReason: undefined,
+      surveySubmittedAt: undefined,
+      planning: undefined,
+      availability: undefined,
+      dataPersistence: undefined,
+      dependencies: undefined,
+      nfrs: undefined,
+      migrationConstraints: undefined,
+      targetArchitecture: undefined,
+      migrationEffortEstimation: undefined,
+      jiraSubtaskConfig: undefined,
+      jiraStoryKey: undefined,
+      jiraJobStatus: undefined,
+      risks: [],
+      approvals: [],
+    }
+    _auditLogs[id] = []
+    return _projects[idx]
+  },
+
   // ─── Waves ─────────────────────────────────────────────────────────────────
 
   getWaves(): Wave[] {

@@ -46,3 +46,12 @@ async def get_by_project(
         .order_by(AuditLogEntry.timestamp.desc())
     )
     return list(result.scalars().all())
+
+
+async def clear_by_project(session: AsyncSession, project_id: str) -> int:
+    """Delete all audit log entries for a project. Returns count deleted."""
+    from sqlalchemy import delete
+    result = await session.execute(
+        delete(AuditLogEntry).where(AuditLogEntry.project_id == project_id)
+    )
+    return result.rowcount
