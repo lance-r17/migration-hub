@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Download, Plus, FolderOpen, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ import { useProjects } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useEmbargos } from '@/hooks/use-embargos'
 import { useCurrentUser } from '@/context/UserContext'
+import { getSurveyDraftProjectIds } from '@/services/projects'
 import type { OverallStats } from '@/types'
 
 type SortKey = 'progress' | 'status'
@@ -28,8 +29,29 @@ export function HomePage() {
   const { projects, loading: projectsLoading } = useProjects({ home: true })
   const { waves, loading: wavesLoading } = useWaves({ enabled: isPlatformLead })
   const { embargos: allEmbargos, loading: embargosLoading } = useEmbargos({ enabled: isPlatformLead })
+  const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
+  const [draftsLoading, setDraftsLoading] = useState(true)
 
-  const loading = dashLoading || projectsLoading || wavesLoading || embargosLoading
+  useEffect(() => {
+    let cancelled = false
+    setDraftsLoading(true)
+    getSurveyDraftProjectIds()
+      .then(ids => {
+        if (!cancelled) {
+          setDraftProjectIds(ids)
+          setDraftsLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDraftProjectIds([])
+          setDraftsLoading(false)
+        }
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  const loading = dashLoading || projectsLoading || wavesLoading || embargosLoading || draftsLoading
 
   // For non-platform-leads: filter activity to their assigned projects only
   const projectIds = useMemo(() => projects.map(p => p.id), [projects])
@@ -138,7 +160,7 @@ export function HomePage() {
               ) : (
                 <>
                   <OverallProgressCard stats={displayStats} projects={projects} waves={waves} />
-                  <ProjectStatusChartCard projects={projects} />
+                  <ProjectStatusChartCard projects={projects} draftProjectIds={draftProjectIds} />
                 </>
               )}
             </div>

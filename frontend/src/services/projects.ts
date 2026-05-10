@@ -25,6 +25,7 @@ const ENDPOINTS = {
   section: (id: string, key: string) => `/api/v1/projects/${id}/sections/${key}`,
   planning: (id: string) => `/api/v1/projects/${id}/planning`,
   surveySubmitted: (id: string) => `/api/v1/projects/${id}/survey-submitted`,
+  surveyDraft: (id: string) => `/api/v1/projects/${id}/survey-draft`,
   resourceSyncComplete: (projectId: string, resourceId: string) => `/api/v1/projects/${projectId}/resources/${resourceId}/sync-complete`,
 }
 
@@ -295,6 +296,45 @@ export async function submitSurvey(id: string): Promise<Project> {
   }
   const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.surveySubmitted(id), {})
   return fromApi(raw)
+}
+
+export interface SurveyDraftPayload {
+  current_index: number
+  answers: Record<string, unknown>
+  attachment_answers: Record<string, string[]>
+  removed_attachment_ids: string[]
+  resource_answers: Record<string, Record<string, unknown>>
+}
+
+export interface SurveyDraftApi {
+  id: string
+  user_id: string
+  project_id: string
+  payload: SurveyDraftPayload
+  updated_at: string
+}
+
+export async function getSurveyDraft(projectId: string): Promise<SurveyDraftApi | null> {
+  if (USE_MOCK) { await delay(); return null }
+  return apiClient.get<SurveyDraftApi | null>(ENDPOINTS.surveyDraft(projectId))
+}
+
+export async function saveSurveyDraft(
+  projectId: string,
+  payload: SurveyDraftPayload,
+): Promise<SurveyDraftApi> {
+  if (USE_MOCK) { await delay(); return { id: 'mock', user_id: 'mock', project_id: projectId, payload, updated_at: new Date().toISOString() } }
+  return apiClient.put<SurveyDraftApi>(ENDPOINTS.surveyDraft(projectId), { payload })
+}
+
+export async function deleteSurveyDraft(projectId: string): Promise<void> {
+  if (USE_MOCK) { await delay(); return }
+  return apiClient.delete<void>(ENDPOINTS.surveyDraft(projectId))
+}
+
+export async function getSurveyDraftProjectIds(): Promise<string[]> {
+  if (USE_MOCK) { await delay(); return [] }
+  return apiClient.get<string[]>(`${ENDPOINTS.projects}/survey-drafts`)
 }
 
 export async function markResourceSyncComplete(

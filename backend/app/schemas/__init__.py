@@ -8,7 +8,7 @@ from app.schemas.audit_log import AuditLogEntryOut, AuditLogResponse
 from app.schemas.embargo import EmbargoOut, EmbargoCreate, EmbargoUpdate
 from app.schemas.billing import BillingRecordOut, BillingUpload, BillingThresholdConfigOut, BillingThresholdConfigUpdate
 from app.schemas.jira_job import JiraJobOut, JiraJobCreate
-from app.schemas.survey import SurveyConfigOut, SurveyConfigUpdate, ResourceSurveyConfigOut, ResourceSurveyConfigUpdate
+from app.schemas.survey import SurveyConfigOut, SurveyConfigUpdate, ResourceSurveyConfigOut, ResourceSurveyConfigUpdate, SurveyDraftOut, SurveyDraftSave
 from app.schemas.dashboard import OverallStatsOut, ActivityOut, ActivityListOut
 
 __all__ = [
@@ -23,5 +23,6 @@ __all__ = [
     "BillingRecordOut", "BillingUpload", "BillingThresholdConfigOut", "BillingThresholdConfigUpdate",
     "JiraJobOut", "JiraJobCreate",
     "SurveyConfigOut", "SurveyConfigUpdate", "ResourceSurveyConfigOut", "ResourceSurveyConfigUpdate",
+    "SurveyDraftOut", "SurveyDraftSave",
     "OverallStatsOut", "ActivityOut", "ActivityListOut",
 ]

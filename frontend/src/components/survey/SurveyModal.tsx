@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { format, addDays, isBefore, isAfter } from 'date-fns'
-import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, ClipboardList, Plus, CalendarIcon, Server, Check } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, ClipboardList, Plus, CalendarIcon, Server, Check, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -15,6 +16,8 @@ import { SurveyFileUpload } from '@/components/survey/SurveyFileUpload'
 import { EffortTableSurveyInput } from '@/components/survey/EffortTableSurveyInput'
 import { deleteAttachment } from '@/services/attachments'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
+import { useSurveyDraft } from '@/hooks/use-survey-draft'
+import { useCurrentUser } from '@/context/UserContext'
 import type { SurveyConfig, SurveyQuestion, SurveyFieldDef, ResourceSurveyConfig, ResourceQuestionDef } from '@/types/survey'
 import type { Project, DependencyEntry, CloudResource, ResourceCategory, EffortTable } from '@/types'
 
@@ -708,6 +711,8 @@ export function SurveyModal({
 }: SurveyModalProps) {
   const { getFieldById } = useSurveyFieldDefs()
   const { settings } = useMigrationSettings()
+  const { user } = useCurrentUser()
+  const { draftPayload, loading: draftLoading, reload, saveDraft, saveDraftImmediately, clearDraft } = useSurveyDraft(project.id, user?.id)
   const platformStart = settings?.platformPeriod?.startDate
   const platformEnd = settings?.platformPeriod?.endDate
   const orderedQuestions = [...surveyConfig.questions].sort((a, b) => a.order - b.order)
@@ -745,6 +750,7 @@ export function SurveyModal({
   const [submitting, setSubmitting] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [resourceListExpanded, setResourceListExpanded] = useState(false)
+  const [ready, setReady] = useState(false)
 
   const visibleQuestions = orderedQuestions.filter(isQuestionVisible)
   const appQuestionsEndIndex = visibleQuestions.length // (inclusive, e.g. if 3 questions: 1, 2, 3)
@@ -760,9 +766,19 @@ export function SurveyModal({
   const resourceStepIndex = currentIndex - (visibleQuestions.length + 1 + (hasTransitionSlide ? 1 : 0))
   const currentResourceStep = (!isWelcomeSlide && !isMainStep && !isTransitionSlide) ? resourceSteps[resourceStepIndex] : undefined
 
+  // Force reload draft every time modal opens
+  useEffect(() => {
+    if (open) {
+      reload()
+    }
+  }, [open, reload])
+
   // Reset + pre-fill when opened
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setReady(false)
+      return
+    }
     setCurrentIndex(0)
     setCompleted(false)
     setSubmitting(false)
@@ -831,8 +847,73 @@ export function SurveyModal({
       if (Object.keys(stepAnswers).length > 0) prefilledResource.set(key, stepAnswers)
     }
     setResourceAnswers(prefilledResource)
+
+    // If draft is already loaded and there's no draft payload, mark ready immediately
+    if (!draftLoading && !draftPayload) {
+      setReady(true)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Restore draft over pre-filled values when draftPayload arrives
+  useEffect(() => {
+    if (!open || !draftPayload) return
+
+    setAnswers(prev => {
+      const restored = new Map<string, AnswerValue>(prev)
+      for (const [k, v] of Object.entries(draftPayload.answers)) {
+        if (v !== undefined) restored.set(k, v as AnswerValue)
+      }
+      return restored
+    })
+
+    setAttachmentAnswers(prev => {
+      const restored = new Map<string, string[]>(prev)
+      for (const [k, v] of Object.entries(draftPayload.attachment_answers)) {
+        if (v?.length) restored.set(k, v)
+      }
+      return restored
+    })
+
+    if (draftPayload.removed_attachment_ids?.length) {
+      setRemovedAttachmentIds(new Set(draftPayload.removed_attachment_ids))
+    }
+
+    setResourceAnswers(prev => {
+      const restored = new Map<string, Record<string, ResourceAnswerValue>>(prev)
+      for (const [k, v] of Object.entries(draftPayload.resource_answers)) {
+        if (v && Object.keys(v).length > 0) restored.set(k, v as Record<string, ResourceAnswerValue>)
+      }
+      return restored
+    })
+
+    // Compute the merged answers (pre-fill + draft) to evaluate conditional visibility correctly
+    const mergedAnswers = new Map<string, AnswerValue>(answers)
+    for (const [k, v] of Object.entries(draftPayload.answers)) {
+      if (v !== undefined) mergedAnswers.set(k, v as AnswerValue)
+    }
+
+    const visible = orderedQuestions.filter(q => {
+      if (!q.condition) return true
+      const answer = mergedAnswers.get(q.condition.fieldId)
+      if (Array.isArray(answer)) return answer.includes(q.condition.value as string)
+      return answer === q.condition.value
+    })
+    const hasTransition = resourceSteps.length > 0
+    const total = 1 + visible.length + (hasTransition ? 1 : 0) + resourceSteps.length
+    const targetIndex = Math.min(Math.max(draftPayload.current_index, 0), total - 1)
+    setCurrentIndex(targetIndex)
+    setReady(true)
+
+    toast.info('Your previous survey progress has been restored.')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draftPayload])
+
+  // Mark ready when draft finishes loading with no payload
+  useEffect(() => {
+    if (!open || draftLoading || draftPayload) return
+    setReady(true)
+  }, [open, draftLoading, draftPayload])
 
   // Collapse resource list whenever the step changes
   useEffect(() => { setResourceListExpanded(false) }, [currentIndex])
@@ -888,6 +969,26 @@ export function SurveyModal({
 
   const canAdvance = isWelcomeSlide ? true : (isMainStep ? appCanAdvance : isTransitionSlide ? true : resourceStepCanAdvance)
   const isLast = currentIndex === totalSteps - 1
+
+  // ─── Draft payload builder ──────────────────────────────────────────────────
+
+  const buildDraftPayload = useCallback(() => {
+    return {
+      current_index: currentIndex,
+      answers: Object.fromEntries(answers.entries()),
+      attachment_answers: Object.fromEntries(attachmentAnswers.entries()),
+      removed_attachment_ids: Array.from(removedAttachmentIds),
+      resource_answers: Object.fromEntries(resourceAnswers.entries()),
+    }
+  }, [currentIndex, answers, attachmentAnswers, removedAttachmentIds, resourceAnswers])
+
+  // ─── Auto-save draft ────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!open || completed || isWelcomeSlide) return
+    const payload = buildDraftPayload()
+    saveDraft(payload)
+  }, [open, completed, isWelcomeSlide, buildDraftPayload, saveDraft])
 
   // ─── Answer setters ─────────────────────────────────────────────────────────
 
@@ -1058,23 +1159,39 @@ export function SurveyModal({
       }
 
       await submitSurvey(project.id)
+      await clearDraft()
       await onSubmitted?.()
       setCompleted(true)
     } finally {
       setSubmitting(false)
     }
-  }, [answers, attachmentAnswers, removedAttachmentIds, resourceAnswers, project, onSave, resources, getCategoryForProduct, onSubmitted, getFieldById])
+  }, [answers, attachmentAnswers, removedAttachmentIds, resourceAnswers, project, onSave, resources, getCategoryForProduct, onSubmitted, getFieldById, clearDraft])
 
   const goNext = useCallback(() => {
-    if (isLast) void handleSubmit()
-    else setCurrentIndex(i => i + 1)
-  }, [isLast, handleSubmit])
+    if (isLast) {
+      void handleSubmit()
+    } else {
+      if (!isWelcomeSlide) {
+        saveDraftImmediately(buildDraftPayload())
+      }
+      setCurrentIndex(i => i + 1)
+    }
+  }, [isLast, handleSubmit, isWelcomeSlide, saveDraftImmediately, buildDraftPayload])
 
-  const goBack = () => setCurrentIndex(i => Math.max(0, i - 1))
+  const goBack = () => {
+    if (!isWelcomeSlide) {
+      saveDraftImmediately(buildDraftPayload())
+    }
+    setCurrentIndex(i => Math.max(0, i - 1))
+  }
 
   const skip = () => {
-    if (isLast) void handleSubmit()
-    else setCurrentIndex(i => i + 1)
+    if (isLast) {
+      void handleSubmit()
+    } else {
+      saveDraftImmediately(buildDraftPayload())
+      setCurrentIndex(i => i + 1)
+    }
   }
 
   // Keyboard: Enter to advance (only on app question steps and transition slide)
@@ -1128,6 +1245,11 @@ export function SurveyModal({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
+        {!ready ? (
+          <div className="min-h-full flex items-center justify-center">
+            <Loader2 className="animate-spin text-primary" size={32} />
+          </div>
+        ) : (
         <div className={cn('min-h-full flex flex-col items-center justify-center w-full transition-all duration-500 mx-auto', isWelcomeSlide ? 'max-w-5xl' : 'max-w-4xl')}
         >
 
@@ -1389,10 +1511,11 @@ export function SurveyModal({
           ) : null}
 
         </div>
+        )}
       </div>
 
       {/* Footer navigation */}
-      {!completed && (
+      {!completed && ready && (
         <div className="flex items-center justify-between px-6 py-4 border-t shrink-0">
           <Button variant="ghost" onClick={goBack} disabled={currentIndex === 0} className="gap-1.5">
             <ChevronLeft size={16} /> Back
@@ -1405,7 +1528,7 @@ export function SurveyModal({
                 Skip
               </Button>
             )}
-            <Button onClick={goNext} disabled={!canAdvance || submitting} className="gap-1.5 min-w-[120px] transition-all duration-300">
+            <Button onClick={goNext} disabled={!canAdvance || submitting || (isWelcomeSlide && draftLoading)} className="gap-1.5 min-w-[120px] transition-all duration-300">
               {submitting ? 'Saving…' : isLast ? 'Submit' : isWelcomeSlide ? <>Start Survey <ChevronRight size={16} /></> : <>Next <ChevronRight size={16} /></>}
             </Button>
           </div>

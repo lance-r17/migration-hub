@@ -15,6 +15,7 @@ from app.schemas.cloud_resource import (
     ResourcesBatchUpsert,
 )
 from app.schemas.risk import RiskHomeOut
+from app.schemas.survey import SurveyDraftOut, SurveyDraftSave
 from app.schemas.project import (
     GovernanceRolesOut,
     GovernanceRolesPatch,
@@ -212,6 +213,15 @@ async def create_project(
     actor = _user_to_actor(current_user)
     project = await project_service.create(db, body, actor)
     return _project_detail(project)
+
+
+@router.get("/survey-drafts", response_model=list[str])
+async def list_survey_draft_project_ids(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return project IDs that have a survey draft for the current user."""
+    return await project_service.get_survey_draft_project_ids(db, current_user.id)
 
 
 @router.get("/{project_id}", response_model=ProjectDetail)
@@ -531,6 +541,41 @@ async def mark_survey_submitted(
     await db.flush()
     await db.refresh(project)
     return _project_detail(project)
+
+
+@router.get("/{project_id}/survey-draft", response_model=SurveyDraftOut | None)
+async def get_survey_draft(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    draft = await project_service.get_survey_draft(db, current_user.id, project_id)
+    if draft is None:
+        return None
+    return SurveyDraftOut.model_validate(draft)
+
+
+@router.put("/{project_id}/survey-draft", response_model=SurveyDraftOut)
+async def save_survey_draft(
+    project_id: str,
+    body: SurveyDraftSave,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    draft = await project_service.save_survey_draft(
+        db, current_user.id, project_id, body.payload.model_dump()
+    )
+    return SurveyDraftOut.model_validate(draft)
+
+
+@router.delete("/{project_id}/survey-draft", status_code=204)
+async def delete_survey_draft(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await project_service.delete_survey_draft(db, current_user.id, project_id)
+    return None
 
 
 @router.post("/{project_id}/reset", response_model=ProjectDetail)

@@ -16,6 +16,7 @@ from app.models.jira_job_log import JiraJobLog
 from app.models.config_store import ConfigStore
 from app.models.email_template import EmailTemplate
 from app.models.project_attachment import ProjectAttachment
+from app.models.survey_draft import SurveyDraft
 
 __all__ = [
     "Base",
@@ -35,4 +36,5 @@ __all__ = [
     "JiraJobLog",
     "ConfigStore",
     "EmailTemplate",
+    "SurveyDraft",
 ]

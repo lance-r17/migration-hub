@@ -9,6 +9,7 @@ import type { Project } from '@/types'
 
 interface ProjectStatusChartCardProps {
   projects: Project[]
+  draftProjectIds?: string[]
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -22,7 +23,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   monitoring: '#6366F1',
 }
 
-export function ProjectStatusChartCard({ projects }: ProjectStatusChartCardProps) {
+export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: ProjectStatusChartCardProps) {
   const { getCategoryForProduct } = useProductCategoryMap()
 
   const stageData = useMemo(() => {
@@ -38,11 +39,16 @@ export function ProjectStatusChartCard({ projects }: ProjectStatusChartCardProps
     })).filter((d) => d.value > 0)
   }, [projects])
 
+  const draftIdSet = useMemo(() => new Set(draftProjectIds), [draftProjectIds])
+
   const surveyData = useMemo(() => {
     const submitted = projects.filter(
       (p) => (p.stageProgress?.survey ?? 0) === 100 || !!p.surveySubmittedAt,
     ).length
-    const notSubmitted = projects.length - submitted
+    const draft = projects.filter(
+      (p) => !((p.stageProgress?.survey ?? 0) === 100 || !!p.surveySubmittedAt) && draftIdSet.has(p.id),
+    ).length
+    const notSubmitted = projects.length - submitted - draft
     return [
       {
         label: 'Submitted',
@@ -50,12 +56,17 @@ export function ProjectStatusChartCard({ projects }: ProjectStatusChartCardProps
         color: 'var(--chart-2)',
       },
       {
+        label: 'Draft',
+        value: draft,
+        color: 'var(--chart-3)',
+      },
+      {
         label: 'Not Submitted',
         value: notSubmitted,
         color: 'var(--chart-4)',
       },
     ].filter((d) => d.value > 0)
-  }, [projects])
+  }, [projects, draftIdSet])
 
   const assetData = useMemo(() => {
     const counts: Record<string, number> = {}

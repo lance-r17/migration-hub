@@ -10,6 +10,7 @@ from app.models.approval import Approval
 from app.models.cloud_resource import CloudResource
 from app.models.project import Project
 from app.models.risk import Risk
+from app.models.survey_draft import SurveyDraft
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectPatch
 from app.services import audit_service, attachment_service
@@ -901,3 +902,59 @@ async def _check_wave_completed(session: AsyncSession, wave_id: str | None) -> N
     wave = await wave_service.get_by_id(session, wave_id)
     if wave and wave.status == "completed":
         raise ValueError(f"Assignment to completed wave '{wave.name}' is blocked.")
+
+
+# ─── Survey Drafts ───────────────────────────────────────────────────────────
+
+
+async def get_survey_draft(
+    session: AsyncSession, user_id: str, project_id: str
+) -> SurveyDraft | None:
+    result = await session.execute(
+        select(SurveyDraft).where(
+            SurveyDraft.user_id == user_id,
+            SurveyDraft.project_id == project_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def save_survey_draft(
+    session: AsyncSession,
+    user_id: str,
+    project_id: str,
+    payload: dict[str, Any],
+) -> SurveyDraft:
+    draft = await get_survey_draft(session, user_id, project_id)
+    if draft is not None:
+        draft.payload = payload
+    else:
+        draft = SurveyDraft(
+            id=f"sd-{uuid.uuid4().hex[:8]}",
+            user_id=user_id,
+            project_id=project_id,
+            payload=payload,
+        )
+        session.add(draft)
+    await session.flush()
+    await session.refresh(draft)
+    return draft
+
+
+async def delete_survey_draft(
+    session: AsyncSession, user_id: str, project_id: str
+) -> None:
+    draft = await get_survey_draft(session, user_id, project_id)
+    if draft is not None:
+        await session.delete(draft)
+        await session.flush()
+
+
+async def get_survey_draft_project_ids(
+    session: AsyncSession, user_id: str
+) -> list[str]:
+    """Return distinct project IDs that have a survey draft for the given user."""
+    result = await session.execute(
+        select(SurveyDraft.project_id).where(SurveyDraft.user_id == user_id).distinct()
+    )
+    return [row[0] for row in result.all() if row[0]]
