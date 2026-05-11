@@ -30,6 +30,7 @@ function getStatusDetail(status: ProjectStatus, stageProgress?: StageProgress): 
     case 'in-progress': {
       if (stageProgress.setup < 100) return 'Awaiting setup'
       if (stageProgress.survey < 100) return 'Awaiting survey'
+      if (stageProgress.signoff === 0) return 'Survey submitted — awaiting sign-off'
       if (stageProgress.signoff < 100) return 'Awaiting sign-off'
       return 'In progress'
     }

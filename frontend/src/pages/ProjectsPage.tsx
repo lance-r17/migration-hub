@@ -76,7 +76,14 @@ export function ProjectsPage() {
   const filteredProjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     return (projects || []).filter((p) => {
-      if (statusFilter !== 'all' && p.status !== statusFilter) return false
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'survey-submitted') {
+          const sp = p.stageProgress
+          if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey === 100 && sp?.signoff === 0)) return false
+        } else if (p.status !== statusFilter) {
+          return false
+        }
+      }
       if (query) {
         const matchesName = p.name.toLowerCase().includes(query)
         const matchesId = p.id.toLowerCase().includes(query)
@@ -166,6 +173,7 @@ export function ProjectsPage() {
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="planning">Planning</SelectItem>
               <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="survey-submitted">Survey Submitted</SelectItem>
               <SelectItem value="signed-off">Signed Off</SelectItem>
               <SelectItem value="migrating">Migrating</SelectItem>
               <SelectItem value="blocked">Blocked</SelectItem>
