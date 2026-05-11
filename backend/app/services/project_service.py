@@ -511,10 +511,10 @@ async def update_governance_roles(
     from app.models.project_user import ProjectUser
 
     governance_roles = {"technical_lead", "business_owner", "dba_data_owner"}
-    governed: dict[str, str] = {}
+    governed: dict[str, set[str]] = {}
     for role, uid in assignments.items():
         if uid:
-            governed[uid] = role
+            governed.setdefault(uid, set()).add(role)
 
     result = await session.execute(
         select(ProjectUser).where(ProjectUser.project_id == project.id)
@@ -526,9 +526,9 @@ async def update_governance_roles(
     for pu in existing_pus:
         current_roles = {r.strip() for r in (pu.role or "").split(",") if r.strip()}
         non_governance = current_roles - governance_roles
-        gov_role = governed.get(pu.user_id)
-        if gov_role:
-            new_roles = non_governance | {gov_role}
+        user_gov_roles = governed.get(pu.user_id, set())
+        if user_gov_roles:
+            new_roles = non_governance | user_gov_roles
         else:
             new_roles = non_governance or {"member"}
         new_role_str = ",".join(sorted(new_roles))
@@ -539,13 +539,14 @@ async def update_governance_roles(
                 {"field": pu.user_id, "label": f"Update {pu.user_id}", "old_value": old, "new_value": new_role_str}
             )
 
-    for uid, role in governed.items():
+    for uid, roles in governed.items():
         if uid not in existing_ids:
             user = await session.get(User, uid)
             if user is not None:
-                session.add(ProjectUser(project_id=project.id, user_id=uid, role=role))
+                role_str = ",".join(sorted(roles))
+                session.add(ProjectUser(project_id=project.id, user_id=uid, role=role_str))
                 changes.append(
-                    {"field": uid, "label": f"Add {uid}", "old_value": None, "new_value": role}
+                    {"field": uid, "label": f"Add {uid}", "old_value": None, "new_value": role_str}
                 )
 
     if changes:

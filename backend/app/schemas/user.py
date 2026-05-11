@@ -47,6 +47,21 @@ class ProjectUserRoleAssignment(BaseModel):
     roles: list[str]
 
 
+class UserAdminUpdate(BaseModel):
+    name: str | None = None
+    email: str | None = None
+    department: str | None = None
+    team: str | None = None
+    role: str | None = None
+
+
+class UserProjectRoleOut(BaseModel):
+    user_id: str
+    project_id: str
+    project_name: str
+    roles: list[str]
+
+
 class LoginRequest(BaseModel):
     email: str
     password: str

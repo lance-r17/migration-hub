@@ -32,7 +32,7 @@ from app.schemas.risk import RiskOut
 from app.schemas.jira_job import JiraJobCreate
 from app.services import audit_service, attachment_service, jira_client, jira_service, migration_settings_service, project_service, user_service
 from app.config import settings
-from app.auth import get_current_user, require_admin
+from app.auth import _user_has_admin_role, get_current_user, require_admin
 from app.models.user import User
 from app.models.cloud_resource import CloudResource
 from app.models.project_attachment import ProjectAttachment
@@ -261,10 +261,10 @@ async def update_governance_roles(
 
     Only Platform Migration Leads may assign or clear these roles.
     """
-    if "platform_migration_lead" not in (current_user.role or ""):
+    if "platform_migration_lead" not in (current_user.role or "") and not _user_has_admin_role(current_user.role):
         raise HTTPException(
             status_code=403,
-            detail="Only Platform Migration Leads can manage governance roles.",
+            detail="Only Platform Migration Leads or Admins can manage governance roles.",
         )
 
     project = await project_service.get_by_id(db, project_id)

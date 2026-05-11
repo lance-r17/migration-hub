@@ -23,7 +23,13 @@ from app.schemas.service_account import (
     ServiceAccountTokenReset,
     ServiceAccountUpdate,
 )
-from app.schemas.user import BatchUserCreateRequest, BatchUserCreateResponse, UserOut
+from app.schemas.user import (
+    BatchUserCreateRequest,
+    BatchUserCreateResponse,
+    UserAdminUpdate,
+    UserOut,
+    UserProjectRoleOut,
+)
 from app.services import attachment_service, user_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -208,6 +214,93 @@ async def bulk_delete_attachments(
         deleted=result["deleted"],
         not_found=result["not_found"],
     )
+
+
+@router.get("/users", response_model=list[UserOut])
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """List all human users (non-service accounts), ordered by name."""
+    result = await db.execute(
+        select(User).where(User.is_service_account == False).order_by(User.name)
+    )
+    return result.scalars().all()
+
+
+@router.get("/user-project-roles", response_model=list[UserProjectRoleOut])
+async def list_all_user_project_roles(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """List all project-user assignments with parsed roles."""
+    result = await db.execute(
+        select(ProjectUser, Project.name)
+        .join(Project, Project.id == ProjectUser.project_id)
+        .order_by(Project.name)
+    )
+    return [
+        UserProjectRoleOut(
+            user_id=pu.user_id,
+            project_id=pu.project_id,
+            project_name=project_name,
+            roles=[r.strip() for r in (pu.role or "").split(",") if r.strip()],
+        )
+        for pu, project_name in result.all()
+    ]
+
+
+@router.patch("/users/{user_id}", response_model=UserOut)
+async def update_user(
+    user_id: str,
+    body: UserAdminUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Update a human user's details."""
+    user = await db.get(User, user_id)
+    if not user or user.is_service_account:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if body.email is not None and body.email != user.email:
+        existing = await db.execute(select(User).where(User.email == body.email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email already in use")
+        user.email = body.email
+
+    if body.name is not None:
+        user.name = body.name
+        words = body.name.split()
+        user.initials = "".join(w[0].upper() for w in words[:2]) if words else "SA"
+
+    if body.department is not None:
+        user.department = body.department
+
+    if body.team is not None:
+        user.team = body.team
+
+    if body.role is not None:
+        user.role = body.role
+
+    await db.flush()
+    return user
+
+
+@router.delete("/users/{user_id}", status_code=204)
+async def delete_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Delete a human user and clean up project associations."""
+    user = await db.get(User, user_id)
+    if not user or user.is_service_account:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Clean up any project associations first to avoid FK violations
+    await db.execute(delete(ProjectUser).where(ProjectUser.user_id == user_id))
+    await db.delete(user)
+    await db.flush()
 
 
 @router.post("/users/batch", response_model=BatchUserCreateResponse, status_code=201)

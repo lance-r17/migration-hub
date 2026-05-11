@@ -1,8 +1,14 @@
 import { Link } from 'react-router-dom'
-import { MonitorDot, Key, Paperclip, UserCog } from 'lucide-react'
+import { MonitorDot, Key, Paperclip, UserCog, Users } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const ADMIN_SECTIONS = [
+  {
+    title: 'User Accounts',
+    description: 'Manage human user accounts across the platform.',
+    icon: <Users size={20} className="text-primary" />,
+    href: '/admin/users',
+  },
   {
     title: 'Job Monitor',
     description: 'View and manage background Jira integration jobs across all projects.',

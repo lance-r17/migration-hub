@@ -21,6 +21,7 @@ import { CallbackPage } from './pages/CallbackPage'
 import { AdminJiraJobsPage } from './pages/AdminJiraJobsPage'
 import { ServiceAccountsPage } from './pages/ServiceAccountsPage'
 import { AdminAttachmentsPage } from './pages/AdminAttachmentsPage'
+import { UserAccountsPage } from './pages/UserAccountsPage'
 import { AdminPage } from './pages/AdminPage'
 import { AdminHome } from './pages/AdminHome'
 import { ProjectsPage } from './pages/ProjectsPage'
@@ -58,6 +59,7 @@ function App() {
         <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
           <Route index element={<AdminHome />} />
+          <Route path="users" element={<UserAccountsPage />} />
           <Route path="jobs" element={<AdminJiraJobsPage />} />
           <Route path="service-accounts" element={<ServiceAccountsPage />} />
           <Route path="attachments" element={<AdminAttachmentsPage />} />
