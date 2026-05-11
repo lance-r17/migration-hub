@@ -97,7 +97,7 @@ async def sync_user_projects(
     session: AsyncSession, user_id: str, project_ids: list[str]
 ) -> None:
     """Sync a user's AD-group-based project memberships (role='member').
-    Non-member roles (governance roles, itso, etc.) are left untouched."""
+    Non-member roles (governance roles, itso, itso_delegate, etc.) are left untouched."""
     # Remove stale 'member' associations — strip the 'member' token from multi-role
     # strings and delete the row only when no roles remain.
     stale_filter = (

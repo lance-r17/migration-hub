@@ -262,6 +262,7 @@ export interface Project {
   // Header metadata
   migrationWave?: string
   itso?: string
+  itsoDelegate?: string
   jiraBaseUrl?: string              // e.g. "https://your-org.atlassian.net", returned by backend API
   updatedAt?: string
   // Register sections

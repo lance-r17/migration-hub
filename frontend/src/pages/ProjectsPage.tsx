@@ -217,6 +217,7 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Progress</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ITSO</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">ITSO Delegate</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">BPS</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">IBS</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">IITA</TableHead>
@@ -229,14 +230,14 @@ export function ProjectsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 10 }).map((_, j) => (
+                    {Array.from({ length: 11 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filteredProjects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={11} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -271,6 +272,9 @@ export function ProjectsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {project.itso ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {project.itsoDelegate ?? '—'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {project.applicationOverview?.systemImportanceClassification?.includes('BPS') ? 'Yes' : 'No'}

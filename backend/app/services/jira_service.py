@@ -315,7 +315,7 @@ def _itso_name(project: "Project") -> str | None:
     """Derive the ITSO display name from project_users."""
     from app.models.project_user import ProjectUser
     for pu in (project.project_users or []):
-        if pu.user and pu.role and "itso" in {r.strip() for r in pu.role.split(",") if r.strip()}:
+        if pu.user and pu.role and {"itso", "itso_delegate"} & {r.strip() for r in pu.role.split(",") if r.strip()}:
             return pu.user.name
     return None
 

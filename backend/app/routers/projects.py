@@ -55,6 +55,13 @@ def _itso_name(p) -> str | None:
     return None
 
 
+def _itso_delegate_name(p) -> str | None:
+    for pu in (p.project_users or []):
+        if pu.user and pu.role and "itso_delegate" in {r.strip() for r in pu.role.split(",") if r.strip()}:
+            return pu.user.name
+    return None
+
+
 def _team_from_project_users(p) -> list[dict]:
     return [
         {"id": pu.user.id, "name": pu.user.name, "initials": pu.user.initials}
@@ -106,6 +113,7 @@ def _project_list_item(p) -> ProjectListItem:
         description=p.description,
         migration_wave=p.migration_wave,
         itso=_itso_name(p),
+        itso_delegate=_itso_delegate_name(p),
         jira_base_url=settings.jira_base_url,
         updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
         wave_id=p.wave_id,
@@ -134,6 +142,7 @@ def _project_home_item(p) -> ProjectHomeItem:
         description=p.description,
         migration_wave=p.migration_wave,
         itso=_itso_name(p),
+        itso_delegate=_itso_delegate_name(p),
         jira_base_url=settings.jira_base_url,
         updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
         wave_id=p.wave_id,
@@ -161,6 +170,7 @@ def _project_detail(p) -> ProjectDetail:
         description=p.description,
         migration_wave=p.migration_wave,
         itso=_itso_name(p),
+        itso_delegate=_itso_delegate_name(p),
         jira_base_url=settings.jira_base_url,
         updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
         wave_id=p.wave_id,
