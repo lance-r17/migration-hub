@@ -10,6 +10,8 @@ import {
   X,
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import {
   Breadcrumb,
@@ -117,6 +119,31 @@ export function UserAccountsPage() {
     roleLabel: string
     currentUserName: string
   } | null>(null)
+
+  // Filter and pagination
+  const [filterText, setFilterText] = useState('')
+  const [page, setPage] = useState(1)
+  const pageSize = 10
+
+  const filteredUsers = useMemo(() => {
+    const term = filterText.trim().toLowerCase()
+    if (!term) return users
+    return users.filter(
+      (u) =>
+        u.name.toLowerCase().includes(term) ||
+        u.id.toLowerCase().includes(term),
+    )
+  }, [users, filterText])
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize))
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return filteredUsers.slice(start, start + pageSize)
+  }, [filteredUsers, page])
+
+  useEffect(() => {
+    setPage(1)
+  }, [filterText])
 
   useEffect(() => {
     let cancelled = false
@@ -366,6 +393,21 @@ export function UserAccountsPage() {
           </div>
         )}
 
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Filter by name or user ID..."
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <span className="text-sm text-muted-foreground">
+            {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>
             <TableHeader>
@@ -394,14 +436,14 @@ export function UserAccountsPage() {
                     <TableCell></TableCell>
                   </TableRow>
                 ))
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="h-24 text-center text-muted-foreground text-sm">
                     No users found.
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((user) => {
+                paginatedUsers.map((user) => {
                   const projRoles = userProjectRolesMap.get(user.id) ?? []
                   return (
                     <TableRow key={user.id}>
@@ -443,6 +485,36 @@ export function UserAccountsPage() {
             </TableBody>
           </Table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="gap-1"
+              >
+                <ChevronLeft className="size-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="gap-1"
+              >
+                Next
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Dialog */}
