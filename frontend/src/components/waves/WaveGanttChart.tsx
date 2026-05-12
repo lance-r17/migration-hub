@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
-import { ChevronDown, ChevronRight, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, FileText, Info, Search, X, Circle, CheckCircle2, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, MilestoneStatus, MigrationEffortEstimation } from '@/types'
+
+import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, MilestoneStatus } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { EmbargoRecord } from '@/types/embargo'
 import { useEmbargos } from '@/hooks/use-embargos'
-import { getAttachments } from '@/services/attachments'
-import type { Attachment } from '@/services/attachments'
+
 import { Button } from '../ui/button'
 import {
   Dialog,
@@ -125,7 +125,7 @@ const MILESTONE_STATUS_META: Record<MilestoneStatus, { label: string; icon: Luci
 
 const DEFAULT_WAVE_COLOR = '#6366F1'
 
-const LP_GRID = '40px minmax(160px,1fr) 100px 80px 80px 32px'
+const LP_GRID = '40px minmax(160px,1fr) 100px 80px 100px 32px'
 const CELL_CLASS = 'h-full flex items-center px-2 border-r min-w-0'
 
 // ─── Memoized sub-components ───────────────────────────────────────────────────
@@ -144,9 +144,11 @@ interface TimelineHeaderProps {
 interface LeftPanelHeaderProps {
   searchQuery: string
   onSearchChange: (q: string) => void
+  durationFilter: string
+  onDurationFilterChange: (v: string) => void
 }
 
-const LeftPanelHeader = memo(function LeftPanelHeader({ searchQuery, onSearchChange }: LeftPanelHeaderProps) {
+const LeftPanelHeader = memo(function LeftPanelHeader({ searchQuery, onSearchChange, durationFilter, onDurationFilterChange }: LeftPanelHeaderProps) {
   const [isSearching, setIsSearching] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -159,7 +161,7 @@ const LeftPanelHeader = memo(function LeftPanelHeader({ searchQuery, onSearchCha
       className="border-b sticky left-0 z-20 grid shrink-0 h-[40px] w-[680px] bg-background border-r"
       style={{ gridTemplateColumns: LP_GRID }}
     >
-      {['', 'Project / Milestones', 'Status', 'Labels', 'Effort', ''].map((col, i) => (
+      {['', 'Project / Milestones', 'Status', 'Labels', 'Duration', ''].map((col, i) => (
         <div
           key={i}
           className={cn(
@@ -197,6 +199,38 @@ const LeftPanelHeader = memo(function LeftPanelHeader({ searchQuery, onSearchCha
                 <Search size={14} />
               </button>
             </div>
+          ) : i === 4 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1 bg-transparent border-none cursor-pointer uppercase tracking-[0.02em] text-[var(--g-text-muted)]">
+                  <span>{col}</span>
+                  <ListFilter size={13} className={durationFilter !== 'all' ? 'text-[oklch(0.48_0.20_260)]' : ''} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-[160px]">
+                {[
+                  { value: 'all', label: 'All durations' },
+                  { value: 'lt30', label: '< 30 days' },
+                  { value: '30to90', label: '30–90 days' },
+                  { value: '90to180', label: '90–180 days' },
+                  { value: 'gte180', label: '≥ 180 days' },
+                ].map(opt => (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    onClick={() => onDurationFilterChange(opt.value)}
+                    className={cn(
+                      'text-[12px] flex items-center gap-2',
+                      durationFilter === opt.value && 'bg-[var(--g-accent-soft)] text-[var(--g-accent)] font-medium',
+                    )}
+                  >
+                    <span className="w-3.5 flex items-center justify-center">
+                      {durationFilter === opt.value && <Check size={12} />}
+                    </span>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             col
           )}
@@ -297,6 +331,10 @@ function formatDate(iso: string): string {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
 }
+function formatDuration(start: string, end: string): string {
+  const days = Math.max(1, daysBetween(parseDate(start), parseDate(end)))
+  return `${days}d`
+}
 function formatDDMM(iso: string): string {
   const [, month, day] = iso.split('-')
   return `${String(parseInt(day)).padStart(2,'0')}.${String(parseInt(month)).padStart(2,'0')}`
@@ -332,71 +370,6 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-// ─── Effort cell with lazy attachment fetch ────────────────────────────────────
-
-function EffortCell({ projectId, estimation }: { projectId: string; estimation?: MigrationEffortEstimation }) {
-  const [attachments, setAttachments] = useState<Attachment[]>([])
-  const [loaded, setLoaded] = useState(false)
-
-  const load = useCallback(async () => {
-    if (loaded || !estimation?.attachmentIds?.length) return
-    try {
-      const list = await getAttachments(projectId)
-      const ids = new Set(estimation.attachmentIds)
-      setAttachments(list.filter(a => ids.has(a.id)))
-    } catch { /* ignore */ }
-    setLoaded(true)
-  }, [loaded, projectId, estimation])
-
-  const effortText = estimation?.effortEstimate
-    ? estimation.effortEstimate.toLowerCase() === 'tbc'
-      ? 'TBC'
-      : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(estimation.effortEstimate))
-    : '—'
-  const hasTooltip = estimation && (estimation.notes || estimation.attachmentIds?.length)
-
-  if (!hasTooltip) return <span>{effortText}</span>
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="cursor-help underline decoration-dotted underline-offset-2" onMouseEnter={load}>
-          {effortText}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-xs">
-        <div className="space-y-2">
-          {estimation.notes && (
-            <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Notes</p>
-              <p className="text-xs whitespace-pre-wrap">{estimation.notes}</p>
-            </div>
-          )}
-          {attachments.length > 0 && (
-            <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Attachments</p>
-              <div className="flex flex-col gap-1">
-                {attachments.map(att => (
-                  <a
-                    key={att.id}
-                    href={`/api/v1/projects/${projectId}/attachments/${att.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <FileText className="w-3 h-3 shrink-0" />
-                    <span className="truncate max-w-[200px]">{att.filename}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </TooltipContent>
-    </Tooltip>
-  )
-}
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
@@ -440,6 +413,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   const [rowMilestoneDragState, setRowMilestoneDragState]         = useState<RowDragState | null>(null)
   const [projRowDragState, setProjRowDragState] = useState<ProjRowDragState | null>(null)
   const [searchQuery, setSearchQuery]           = useState('')
+  const [durationFilter, setDurationFilter]     = useState('all')
   const [statusDialog, setStatusDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; nextStatus: MilestoneStatus } | null>(null)
 
   const colPx      = ZOOM_COL_PX[zoom]
@@ -1169,6 +1143,26 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   // ─── Search filter ───────────────────────────────────────────────────────────
   const searchLower = searchQuery.trim().toLowerCase()
   const hasSearch = searchLower.length > 0
+  const hasDurationFilter = durationFilter !== 'all'
+
+  function getProjectDurationDays(p: Project): number | null {
+    const dates = effectiveProjectDates(p)
+    if (!dates?.start || !dates?.end) return null
+    const s = parseDate(dates.start)
+    const e = parseDate(dates.end)
+    return Math.max(1, daysBetween(s, e))
+  }
+
+  function durationMatches(days: number | null): boolean {
+    if (!hasDurationFilter || days === null) return false
+    switch (durationFilter) {
+      case 'lt30':    return days < 30
+      case '30to90':  return days >= 30 && days < 90
+      case '90to180': return days >= 90 && days < 180
+      case 'gte180':  return days >= 180
+      default:        return true
+    }
+  }
 
   const matchingProjectIds = useMemo(() => {
     if (!hasSearch) return new Set<string>()
@@ -1196,6 +1190,15 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     return set
   }, [hasSearch, searchLower, embargos])
 
+  const matchingDurationIds = useMemo(() => {
+    if (!hasDurationFilter) return new Set<string>()
+    const set = new Set<string>()
+    for (const p of projects) {
+      if (durationMatches(getProjectDurationDays(p))) set.add(p.id)
+    }
+    return set
+  }, [hasDurationFilter, durationFilter, projects, localPlanning])
+
   const rows = useMemo<RowItem[]>(() => {
     const result: RowItem[] = []
     let projectCounter = 0
@@ -1216,16 +1219,17 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
     for (const wave of sortedWaves) {
       const waveProjectsRaw = projectsByWave.get(wave.id) ?? []
-      const visibleWaveProjects = hasSearch
-        ? waveProjectsRaw.filter(p => matchingProjectIds.has(p.id))
-        : waveProjectsRaw
+      const visibleWaveProjects = waveProjectsRaw.filter(p =>
+        (!hasSearch || matchingProjectIds.has(p.id)) &&
+        (!hasDurationFilter || matchingDurationIds.has(p.id))
+      )
 
-      if (hasSearch && visibleWaveProjects.length === 0) continue
+      if ((hasSearch || hasDurationFilter) && visibleWaveProjects.length === 0) continue
 
       result.push({ type: 'wave', wave })
       if (!collapsedWaves.has(wave.id)) {
         let waveProjects = visibleWaveProjects
-        if (!hasSearch && projRowDragState?.waveId === wave.id && waveProjects.length > 0) {
+        if (!hasSearch && !hasDurationFilter && projRowDragState?.waveId === wave.id && waveProjects.length > 0) {
           const arr = [...waveProjects]
           const [moved] = arr.splice(projRowDragState.sourceIndex, 1)
           if (moved) {
@@ -1249,9 +1253,10 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
       }
     }
 
-    const visibleUnassigned = hasSearch
-      ? unassignedProjects.filter(p => matchingProjectIds.has(p.id))
-      : unassignedProjects
+    const visibleUnassigned = unassignedProjects.filter(p =>
+      (!hasSearch || matchingProjectIds.has(p.id)) &&
+      (!hasDurationFilter || matchingDurationIds.has(p.id))
+    )
 
     if (visibleUnassigned.length > 0) {
       result.push({ type: 'unassigned-header' })
@@ -1270,7 +1275,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     }
     return result
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds])
+  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds])
 
   // ─── Row height helpers ──────────────────────────────────────────────────────
 
@@ -1417,6 +1422,8 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
             <LeftPanelHeader
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+              durationFilter={durationFilter}
+              onDurationFilterChange={setDurationFilter}
             />
             <TimelineHeader
               zoom={zoom}
@@ -1692,7 +1699,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                     <div className={cn(cellClass, 'justify-center')} />
                     {/* Labels col */}
                     <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)]')} />
-                    {/* Effort col */}
+                    {/* Duration col */}
                     <div className={cn(cellClass, 'justify-center')} />
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0')} />
@@ -1815,8 +1822,10 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                         </span>
                       )}
                     </div>
-                    {/* Effort col (milestone: empty) */}
-                    <div className={cn(cellClass, 'justify-center')} />
+                    {/* Duration col */}
+                    <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
+                      {formatDuration(start, end)}
+                    </div>
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
                       <DropdownMenu>
@@ -2052,9 +2061,9 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                           </span>
                     )}
                   </div>
-                  {/* Effort col */}
+                  {/* Duration col */}
                   <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
-                    <EffortCell projectId={p.id} estimation={p.migrationEffortEstimation} />
+                    {projectDates ? formatDuration(projectDates.start, projectDates.end) : '—'}
                   </div>
                   {/* Action col */}
                   <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
