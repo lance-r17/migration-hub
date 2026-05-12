@@ -415,6 +415,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   const [searchQuery, setSearchQuery]           = useState('')
   const [durationFilter, setDurationFilter]     = useState('all')
   const [statusDialog, setStatusDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; nextStatus: MilestoneStatus } | null>(null)
+  const [deleteDialog, setDeleteDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; milestoneName: string } | null>(null)
 
   const colPx      = ZOOM_COL_PX[zoom]
   const daysPerCol = ZOOM_DAYS_PER_COL[zoom]
@@ -1852,7 +1853,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                           {nextMilestoneStatus(milestone.status) && <DropdownMenuSeparator />}
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
-                            onClick={() => void deleteMilestone(project.id, milestone.id)}
+                            onClick={() => setDeleteDialog({ open: true, projectId: project.id, milestoneId: milestone.id, milestoneName: milestone.name })}
                           >
                             <Trash2 className="w-[13px] h-[13px] mr-1.5" />
                             Remove
@@ -2392,6 +2393,32 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                 }}
               >
                 Confirm
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Milestone delete confirmation dialog */}
+      {deleteDialog && (
+        <Dialog open={deleteDialog.open} onOpenChange={open => { if (!open) setDeleteDialog(null) }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove Milestone</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove <strong>{deleteDialog.milestoneName}</strong>?
+                This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialog(null)}>Cancel</Button>
+              <Button variant="destructive"
+                onClick={() => {
+                  void deleteMilestone(deleteDialog.projectId, deleteDialog.milestoneId)
+                  setDeleteDialog(null)
+                }}
+              >
+                Remove
               </Button>
             </DialogFooter>
           </DialogContent>
