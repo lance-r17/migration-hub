@@ -13,6 +13,9 @@ data:
   SESSION_MAX_AGE_MINUTES: "480"
   OAUTH_AD_GROUP_REGEX: "CN=([^,]+)-ResourceSetReadOnly"
   OAUTH_AD_GROUP_OU_FILTER: "OU=Ali"
+  # Flexible AD group → project mapping (JSON array). Overrides OAUTH_AD_GROUP_REGEX when set.
+  # project_id supports capture group substitution with $1, $2, etc.
+  # OAUTH_AD_GROUP_MAPPINGS: "[{\"regex\": \"CN=([^,]+)-dev-ResourceSetReadOnly\", \"project_id\": \"$1-prod\"}]"
   # Worker flag: only the worker deployment processes background tasks
   DISABLE_BACKGROUND_TASKS: "false"
 

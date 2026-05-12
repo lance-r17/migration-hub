@@ -85267,5 +85267,124 @@
     "jira_story_key": "MIG-80200",
     "survey_submitted_at": null,
     "updated_at": "2025-04-07"
+  },
+  {
+    "id": "demo-123456-sampleapp-prod",
+    "name": "Sample App Production Migration",
+    "status": "planning",
+    "description": "Production environment migration for the Sample App platform.",
+    "migration_strategy": "Lift & Shift",
+    "application_overview": {
+      "applicationName": "Sample App",
+      "shortName": "SAMPLEAPP",
+      "businessFunction": "Customer-facing web application handling order processing and inventory management.",
+      "userBase": {
+        "type": "External",
+        "count": "~15,000 users"
+      },
+      "applicationTier": "T1",
+      "baId": "EIM-99999",
+      "systemImportanceClassification": [
+        "IBS"
+      ],
+      "iitaApplicability": true,
+      "migrationStrategy": "Lift & Shift",
+      "serviceLine": "Digital Commerce"
+    },
+    "availability": {
+      "rto": "2 hours",
+      "rpo": "15 minutes",
+      "azReadiness3Az": "Currently deployed across 2 AZs. Third AZ readiness planned for Q3 2026.",
+      "healthCheckEndpoints": [
+        "/health",
+        "/api/ready"
+      ]
+    },
+    "data_persistence": {
+      "databaseTypes": [
+        "PostgreSQL 15",
+        "Redis 7"
+      ],
+      "totalDataVolume": "~850 GB",
+      "dataGrowthRate": "+20 GB / month",
+      "backupRequiredDuringMigration": true,
+      "dataResidency": "APAC region only.",
+      "encryptionAtRest": "AES-256 via cloud KMS.",
+      "statefulComponents": [
+        "PostgreSQL 15 primary + replica",
+        "Redis 7 cache cluster"
+      ]
+    },
+    "dependencies": {
+      "upstream": [
+        {
+          "id": "d1",
+          "name": "Identity Provider",
+          "baId": "EIM-00001",
+          "contactEmail": "idp-team@corp.com",
+          "hosting": "On-Premise",
+          "notes": "OIDC provider"
+        }
+      ],
+      "downstream": [
+        {
+          "id": "d2",
+          "name": "Reporting Service",
+          "baId": "EIM-00002",
+          "contactEmail": "reporting@corp.com",
+          "hosting": "AliCloud",
+          "notes": "Consumes order events via Kafka"
+        }
+      ]
+    },
+    "nfrs": {
+      "peakRps": "2,500",
+      "avgRps": "350",
+      "concurrentUsers": "1,200",
+      "latencyP99": "120ms",
+      "responseTimeSla": "p99 < 150ms"
+    },
+    "migration_constraints": {
+      "downtimeWindow": "Saturday 02:00-06:00 UTC (4 hours)",
+      "complianceRequirements": "PCI-DSS Level 1, SOC 2 Type II",
+      "dataResidency": "Must remain in APAC",
+      "networkConstraints": "PrivateLink / VPC peering required. No public endpoints.",
+      "specialRequirements": "Zero-downtime blue-green cutover preferred."
+    },
+    "target_architecture": {
+      "cloudProvider": "AliCloud",
+      "region": "ap-southeast-1",
+      "computePlatform": "ACK (Kubernetes)",
+      "database": "ApsaraDB for PostgreSQL 15",
+      "caching": "ApsaraDB for Redis 7",
+      "networking": "VPC + PrivateLink",
+      "observability": "SLS + ARMS"
+    },
+    "migration_effort_estimation": {
+      "totalEffortWeeks": 12,
+      "teamSize": 5,
+      "costEstimate": 85000,
+      "costEstimateCurrency": "USD"
+    },
+    "risks": [
+      {
+        "id": "r-demo-001",
+        "title": "Data replication lag during cutover could exceed RPO.",
+        "severity": "high",
+        "mitigation": "Implement real-time CDC with Debezium; rehearse failover 3 times before cutover.",
+        "owner": "u2",
+        "status": "open"
+      }
+    ],
+    "resources": [],
+    "project_users": [],
+    "planning": {
+      "startDate": "2026-06-01",
+      "endDate": "2026-09-30",
+      "estimatedStartDate": "2026-06-01",
+      "estimatedEndDate": "2026-09-30",
+      "tasks": []
+    },
+    "jira_story_key": "MIG-99999"
   }
 ]

@@ -41,8 +41,14 @@ class Settings(BaseSettings):
     session_max_age_minutes: int = 480  # 8 hours
 
     # AD group → project auto-assignment
+    # Legacy single-regex mode (used when oauth_ad_group_mappings is empty)
     oauth_ad_group_regex: str = r"CN=([^,]+)-ResourceSetReadOnly"
     oauth_ad_group_ou_filter: str = "OU=Ali"
+
+    # Flexible AD group → project mapping (JSON array of {"regex": "...", "project_id": "..."})
+    # project_id supports capture group substitution: $1, $2, etc.
+    # Example: [{"regex": "CN=([^,]+)-dev-ResourceSetReadOnly", "project_id": "$1-prod"}]
+    oauth_ad_group_mappings: str = ""
 
     # AD group → global role mapping (JSON array of {"regex": "...", "role": "..."})
     oauth_role_mappings: str = ""

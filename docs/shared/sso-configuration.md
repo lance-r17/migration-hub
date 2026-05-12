@@ -179,15 +179,48 @@ On every Custom Enterprise OAuth login, the backend receives the user's AD group
 | Sync | What happens | Rows affected |
 |---|---|---|
 | **Global roles** | AD groups are matched against `OAUTH_ROLE_MAPPINGS`; the user's `users.role` is overwritten | `users` table |
-| **Project memberships** | AD groups are matched against `OAUTH_AD_GROUP_REGEX`; matching projects grant `role='member'` | `project_users` table |
+| **Project memberships** | AD groups are matched against `OAUTH_AD_GROUP_MAPPINGS` (or `OAUTH_AD_GROUP_REGEX` as fallback); matching projects grant `role='member'` | `project_users` table |
 
 #### Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `OAUTH_AD_GROUP_REGEX` | `CN=([^,]+)-ResourceSetReadOnly` | Regex to extract a project ID from an AD group DN. The first capture group becomes the project ID. |
+| `OAUTH_AD_GROUP_REGEX` | `CN=([^,]+)-ResourceSetReadOnly` | Regex to extract a project ID from an AD group DN. The first capture group becomes the project ID. **Only used when `OAUTH_AD_GROUP_MAPPINGS` is empty.** |
 | `OAUTH_AD_GROUP_OU_FILTER` | `OU=Ali` | If set, only AD groups containing this substring are considered. |
+| `OAUTH_AD_GROUP_MAPPINGS` | _(empty)_ | JSON array of `{"regex": "...", "project_id": "..."}` for flexible project assignment. `project_id` supports capture group substitution with `$1`, `$2`, etc. When set, this **overrides** `OAUTH_AD_GROUP_REGEX`. |
 | `OAUTH_ROLE_MAPPINGS` | _(empty)_ | JSON array of `{"regex": "...", "role": "..."}`. The first matching regex sets the global role. Role may be comma-separated for multiple roles. |
+
+#### Flexible project mapping (`OAUTH_AD_GROUP_MAPPINGS`)
+
+The legacy `OAUTH_AD_GROUP_REGEX` only supports 1:1 extraction — the first capture group *is* the project ID. For more complex AD group structures, use `OAUTH_AD_GROUP_MAPPINGS`:
+
+```json
+[
+  {"regex": "CN=([^,]+)-prod-ResourceSetReadOnly", "project_id": "$1-prod"},
+  {"regex": "CN=([^,]+)-dev-ResourceSetReadOnly", "project_id": "$1-prod"}
+]
+```
+
+In this example:
+- `CN=myapp-123-prod-ResourceSetReadOnly` → project `myapp-123-prod`
+- `CN=myapp-123-dev-ResourceSetReadOnly` → also project `myapp-123-prod`
+
+**Rules:**
+- Each AD group is tested against the mappings **in order**; the **first match wins**.
+- `project_id` may contain `$1`, `$2`, … which are replaced with the corresponding regex capture groups. If `project_id` is omitted, the first capture group (`$1`) is used.
+- Only groups passing the `OAUTH_AD_GROUP_OU_FILTER` (if set) are considered.
+- If `OAUTH_AD_GROUP_MAPPINGS` is empty or unset, the backend falls back to `OAUTH_AD_GROUP_REGEX`.
+
+**Real-world example** — assign both dev and prod AD groups to the prod project:
+
+```bash
+OAUTH_AD_GROUP_MAPPINGS='[
+  {"regex": "CN=([^,]+)-dev-ResourceSetReadOnly", "project_id": "$1-prod"},
+  {"regex": "CN=([^,]+)-ResourceSetReadOnly", "project_id": "$1"}
+]'
+```
+
+> **Ordering matters:** put the more specific `-dev-` rule **before** the general rule so it matches first.
 
 #### Governance roles are protected
 

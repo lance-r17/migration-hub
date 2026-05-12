@@ -170,8 +170,9 @@ Copy `.env.example` to `.env` and adjust as needed:
 | `OAUTH_CLIENT_SECRET` | _(empty)_ | Client secret for backend-to-OAuth-service `/userinfo` calls. |
 | `SESSION_SECRET_KEY` | _(empty)_ | Secret key for signing backend session JWTs (HS256). |
 | `SESSION_MAX_AGE_MINUTES` | `480` | Session lifetime in minutes (default 8 hours). |
-| `OAUTH_AD_GROUP_REGEX` | `CN=([^,]+)-ResourceSetReadOnly` | Regex to extract project ID from AD group DN. |
+| `OAUTH_AD_GROUP_REGEX` | `CN=([^,]+)-ResourceSetReadOnly` | Regex to extract project ID from AD group DN. Used when `OAUTH_AD_GROUP_MAPPINGS` is empty. |
 | `OAUTH_AD_GROUP_OU_FILTER` | `OU=Ali` | Substring filter for relevant AD groups. |
+| `OAUTH_AD_GROUP_MAPPINGS` | _(empty)_ | JSON array of `{"regex": "...", "project_id": "..."}` for flexible project assignment. `project_id` supports `$1`, `$2`, etc. capture group substitution. Overrides `OAUTH_AD_GROUP_REGEX` when set. |
 | `OAUTH_ROLE_MAPPINGS` | _(empty)_ | JSON array of `{"regex": "...", "role": "..."}` for global role assignment. |
 | `OIDC_ISSUER` | _(empty)_ | OIDC issuer URL (legacy). See [SSO configuration](shared/sso-configuration.md). |
 | `OIDC_AUDIENCE` | `migration-hub` | Expected `aud` claim in OIDC JWTs. Must be set to your client ID for Azure AD. |

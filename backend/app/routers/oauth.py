@@ -40,6 +40,17 @@ def _derive_initials(name: str) -> str:
     return "".join(part[0].upper() for part in name.split() if part)
 
 
+def _apply_template(template: str, match: re.Match) -> str:
+    """Substitute $1, $2, … in *template* with the corresponding capture groups."""
+
+    def replacer(m: re.Match) -> str:
+        idx = int(m.group(1))
+        val = match.group(idx)
+        return val if val is not None else ""
+
+    return re.sub(r"\$(\d+)", replacer, template)
+
+
 def _derive_initials_from_names(given_name: str, family_name: str) -> str:
     """Derive initials from given + family name (e.g. Andy + ZHANG → AZ)."""
     initials = ""
@@ -212,21 +223,60 @@ async def sso_exchange(
         await db.refresh(user)
 
     # 6. Sync AD group → project memberships
-    matched_project_ids: list[str] = []
-    project_regex = re.compile(settings.oauth_ad_group_regex)
-    for group in member_of:
-        if settings.oauth_ad_group_ou_filter and settings.oauth_ad_group_ou_filter not in group:
-            continue
-        m = project_regex.search(group)
-        if m:
-            matched_project_ids.append(m.group(1))
+    matched_project_ids: set[str] = set()
 
+    if settings.oauth_ad_group_mappings:
+        try:
+            ad_group_mappings = json.loads(settings.oauth_ad_group_mappings)
+        except json.JSONDecodeError:
+            logger.warning(
+                "Invalid OAUTH_AD_GROUP_MAPPINGS JSON: %s",
+                settings.oauth_ad_group_mappings,
+            )
+            ad_group_mappings = []
+        for group in member_of:
+            if (
+                settings.oauth_ad_group_ou_filter
+                and settings.oauth_ad_group_ou_filter not in group
+            ):
+                continue
+            for mapping in ad_group_mappings:
+                mapping_regex = mapping.get("regex", "")
+                mapping_project_id = mapping.get("project_id", "")
+                if not mapping_regex:
+                    continue
+                compiled = re.compile(mapping_regex)
+                m = compiled.search(group)
+                if m:
+                    # Default to first capture group when project_id is omitted
+                    project_id = (
+                        _apply_template(mapping_project_id, m)
+                        if mapping_project_id
+                        else m.group(1)
+                    )
+                    if project_id:
+                        matched_project_ids.add(project_id)
+                    break  # first matching mapping wins for this group
+    else:
+        # Legacy single-regex mode
+        project_regex = re.compile(settings.oauth_ad_group_regex)
+        for group in member_of:
+            if (
+                settings.oauth_ad_group_ou_filter
+                and settings.oauth_ad_group_ou_filter not in group
+            ):
+                continue
+            m = project_regex.search(group)
+            if m:
+                matched_project_ids.add(m.group(1))
+
+    project_ids_list = list(matched_project_ids)
     logger.info(
         "Syncing %d project associations for user %s from AD groups",
-        len(matched_project_ids),
+        len(project_ids_list),
         user.id,
     )
-    await user_service.sync_user_projects(db, user.id, matched_project_ids)
+    await user_service.sync_user_projects(db, user.id, project_ids_list)
 
     # 7. Issue backend session token
     token = _create_session_token(user)

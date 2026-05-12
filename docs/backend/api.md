@@ -46,7 +46,7 @@ Custom OAuth code exchange. The frontend calls this after receiving a one-time `
 1. Backend GETs `{OAUTH_SERVICE_URL}/api/v1/oauth/sso/userinfo` with `client_id`, `client_secret`, and `code` query parameters
 2. OAuth service returns user details JSON (including `member_of` AD groups)
 3. Backend derives the user's global role from `OAUTH_ROLE_MAPPINGS` against AD groups
-4. Backend derives project memberships from `OAUTH_AD_GROUP_REGEX` against AD groups
+4. Backend derives project memberships from `OAUTH_AD_GROUP_MAPPINGS` (or falls back to `OAUTH_AD_GROUP_REGEX`) against AD groups
 5. Backend looks up the user by `email`; if not found, **auto-provisions** a new user from the OAuth data
 6. Backend syncs `project_users` rows with `role='member'` for matched projects (governance roles and ITSO are never touched)
 7. Backend issues a signed JWT session token

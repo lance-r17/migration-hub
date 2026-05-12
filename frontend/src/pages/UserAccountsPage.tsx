@@ -39,6 +39,12 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
   Table,
   TableBody,
   TableCell,
@@ -85,6 +91,17 @@ function formatProjectRoleSummary(roles: UserProjectRole[]): string {
     return count > 0 ? `${count} project${count > 1 ? 's' : ''}` : '—'
   }
   return gov.join(', ')
+}
+
+function buildProjectTooltip(roles: UserProjectRole[]): React.ReactNode {
+  if (roles.length === 0) return 'No project assignments'
+  return (
+    <ul className="list-disc pl-4 space-y-0.5">
+      {roles.map((r) => (
+        <li key={r.project_id}>{r.project_name}</li>
+      ))}
+    </ul>
+  )
 }
 
 export function UserAccountsPage() {
@@ -453,8 +470,19 @@ export function UserAccountsPage() {
                       <TableCell className="text-sm text-muted-foreground">{user.team || '—'}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{user.initials}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{user.role.join(', ') || '—'}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[240px] truncate" title={formatProjectRoleSummary(projRoles)}>
-                        {formatProjectRoleSummary(projRoles)}
+                      <TableCell className="text-sm text-muted-foreground max-w-[240px] truncate">
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-default truncate block">
+                                {formatProjectRoleSummary(projRoles)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="start" className="max-w-sm">
+                              {buildProjectTooltip(projRoles)}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 justify-end">

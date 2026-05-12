@@ -61,7 +61,7 @@ See [../getting-started.md](../getting-started.md) for the full environment vari
 | `JIRA_BASE_URL` / `JIRA_API_TOKEN` / `JIRA_USER_EMAIL` | Jira REST API credentials |
 | `OAUTH_SERVICE_URL` / `OAUTH_CLIENT_ID` / `OAUTH_CLIENT_SECRET` | Custom Enterprise OAuth |
 | `SESSION_SECRET_KEY` / `SESSION_MAX_AGE_MINUTES` | Backend JWT signing |
-| `OAUTH_AD_GROUP_REGEX` / `OAUTH_AD_GROUP_OU_FILTER` / `OAUTH_ROLE_MAPPINGS` | AD group synchronization |
+| `OAUTH_AD_GROUP_REGEX` / `OAUTH_AD_GROUP_MAPPINGS` / `OAUTH_AD_GROUP_OU_FILTER` / `OAUTH_ROLE_MAPPINGS` | AD group synchronization |
 | `OIDC_ISSUER` / `OIDC_AUDIENCE` | Standard OIDC (legacy) |
 | `ENVIRONMENT` | `development` or `production` |
 

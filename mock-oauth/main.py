@@ -49,7 +49,7 @@ MOCK_USERS = {
         "family_name": "Wilson",
         "member_of": [
             "CN=prj-1234-aaaa,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
-            "CN=M-11029-ResourceSetReadOnly,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
+            "CN=demo-123456-sampleapp-dev-ResourceSetReadOnly,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
         ],
     },
     "u3": {
