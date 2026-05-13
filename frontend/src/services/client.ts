@@ -55,12 +55,24 @@ async function handleResponse<T>(res: Response, method: string, path: string): P
   return res.json() as Promise<T>
 }
 
+const inFlight = new Map<string, Promise<unknown>>()
+
 export const apiClient = {
   async get<T>(path: string): Promise<T> {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-    })
-    return handleResponse<T>(res, 'GET', path)
+    const key = `GET ${path}`
+    const cached = inFlight.get(key)
+    if (cached) return cached as Promise<T>
+
+    const promise = (async () => {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+      })
+      return handleResponse<T>(res, 'GET', path)
+    })()
+
+    inFlight.set(key, promise)
+    promise.then(() => inFlight.delete(key), () => inFlight.delete(key))
+    return promise
   },
 
   async put<T>(path: string, body: unknown): Promise<T> {
