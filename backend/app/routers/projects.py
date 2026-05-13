@@ -230,8 +230,8 @@ async def list_survey_draft_project_ids(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return project IDs that have a survey draft for the current user."""
-    return await project_service.get_survey_draft_project_ids(db, current_user.id)
+    """Return project IDs that have any survey draft (platform-wide)."""
+    return await project_service.get_survey_draft_project_ids(db)
 
 
 @router.get("/{project_id}", response_model=ProjectDetail)

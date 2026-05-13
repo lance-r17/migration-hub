@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search } from 'lucide-react'
+import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   Table,
@@ -20,10 +20,19 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
+import { getSurveyDraftProjectIds } from '@/services/projects'
+import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
+import { getStatusLabel } from '@/components/shared/StatusBadge'
+import * as XLSX from 'xlsx'
 import type { Project } from '@/types'
 
 function formatDate(value: string | undefined) {
@@ -62,6 +71,79 @@ function getProgressVariant(project: Project) {
   return 'primary'
 }
 
+function exportProjectsToExcel(projects: Project[], draftProjectIds: string[]) {
+  const rows = projects.map((p) => {
+    const { start, end } = getMigrationDates(p)
+    const days = getMigrationPeriodDays(p)
+    const period = !start && !end ? '—' : `${formatDate(start)} → ${formatDate(end)}${days !== null ? ` (${days} days)` : ''}`
+    const { totalCost } = getMigrationEffortSummary(p)
+    return {
+      'Name': p.name,
+      'ID': p.id,
+      'Status': getStatusLabel(p.status, p.stageProgress, draftProjectIds.includes(p.id)),
+      'Progress (%)': p.progress,
+      'ITSO': p.itso ?? '—',
+      'ITSO Delegate': p.itsoDelegate ?? '—',
+      'BPS': p.applicationOverview?.systemImportanceClassification?.includes('BPS') ? 'Yes' : 'No',
+      'IBS': p.applicationOverview?.systemImportanceClassification?.includes('IBS') ? 'Yes' : 'No',
+      'IITA': p.applicationOverview?.iitaApplicability ? 'Yes' : 'No',
+      'Migration Strategy': p.applicationOverview?.migrationStrategy ?? '—',
+      'Migration Period': period,
+      'Migration Effort': totalCost > 0 ? `$${Math.round(totalCost).toLocaleString()}` : '—',
+      'Migration Story': p.jiraStoryKey ?? '—',
+    }
+  })
+
+  const worksheet = XLSX.utils.json_to_sheet(rows)
+  worksheet['!cols'] = [
+    { wch: 32 }, { wch: 18 }, { wch: 14 }, { wch: 12 },
+    { wch: 24 }, { wch: 24 }, { wch: 8 }, { wch: 8 },
+    { wch: 8 }, { wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 14 },
+  ]
+
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Projects')
+  XLSX.writeFile(workbook, `projects-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+}
+
+function getMigrationEffortSummary(project: Project): {
+  totalCost: number
+  groups: {
+    baId: string
+    tasks: { type: string; effort: number; effortTime: number; rate: number; cost: number; thirdParty?: boolean; remarks?: string }[]
+    subTotalCost: number
+  }[]
+} {
+  const tables = project.migrationEffortEstimation?.tables ?? []
+  const groupMap = new Map<string, typeof tables[number]['tasks']>()
+  for (const table of tables) {
+    const baId = table.baId || 'No BA'
+    const existing = groupMap.get(baId) ?? []
+    groupMap.set(baId, existing.concat(table.tasks ?? []))
+  }
+
+  const groups: {
+    baId: string
+    tasks: { type: string; effort: number; effortTime: number; rate: number; cost: number; thirdParty?: boolean; remarks?: string }[]
+    subTotalCost: number
+  }[] = []
+
+  for (const [baId, tasks] of groupMap) {
+    const breakdown = tasks.map(task => {
+      const effort = task.effort ?? 0
+      const effortTime = task.effortTime ?? 0
+      const rate = task.rate ?? 0
+      const cost = effort * effortTime * rate
+      return { type: task.effortType, effort, effortTime, rate, cost, thirdParty: task.thirdParty, remarks: task.remarks }
+    })
+    const subTotalCost = breakdown.reduce((sum, t) => sum + t.cost, 0)
+    groups.push({ baId, tasks: breakdown, subTotalCost })
+  }
+
+  const totalCost = groups.reduce((sum, g) => sum + g.subTotalCost, 0)
+  return { totalCost, groups }
+}
+
 export function ProjectsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
@@ -72,14 +154,36 @@ export function ProjectsPage() {
   const [migrationRange, setMigrationRange] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    getSurveyDraftProjectIds()
+      .then(ids => {
+        if (!cancelled) setDraftProjectIds(ids)
+      })
+      .catch(() => {
+        if (!cancelled) setDraftProjectIds([])
+      })
+    return () => { cancelled = true }
+  }, [])
 
   const filteredProjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     return (projects || []).filter((p) => {
       if (statusFilter !== 'all') {
-        if (statusFilter === 'survey-submitted') {
+        if (statusFilter === 'drafting-survey') {
+          const sp = p.stageProgress
+          if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey < 100 && draftProjectIds.includes(p.id))) return false
+        } else if (statusFilter === 'awaiting-survey') {
+          const sp = p.stageProgress
+          if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey < 100 && !draftProjectIds.includes(p.id))) return false
+        } else if (statusFilter === 'survey-submitted') {
           const sp = p.stageProgress
           if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey === 100 && sp?.signoff === 0)) return false
+        } else if (statusFilter === 'awaiting-signoff') {
+          const sp = p.stageProgress
+          if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey === 100 && sp?.signoff > 0 && sp?.signoff < 100)) return false
         } else if (p.status !== statusFilter) {
           return false
         }
@@ -105,7 +209,7 @@ export function ProjectsPage() {
           return true
       }
     })
-  }, [projects, migrationRange, statusFilter, searchQuery])
+  }, [projects, migrationRange, statusFilter, searchQuery, draftProjectIds])
 
   const totalPages = Math.ceil(filteredProjects.length / pageSize)
   const startIndex = (currentPage - 1) * pageSize
@@ -172,8 +276,10 @@ export function ProjectsPage() {
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="planning">Planning</SelectItem>
-              <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="awaiting-survey">Awaiting Survey</SelectItem>
+              <SelectItem value="drafting-survey">Drafting Survey</SelectItem>
               <SelectItem value="survey-submitted">Survey Submitted</SelectItem>
+              <SelectItem value="awaiting-signoff">Awaiting Sign-off</SelectItem>
               <SelectItem value="signed-off">Signed Off</SelectItem>
               <SelectItem value="migrating">Migrating</SelectItem>
               <SelectItem value="blocked">Blocked</SelectItem>
@@ -213,6 +319,12 @@ export function ProjectsPage() {
             />
           </div>
           </div>
+          <button
+            className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2"
+            onClick={() => exportProjectsToExcel(filteredProjects, draftProjectIds)}
+          >
+            <Download size={14} /> Export
+          </button>
         </div>
 
         {/* Projects Table */}
@@ -229,7 +341,9 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">BPS</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">IBS</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">IITA</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Strategy</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Period</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Effort</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Story</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
@@ -238,14 +352,14 @@ export function ProjectsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 11 }).map((_, j) => (
+                    {Array.from({ length: 13 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filteredProjects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={13} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -263,7 +377,7 @@ export function ProjectsPage() {
                       {project.id}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={project.status} stageProgress={project.stageProgress} />
+                      <StatusBadge status={project.status} stageProgress={project.stageProgress} hasSurveyDraft={draftProjectIds.includes(project.id)} surveySubmittedAt={project.surveySubmittedAt} />
                     </TableCell>
                     <TableCell>
                       <div className="w-full max-w-[120px]">
@@ -294,11 +408,81 @@ export function ProjectsPage() {
                       {project.applicationOverview?.iitaApplicability ? 'Yes' : 'No'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
+                      {project.applicationOverview?.migrationStrategy ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
                       {(() => {
                         const { start, end } = getMigrationDates(project)
                         if (!start && !end) return '—'
                         const days = getMigrationPeriodDays(project)
                         return `${formatDate(start)} → ${formatDate(end)}${days !== null ? ` (${days} days)` : ''}`
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-sm text-right">
+                      {(() => {
+                        const { totalCost, groups } = getMigrationEffortSummary(project)
+                        if (groups.length === 0) return <span className="text-muted-foreground">—</span>
+                        const summaryText = `$${Math.round(totalCost).toLocaleString()}`
+                        const hasThirdParty = groups.some(g => g.tasks.some(t => t.thirdParty))
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help border-b border-dashed border-muted-foreground/50">{summaryText}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-none bg-popover text-popover-foreground border border-border shadow-lg px-0 py-2" sideOffset={4} arrowClassName="fill-popover bg-popover">
+                              <div className="overflow-auto max-h-[320px]">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="text-muted-foreground">
+                                      <th className="text-left px-3 py-1 font-medium w-full">Type</th>
+                                      <th className="text-right px-3 py-1 font-medium whitespace-nowrap">FTE</th>
+                                      <th className="text-right px-3 py-1 font-medium whitespace-nowrap">Months</th>
+                                      <th className="text-right px-3 py-1 font-medium whitespace-nowrap">Rate</th>
+                                      <th className="text-right px-3 py-1 font-medium whitespace-nowrap">Cost</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {groups.map((group) => (
+                                      <>
+                                        <tr className="bg-muted/40">
+                                          <td colSpan={5} className="px-3 py-1 font-semibold text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                                            {group.baId}
+                                          </td>
+                                        </tr>
+                                        {group.tasks.map((task, idx) => (
+                                          <tr key={`${group.baId}-${idx}`} className="border-t border-border/50">
+                                            <td className="px-3 py-1.5">{getEffortTypeLabel(task.type)}{task.thirdParty ? ' *' : ''}</td>
+                                            <td className="px-3 py-1.5 text-right whitespace-nowrap">{task.effort.toFixed(1)}</td>
+                                            <td className="px-3 py-1.5 text-right whitespace-nowrap">{task.effortTime.toFixed(0)}</td>
+                                            <td className="px-3 py-1.5 text-right whitespace-nowrap">${task.rate.toLocaleString()}</td>
+                                            <td className="px-3 py-1.5 text-right font-medium whitespace-nowrap">${Math.round(task.cost).toLocaleString()}</td>
+                                          </tr>
+                                        ))}
+                                        <tr className="border-t border-border/50 font-medium">
+                                          <td className="px-3 py-1 text-muted-foreground">Subtotal</td>
+                                          <td className="px-3 py-1 text-right whitespace-nowrap" />
+                                          <td className="px-3 py-1 text-right whitespace-nowrap" />
+                                          <td className="px-3 py-1 text-right whitespace-nowrap" />
+                                          <td className="px-3 py-1 text-right whitespace-nowrap">${Math.round(group.subTotalCost).toLocaleString()}</td>
+                                        </tr>
+                                      </>
+                                    ))}
+                                    <tr className="border-t border-border font-semibold">
+                                      <td className="px-3 py-1.5">Total</td>
+                                      <td className="px-3 py-1.5 text-right whitespace-nowrap" />
+                                      <td className="px-3 py-1.5 text-right whitespace-nowrap" />
+                                      <td className="px-3 py-1.5 text-right whitespace-nowrap" />
+                                      <td className="px-3 py-1.5 text-right whitespace-nowrap">${Math.round(totalCost).toLocaleString()}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                              {hasThirdParty && (
+                                <p className="text-[10px] text-muted-foreground px-3 pt-2">* Third-party effort</p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        )
                       })()}
                     </TableCell>
                     <TableCell className="text-sm">

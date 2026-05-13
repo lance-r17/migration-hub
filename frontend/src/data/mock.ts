@@ -369,6 +369,26 @@ export const mockProjects: Project[] = [
       architectureDiagram: 'https://confluence.corp.com/display/ARCH/ERP-3AZ-Target-Architecture',
     },
 
+    // Section 8.5
+    migrationEffortEstimation: {
+      effortEstimate: 'High',
+      notes: 'Significant re-architecture required for 3-AZ Oracle RAC.',
+      tableMode: 'single',
+      tables: [
+        {
+          baId: 'EIM-00421',
+          tasks: [
+            { effortType: 'app_specific', effort: 5, effortTime: 3, rate: 8000, thirdParty: false, remarks: 'Core ERP migration' },
+            { effortType: 'third_party_license', effort: 0, effortTime: 0, rate: 0, thirdParty: false, remarks: '' },
+            { effortType: 'third_party_services', effort: 2, effortTime: 2, rate: 5000, thirdParty: true, remarks: 'Oracle consulting' },
+            { effortType: 'dependency', effort: 1, effortTime: 1, rate: 6000, thirdParty: false, remarks: 'Auth service integration' },
+            { effortType: 'new_cloud_consumption', effort: 0, effortTime: 0, rate: 0, thirdParty: false, remarks: '' },
+            { effortType: 'miscellaneous', effort: 0.5, effortTime: 1, rate: 4000, thirdParty: false, remarks: 'Documentation' },
+          ],
+        },
+      ],
+    },
+
     // Section 9
     risks: [
       {
@@ -550,6 +570,25 @@ export const mockProjects: Project[] = [
       reArchitectureNeeded: false,
       topology3Az: 'ECS Fargate service with tasks distributed across AZ-A, AZ-B, AZ-C behind an internal ALB.',
       dnsIpChanges: 'auth.internal.company.com updated to new ALB DNS name.',
+    },
+
+    migrationEffortEstimation: {
+      effortEstimate: 'Medium',
+      notes: 'Standard lift and shift with minimal re-architecture.',
+      tableMode: 'single',
+      tables: [
+        {
+          baId: 'EIM-0042',
+          tasks: [
+            { effortType: 'app_specific', effort: 2, effortTime: 1, rate: 7000, thirdParty: false, remarks: 'Auth service migration' },
+            { effortType: 'third_party_license', effort: 0, effortTime: 0, rate: 0, thirdParty: true, remarks: '' },
+            { effortType: 'third_party_services', effort: 0, effortTime: 0, rate: 0, thirdParty: true, remarks: '' },
+            { effortType: 'dependency', effort: 0.5, effortTime: 0.5, rate: 6000, thirdParty: false, remarks: 'LDAP integration' },
+            { effortType: 'new_cloud_consumption', effort: 0, effortTime: 0, rate: 0, thirdParty: false, remarks: '' },
+            { effortType: 'miscellaneous', effort: 0.2, effortTime: 0.5, rate: 4000, thirdParty: false, remarks: '' },
+          ],
+        },
+      ],
     },
 
     risks: [],

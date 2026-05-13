@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, Plus, FolderOpen, ArrowRight } from 'lucide-react'
+import { Download, Plus, FolderOpen, ArrowRight, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AppShell } from '@/components/layout/AppShell'
 import { OverallProgressCard } from '@/components/home/OverallProgressCard'
@@ -15,6 +15,13 @@ import { useWaves } from '@/hooks/use-waves'
 import { useEmbargos } from '@/hooks/use-embargos'
 import { useCurrentUser } from '@/context/UserContext'
 import { getSurveyDraftProjectIds } from '@/services/projects'
+import { exportEstimatedEffortReport } from '@/lib/export-report'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 import type { OverallStats } from '@/types'
 
 type SortKey = 'progress' | 'status'
@@ -140,9 +147,18 @@ export function HomePage() {
             </div>
             {isPlatformLead && (
               <div className="flex gap-2">
-                <button className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2">
-                  <Download size={14} /> Export Report
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2 cursor-pointer">
+                      <Download size={14} /> Export Report <ChevronDown size={14} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => exportEstimatedEffortReport()}>
+                      Estimated Effort Report
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <button className="px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg flex items-center gap-2 shadow-sm">
                   <Plus size={14} /> New Migration
                 </button>

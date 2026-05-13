@@ -952,10 +952,10 @@ async def delete_survey_draft(
 
 
 async def get_survey_draft_project_ids(
-    session: AsyncSession, user_id: str
+    session: AsyncSession,
 ) -> list[str]:
-    """Return distinct project IDs that have a survey draft for the given user."""
+    """Return distinct project IDs that have any survey draft."""
     result = await session.execute(
-        select(SurveyDraft.project_id).where(SurveyDraft.user_id == user_id).distinct()
+        select(SurveyDraft.project_id).distinct()
     )
     return [row[0] for row in result.all() if row[0]]
