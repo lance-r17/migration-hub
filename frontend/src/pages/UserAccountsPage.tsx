@@ -206,7 +206,7 @@ export function UserAccountsPage() {
     setSelectedGovRole('')
 
     try {
-      const projects = await getProjects()
+      const projects = await getProjects(['basic'])
       setAllProjects(projects)
     } catch {
       // ignore; dropdown will be empty

@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PieChart as PieChartIcon, ClipboardCheck, Database } from 'lucide-react'
+import { getAssetStats } from '@/services/projects'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PieChart } from '@/components/shared/PieChart'
 import { getProjectStage, STAGE_META } from '@/lib/project-stages'
-import { useProductCategoryMap } from '@/hooks/use-product-category'
 import type { Project } from '@/types'
 
 interface ProjectStatusChartCardProps {
@@ -24,7 +24,15 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: ProjectStatusChartCardProps) {
-  const { getCategoryForProduct } = useProductCategoryMap()
+  const [assetStats, setAssetStats] = useState<Record<string, number> | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getAssetStats()
+      .then(data => { if (!cancelled) setAssetStats(data) })
+      .catch(() => { if (!cancelled) setAssetStats({}) })
+    return () => { cancelled = true }
+  }, [])
 
   const stageData = useMemo(() => {
     const counts = new Map<string, number>()
@@ -67,26 +75,6 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
       },
     ].filter((d) => d.value > 0)
   }, [projects, draftIdSet])
-
-  const assetData = useMemo(() => {
-    const counts: Record<string, number> = {}
-    for (const project of projects) {
-      for (const resource of project.currentInfrastructure?.resources ?? []) {
-        const cat = getCategoryForProduct(resource.product)
-        counts[cat] = (counts[cat] ?? 0) + 1
-      }
-    }
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([category, value]) => ({
-        label: category
-          .split('-')
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' '),
-        value,
-        color: CATEGORY_COLORS[category] ?? '#94a3b8',
-      }))
-  }, [projects, getCategoryForProduct])
 
   return (
     <Card className="md:col-span-2">
@@ -141,8 +129,20 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
           </TabsContent>
           <TabsContent value="assets" className="flex flex-col gap-2">
             <div className="w-full flex justify-center">
-              {assetData.length > 0 ? (
-                <PieChart data={assetData} size={180} />
+              {assetStats && Object.keys(assetStats).length > 0 ? (
+                <PieChart
+                  data={Object.entries(assetStats)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([category, value]) => ({
+                      label: category
+                        .split('-')
+                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                        .join(' '),
+                      value,
+                      color: CATEGORY_COLORS[category] ?? '#94a3b8',
+                    }))}
+                  size={180}
+                />
               ) : (
                 <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
                   No asset data available

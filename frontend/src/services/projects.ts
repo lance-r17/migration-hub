@@ -222,28 +222,42 @@ function fromApi(raw: ProjectApiResponse): Project {
 
 // ─── Service functions ────────────────────────────────────────────────────────
 
-export async function getProjects(): Promise<Project[]> {
+function buildFieldsQs(fields?: string[]): string {
+  if (!fields || fields.length === 0) return ''
+  return fields.map(f => `fields=${encodeURIComponent(f)}`).join('&')
+}
+
+export async function getProjects(fields?: string[]): Promise<Project[]> {
   if (USE_MOCK) { await delay(); return store.getProjects() }
-  const items = await apiClient.get<ProjectListItemApi[]>(ENDPOINTS.projects)
+  const qs = buildFieldsQs(fields)
+  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}${qs ? `?${qs}` : ''}`)
   return items.map(fromApiListItem)
 }
 
-export async function getProjectsForUser(userId: string): Promise<Project[]> {
+export async function getProjectsForUser(userId: string, fields?: string[]): Promise<Project[]> {
   if (USE_MOCK) { await delay(); return store.getProjectsForUser(userId) }
-  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}?userId=${userId}`)
+  const qs = buildFieldsQs(fields)
+  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}?userId=${userId}${qs ? `&${qs}` : ''}`)
   return items.map(fromApiListItem)
 }
 
-export async function getProjectsHome(): Promise<Project[]> {
+export async function getProjectsHome(fields?: string[]): Promise<Project[]> {
   if (USE_MOCK) { await delay(); return store.getProjects() }
-  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}/home`)
+  const qs = buildFieldsQs(fields)
+  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}/home${qs ? `?${qs}` : ''}`)
   return items.map(fromApiListItem)
 }
 
-export async function getProjectsHomeForUser(userId: string): Promise<Project[]> {
+export async function getProjectsHomeForUser(userId: string, fields?: string[]): Promise<Project[]> {
   if (USE_MOCK) { await delay(); return store.getProjectsForUser(userId) }
-  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}/home?userId=${userId}`)
+  const qs = buildFieldsQs(fields)
+  const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}/home?userId=${userId}${qs ? `&${qs}` : ''}`)
   return items.map(fromApiListItem)
+}
+
+export async function getAssetStats(): Promise<Record<string, number>> {
+  if (USE_MOCK) { await delay(); return {} }
+  return apiClient.get<Record<string, number>>(`${ENDPOINTS.projects}/asset-stats`)
 }
 
 export async function getProject(id: string): Promise<Project | undefined> {

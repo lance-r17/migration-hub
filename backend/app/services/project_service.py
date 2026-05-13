@@ -2,7 +2,7 @@ import re
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import attributes, selectinload
 
@@ -14,6 +14,30 @@ from app.models.survey_draft import SurveyDraft
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectPatch
 from app.services import audit_service, attachment_service
+
+# Field group → ORM relationships required
+_FIELD_REL_REQUIREMENTS: dict[str, set[str]] = {
+    "progress": {"cloud_resources", "project_users", "approvals"},
+    "team": {"project_users"},
+    "itso": {"project_users"},
+    "itso_delegate": {"project_users"},
+    "governance": {"project_users"},
+    "resources": {"cloud_resources"},
+    "resources_full": {"cloud_resources"},
+    "risks": {"risks"},
+    "approvals": {"approvals"},
+}
+
+
+def _resolve_rels(fields: set[str] | None, default_rels: set[str]) -> set[str]:
+    if fields is None:
+        return default_rels
+    rels: set[str] = set()
+    for f, req in _FIELD_REL_REQUIREMENTS.items():
+        if f in fields:
+            rels.update(req)
+    return rels
+
 
 # Maps camelCase frontend section keys → ORM column names
 SECTION_COLUMN_MAP: dict[str, str | None] = {
@@ -209,16 +233,22 @@ def _project_options():
 
 
 async def get_all(
-    session: AsyncSession, user_id: str | None = None
+    session: AsyncSession, user_id: str | None = None, fields: set[str] | None = None
 ) -> list[Project]:
     from app.models.project_user import ProjectUser
 
-    q = select(Project).options(
-        selectinload(Project.approvals),
-        selectinload(Project.cloud_resources),
-        selectinload(Project.wave),
-        selectinload(Project.project_users).selectinload(ProjectUser.user),
-    )
+    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "wave", "project_users"})
+    options = []
+    if "approvals" in rels:
+        options.append(selectinload(Project.approvals))
+    if "cloud_resources" in rels:
+        options.append(selectinload(Project.cloud_resources))
+    if "wave" in rels:
+        options.append(selectinload(Project.wave))
+    if "project_users" in rels:
+        options.append(selectinload(Project.project_users).selectinload(ProjectUser.user))
+
+    q = select(Project).options(*options)
     if user_id:
         q = q.join(ProjectUser, ProjectUser.project_id == Project.id).where(
             ProjectUser.user_id == user_id
@@ -228,16 +258,22 @@ async def get_all(
 
 
 async def get_all_home(
-    session: AsyncSession, user_id: str | None = None
+    session: AsyncSession, user_id: str | None = None, fields: set[str] | None = None
 ) -> list[Project]:
     from app.models.project_user import ProjectUser
 
-    q = select(Project).options(
-        selectinload(Project.approvals),
-        selectinload(Project.cloud_resources),
-        selectinload(Project.risks),
-        selectinload(Project.project_users).selectinload(ProjectUser.user),
-    )
+    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "risks", "project_users"})
+    options = []
+    if "approvals" in rels:
+        options.append(selectinload(Project.approvals))
+    if "cloud_resources" in rels:
+        options.append(selectinload(Project.cloud_resources))
+    if "risks" in rels:
+        options.append(selectinload(Project.risks))
+    if "project_users" in rels:
+        options.append(selectinload(Project.project_users).selectinload(ProjectUser.user))
+
+    q = select(Project).options(*options)
     if user_id:
         q = q.join(ProjectUser, ProjectUser.project_id == Project.id).where(
             ProjectUser.user_id == user_id
@@ -256,6 +292,32 @@ async def get_all_for_stats(
     )
     result = await session.execute(q.order_by(Project.name))
     return list(result.scalars().all())
+
+
+async def get_asset_stats(
+    session: AsyncSession, user_id: str | None = None
+) -> dict[str, int]:
+    """Return aggregated cloud-resource counts grouped by product category."""
+    from app.models.project_user import ProjectUser
+    from app.services.product_category_service import get_category_for_product
+
+    q = select(CloudResource.product, func.count(CloudResource.resource_id))
+    if user_id:
+        q = (
+            q.join(Project, Project.id == CloudResource.project_id)
+            .join(ProjectUser, ProjectUser.project_id == Project.id)
+            .where(ProjectUser.user_id == user_id)
+        )
+    q = q.group_by(CloudResource.product)
+
+    result = await session.execute(q)
+    rows = result.all()
+
+    counts: dict[str, int] = {}
+    for product, cnt in rows:
+        category = get_category_for_product(product)
+        counts[category] = counts.get(category, 0) + cnt
+    return counts
 
 
 async def get_by_id(session: AsyncSession, project_id: str) -> Project | None:

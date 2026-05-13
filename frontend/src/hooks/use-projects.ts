@@ -244,7 +244,7 @@ interface ProjectsState {
   error: string | null
 }
 
-export function useProjects(options?: { home?: boolean }): ProjectsState {
+export function useProjects(options?: { home?: boolean; fields?: string[] }): ProjectsState {
   const [state, setState] = useState<ProjectsState>({
     projects: [],
     loading: true,
@@ -259,8 +259,8 @@ export function useProjects(options?: { home?: boolean }): ProjectsState {
     let cancelled = false
 
     const fetch = isPlatformLead
-      ? (options?.home ? getProjectsHome() : getProjects())
-      : (options?.home ? getProjectsHomeForUser(user.id) : getProjectsForUser(user.id))
+      ? (options?.home ? getProjectsHome(options?.fields) : getProjects(options?.fields))
+      : (options?.home ? getProjectsHomeForUser(user.id, options?.fields) : getProjectsForUser(user.id, options?.fields))
 
     fetch
       .then(projects => {
@@ -275,7 +275,7 @@ export function useProjects(options?: { home?: boolean }): ProjectsState {
       })
 
     return () => { cancelled = true }
-  }, [user?.id, user?.role, options?.home]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role, options?.home, JSON.stringify(options?.fields)]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return state
 }

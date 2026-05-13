@@ -147,7 +147,9 @@ function getMigrationEffortSummary(project: Project): {
 export function ProjectsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
-  const { projects, loading } = useProjects()
+  const { projects, loading } = useProjects({
+    fields: ['basic', 'itso', 'itso_delegate', 'progress', 'planning', 'overview', 'effort'],
+  })
 
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)

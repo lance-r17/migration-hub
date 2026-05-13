@@ -9,7 +9,7 @@ function calcTaskCost(effort?: number, effortTime?: number, rate?: number): numb
 }
 
 export async function exportEstimatedEffortReport() {
-  const projects = await getProjects()
+  const projects = await getProjects(['basic', 'effort'])
 
   const rows: Record<string, string | number>[] = []
 

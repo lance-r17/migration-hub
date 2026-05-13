@@ -17,7 +17,9 @@ export function WaveGanttPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
   const { waves: initialWaves, loading: wavesLoading } = useWaves()
-  const { projects: initialProjects, loading: projectsLoading } = useProjects()
+  const { projects: initialProjects, loading: projectsLoading } = useProjects({
+    fields: ['basic', 'progress', 'planning'],
+  })
 
   const [liveWaves, setLiveWaves] = useState<Wave[]>(initialWaves)
   const [liveProjects, setLiveProjects] = useState<Project[]>(initialProjects)

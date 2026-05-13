@@ -7,12 +7,10 @@ import { OverallProgressCard } from '@/components/home/OverallProgressCard'
 import { ProjectStatusChartCard } from '@/components/home/ProjectStatusChartCard'
 import { ProjectCard } from '@/components/home/ProjectCard'
 import { ActivityTimeline } from '@/components/home/ActivityTimeline'
-import { SecurityHealthWidget } from '@/components/home/SecurityHealthWidget'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDashboard } from '@/hooks/use-dashboard'
 import { useProjects } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
-import { useEmbargos } from '@/hooks/use-embargos'
 import { useCurrentUser } from '@/context/UserContext'
 import { getSurveyDraftProjectIds } from '@/services/projects'
 import { exportEstimatedEffortReport } from '@/lib/export-report'
@@ -33,9 +31,11 @@ export function HomePage() {
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
   const { stats: globalStats, activity: allActivity, loading: dashLoading } = useDashboard({ enabled: isPlatformLead })
-  const { projects, loading: projectsLoading } = useProjects({ home: true })
+  const { projects, loading: projectsLoading } = useProjects({
+    home: true,
+    fields: ['basic', 'progress', 'planning', 'risks', 'team', 'approvals'],
+  })
   const { waves, loading: wavesLoading } = useWaves({ enabled: isPlatformLead })
-  const { embargos: allEmbargos, loading: embargosLoading } = useEmbargos({ enabled: isPlatformLead })
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
   const [draftsLoading, setDraftsLoading] = useState(true)
 
@@ -58,7 +58,7 @@ export function HomePage() {
     return () => { cancelled = true }
   }, [])
 
-  const loading = dashLoading || projectsLoading || wavesLoading || embargosLoading || draftsLoading
+  const loading = dashLoading || projectsLoading || wavesLoading || draftsLoading
 
   // For non-platform-leads: filter activity to their assigned projects only
   const projectIds = useMemo(() => projects.map(p => p.id), [projects])
@@ -105,29 +105,7 @@ export function HomePage() {
     return latestActive.slice(0, 5)
   }, [isPlatformLead, sortedProjects])
 
-  // Security metrics for the Security Health widget
-  const securityMetrics = useMemo(() => {
-    const openCriticalRisks = projects.flatMap(p => p.risks ?? [])
-      .filter(r => r.severity === 'critical' && r.riskStatus?.toLowerCase() === 'open')
-    const blockedProjectsList = projects.filter(p => p.status === 'blocked')
-    const securityResourcesOutOfSync = projects.flatMap(p =>
-      p.currentInfrastructure?.resources ?? []
-    ).filter(r =>
-      (r.product === 'kms' || r.product === 'vpc') && r.syncStatus !== 'synced'
-    )
 
-    const today = new Date().toISOString().slice(0, 10)
-    const activeEmbargosList = allEmbargos.filter(e => e.startDate <= today && e.endDate >= today)
-
-    return {
-      openCriticalRisksCount: openCriticalRisks.length,
-      openCriticalRisksTitles: openCriticalRisks.slice(0, 2).map(r => r.title),
-      blockedProjectsCount: blockedProjectsList.length,
-      securityResourcesOutOfSyncCount: securityResourcesOutOfSync.length,
-      activeEmbargosCount: activeEmbargosList.length,
-      activeEmbargoNames: activeEmbargosList.slice(0, 2).map(e => e.name),
-    }
-  }, [projects, allEmbargos])
 
   return (
     <AppShell>
@@ -153,7 +131,7 @@ export function HomePage() {
                       <Download size={14} /> Export Report <ChevronDown size={14} />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="min-w-[220px]">
                     <DropdownMenuItem onClick={() => exportEstimatedEffortReport()}>
                       Estimated Effort Report
                     </DropdownMenuItem>
@@ -241,20 +219,13 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* Section 3: Secondary — only for platform leads */}
+        {/* Section 3: Activity Timeline — only for platform leads */}
         {isPlatformLead && (
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              {loading ? (
-                <Skeleton className="h-48 rounded-xl" />
-              ) : (
-                <ActivityTimeline activities={activity} />
-              )}
-            </div>
+          <section>
             {loading ? (
               <Skeleton className="h-48 rounded-xl" />
             ) : (
-              <SecurityHealthWidget {...securityMetrics} />
+              <ActivityTimeline activities={activity} />
             )}
           </section>
         )}

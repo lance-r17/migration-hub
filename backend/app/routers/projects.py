@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -102,61 +102,169 @@ def _derive_status(p, stage_data: dict) -> str:
     return project_service.derive_status_from_stage_progress(stage_data)
 
 
-def _project_list_item(p) -> ProjectListItem:
-    stage_data = project_service.compute_stage_progress(p)
-    return ProjectListItem(
-        id=p.id,
-        name=p.name,
-        status=_derive_status(p, stage_data),
-        blocked_reason=p.blocked_reason,
-        progress=stage_data["overall"],
-        description=p.description,
-        migration_wave=p.migration_wave,
-        itso=_itso_name(p),
-        itso_delegate=_itso_delegate_name(p),
-        jira_base_url=settings.jira_base_url,
-        updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
-        wave_id=p.wave_id,
-        jira_story_key=p.jira_story_key,
-        jira_job_status=p.jira_job_status,
-        planning=p.planning,
-        survey_submitted_at=p.survey_submitted_at,
-        stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
-        team=_team_from_project_users(p),
-        migration_constraints=p.migration_constraints,
-        migration_effort_estimation=p.migration_effort_estimation,
-        application_overview=p.application_overview,
-        approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
-        cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
-    )
+def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
+    if fields is None:
+        stage_data = project_service.compute_stage_progress(p)
+        return ProjectListItem(
+            id=p.id,
+            name=p.name,
+            status=_derive_status(p, stage_data),
+            blocked_reason=p.blocked_reason,
+            progress=stage_data["overall"],
+            description=p.description,
+            migration_wave=p.migration_wave,
+            itso=_itso_name(p),
+            itso_delegate=_itso_delegate_name(p),
+            jira_base_url=settings.jira_base_url,
+            updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
+            wave_id=p.wave_id,
+            jira_story_key=p.jira_story_key,
+            jira_job_status=p.jira_job_status,
+            planning=p.planning,
+            survey_submitted_at=p.survey_submitted_at,
+            stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
+            team=_team_from_project_users(p),
+            migration_constraints=p.migration_constraints,
+            migration_effort_estimation=p.migration_effort_estimation,
+            application_overview=p.application_overview,
+            approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
+            cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
+        )
+
+    data: dict[str, Any] = {}
+
+    if "basic" in fields:
+        data.update(
+            {
+                "id": p.id,
+                "name": p.name,
+                "status": p.status,
+                "blocked_reason": p.blocked_reason,
+                "description": p.description,
+                "migration_wave": p.migration_wave,
+                "wave_id": p.wave_id,
+                "jira_story_key": p.jira_story_key,
+                "jira_job_status": p.jira_job_status,
+                "planning": p.planning,
+                "survey_submitted_at": p.survey_submitted_at,
+                "migration_constraints": p.migration_constraints,
+                "migration_effort_estimation": p.migration_effort_estimation,
+                "application_overview": p.application_overview,
+                "jira_base_url": settings.jira_base_url,
+                "updated_at": p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
+            }
+        )
+
+    if "progress" in fields:
+        stage_data = project_service.compute_stage_progress(p)
+        data["status"] = _derive_status(p, stage_data)
+        data["progress"] = stage_data["overall"]
+        data["stage_progress"] = {k: v for k, v in stage_data.items() if k != "overall"}
+
+    if "team" in fields:
+        data["team"] = _team_from_project_users(p)
+
+    if "itso" in fields:
+        data["itso"] = _itso_name(p)
+
+    if "itso_delegate" in fields:
+        data["itso_delegate"] = _itso_delegate_name(p)
+
+    if "governance" in fields:
+        data["governance_roles"] = _governance_roles_from_project_users(p)
+
+    if "resources" in fields or "resources_full" in fields:
+        data["cloud_resources"] = [
+            CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])
+        ]
+
+    if "approvals" in fields:
+        data["approvals"] = [
+            ApprovalOut.model_validate(a) for a in (p.approvals or [])
+        ]
+
+    return ProjectListItem(**data)
 
 
-def _project_home_item(p) -> ProjectHomeItem:
-    stage_data = project_service.compute_stage_progress(p)
-    return ProjectHomeItem(
-        id=p.id,
-        name=p.name,
-        status=_derive_status(p, stage_data),
-        blocked_reason=p.blocked_reason,
-        progress=stage_data["overall"],
-        description=p.description,
-        migration_wave=p.migration_wave,
-        itso=_itso_name(p),
-        itso_delegate=_itso_delegate_name(p),
-        jira_base_url=settings.jira_base_url,
-        updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
-        wave_id=p.wave_id,
-        jira_story_key=p.jira_story_key,
-        jira_job_status=p.jira_job_status,
-        planning=p.planning,
-        survey_submitted_at=p.survey_submitted_at,
-        stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
-        team=_team_from_project_users(p),
-        migration_constraints=p.migration_constraints,
-        approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
-        cloud_resources=[CloudResourceHomeOut.model_validate(r) for r in (p.cloud_resources or [])],
-        risks=[RiskHomeOut.model_validate(r) for r in (p.risks or [])],
-    )
+def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
+    if fields is None:
+        stage_data = project_service.compute_stage_progress(p)
+        return ProjectHomeItem(
+            id=p.id,
+            name=p.name,
+            status=_derive_status(p, stage_data),
+            blocked_reason=p.blocked_reason,
+            progress=stage_data["overall"],
+            description=p.description,
+            migration_wave=p.migration_wave,
+            itso=_itso_name(p),
+            itso_delegate=_itso_delegate_name(p),
+            jira_base_url=settings.jira_base_url,
+            updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
+            wave_id=p.wave_id,
+            jira_story_key=p.jira_story_key,
+            jira_job_status=p.jira_job_status,
+            planning=p.planning,
+            survey_submitted_at=p.survey_submitted_at,
+            stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
+            team=_team_from_project_users(p),
+            migration_constraints=p.migration_constraints,
+            approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
+            cloud_resources=[CloudResourceHomeOut.model_validate(r) for r in (p.cloud_resources or [])],
+            risks=[RiskHomeOut.model_validate(r) for r in (p.risks or [])],
+        )
+
+    data: dict[str, Any] = {}
+
+    if "basic" in fields:
+        data.update(
+            {
+                "id": p.id,
+                "name": p.name,
+                "status": p.status,
+                "blocked_reason": p.blocked_reason,
+                "description": p.description,
+                "migration_wave": p.migration_wave,
+                "wave_id": p.wave_id,
+                "jira_story_key": p.jira_story_key,
+                "jira_job_status": p.jira_job_status,
+                "planning": p.planning,
+                "survey_submitted_at": p.survey_submitted_at,
+                "migration_constraints": p.migration_constraints,
+                "jira_base_url": settings.jira_base_url,
+                "updated_at": p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
+            }
+        )
+
+    if "progress" in fields:
+        stage_data = project_service.compute_stage_progress(p)
+        data["status"] = _derive_status(p, stage_data)
+        data["progress"] = stage_data["overall"]
+        data["stage_progress"] = {k: v for k, v in stage_data.items() if k != "overall"}
+
+    if "team" in fields:
+        data["team"] = _team_from_project_users(p)
+
+    if "itso" in fields:
+        data["itso"] = _itso_name(p)
+
+    if "itso_delegate" in fields:
+        data["itso_delegate"] = _itso_delegate_name(p)
+
+    if "resources" in fields:
+        data["cloud_resources"] = [
+            CloudResourceHomeOut.model_validate(r) for r in (p.cloud_resources or [])
+        ]
+
+    if "risks" in fields:
+        data["risks"] = [RiskHomeOut.model_validate(r) for r in (p.risks or [])]
+
+    if "approvals" in fields:
+        data["approvals"] = [
+            ApprovalOut.model_validate(a) for a in (p.approvals or [])
+        ]
+
+    return ProjectHomeItem(**data)
 
 
 def _project_detail(p) -> ProjectDetail:
@@ -199,19 +307,31 @@ def _project_detail(p) -> ProjectDetail:
 @router.get("", response_model=list[ProjectListItem])
 async def list_projects(
     userId: str | None = None,
+    fields: list[str] | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    projects = await project_service.get_all(db, user_id=userId)
-    return [_project_list_item(p) for p in projects]
+    field_set = set(fields) if fields else None
+    projects = await project_service.get_all(db, user_id=userId, fields=field_set)
+    return [_project_list_item(p, fields=field_set) for p in projects]
 
 
 @router.get("/home", response_model=list[ProjectHomeItem])
 async def list_projects_home(
     userId: str | None = None,
+    fields: list[str] | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    projects = await project_service.get_all_home(db, user_id=userId)
-    return [_project_home_item(p) for p in projects]
+    field_set = set(fields) if fields else None
+    projects = await project_service.get_all_home(db, user_id=userId, fields=field_set)
+    return [_project_home_item(p, fields=field_set) for p in projects]
+
+
+@router.get("/asset-stats", response_model=dict[str, int])
+async def get_project_asset_stats(
+    userId: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    return await project_service.get_asset_stats(db, user_id=userId)
 
 
 @router.post("", response_model=ProjectDetail, status_code=201)

@@ -54,7 +54,7 @@ export function WavesPage() {
   const { user } = useCurrentUser()
   const { settings } = useMigrationSettings()
   const { waves, loading, createWave, importWave } = useWaves()
-  const { projects: initialProjects } = useProjects()
+  const { projects: initialProjects } = useProjects({ fields: ['basic'] })
   const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)

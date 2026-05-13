@@ -231,7 +231,7 @@ interface SummaryRow {
 
 export function FinancePage() {
   const { user } = useCurrentUser()
-  const { projects } = useProjects()
+  const { projects } = useProjects({ fields: ['basic', 'resources'] })
 
   const [availableMonths, setAvailableMonths] = useState<string[]>([])
   const [selectedMonth, setSelectedMonth] = useState<string>('')

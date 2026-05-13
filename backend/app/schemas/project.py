@@ -32,11 +32,11 @@ class GovernanceRolesOut(BaseModel):
 class ProjectListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
-    name: str
-    status: str
+    id: str | None = None
+    name: str | None = None
+    status: str | None = None
     blocked_reason: str | None = None
-    progress: int
+    progress: int | None = None
     description: str | None = None
     migration_wave: str | None = None
     itso: str | None = None
@@ -49,12 +49,12 @@ class ProjectListItem(BaseModel):
     planning: dict[str, Any] | None = None
     survey_submitted_at: datetime | None = None
     stage_progress: dict[str, int] | None = None
-    team: list[dict[str, Any]] = []
+    team: list[dict[str, Any]] | None = None
     migration_constraints: dict[str, Any] | None = None
     migration_effort_estimation: dict[str, Any] | None = None
     application_overview: dict[str, Any] | None = None
-    approvals: list[ApprovalOut] = []
-    cloud_resources: list[CloudResourceOut] = []
+    approvals: list[ApprovalOut] | None = None
+    cloud_resources: list[CloudResourceOut] | None = None
 
 
 class ProjectDetail(BaseModel):
@@ -96,11 +96,11 @@ class ProjectDetail(BaseModel):
 class ProjectHomeItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
-    name: str
-    status: str
+    id: str | None = None
+    name: str | None = None
+    status: str | None = None
     blocked_reason: str | None = None
-    progress: int
+    progress: int | None = None
     description: str | None = None
     migration_wave: str | None = None
     itso: str | None = None
@@ -113,11 +113,11 @@ class ProjectHomeItem(BaseModel):
     planning: dict[str, Any] | None = None
     survey_submitted_at: datetime | None = None
     stage_progress: dict[str, int] | None = None
-    team: list[dict[str, Any]] = []
+    team: list[dict[str, Any]] | None = None
     migration_constraints: dict[str, Any] | None = None
-    approvals: list[ApprovalOut] = []
-    cloud_resources: list[CloudResourceHomeOut] = []
-    risks: list[RiskHomeOut] = []
+    approvals: list[ApprovalOut] | None = None
+    cloud_resources: list[CloudResourceHomeOut] | None = None
+    risks: list[RiskHomeOut] | None = None
 
 
 class ProjectCreate(BaseModel):
