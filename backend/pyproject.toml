@@ -19,6 +19,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "python-jose[cryptography]>=3.3",
     "openpyxl>=3.1",
+    "aiosmtplib>=3.0",
 ]
 
 [project.optional-dependencies]

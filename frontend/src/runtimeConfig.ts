@@ -25,7 +25,6 @@ function env(key: string): string | undefined {
 // ─── Typed accessors ─────────────────────────────────────────────────────────
 
 export const getApiBaseUrl = () => env('VITE_API_BASE_URL') ?? ''
-export const getEmailServerUrl = () => env('VITE_EMAIL_SERVER_URL')
 export const getOAuthServiceUrl = () => env('VITE_OAUTH_SERVICE_URL')
 export const getOAuthClientId = () => env('VITE_OAUTH_CLIENT_ID') ?? 'migration-hub'
 export const getOAuthRedirectUri = () => env('VITE_OAUTH_REDIRECT_URI')

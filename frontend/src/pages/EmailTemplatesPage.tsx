@@ -42,35 +42,46 @@ export function EmailTemplatesPage() {
 
   return (
     <AppShell title="Email Templates">
-      <div className="p-6 space-y-6">
+      <div className="max-w-screen-xl mx-auto w-full space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-            <Mail className="size-4 text-primary" />
-          </div>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-lg font-semibold">Email Templates</h1>
-            <p className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 mb-1">
+              <Mail className="size-5 text-muted-foreground" />
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground">Email Templates</h1>
+            </div>
+            <p className="text-muted-foreground text-sm">
               Manage notification templates for platform events
             </p>
           </div>
         </div>
 
-        {/* Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-[180px] rounded-xl" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <CreateTemplateCard onClick={handleCreate} />
-            {templates.map(tpl => (
-              <TemplateCard key={tpl.id} template={tpl} onDelete={handleDelete} />
-            ))}
-          </div>
-        )}
+        {/* Templates */}
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-3">
+            All Templates
+          </h2>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-[180px] rounded-xl" />
+              ))}
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border p-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No templates yet. Create your first email template to get started.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <CreateTemplateCard onClick={handleCreate} />
+              {templates.map(tpl => (
+                <TemplateCard key={tpl.id} template={tpl} onDelete={handleDelete} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </AppShell>
   )

@@ -66,7 +66,6 @@ cp .env.example .env.local
 | Variable | Default | Description |
 |---|---|---|
 | `VITE_API_BASE_URL` | _(empty)_ | Base URL for the backend API. Leave empty to run on mock data. |
-| `VITE_EMAIL_SERVER_URL` | _(empty)_ | URL of the local email relay server. Set to `http://localhost:3001` when running the email server. |
 | `VITE_OAUTH_SERVICE_URL` | _(empty)_ | Custom OAuth service base URL. Leave empty for mock auth (default). See [SSO configuration](shared/sso-configuration.md). |
 | `VITE_OAUTH_CLIENT_ID` | _(empty)_ | OAuth client ID. Required when `VITE_OAUTH_SERVICE_URL` is set. |
 | `VITE_OAUTH_REDIRECT_URI` | _(empty)_ | Post-login callback URL. Defaults to `{origin}/callback` when not set. |
@@ -78,38 +77,24 @@ cp .env.example .env.local
 
 **Real API mode:** set `VITE_API_BASE_URL=http://localhost:8000` (or wherever the FastAPI server is running).
 
-## Email server (optional)
+## Email sending
 
-The email server enables real SMTP email sending from the "Send Test" button in email template previews. It runs independently of the frontend.
+Real SMTP email sending (e.g. test emails from the email template preview) is handled by the backend. Configure SMTP settings in the backend `.env` file.
 
-### Setup
-
-```bash
-cd email-server
-npm install
-cp .env.example .env   # fill in your SMTP credentials
-```
-
-`.env` settings:
+### Backend SMTP settings
 
 | Variable | Description |
 |---|---|
 | `SMTP_HOST` | SMTP server hostname (e.g. `smtp.gmail.com`) |
 | `SMTP_PORT` | SMTP port — `587` for TLS, `465` for SSL |
-| `SMTP_SECURE` | `true` for port 465 (SSL), `false` for 587 (TLS) |
+| `SMTP_SECURE` | `true` for TLS on connect, `false` for STARTTLS (default `false`) |
 | `SMTP_USER` | Sender email address |
-| `SMTP_PASS` | App password or SMTP password |
+| `SMTP_PASSWORD` | App password or SMTP password |
 | `SMTP_FROM` | Display name + address (e.g. `Migration Hub <you@example.com>`) |
 
-**Gmail quick start:** enable 2-factor auth, generate an App Password at `myaccount.google.com/apppasswords`, and use it as `SMTP_PASS`.
+**Gmail quick start:** enable 2-factor auth, generate an App Password at `myaccount.google.com/apppasswords`, and use it as `SMTP_PASSWORD`.
 
-### Run
-
-```bash
-npm run dev   # starts on http://localhost:3001
-```
-
-Then add `VITE_EMAIL_SERVER_URL=http://localhost:3001` to `frontend/.env.local`. The rest of the app remains in mock mode.
+No frontend configuration is required — the frontend always calls the backend API for email sends.
 
 ## Login
 
@@ -165,6 +150,13 @@ Copy `.env.example` to `.env` and adjust as needed:
 | `JIRA_BASE_URL` | _(empty)_ | Jira instance URL (optional for Jira job testing) |
 | `JIRA_API_TOKEN` | _(empty)_ | Jira API token |
 | `JIRA_USER_EMAIL` | _(empty)_ | Email for Jira API auth |
+| `SMTP_HOST` | _(empty)_ | SMTP server hostname for sending emails |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_SECURE` | `false` | Use TLS on connect (`true` for port 465) |
+| `SMTP_USER` | _(empty)_ | SMTP username / sender address |
+| `SMTP_PASSWORD` | _(empty)_ | SMTP password or app password |
+| `SMTP_FROM` | _(empty)_ | From address display name (defaults to `SMTP_USER`) |
+| `CONSOLE_EMAIL` | `false` | Print emails to backend log instead of sending via SMTP. Useful for dev when no SMTP server is available. |
 | `OAUTH_SERVICE_URL` | _(empty)_ | Custom OAuth service base URL. Leave empty for mock auth. See [SSO configuration](shared/sso-configuration.md). |
 | `OAUTH_CLIENT_ID` | `migration-hub` | Client ID registered with the OAuth service. |
 | `OAUTH_CLIENT_SECRET` | _(empty)_ | Client secret for backend-to-OAuth-service `/userinfo` calls. |

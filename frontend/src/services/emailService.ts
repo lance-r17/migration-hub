@@ -7,7 +7,6 @@ import {
   createBlankTemplate,
 } from '@/data/emailTemplates'
 import { USE_MOCK, apiClient } from './client'
-import { getEmailServerUrl } from '@/runtimeConfig'
 
 const delay = (ms = 300) => new Promise(res => setTimeout(res, ms))
 
@@ -65,29 +64,24 @@ export interface SendTestEmailPayload {
 }
 
 export async function sendTestEmail(payload: SendTestEmailPayload): Promise<void> {
-  const emailServerUrl = getEmailServerUrl()
-  if (emailServerUrl) {
-    const res = await fetch(`${emailServerUrl}/api/v1/email-templates/send-test`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipientEmail: payload.recipientEmail,
-        subject: payload.subject,
-        htmlContent: payload.htmlContent,
-      }),
-    })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error((body as { error?: string }).error ?? 'Failed to send test email')
-    }
-    return
-  }
-
   if (USE_MOCK) {
     await delay(800)
-    // Mock: no email server configured — silently succeed
     return
   }
-
   await apiClient.post<void>('/api/v1/email-templates/send-test', payload)
+}
+
+export interface SendEmailPayload {
+  templateId?: string
+  toEmails: string[]
+  subject?: string
+  htmlContent: string
+}
+
+export async function sendEmail(payload: SendEmailPayload): Promise<void> {
+  if (USE_MOCK) {
+    await delay(800)
+    return
+  }
+  await apiClient.post<void>('/api/v1/email-templates/send', payload)
 }

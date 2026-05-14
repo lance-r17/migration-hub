@@ -56,6 +56,15 @@ class Settings(BaseSettings):
     # Kubernetes deployment: API pods should not run background tasks
     disable_background_tasks: bool = False
 
+    # SMTP / email settings
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_secure: bool = False
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    console_email: bool = False  # Log emails to stdout instead of sending (dev mode)
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

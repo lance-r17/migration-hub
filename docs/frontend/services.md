@@ -162,15 +162,14 @@ import {
 | `createEmailTemplate` | `() => Promise<EmailTemplate>` | `POST /api/v1/email-templates` | Creates a blank template and adds it to the mock store |
 | `saveEmailTemplate` | `(template: EmailTemplate) => Promise<EmailTemplate>` | `PUT /api/v1/email-templates/:id` | Persists the full template |
 | `deleteEmailTemplate` | `(id: string) => Promise<void>` | `DELETE /api/v1/email-templates/:id` | Removes the template |
-| `sendTestEmail` | `(payload: SendTestEmailPayload) => Promise<void>` | See below | Sends a rendered HTML email to a recipient |
+| `sendTestEmail` | `(payload: SendTestEmailPayload) => Promise<void>` | `POST /api/v1/email-templates/send-test` | Sends a rendered HTML test email to a recipient |
+| `sendEmail` | `(payload: SendEmailPayload) => Promise<void>` | `POST /api/v1/email-templates/send` | Sends a rendered HTML email (for actual triggers) |
 
-### `sendTestEmail` routing
+### Email sending
 
-`sendTestEmail` has a three-path dispatch (checked in order):
+Both `sendTestEmail` and `sendEmail` always call the backend API. The backend handles SMTP delivery using `aiosmtplib` with settings from its environment variables (`SMTP_HOST`, `SMTP_PORT`, etc.). The caller pre-renders the template HTML using `generateEmailHtml()` and resolves the subject before calling either function.
 
-1. **Email server** — when `VITE_EMAIL_SERVER_URL` is set, POSTs `{ recipientEmail, subject, htmlContent }` to the local Node.js relay regardless of `USE_MOCK`. The caller pre-renders the template HTML using `generateEmailHtml()` and resolves the subject before calling this function.
-2. **Mock** — when no email server URL is configured, waits 800 ms and silently succeeds.
-3. **Real backend** — when `VITE_API_BASE_URL` is set and no email server URL is present, POSTs the full `SendTestEmailPayload` to `/api/v1/email-templates/send-test`.
+In mock mode (`USE_MOCK=true`), both functions wait 800 ms and silently succeed.
 
 `SendTestEmailPayload`:
 
@@ -179,7 +178,18 @@ interface SendTestEmailPayload {
   templateId: string
   recipientEmail: string
   sampleData?: Record<string, string | Record<string, unknown>[]>
-  htmlContent?: string   // pre-rendered email HTML (required for email server path)
-  subject?: string       // resolved subject line (variables substituted)
+  htmlContent: string   // pre-rendered email HTML
+  subject?: string      // resolved subject line (variables substituted)
+}
+```
+
+`SendEmailPayload`:
+
+```ts
+interface SendEmailPayload {
+  templateId?: string
+  toEmails: string[]
+  subject?: string
+  htmlContent: string   // pre-rendered email HTML
 }
 ```

@@ -61,9 +61,9 @@ When `USE_MOCK` is `true`, every service function reads/writes `src/data/store.t
 
 No code changes are needed to switch modes — set `VITE_API_BASE_URL` in `.env.local`.
 
-### Email server exception
+### Email sending
 
-`sendTestEmail` in `services/emailService.ts` bypasses the `USE_MOCK` flag entirely when `VITE_EMAIL_SERVER_URL` is set. It calls the local Node.js email relay (`email-server/`) at that URL directly, regardless of whether the rest of the app is in mock mode. This lets real email sending work during frontend-only development without a full backend.
+All email sends (test emails and future triggered notifications) go through the backend API. The backend uses `aiosmtplib` to deliver via the SMTP server configured in its environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, etc.). The frontend never talks directly to an SMTP server.
 
 ## Authentication
 
