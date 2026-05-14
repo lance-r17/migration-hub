@@ -7,6 +7,7 @@ import {
   MousePointerClick,
   Minus,
   Square,
+  PanelBottom,
 } from 'lucide-react'
 import type { ComponentType } from '@/types/email'
 import { COMPONENT_LABELS } from '@/types/email'
@@ -24,6 +25,7 @@ const COMPONENTS: ComponentDef[] = [
   { type: 'cta', icon: <MousePointerClick className="size-4" />, description: 'Call-to-action button' },
   { type: 'divider', icon: <Minus className="size-4" />, description: 'Horizontal rule' },
   { type: 'spacer', icon: <Square className="size-4" />, description: 'Vertical whitespace' },
+  { type: 'footer', icon: <PanelBottom className="size-4" />, description: 'Platform footer with divider and link' },
 ]
 
 function DraggableComponent({ comp }: { comp: ComponentDef }) {

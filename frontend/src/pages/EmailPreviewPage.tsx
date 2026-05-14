@@ -17,7 +17,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { BrowserContainer } from '@/components/email-builder/preview/BrowserContainer'
 import { generateEmailHtml } from '@/components/email-builder/preview/TemplateRenderer'
-import { getEmailTemplate, sendTestEmail } from '@/services/emailService'
+import { getEmailTemplate, sendTestEmail, getPlatformConfig } from '@/services/emailService'
 import type { EmailTemplate } from '@/types/email'
 import { TEMPLATE_VARIABLES } from '@/types/email'
 
@@ -133,6 +133,13 @@ export function EmailPreviewPage() {
   const [sendDialogOpen, setSendDialogOpen] = useState(false)
   const [sendEmail, setSendEmail] = useState('')
   const [sending, setSending] = useState(false)
+  const [platformConfig, setPlatformConfig] = useState<{ platformName: string; platformUrl: string } | null>(null)
+
+  useEffect(() => {
+    getPlatformConfig()
+      .then(setPlatformConfig)
+      .catch(() => toast.error('Failed to load platform config'))
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -142,12 +149,19 @@ export function EmailPreviewPage() {
       .finally(() => setLoading(false))
   }, [id])
 
-  const sampleData = SAMPLE_DATA_SETS[selectedSampleIdx]?.data ?? {}
+  const rawSampleData = SAMPLE_DATA_SETS[selectedSampleIdx]?.data ?? {}
+  const sampleData = useMemo(() => {
+    return {
+      ...rawSampleData,
+      'platform.name': platformConfig?.platformName ?? rawSampleData['platform.name'] ?? 'Migration Engine',
+      'platform.url': platformConfig?.platformUrl ?? rawSampleData['platform.url'] ?? 'http://localhost:5173',
+    }
+  }, [rawSampleData, platformConfig])
 
   const html = useMemo(() => {
     if (!template) return ''
-    return generateEmailHtml(template, sampleData)
-  }, [template, sampleData])
+    return generateEmailHtml(template, sampleData, platformConfig?.emailBannerUrl)
+  }, [template, sampleData, platformConfig])
 
   const handleSend = async () => {
     if (!template || !sendEmail) return

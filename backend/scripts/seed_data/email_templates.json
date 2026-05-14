@@ -169,69 +169,17 @@
         ]
       },
       {
-        "id": "twa-r7",
+        "id": "tpl-wave-assigned-footer",
         "layout": "full",
         "columns": [
           {
-            "id": "twa-r7-c1",
+            "id": "tpl-wave-assigned-footer-c1",
             "components": [
               {
-                "id": "twa-r7-c1-s1",
-                "type": "spacer",
+                "id": "tpl-wave-assigned-footer-c1-f1",
+                "type": "footer",
                 "style": {},
-                "content": {
-                  "spacerHeight": 24
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "twa-r8",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "twa-r8-c1",
-            "components": [
-              {
-                "id": "twa-r8-c1-d1",
-                "type": "divider",
-                "style": {
-                  "paddingTop": 12,
-                  "paddingBottom": 12
-                },
-                "content": {
-                  "color": "#e5e7eb",
-                  "thickness": 1
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "twa-r9",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "twa-r9-c1",
-            "components": [
-              {
-                "id": "twa-r9-c1-t1",
-                "type": "text",
-                "style": {
-                  "paddingTop": 8,
-                  "paddingBottom": 8,
-                  "paddingLeft": 0,
-                  "paddingRight": 0,
-                  "textAlign": "center"
-                },
-                "content": {
-                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
-                },
+                "content": {},
                 "config": {}
               }
             ]
@@ -411,69 +359,17 @@
         ]
       },
       {
-        "id": "tsr-r7",
+        "id": "tpl-signoff-required-footer",
         "layout": "full",
         "columns": [
           {
-            "id": "tsr-r7-c1",
+            "id": "tpl-signoff-required-footer-c1",
             "components": [
               {
-                "id": "tsr-r7-c1-s1",
-                "type": "spacer",
+                "id": "tpl-signoff-required-footer-c1-f1",
+                "type": "footer",
                 "style": {},
-                "content": {
-                  "spacerHeight": 24
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tsr-r8",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tsr-r8-c1",
-            "components": [
-              {
-                "id": "tsr-r8-c1-d1",
-                "type": "divider",
-                "style": {
-                  "paddingTop": 12,
-                  "paddingBottom": 12
-                },
-                "content": {
-                  "color": "#e5e7eb",
-                  "thickness": 1
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tsr-r9",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tsr-r9-c1",
-            "components": [
-              {
-                "id": "tsr-r9-c1-t1",
-                "type": "text",
-                "style": {
-                  "paddingTop": 8,
-                  "paddingBottom": 8,
-                  "paddingLeft": 0,
-                  "paddingRight": 0,
-                  "textAlign": "center"
-                },
-                "content": {
-                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
-                },
+                "content": {},
                 "config": {}
               }
             ]
@@ -657,69 +553,17 @@
         ]
       },
       {
-        "id": "tps-r7",
+        "id": "tpl-project-signedoff-footer",
         "layout": "full",
         "columns": [
           {
-            "id": "tps-r7-c1",
+            "id": "tpl-project-signedoff-footer-c1",
             "components": [
               {
-                "id": "tps-r7-c1-s1",
-                "type": "spacer",
+                "id": "tpl-project-signedoff-footer-c1-f1",
+                "type": "footer",
                 "style": {},
-                "content": {
-                  "spacerHeight": 24
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tps-r8",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tps-r8-c1",
-            "components": [
-              {
-                "id": "tps-r8-c1-d1",
-                "type": "divider",
-                "style": {
-                  "paddingTop": 12,
-                  "paddingBottom": 12
-                },
-                "content": {
-                  "color": "#e5e7eb",
-                  "thickness": 1
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tps-r9",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tps-r9-c1",
-            "components": [
-              {
-                "id": "tps-r9-c1-t1",
-                "type": "text",
-                "style": {
-                  "paddingTop": 8,
-                  "paddingBottom": 8,
-                  "paddingLeft": 0,
-                  "paddingRight": 0,
-                  "textAlign": "center"
-                },
-                "content": {
-                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
-                },
+                "content": {},
                 "config": {}
               }
             ]
@@ -1039,69 +883,17 @@
         ]
       },
       {
-        "id": "tra-r12",
+        "id": "tpl-risk-alert-footer",
         "layout": "full",
         "columns": [
           {
-            "id": "tra-r12-c1",
+            "id": "tpl-risk-alert-footer-c1",
             "components": [
               {
-                "id": "tra-r12-c1-s1",
-                "type": "spacer",
+                "id": "tpl-risk-alert-footer-c1-f1",
+                "type": "footer",
                 "style": {},
-                "content": {
-                  "spacerHeight": 24
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tra-r13",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tra-r13-c1",
-            "components": [
-              {
-                "id": "tra-r13-c1-d1",
-                "type": "divider",
-                "style": {
-                  "paddingTop": 12,
-                  "paddingBottom": 12
-                },
-                "content": {
-                  "color": "#e5e7eb",
-                  "thickness": 1
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tra-r14",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tra-r14-c1",
-            "components": [
-              {
-                "id": "tra-r14-c1-t1",
-                "type": "text",
-                "style": {
-                  "paddingTop": 8,
-                  "paddingBottom": 8,
-                  "paddingLeft": 0,
-                  "paddingRight": 0,
-                  "textAlign": "center"
-                },
-                "content": {
-                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
-                },
+                "content": {},
                 "config": {}
               }
             ]
@@ -1281,69 +1073,17 @@
         ]
       },
       {
-        "id": "tcr-r7",
+        "id": "tpl-cutover-reminder-footer",
         "layout": "full",
         "columns": [
           {
-            "id": "tcr-r7-c1",
+            "id": "tpl-cutover-reminder-footer-c1",
             "components": [
               {
-                "id": "tcr-r7-c1-s1",
-                "type": "spacer",
+                "id": "tpl-cutover-reminder-footer-c1-f1",
+                "type": "footer",
                 "style": {},
-                "content": {
-                  "spacerHeight": 24
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tcr-r8",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tcr-r8-c1",
-            "components": [
-              {
-                "id": "tcr-r8-c1-d1",
-                "type": "divider",
-                "style": {
-                  "paddingTop": 12,
-                  "paddingBottom": 12
-                },
-                "content": {
-                  "color": "#e5e7eb",
-                  "thickness": 1
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tcr-r9",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tcr-r9-c1",
-            "components": [
-              {
-                "id": "tcr-r9-c1-t1",
-                "type": "text",
-                "style": {
-                  "paddingTop": 8,
-                  "paddingBottom": 8,
-                  "paddingLeft": 0,
-                  "paddingRight": 0,
-                  "textAlign": "center"
-                },
-                "content": {
-                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
-                },
+                "content": {},
                 "config": {}
               }
             ]
@@ -1519,69 +1259,17 @@
         ]
       },
       {
-        "id": "tas-r7",
+        "id": "tpl-approval-submitted-footer",
         "layout": "full",
         "columns": [
           {
-            "id": "tas-r7-c1",
+            "id": "tpl-approval-submitted-footer-c1",
             "components": [
               {
-                "id": "tas-r7-c1-s1",
-                "type": "spacer",
+                "id": "tpl-approval-submitted-footer-c1-f1",
+                "type": "footer",
                 "style": {},
-                "content": {
-                  "spacerHeight": 24
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tas-r8",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tas-r8-c1",
-            "components": [
-              {
-                "id": "tas-r8-c1-d1",
-                "type": "divider",
-                "style": {
-                  "paddingTop": 12,
-                  "paddingBottom": 12
-                },
-                "content": {
-                  "color": "#e5e7eb",
-                  "thickness": 1
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tas-r9",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tas-r9-c1",
-            "components": [
-              {
-                "id": "tas-r9-c1-t1",
-                "type": "text",
-                "style": {
-                  "paddingTop": 8,
-                  "paddingBottom": 8,
-                  "paddingLeft": 0,
-                  "paddingRight": 0,
-                  "textAlign": "center"
-                },
-                "content": {
-                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
-                },
+                "content": {},
                 "config": {}
               }
             ]
@@ -1834,69 +1522,17 @@
         ]
       },
       {
-        "id": "tjc-r9",
+        "id": "tpl-jira-created-footer",
         "layout": "full",
         "columns": [
           {
-            "id": "tjc-r9-c1",
+            "id": "tpl-jira-created-footer-c1",
             "components": [
               {
-                "id": "tjc-r9-c1-s1",
-                "type": "spacer",
+                "id": "tpl-jira-created-footer-c1-f1",
+                "type": "footer",
                 "style": {},
-                "content": {
-                  "spacerHeight": 24
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tjc-r10",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tjc-r10-c1",
-            "components": [
-              {
-                "id": "tjc-r10-c1-d1",
-                "type": "divider",
-                "style": {
-                  "paddingTop": 12,
-                  "paddingBottom": 12
-                },
-                "content": {
-                  "color": "#e5e7eb",
-                  "thickness": 1
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tjc-r11",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tjc-r11-c1",
-            "components": [
-              {
-                "id": "tjc-r11-c1-t1",
-                "type": "text",
-                "style": {
-                  "paddingTop": 8,
-                  "paddingBottom": 8,
-                  "paddingLeft": 0,
-                  "paddingRight": 0,
-                  "textAlign": "center"
-                },
-                "content": {
-                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
-                },
+                "content": {},
                 "config": {}
               }
             ]
@@ -2076,69 +1712,17 @@
         ]
       },
       {
-        "id": "tss-r7",
+        "id": "tpl-survey-submitted-footer",
         "layout": "full",
         "columns": [
           {
-            "id": "tss-r7-c1",
+            "id": "tpl-survey-submitted-footer-c1",
             "components": [
               {
-                "id": "tss-r7-c1-s1",
-                "type": "spacer",
+                "id": "tpl-survey-submitted-footer-c1-f1",
+                "type": "footer",
                 "style": {},
-                "content": {
-                  "spacerHeight": 24
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tss-r8",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tss-r8-c1",
-            "components": [
-              {
-                "id": "tss-r8-c1-d1",
-                "type": "divider",
-                "style": {
-                  "paddingTop": 12,
-                  "paddingBottom": 12
-                },
-                "content": {
-                  "color": "#e5e7eb",
-                  "thickness": 1
-                },
-                "config": {}
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "tss-r9",
-        "layout": "full",
-        "columns": [
-          {
-            "id": "tss-r9-c1",
-            "components": [
-              {
-                "id": "tss-r9-c1-t1",
-                "type": "text",
-                "style": {
-                  "paddingTop": 8,
-                  "paddingBottom": 8,
-                  "paddingLeft": 0,
-                  "paddingRight": 0,
-                  "textAlign": "center"
-                },
-                "content": {
-                  "html": "<p><span style=\"font-size: 12px; color: #6b7280;\">This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280;\">{{platform.name}}</a>. Do not reply to this email.</span></p>"
-                },
+                "content": {},
                 "config": {}
               }
             ]

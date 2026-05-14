@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
+    # Platform branding for email footers
+    platform_name: str = "Migration Engine"
+    platform_url: str = ""
+    email_banner_url: str = "/email-banner.png"
+
     console_email: bool = False  # Log emails to stdout instead of sending (dev mode)
 
     @property

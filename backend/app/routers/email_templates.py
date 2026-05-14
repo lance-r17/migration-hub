@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.email_template import EmailTemplate
+from app.config import settings
 from app.services.email_service import send_email
 
 router = APIRouter(prefix="/email-templates", tags=["email-templates"])
@@ -28,6 +29,16 @@ def _template_out(t: EmailTemplate) -> dict[str, Any]:
         "isPredefined": t.is_predefined,
         "createdAt": t.created_at.isoformat() if t.created_at else None,
         "updatedAt": t.updated_at.isoformat() if t.updated_at else None,
+    }
+
+
+@router.get("/platform-config")
+async def get_platform_config():
+    """Return platform name, URL and email banner URL for template rendering."""
+    return {
+        "platformName": settings.platform_name,
+        "platformUrl": settings.platform_url,
+        "emailBannerUrl": settings.email_banner_url,
     }
 
 

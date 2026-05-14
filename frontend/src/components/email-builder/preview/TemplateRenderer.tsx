@@ -59,6 +59,17 @@ function renderComponent(comp: EmailComponent, template: EmailTemplate, data: Re
       return `<div style="${inlinePadding(comp)}"><hr style="border: none; border-top: ${comp.content.thickness ?? 1}px solid ${comp.content.color ?? '#e5e7eb'};" /></div>`
     case 'spacer':
       return `<div style="height: ${comp.content.spacerHeight ?? 16}px;"></div>`
+    case 'footer': {
+      const pfUrl = resolveVariables('{{platform.url}}', data)
+      const pfName = resolveVariables('{{platform.name}}', data)
+      return `<div style="${inlinePadding(comp)}">
+        <div style="height: 24px;"></div>
+        <div style="padding: 12px 0;"><hr style="border: none; border-top: 1px solid #e5e7eb;" /></div>
+        <p style="font-size: 12px; color: #6b7280; text-align: center; margin: 0; padding: 8px 0; font-family: ${fontFamily};">
+          This is an automated message from <a href="${pfUrl}" style="color: #6b7280; text-decoration: underline;">${pfName}</a>. Do not reply to this email.
+        </p>
+      </div>`
+    }
     default:
       return ''
   }
@@ -165,11 +176,12 @@ const GOOGLE_FONTS: Record<string, string> = {
   'Inter':      'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
 }
 
-export function generateEmailHtml(template: EmailTemplate, sampleData: RenderData): string {
+export function generateEmailHtml(template: EmailTemplate, sampleData: RenderData, bannerUrl?: string): string {
   const { backgroundColor, maxWidth, paddingX, paddingY, fontFamily, fontSize, textColor } = template.templateStyle
   const subject = resolveVariables(template.subject, sampleData as Record<string, string>)
   const rows = template.rows.map(r => renderRow(r, template, sampleData)).join('')
 
+  const resolvedBannerUrl = bannerUrl ?? '/email-banner.png'
   const googleFontLink = GOOGLE_FONTS[fontFamily]
     ? `  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -211,7 +223,7 @@ ${googleFontLink}
         >
           <tr>
             <td style="padding: 0; line-height: 0; font-size: 0;">
-              <img src="/email-banner.png" alt="Migration Engine" width="${maxWidth}" style="display: block; width: 100%; max-width: ${maxWidth}px; height: auto; border: 0;" />
+              <img src="${resolvedBannerUrl}" alt="Migration Engine" width="${maxWidth}" style="display: block; width: 100%; max-width: ${maxWidth}px; height: auto; border: 0;" />
             </td>
           </tr>
           <tr>

@@ -36,6 +36,16 @@ function dividerComponent(): EmailComponent {
   }
 }
 
+function footerComponent(): EmailComponent {
+  return {
+    id: uid(),
+    type: 'footer',
+    style: {},
+    content: {},
+    config: {},
+  }
+}
+
 function spacerComponent(height = 16): EmailComponent {
   return {
     id: uid(),
@@ -93,8 +103,7 @@ const predefined: EmailTemplate[] = [
       fullRow([spacerComponent(16)]),
       fullRow([ctaComponent('View Jira Epic →', '{{jiraBaseUrl}}/browse/{{jiraStoryKey}}')]),
       fullRow([spacerComponent(24)]),
-      fullRow([dividerComponent()]),
-      fullRow([textComponent('<p><span style="font-size: 12px; color: #6b7280;">This is an automated message from <a href="{{platform.url}}" style="color: #6b7280;">{{platform.name}}</a>. Do not reply to this email.</span></p>', 'center')]),
+      fullRow([footerComponent()]),
     ],
   },
 
@@ -121,8 +130,7 @@ const predefined: EmailTemplate[] = [
       fullRow([spacerComponent(16)]),
       fullRow([ctaComponent('Review & Approve →', '{{platform.url}}/projects/{{project.id}}')]),
       fullRow([spacerComponent(24)]),
-      fullRow([dividerComponent()]),
-      fullRow([textComponent('<p><span style="font-size: 12px; color: #6b7280;">This is an automated message from <a href="{{platform.url}}" style="color: #6b7280;">{{platform.name}}</a>. Do not reply to this email.</span></p>', 'center')]),
+      fullRow([footerComponent()]),
     ],
   },
 
@@ -150,8 +158,7 @@ const predefined: EmailTemplate[] = [
       fullRow([spacerComponent(16)]),
       fullRow([ctaComponent('View Jira Epic →', '{{jiraBaseUrl}}/browse/{{jiraStoryKey}}')]),
       fullRow([spacerComponent(24)]),
-      fullRow([dividerComponent()]),
-      fullRow([textComponent('<p><span style="font-size: 12px; color: #6b7280;">This is an automated message from <a href="{{platform.url}}" style="color: #6b7280;">{{platform.name}}</a>. Do not reply to this email.</span></p>', 'center')]),
+      fullRow([footerComponent()]),
     ],
   },
 
@@ -186,8 +193,7 @@ const predefined: EmailTemplate[] = [
       fullRow([spacerComponent(8)]),
       fullRow([ctaComponent('View Project Risks →', '{{platform.url}}/projects/{{project.id}}')]),
       fullRow([spacerComponent(24)]),
-      fullRow([dividerComponent()]),
-      fullRow([textComponent('<p><span style="font-size: 12px; color: #6b7280;">This is an automated message from <a href="{{platform.url}}" style="color: #6b7280;">{{platform.name}}</a>. Do not reply to this email.</span></p>', 'center')]),
+      fullRow([footerComponent()]),
     ],
   },
 
@@ -214,8 +220,7 @@ const predefined: EmailTemplate[] = [
       fullRow([spacerComponent(16)]),
       fullRow([ctaComponent('View Jira Epic →', '{{jiraBaseUrl}}/browse/{{jiraStoryKey}}')]),
       fullRow([spacerComponent(24)]),
-      fullRow([dividerComponent()]),
-      fullRow([textComponent('<p><span style="font-size: 12px; color: #6b7280;">This is an automated message from <a href="{{platform.url}}" style="color: #6b7280;">{{platform.name}}</a>. Do not reply to this email.</span></p>', 'center')]),
+      fullRow([footerComponent()]),
     ],
   },
 
@@ -239,8 +244,7 @@ const predefined: EmailTemplate[] = [
       fullRow([spacerComponent(16)]),
       fullRow([ctaComponent('View Sign-Off Status →', '{{platform.url}}/projects/{{project.id}}')]),
       fullRow([spacerComponent(24)]),
-      fullRow([dividerComponent()]),
-      fullRow([textComponent('<p><span style="font-size: 12px; color: #6b7280;">This is an automated message from <a href="{{platform.url}}" style="color: #6b7280;">{{platform.name}}</a>. Do not reply to this email.</span></p>', 'center')]),
+      fullRow([footerComponent()]),
     ],
   },
 
@@ -281,8 +285,7 @@ const predefined: EmailTemplate[] = [
       fullRow([spacerComponent(16)]),
       fullRow([ctaComponent('Open in Jira →', '{{jiraBaseUrl}}/browse/{{jiraStoryKey}}')]),
       fullRow([spacerComponent(24)]),
-      fullRow([dividerComponent()]),
-      fullRow([textComponent('<p><span style="font-size: 12px; color: #6b7280;">This is an automated message from <a href="{{platform.url}}" style="color: #6b7280;">{{platform.name}}</a>. Do not reply to this email.</span></p>', 'center')]),
+      fullRow([footerComponent()]),
     ],
   },
 
@@ -308,9 +311,7 @@ const predefined: EmailTemplate[] = [
       fullRow([textComponent('<p>Hi {{user.name}},</p><p>The migration readiness survey for <strong>{{project.name}}</strong> has been submitted. The platform team can now review the submitted information and proceed with migration planning.</p>')]),
       fullRow([spacerComponent(16)]),
       fullRow([ctaComponent('View Project Details →', '{{platform.url}}/projects/{{project.id}}')]),
-      fullRow([spacerComponent(24)]),
-      fullRow([dividerComponent()]),
-      fullRow([textComponent('<p><span style="font-size: 12px; color: #6b7280;">This is an automated message from <a href="{{platform.url}}" style="color: #6b7280;">{{platform.name}}</a>. Do not reply to this email.</span></p>', 'center')]),
+      fullRow([footerComponent()]),
     ],
   },
 ]

@@ -85,3 +85,17 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
   }
   await apiClient.post<void>('/api/v1/email-templates/send', payload)
 }
+
+export interface PlatformConfig {
+  platformName: string
+  platformUrl: string
+  emailBannerUrl: string
+}
+
+export async function getPlatformConfig(): Promise<PlatformConfig> {
+  if (USE_MOCK) {
+    await delay(100)
+    return { platformName: 'Migration Engine', platformUrl: 'http://localhost:5173', emailBannerUrl: '/email-banner.png' }
+  }
+  return apiClient.get<PlatformConfig>('/api/v1/email-templates/platform-config')
+}

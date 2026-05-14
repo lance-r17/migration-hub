@@ -189,6 +189,13 @@ export function ContentTab({ selectedComponent, onComponentContentChange, select
         </p>
       )}
 
+      {/* Footer */}
+      {comp.type === 'footer' && (
+        <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+          Footer content is configured globally via platform settings (platform name and URL)
+        </p>
+      )}
+
       {/* CTA button text */}
       {comp.type === 'cta' && (
         <div className="space-y-1">

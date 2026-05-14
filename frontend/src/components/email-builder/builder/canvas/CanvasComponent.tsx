@@ -114,6 +114,24 @@ function renderComponentPreview(comp: EmailComponent, templateStyle: EmailTempla
     case 'spacer':
       return <div style={{ height: comp.content.spacerHeight ?? 16 }} />
 
+    case 'footer': {
+      const pfUrl = '{{platform.url}}'
+      const pfName = '{{platform.name}}'
+      return (
+        <div style={baseStyle}>
+          <div style={{ height: 24 }} />
+          <hr style={{ border: 'none', borderTop: `1px solid #e5e7eb`, margin: '12px 0' }} />
+          <p style={{ fontSize: 12, color: '#6b7280', textAlign: 'center', margin: 0, padding: '8px 0' }}>
+            This is an automated message from{' '}
+            <a href={pfUrl} style={{ color: '#6b7280', textDecoration: 'underline' }}>
+              {pfName}
+            </a>
+            . Do not reply to this email.
+          </p>
+        </div>
+      )
+    }
+
     default:
       return null
   }

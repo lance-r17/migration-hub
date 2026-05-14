@@ -7,6 +7,7 @@ export type ComponentType =
   | 'cta'
   | 'divider'
   | 'spacer'
+  | 'footer'
 
 export type EmailEventType =
   | 'wave_assigned'
@@ -219,4 +220,5 @@ export const COMPONENT_LABELS: Record<ComponentType, string> = {
   cta: 'Call to Action',
   divider: 'Divider',
   spacer: 'Spacer',
+  footer: 'Footer',
 }

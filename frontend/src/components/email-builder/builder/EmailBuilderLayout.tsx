@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Eye, Save, Loader2 } from 'lucide-react'
 import {
@@ -27,6 +27,7 @@ import type {
   TableConfig,
   RowStyle,
 } from '@/types/email'
+import { getPlatformConfig } from '@/services/emailService'
 
 // ─── Helpers (shared with Canvas for creating new rows/components) ────────────
 
@@ -51,13 +52,14 @@ function makeComponent(type: ComponentType): EmailComponent {
     cta: { buttonText: 'Click here' },
     divider: { color: '#e5e7eb', thickness: 1 },
     spacer: { spacerHeight: 24 },
+    footer: {},
   }
   return {
     id: uid(),
     type,
     style: {
-      paddingTop: type === 'divider' || type === 'spacer' ? 0 : 8,
-      paddingBottom: type === 'divider' || type === 'spacer' ? 0 : 8,
+      paddingTop: type === 'divider' || type === 'spacer' || type === 'footer' ? 0 : 8,
+      paddingBottom: type === 'divider' || type === 'spacer' || type === 'footer' ? 0 : 8,
       paddingLeft: 0,
       paddingRight: 0,
       textAlign: 'left',
@@ -84,7 +86,14 @@ export function EmailBuilderLayout({ template, saving, onTemplateChange, onSave 
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [editingComponentId, setEditingComponentId] = useState<string | null>(null)
+  const [emailBannerUrl, setEmailBannerUrl] = useState('/email-banner.png')
   const editorRef = useRef<{ insertVariable: (v: string) => void } | null>(null)
+
+  useEffect(() => {
+    getPlatformConfig()
+      .then(cfg => { if (cfg.emailBannerUrl) setEmailBannerUrl(cfg.emailBannerUrl) })
+      .catch(() => {})
+  }, [])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -380,6 +389,7 @@ export function EmailBuilderLayout({ template, saving, onTemplateChange, onSave 
           <Canvas
             rows={rows}
             templateStyle={template.templateStyle}
+            emailBannerUrl={emailBannerUrl}
             selectedComponentId={selectedId}
             selectedRowId={selectedRowId}
             editingComponentId={editingComponentId}

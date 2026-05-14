@@ -14,6 +14,7 @@ const uid = () => `cv-${Date.now()}-${_seq++}`
 interface Props {
   rows: EmailRow[]
   templateStyle: EmailTemplate['templateStyle']
+  emailBannerUrl: string
   selectedComponentId: string | null
   selectedRowId: string | null
   editingComponentId: string | null
@@ -27,7 +28,7 @@ interface Props {
 
 // ─── Canvas ───────────────────────────────────────────────────────────────────
 
-export function Canvas({ rows, templateStyle, selectedComponentId, selectedRowId, editingComponentId, onSelectComponent, onSelectRow, onRowsChange, onStartEdit, onFinishEdit, editorRef }: Props) {
+export function Canvas({ rows, templateStyle, emailBannerUrl, selectedComponentId, selectedRowId, editingComponentId, onSelectComponent, onSelectRow, onRowsChange, onStartEdit, onFinishEdit, editorRef }: Props) {
   // Canvas-level droppable — catches layout drops on the empty canvas
   const { setNodeRef: setCanvasRef, isOver: isCanvasOver } = useDroppable({
     id: 'canvas-drop-zone',
@@ -106,7 +107,7 @@ export function Canvas({ rows, templateStyle, selectedComponentId, selectedRowId
       >
         {/* Fixed branding banner — not editable, not part of rows */}
         <img
-          src="/email-banner.png"
+          src={emailBannerUrl}
           alt="Migration Engine"
           style={{ display: 'block', width: '100%', height: 'auto' }}
         />
