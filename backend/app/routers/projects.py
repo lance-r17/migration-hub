@@ -220,6 +220,12 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
             CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])
         ]
 
+    if "resource_sets" in fields:
+        data["resource_sets"] = sorted({
+            r.resource_set for r in (p.cloud_resources or [])
+            if r.resource_set
+        })
+
     if "dependencies" in fields:
         data["dependencies"] = p.dependencies
 

@@ -63,6 +63,7 @@ class ProjectListItem(BaseModel):
     target_architecture: dict[str, Any] | None = None
     approvals: list[ApprovalOut] | None = None
     cloud_resources: list[CloudResourceOut] | None = None
+    resource_sets: list[str] | None = None
 
 
 class ProjectDetail(BaseModel):

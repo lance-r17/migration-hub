@@ -100,6 +100,7 @@ interface ProjectListItemApi {
   target_architecture: TargetArchitecture | null
   approvals: ApprovalApi[]
   cloud_resources: CloudResourceApi[]
+  resource_sets: string[] | null
   risks: RiskApi[]
 }
 
@@ -203,6 +204,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     currentInfrastructure: raw.cloud_resources?.length
       ? { resources: raw.cloud_resources.map(mapResource) }
       : undefined,
+    resourceSets: raw.resource_sets ?? undefined,
   }
 }
 

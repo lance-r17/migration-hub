@@ -231,7 +231,7 @@ interface SummaryRow {
 
 export function FinancePage() {
   const { user } = useCurrentUser()
-  const { projects } = useProjects({ fields: ['basic', 'resources'] })
+  const { projects } = useProjects({ fields: ['basic', 'resource_sets'] })
 
   const [availableMonths, setAvailableMonths] = useState<string[]>([])
   const [selectedMonth, setSelectedMonth] = useState<string>('')
@@ -406,8 +406,7 @@ export function FinancePage() {
     const groups: ProjectGroup[] = []
 
     for (const project of projects) {
-      const resources = project.currentInfrastructure?.resources ?? []
-      const resourceSets = Array.from(new Set(resources.map(r => r.resourceSet).filter(Boolean))) as string[]
+      const resourceSets = project.resourceSets ?? []
       if (resourceSets.length === 0) continue
 
       const rows: ComparisonRow[] = resourceSets

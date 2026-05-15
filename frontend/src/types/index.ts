@@ -286,6 +286,8 @@ export interface Project {
   jiraSubtaskConfig?: JiraSubtaskConfig
   jiraStoryKey?: string        // e.g. "MIG-42", populated by async Jira job
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
+  // Lean fields
+  resourceSets?: string[]      // deduplicated resource_set values from cloud_resources
 }
 
 // ─── Dashboard / Home ─────────────────────────────────────────────────────────

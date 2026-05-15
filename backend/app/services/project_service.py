@@ -24,6 +24,7 @@ _FIELD_REL_REQUIREMENTS: dict[str, set[str]] = {
     "governance": {"project_users"},
     "resources": {"cloud_resources"},
     "resources_full": {"cloud_resources"},
+    "resource_sets": {"cloud_resources"},
     "risks": {"risks"},
     "approvals": {"approvals"},
 }
