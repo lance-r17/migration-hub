@@ -195,6 +195,14 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
     if "governance" in fields:
         data["governance_roles"] = _governance_roles_from_project_users(p)
 
+    if "itso" in fields:
+        data["itso"] = _itso_name(p)
+        data["itso_email"] = _itso_email(p)
+
+    if "itso_delegate" in fields:
+        data["itso_delegate"] = _itso_delegate_name(p)
+        data["itso_delegate_email"] = _itso_delegate_email(p)
+
     if "availability" in fields:
         data["availability"] = p.availability
 

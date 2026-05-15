@@ -309,11 +309,13 @@ export async function exportProjectDetailsReport() {
   try {
     const projects = await getProjects([
       'basic',
+      'itso',
+      'itso_delegate',
       'governance',
       'availability',
-      'dataPersistence',
+      'data_persistence',
       'nfrs',
-      'targetArchitecture',
+      'target_architecture',
     ])
 
     // Determine max change-freeze periods for dynamic columns
