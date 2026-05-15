@@ -4,7 +4,7 @@
 
 | Component | Current Behavior | Resilience Gap |
 |-----------|------------------|----------------|
-| **Backend API** | FastAPI with `lifespan` background tasks (job monitor, attachment cleanup) | Tasks are in-memory per pod. Multiple replicas = **double-processing** risk. Pod restart = **lost jobs**. |
+| **Backend API** | FastAPI with `lifespan` background tasks (Jira job monitor, attachment cleanup, email job monitor, cutover reminder monitor) | Tasks are in-memory per pod. Multiple replicas = **double-processing** risk. Pod restart = **lost jobs**. |
 | **File Uploads** | Saved to `./uploads/projects/` on local disk | Multi-replica deployments can't share files. Upload to pod A, download from pod B = **404**. |
 | **Health Checks** | `GET /health` returns `{"status":"ok"}` | No DB connectivity probe. K8s may route traffic to a pod that **cannot serve requests**. |
 | **Frontend** | Nginx static SPA with Go entrypoint for runtime env injection | Stateless and horizontally scalable. No gaps. |
@@ -65,7 +65,7 @@
 | Backend API | 2 | 5 | CPU 70% |
 | Backend Worker | 1 | 1 | — (fixed) |
 
-> The worker is intentionally fixed at 1 replica until a distributed task queue (Redis + Celery/ARQ) is introduced.
+> The worker is intentionally fixed at 1 replica until a distributed task queue (Redis + Celery/ARQ) is introduced. All background monitors — Jira jobs, attachment cleanup, email jobs, and cutover reminders — run exclusively on the worker pod (`DISABLE_BACKGROUND_TASKS=false`). API pods set `DISABLE_BACKGROUND_TASKS=true` and remain stateless.
 
 ## 4. Pod Disruption Budgets (PDB)
 

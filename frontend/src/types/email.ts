@@ -126,6 +126,7 @@ export interface EmailTemplate {
   recipientList: RecipientConfig[]
   templateStyle: TemplateStyle
   rows: EmailRow[]
+  htmlSnapshot?: string
   isPredefined: boolean
   createdAt: string
   updatedAt: string

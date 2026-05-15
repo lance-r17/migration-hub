@@ -919,6 +919,7 @@
         "role": "business_owner"
       }
     ],
+    "html_snapshot": "<div style=\"font-family:Montserrat,sans-serif;font-size:14px;color:#4A3F35;background-color:#FFFCF5;max-width:600px;padding:24px 32px;\"><div style=\"height:24px;\"></div><h2><span style=\"font-size:20px;color:#A67C52;\">Cutover Approaching</span></h2><div style=\"height:8px;\"></div><p>Hi {{user.name}},</p><p>This is a reminder that the cutover date for <strong>{{wave.name}}</strong> is in <strong>{{daysUntilCutover}} days</strong> (<strong>{{wave.cutoverDate}}</strong>).</p><p>Please ensure all migration sign-offs and Jira tasks for your application are completed before the cutover window.</p><div style=\"height:16px;\"></div><div style=\"text-align:center;padding:16px;background-color:#A67C52;border-radius:6px;\"><a href=\"{{jiraBaseUrl}}/browse/{{jiraStoryKey}}\" target=\"_blank\" style=\"color:#ffffff;text-decoration:none;\">View Jira Epic →</a></div><div style=\"height:24px;\"></div><p style=\"font-size:12px;color:#9ca3af;text-align:center;\">{{platformName}} · <a href=\"{{platformUrl}}\" style=\"color:#9ca3af;\">{{platformUrl}}</a></p></div>",
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
       "fontSize": 14,

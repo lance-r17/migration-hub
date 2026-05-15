@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmailBuilderLayout } from '@/components/email-builder/builder/EmailBuilderLayout'
+import { generateEmailHtml } from '@/components/email-builder/preview/TemplateRenderer'
 import { getEmailTemplate, saveEmailTemplate } from '@/services/emailService'
 import type { EmailTemplate } from '@/types/email'
 
@@ -24,7 +25,9 @@ export function EmailBuilderPage() {
     if (!template) return
     setSaving(true)
     try {
-      const saved = await saveEmailTemplate(template)
+      const snapshot = generateEmailHtml(template, {})
+      const toSave: EmailTemplate = { ...template, htmlSnapshot: snapshot }
+      const saved = await saveEmailTemplate(toSave)
       setTemplate(saved)
       toast.success('Template saved')
     } catch {

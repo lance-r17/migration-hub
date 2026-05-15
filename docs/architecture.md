@@ -29,7 +29,9 @@ Migration Hub is a monorepo with a React SPA frontend and a Python/FastAPI backe
                          ┌───────────▼───────────┐
                          │  Background jobs       │
                          │  • Jira issue creation │
-                         │  • Resource scanning   │
+                         │  • Attachment cleanup  │
+                         │  • Email delivery      │
+                         │  • Cutover reminders   │
                          └───────────────────────┘
 ```
 
@@ -122,5 +124,16 @@ The FastAPI backend lives in `backend/` and exposes all `/api/v1/...` endpoints 
 - Audit entries are written as a transaction side-effect on every project write — never by the frontend
 - Jira job processing uses FastAPI `BackgroundTasks`; stale `processing` jobs are reset to `failed` on startup
 - `GET /api/v1/users/me` resolves the user from the active auth mode: backend JWT (custom OAuth), IdP JWT (OIDC), or `CURRENT_USER_ID` fallback (mock auth)
+
+## Background monitors
+
+The backend runs four periodic background monitors (only in the worker pod when `DISABLE_BACKGROUND_TASKS=false`):
+
+1. **Jira Job Monitor** (30s) — dispatches pending `JiraJob` records.
+2. **Attachment Cleanup Monitor** (1h) — removes orphaned `ProjectAttachment` files.
+3. **Email Job Monitor** (30s) — dispatches pending `EmailJob` records.
+4. **Cutover Reminder Monitor** (5m) — scans waves for upcoming cutover dates and enqueues reminder emails once per day at the configured UTC time.
+
+All monitors are started in `app/main.py` lifespan and respect the `DISABLE_BACKGROUND_TASKS` flag so API pods stay stateless.
 
 See [backend/overview.md](backend/overview.md), [backend/api.md](backend/api.md), and [backend/database.md](backend/database.md) for full details.

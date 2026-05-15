@@ -246,6 +246,7 @@ def seed_email_templates(session: Session) -> None:
                 recipient_list=t.get("recipient_list", []),
                 template_style=t.get("template_style", {}),
                 rows=t.get("rows", []),
+                html_snapshot=t.get("html_snapshot"),
                 is_predefined=t.get("is_predefined", False),
             ))
 

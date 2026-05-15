@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MonitorDot, Key, Paperclip, UserCog, Users } from 'lucide-react'
+import { MonitorDot, Key, Paperclip, UserCog, Users, Mail, Bell } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const ADMIN_SECTIONS = [
@@ -14,6 +14,18 @@ const ADMIN_SECTIONS = [
     description: 'View and manage background Jira integration jobs across all projects.',
     icon: <MonitorDot size={20} className="text-primary" />,
     href: '/admin/jobs',
+  },
+  {
+    title: 'Email Jobs',
+    description: 'View background email delivery status and retry failed sends.',
+    icon: <Mail size={20} className="text-primary" />,
+    href: '/admin/email-jobs',
+  },
+  {
+    title: 'Notifications',
+    description: 'Configure event-driven email triggers and cron schedules.',
+    icon: <Bell size={20} className="text-primary" />,
+    href: '/admin/notifications',
   },
   {
     title: 'Service Accounts',

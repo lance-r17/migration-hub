@@ -33,6 +33,8 @@ async def lifespan(app: FastAPI):
 
     monitor_task: asyncio.Task | None = None
     cleanup_task: asyncio.Task | None = None
+    email_job_task: asyncio.Task | None = None
+    cutover_task: asyncio.Task | None = None
 
     if settings.disable_background_tasks:
         logger.info("lifespan startup: DISABLE_BACKGROUND_TASKS=true — skipping background monitors")
@@ -62,6 +64,16 @@ async def lifespan(app: FastAPI):
         from app.services import attachment_service
         cleanup_task = asyncio.create_task(attachment_service.start_cleanup_monitor())
 
+        # Start email job monitor (interval=30s)
+        logger.info("lifespan startup: starting email job monitor (interval=30s)")
+        from app.services import email_service
+        email_job_task = asyncio.create_task(email_service.start_email_job_monitor())
+
+        # Start cutover reminder monitor (interval=5m)
+        logger.info("lifespan startup: starting cutover reminder monitor (interval=5m)")
+        from app.services import cutover_reminder_service
+        cutover_task = asyncio.create_task(cutover_reminder_service.start_cutover_reminder_monitor())
+
     yield
 
     # Shutdown: cancel monitors gracefully (only if they were started)
@@ -81,6 +93,22 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             logger.info("lifespan shutdown: attachment cleanup monitor stopped")
 
+    if email_job_task is not None:
+        logger.info("lifespan shutdown: cancelling email job monitor")
+        email_job_task.cancel()
+        try:
+            await email_job_task
+        except asyncio.CancelledError:
+            logger.info("lifespan shutdown: email job monitor stopped")
+
+    if cutover_task is not None:
+        logger.info("lifespan shutdown: cancelling cutover reminder monitor")
+        cutover_task.cancel()
+        try:
+            await cutover_task
+        except asyncio.CancelledError:
+            logger.info("lifespan shutdown: cutover reminder monitor stopped")
+
 
 _OPENAPI_TAGS = [
     {"name": "projects",   "description": "Project lifecycle management"},
@@ -94,6 +122,7 @@ _OPENAPI_TAGS = [
     {"name": "jira",       "description": "Jira integration jobs"},
     {"name": "embargos",   "description": "Change freeze embargo windows"},
     {"name": "dashboard",  "description": "Summary statistics"},
+    {"name": "admin-email", "description": "Email event config and job log (admin only)"},
 ]
 
 
@@ -120,6 +149,7 @@ def create_app() -> FastAPI:
 
     from app.routers import (
         admin,
+        admin_email,
         audit,
         billing,
         dashboard,
@@ -151,6 +181,7 @@ def create_app() -> FastAPI:
     app.include_router(product_categories.router, prefix=prefix)
     app.include_router(email_templates.router, prefix=prefix)
     app.include_router(admin.router, prefix=prefix)
+    app.include_router(admin_email.router, prefix=prefix)
 
     @app.get("/health")
     async def health():

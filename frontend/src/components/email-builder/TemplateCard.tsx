@@ -1,6 +1,5 @@
 import { MoreHorizontal, Pencil, Eye, Trash2, Lock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -47,6 +46,11 @@ export function TemplateCard({ template, onDelete }: Props) {
               <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 <Lock className="size-2.5" />
                 Pre-defined
+              </span>
+            )}
+            {template.eventType !== 'custom' && (
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${template.htmlSnapshot ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}`}>
+                {template.htmlSnapshot ? 'Snapshot ready' : 'No snapshot'}
               </span>
             )}
           </div>

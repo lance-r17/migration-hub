@@ -26,6 +26,7 @@ def _template_out(t: EmailTemplate) -> dict[str, Any]:
         "recipientList": t.recipient_list,
         "templateStyle": t.template_style,
         "rows": t.rows,
+        "htmlSnapshot": t.html_snapshot,
         "isPredefined": t.is_predefined,
         "createdAt": t.created_at.isoformat() if t.created_at else None,
         "updatedAt": t.updated_at.isoformat() if t.updated_at else None,
@@ -59,6 +60,7 @@ async def create_email_template(body: dict[str, Any], db: AsyncSession = Depends
         recipient_list=body.get("recipientList", []),
         template_style=body.get("templateStyle", {}),
         rows=body.get("rows", []),
+        html_snapshot=body.get("htmlSnapshot"),
         is_predefined=body.get("isPredefined", False),
     )
     db.add(template)
@@ -155,6 +157,7 @@ async def update_email_template(
         ("name", "name"), ("description", "description"), ("eventType", "event_type"),
         ("subject", "subject"), ("recipientList", "recipient_list"),
         ("templateStyle", "template_style"), ("rows", "rows"),
+        ("htmlSnapshot", "html_snapshot"),
     ]:
         if key in body:
             setattr(template, col, body[key])

@@ -22,6 +22,8 @@ import { AdminJiraJobsPage } from './pages/AdminJiraJobsPage'
 import { ServiceAccountsPage } from './pages/ServiceAccountsPage'
 import { AdminAttachmentsPage } from './pages/AdminAttachmentsPage'
 import { UserAccountsPage } from './pages/UserAccountsPage'
+import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
+import { EmailJobsPage } from './pages/EmailJobsPage'
 import { AdminPage } from './pages/AdminPage'
 import { AdminHome } from './pages/AdminHome'
 import { ProjectsPage } from './pages/ProjectsPage'
@@ -61,6 +63,8 @@ function App() {
           <Route index element={<AdminHome />} />
           <Route path="users" element={<UserAccountsPage />} />
           <Route path="jobs" element={<AdminJiraJobsPage />} />
+          <Route path="email-jobs" element={<EmailJobsPage />} />
+          <Route path="notifications" element={<NotificationSettingsPage />} />
           <Route path="service-accounts" element={<ServiceAccountsPage />} />
           <Route path="attachments" element={<AdminAttachmentsPage />} />
         </Route>

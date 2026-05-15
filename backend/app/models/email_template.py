@@ -19,6 +19,7 @@ class EmailTemplate(Base):
     recipient_list: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
     template_style: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     rows: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    html_snapshot: Mapped[str | None] = mapped_column(String, nullable=True)
     is_predefined: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
