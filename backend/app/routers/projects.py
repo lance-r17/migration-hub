@@ -55,10 +55,24 @@ def _itso_name(p) -> str | None:
     return None
 
 
+def _itso_email(p) -> str | None:
+    for pu in (p.project_users or []):
+        if pu.user and pu.role and "itso" in {r.strip() for r in pu.role.split(",") if r.strip()}:
+            return pu.user.email
+    return None
+
+
 def _itso_delegate_name(p) -> str | None:
     for pu in (p.project_users or []):
         if pu.user and pu.role and "itso_delegate" in {r.strip() for r in pu.role.split(",") if r.strip()}:
             return pu.user.name
+    return None
+
+
+def _itso_delegate_email(p) -> str | None:
+    for pu in (p.project_users or []):
+        if pu.user and pu.role and "itso_delegate" in {r.strip() for r in pu.role.split(",") if r.strip()}:
+            return pu.user.email
     return None
 
 
@@ -114,7 +128,9 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
             description=p.description,
             migration_wave=p.migration_wave,
             itso=_itso_name(p),
+            itso_email=_itso_email(p),
             itso_delegate=_itso_delegate_name(p),
+            itso_delegate_email=_itso_delegate_email(p),
             jira_base_url=settings.jira_base_url,
             updated_at=p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
             wave_id=p.wave_id,
@@ -127,6 +143,12 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
             migration_constraints=p.migration_constraints,
             migration_effort_estimation=p.migration_effort_estimation,
             application_overview=p.application_overview,
+            dependencies=p.dependencies,
+            governance_roles=_governance_roles_from_project_users(p),
+            availability=p.availability,
+            data_persistence=p.data_persistence,
+            nfrs=p.nfrs,
+            target_architecture=p.target_architecture,
             approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
             cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
         )
@@ -173,10 +195,25 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
     if "governance" in fields:
         data["governance_roles"] = _governance_roles_from_project_users(p)
 
+    if "availability" in fields:
+        data["availability"] = p.availability
+
+    if "data_persistence" in fields:
+        data["data_persistence"] = p.data_persistence
+
+    if "nfrs" in fields:
+        data["nfrs"] = p.nfrs
+
+    if "target_architecture" in fields:
+        data["target_architecture"] = p.target_architecture
+
     if "resources" in fields or "resources_full" in fields:
         data["cloud_resources"] = [
             CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])
         ]
+
+    if "dependencies" in fields:
+        data["dependencies"] = p.dependencies
 
     if "approvals" in fields:
         data["approvals"] = [

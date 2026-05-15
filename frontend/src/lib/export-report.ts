@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { getProjects } from '@/services/projects'
+import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
 import type { Project } from '@/types'
@@ -93,6 +94,433 @@ export async function exportEstimatedEffortReport() {
     ]
 
     XLSX.writeFile(workbook, `estimated-effort-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Report downloaded', { id: toastId })
+  } catch {
+    toast.error('Failed to generate report', { id: toastId })
+  }
+}
+
+export async function exportProjectResourcesReport() {
+  const toastId = toast.loading('Generating project resources report...')
+
+  try {
+    const [projects, categoryEntries] = await Promise.all([
+      getProjects(['basic', 'resources']),
+      fetchProductCategoryMap(),
+    ])
+
+    const categoryMap = new Map(categoryEntries.map(e => [e.product, e.category]))
+
+    // Collect all unique spec keys across every resource
+    const specKeys = new Set<string>()
+    for (const project of projects) {
+      for (const resource of project.currentInfrastructure?.resources ?? []) {
+        for (const key of Object.keys(resource.specs ?? {})) {
+          specKeys.add(key)
+        }
+      }
+    }
+    const sortedSpecKeys = Array.from(specKeys).sort()
+
+    const baseHeaders = [
+      'Project ID',
+      'Project Name',
+      'Resource ID',
+      'Resource Name',
+      'Product',
+      'Product Category',
+      'Resource Set',
+      'Sub Application',
+      'Target Resource ID',
+      'Sync Status',
+      'Need Migration',
+      'Migration Completed',
+      'Jira Subtask Key',
+    ]
+    const specHeaders = sortedSpecKeys.map(k => `Spec: ${k}`)
+    const headers = [...baseHeaders, ...specHeaders]
+
+    const rows: Record<string, string | number>[] = []
+
+    for (const project of projects) {
+      for (const resource of project.currentInfrastructure?.resources ?? []) {
+        const row: Record<string, string | number> = {
+          'Project ID': project.id,
+          'Project Name': project.name,
+          'Resource ID': resource.resourceId,
+          'Resource Name': resource.name,
+          'Product': resource.product ?? '',
+          'Product Category': categoryMap.get(resource.product ?? '') ?? '',
+          'Resource Set': resource.resourceSet ?? '',
+          'Sub Application': resource.subApplication ?? '',
+          'Target Resource ID': resource.targetResourceId ?? '',
+          'Sync Status': resource.syncStatus,
+          'Need Migration': resource.needMigration ? 'Yes' : 'No',
+          'Migration Completed': resource.migrationCompleted ? 'Yes' : 'No',
+          'Jira Subtask Key': resource.jiraSubtaskKey ?? '',
+        }
+        for (const key of sortedSpecKeys) {
+          const val = resource.specs?.[key]
+          row[`Spec: ${key}`] = val !== undefined && val !== null ? String(val) : ''
+        }
+        rows.push(row)
+      }
+    }
+
+    if (rows.length === 0) {
+      toast.info('No resource data found across projects.', { id: toastId })
+      return
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+
+    const lastRow = rows.length + 1
+    const lastCol = XLSX.utils.encode_col(headers.length - 1)
+    worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
+
+    worksheet['!cols'] = headers.map(h => {
+      if (h.startsWith('Spec:')) return { wch: 20 }
+      if (h === 'Project Name') return { wch: 28 }
+      if (h === 'Resource Name') return { wch: 28 }
+      if (h === 'Product Category') return { wch: 18 }
+      if (h === 'Resource Set') return { wch: 28 }
+      if (h === 'Sub Application') return { wch: 20 }
+      if (h === 'Jira Subtask Key') return { wch: 18 }
+      return { wch: 14 }
+    })
+
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Project Resources')
+
+    workbook.Workbook = workbook.Workbook || {}
+    workbook.Workbook.Names = [
+      {
+        Name: 'ResourcesData',
+        Ref: `'Project Resources'!$A$1:$${lastCol}$${lastRow}`,
+        Sheet: 0,
+      },
+    ]
+
+    XLSX.writeFile(workbook, `project-resources-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Report downloaded', { id: toastId })
+  } catch {
+    toast.error('Failed to generate report', { id: toastId })
+  }
+}
+
+export async function exportProjectDependenciesReport() {
+  const toastId = toast.loading('Generating project dependencies report...')
+
+  try {
+    const projects = await getProjects(['basic', 'dependencies'])
+
+    const rows: Record<string, string | number>[] = []
+
+    for (const project of projects) {
+      for (const dep of project.dependencies?.upstream ?? []) {
+        rows.push({
+          'Project ID': project.id,
+          'Project Name': project.name,
+          'Dependency Type': 'Upstream',
+          'Dependency ID': dep.id,
+          'Dependency Name': dep.name,
+          'BA ID': dep.baId ?? '',
+          'Contact Email': dep.contactEmail ?? '',
+          'Hosting': dep.hosting ?? '',
+          'Notes': dep.notes ?? '',
+        })
+      }
+      for (const dep of project.dependencies?.downstream ?? []) {
+        rows.push({
+          'Project ID': project.id,
+          'Project Name': project.name,
+          'Dependency Type': 'Downstream',
+          'Dependency ID': dep.id,
+          'Dependency Name': dep.name,
+          'BA ID': dep.baId ?? '',
+          'Contact Email': dep.contactEmail ?? '',
+          'Hosting': dep.hosting ?? '',
+          'Notes': dep.notes ?? '',
+        })
+      }
+    }
+
+    if (rows.length === 0) {
+      toast.info('No dependency data found across projects.', { id: toastId })
+      return
+    }
+
+    const headers = [
+      'Project ID',
+      'Project Name',
+      'Dependency Type',
+      'Dependency ID',
+      'Dependency Name',
+      'BA ID',
+      'Contact Email',
+      'Hosting',
+      'Notes',
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+
+    const lastRow = rows.length + 1
+    const lastCol = XLSX.utils.encode_col(headers.length - 1)
+    worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
+
+    worksheet['!cols'] = [
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 28 },
+      { wch: 18 },
+      { wch: 36 },
+    ]
+
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Project Dependencies')
+
+    workbook.Workbook = workbook.Workbook || {}
+    workbook.Workbook.Names = [
+      {
+        Name: 'DependenciesData',
+        Ref: `'Project Dependencies'!$A$1:$I$${lastRow}`,
+        Sheet: 0,
+      },
+    ]
+
+    XLSX.writeFile(workbook, `project-dependencies-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Report downloaded', { id: toastId })
+  } catch {
+    toast.error('Failed to generate report', { id: toastId })
+  }
+}
+
+export async function exportProjectDetailsReport() {
+  const toastId = toast.loading('Generating project details report...')
+
+  try {
+    const projects = await getProjects([
+      'basic',
+      'governance',
+      'availability',
+      'dataPersistence',
+      'nfrs',
+      'targetArchitecture',
+    ])
+
+    // Determine max change-freeze periods for dynamic columns
+    let maxFreezePeriods = 0
+    for (const project of projects) {
+      const count = project.migrationConstraints?.changeFreezePeriods?.length ?? 0
+      if (count > maxFreezePeriods) maxFreezePeriods = count
+    }
+
+    const baseHeaders = [
+      'Project ID',
+      'Project Name',
+      'Status',
+      'Blocked Reason',
+      'Description',
+      'Migration Wave',
+      'Jira Story Key',
+      'Survey Submitted At',
+      'ITSO',
+      'ITSO Email',
+      'ITSO Delegate',
+      'ITSO Delegate Email',
+      'Application Name',
+      'Short Name',
+      'Business Function',
+      'User Base Type',
+      'User Base Count',
+      'Application Tier',
+      'BA ID',
+      'IBS',
+      'BPS',
+      'IITA Applicability',
+      'Software Origin',
+      'Migration Strategy',
+      'Service Line',
+      'Technical Lead Name',
+      'Technical Lead Email',
+      'Business Owner Name',
+      'Business Owner Email',
+      'DBA Data Owner Name',
+      'DBA Data Owner Email',
+      'RTO',
+      'RPO',
+      '3-AZ Readiness',
+      'Health Check Endpoints',
+      'Database Types',
+      'Total Data Volume',
+      'Data Growth Rate',
+      'Backup Required During Migration',
+      'Last Restore Test',
+      'Data Residency',
+      'Encryption At Rest',
+      'Stateful Components',
+      'Peak Load',
+      'Autoscaling',
+      'Licensing',
+      'Regular Migration Window',
+      'Preferred Migration Window',
+      'Earliest Start Date',
+      'Latest End Date',
+      'CR Duration (hours)',
+      'SNOW CI Groups',
+      'Re-Architecture Needed',
+      '3-AZ Topology',
+      'DNS / IP Changes',
+      'New Services Required',
+      'Architecture Diagram',
+    ]
+
+    const freezeHeaders: string[] = []
+    for (let i = 1; i <= maxFreezePeriods; i++) {
+      freezeHeaders.push(`Change Freeze ${i} Name`, `Change Freeze ${i} From`, `Change Freeze ${i} To`)
+    }
+
+    const headers = [...baseHeaders, ...freezeHeaders]
+
+    const rows: Record<string, string | number>[] = []
+
+    for (const project of projects) {
+      const ao = project.applicationOverview
+      const gr = project.governanceRoles
+      const av = project.availability
+      const dp = project.dataPersistence
+      const nfr = project.nfrs
+      const mc = project.migrationConstraints
+      const ta = project.targetArchitecture
+
+      const row: Record<string, string | number> = {
+        'Project ID': project.id,
+        'Project Name': project.name,
+        'Status': project.status,
+        'Blocked Reason': project.blockedReason ?? '',
+        'Description': project.description ?? '',
+        'Migration Wave': project.migrationWave ?? '',
+        'Jira Story Key': project.jiraStoryKey ?? '',
+        'Survey Submitted At': project.surveySubmittedAt ? formatDate(project.surveySubmittedAt) : '',
+        'ITSO': project.itso ?? '',
+        'ITSO Email': project.itsoEmail ?? '',
+        'ITSO Delegate': project.itsoDelegate ?? '',
+        'ITSO Delegate Email': project.itsoDelegateEmail ?? '',
+        'Application Name': ao?.applicationName ?? '',
+        'Short Name': ao?.shortName ?? '',
+        'Business Function': ao?.businessFunction ?? '',
+        'User Base Type': ao?.userBase?.type ?? '',
+        'User Base Count': ao?.userBase?.count ?? '',
+        'Application Tier': ao?.applicationTier ?? '',
+        'BA ID': ao?.baId ?? '',
+        'IBS': ao?.systemImportanceClassification?.includes('IBS') ? 'Yes' : 'No',
+        'BPS': ao?.systemImportanceClassification?.includes('BPS') ? 'Yes' : 'No',
+        'IITA Applicability': ao?.iitaApplicability ? 'Yes' : 'No',
+        'Software Origin': ao?.softwareOrigin ?? '',
+        'Migration Strategy': ao?.migrationStrategy ?? '',
+        'Service Line': ao?.serviceLine ?? '',
+        'Technical Lead Name': gr?.technicalLead?.name ?? '',
+        'Technical Lead Email': gr?.technicalLead?.email ?? '',
+        'Business Owner Name': gr?.businessOwner?.name ?? '',
+        'Business Owner Email': gr?.businessOwner?.email ?? '',
+        'DBA Data Owner Name': gr?.dbaDataOwner?.name ?? '',
+        'DBA Data Owner Email': gr?.dbaDataOwner?.email ?? '',
+        'RTO': av?.rto ?? '',
+        'RPO': av?.rpo ?? '',
+        '3-AZ Readiness': av?.azReadiness3Az ?? '',
+        'Health Check Endpoints': (av?.healthCheckEndpoints ?? []).join(', '),
+        'Database Types': (dp?.databaseTypes ?? []).join(', '),
+        'Total Data Volume': dp?.totalDataVolume ?? '',
+        'Data Growth Rate': dp?.dataGrowthRate ?? '',
+        'Backup Required During Migration': dp?.backupRequiredDuringMigration ? 'Yes' : 'No',
+        'Last Restore Test': dp?.lastRestoreTest ?? '',
+        'Data Residency': dp?.dataResidency ?? '',
+        'Encryption At Rest': dp?.encryptionAtRest ?? '',
+        'Stateful Components': (dp?.statefulComponents ?? []).join(', '),
+        'Peak Load': nfr?.peakLoad ?? '',
+        'Autoscaling': nfr?.autoscaling ?? '',
+        'Licensing': nfr?.licensing ?? '',
+        'Regular Migration Window': mc?.regularMigrationWindow ?? '',
+        'Preferred Migration Window': (mc?.preferredMigrationWindow ?? []).join(', '),
+        'Earliest Start Date': mc?.earliestStartDate ?? '',
+        'Latest End Date': mc?.latestEndDate ?? '',
+        'CR Duration (hours)': mc?.crDurationHours ?? '',
+        'SNOW CI Groups': (mc?.snowCiGroups ?? []).join(', '),
+        'Re-Architecture Needed': ta?.reArchitectureNeeded ? 'Yes' : 'No',
+        '3-AZ Topology': ta?.topology3Az ?? '',
+        'DNS / IP Changes': ta?.dnsIpChanges ?? '',
+        'New Services Required': (ta?.newServicesRequired ?? []).join(', '),
+        'Architecture Diagram': ta?.architectureDiagram ?? '',
+      }
+
+      const freezePeriods = mc?.changeFreezePeriods ?? []
+      for (let i = 0; i < maxFreezePeriods; i++) {
+        const fp = freezePeriods[i]
+        const idx = i + 1
+        row[`Change Freeze ${idx} Name`] = fp?.name ?? ''
+        row[`Change Freeze ${idx} From`] = fp?.from ?? ''
+        row[`Change Freeze ${idx} To`] = fp?.to ?? ''
+      }
+
+      rows.push(row)
+    }
+
+    if (rows.length === 0) {
+      toast.info('No project data found.', { id: toastId })
+      return
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+
+    const lastRow = rows.length + 1
+    const lastCol = XLSX.utils.encode_col(headers.length - 1)
+    worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
+
+    worksheet['!cols'] = headers.map(h => {
+      if (h.startsWith('Change Freeze')) return { wch: 18 }
+      if (h === 'Project Name') return { wch: 28 }
+      if (h === 'Description') return { wch: 36 }
+      if (h === 'Blocked Reason') return { wch: 28 }
+      if (h === 'Application Name') return { wch: 28 }
+      if (h === 'Business Function') return { wch: 24 }
+      if (h === 'Migration Strategy') return { wch: 18 }
+      if (h === 'Service Line') return { wch: 24 }
+      if (h === 'Health Check Endpoints') return { wch: 28 }
+      if (h === 'Last Restore Test') return { wch: 28 }
+      if (h === 'Architecture Diagram') return { wch: 28 }
+      if (h === 'Regular Migration Window') return { wch: 24 }
+      if (h === 'Preferred Migration Window') return { wch: 24 }
+      if (h === 'SNOW CI Groups') return { wch: 24 }
+      if (h === 'New Services Required') return { wch: 28 }
+      if (h === 'DNS / IP Changes') return { wch: 24 }
+      if (h.endsWith('Email')) return { wch: 28 }
+      if (h.endsWith('Name')) return { wch: 24 }
+      return { wch: 14 }
+    })
+
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Project Details')
+
+    workbook.Workbook = workbook.Workbook || {}
+    workbook.Workbook.Names = [
+      {
+        Name: 'ProjectDetailsData',
+        Ref: `'Project Details'!$A$1:$${lastCol}$${lastRow}`,
+        Sheet: 0,
+      },
+    ]
+
+    XLSX.writeFile(workbook, `project-details-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
     toast.success('Report downloaded', { id: toastId })
   } catch {
     toast.error('Failed to generate report', { id: toastId })

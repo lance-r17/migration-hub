@@ -40,7 +40,9 @@ class ProjectListItem(BaseModel):
     description: str | None = None
     migration_wave: str | None = None
     itso: str | None = None
+    itso_email: str | None = None
     itso_delegate: str | None = None
+    itso_delegate_email: str | None = None
     jira_base_url: str | None = None
     updated_at: str | None = None
     wave_id: str | None = None
@@ -53,6 +55,12 @@ class ProjectListItem(BaseModel):
     migration_constraints: dict[str, Any] | None = None
     migration_effort_estimation: dict[str, Any] | None = None
     application_overview: dict[str, Any] | None = None
+    dependencies: dict[str, Any] | None = None
+    governance_roles: GovernanceRolesOut | None = None
+    availability: dict[str, Any] | None = None
+    data_persistence: dict[str, Any] | None = None
+    nfrs: dict[str, Any] | None = None
+    target_architecture: dict[str, Any] | None = None
     approvals: list[ApprovalOut] | None = None
     cloud_resources: list[CloudResourceOut] | None = None
 

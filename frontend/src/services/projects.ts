@@ -80,7 +80,9 @@ interface ProjectListItemApi {
   description: string | null
   migration_wave: string | null
   itso: string | null
+  itso_email: string | null
   itso_delegate: string | null
+  itso_delegate_email: string | null
   jira_base_url: string | null
   updated_at: string | null
   wave_id: string | null
@@ -90,6 +92,12 @@ interface ProjectListItemApi {
   migration_constraints: MigrationConstraints | null
   migration_effort_estimation: MigrationEffortEstimation | null
   application_overview: ApplicationOverview | null
+  dependencies: Dependencies | null
+  governance_roles: GovernanceRolesApi | null
+  availability: AvailabilityResilience | null
+  data_persistence: DataPersistence | null
+  nfrs: NonFunctionalRequirements | null
+  target_architecture: TargetArchitecture | null
   approvals: ApprovalApi[]
   cloud_resources: CloudResourceApi[]
   risks: RiskApi[]
@@ -170,7 +178,9 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     description: raw.description ?? undefined,
     migrationWave: raw.migration_wave ?? undefined,
     itso: raw.itso ?? undefined,
+    itsoEmail: raw.itso_email ?? undefined,
     itsoDelegate: raw.itso_delegate ?? undefined,
+    itsoDelegateEmail: raw.itso_delegate_email ?? undefined,
     jiraBaseUrl: raw.jira_base_url ?? undefined,
     updatedAt: raw.updated_at ?? undefined,
     waveId: raw.wave_id ?? undefined,
@@ -182,6 +192,12 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     migrationConstraints: raw.migration_constraints ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
     applicationOverview: raw.application_overview ?? undefined,
+    dependencies: raw.dependencies ?? undefined,
+    governanceRoles: mapGovernanceRoles(raw.governance_roles),
+    availability: raw.availability ?? undefined,
+    dataPersistence: raw.data_persistence ?? undefined,
+    nfrs: raw.nfrs ?? undefined,
+    targetArchitecture: raw.target_architecture ?? undefined,
     risks: (raw.risks ?? []).map(mapRisk),
     approvals: (raw.approvals ?? []).map(mapApproval),
     currentInfrastructure: raw.cloud_resources?.length

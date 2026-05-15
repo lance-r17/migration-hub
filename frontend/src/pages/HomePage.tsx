@@ -13,7 +13,12 @@ import { useProjects } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
 import { getSurveyDraftProjectIds } from '@/services/projects'
-import { exportEstimatedEffortReport } from '@/lib/export-report'
+import {
+  exportEstimatedEffortReport,
+  exportProjectResourcesReport,
+  exportProjectDependenciesReport,
+  exportProjectDetailsReport,
+} from '@/lib/export-report'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -131,9 +136,18 @@ export function HomePage() {
                       <Download size={14} /> Export Report <ChevronDown size={14} />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[220px]">
+                  <DropdownMenuContent align="end" className="min-w-[280px]">
                     <DropdownMenuItem onClick={() => exportEstimatedEffortReport()}>
                       Estimated Effort Report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportProjectResourcesReport()}>
+                      Project Resources Report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportProjectDependenciesReport()}>
+                      Project Dependencies Report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportProjectDetailsReport()}>
+                      Project Details Report
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
