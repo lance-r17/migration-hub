@@ -17,6 +17,7 @@
 | **backend/** | |
 | [backend/overview.md](backend/overview.md) | Backend structure and design principles (Python/FastAPI) |
 | [backend/api.md](backend/api.md) | REST API endpoint reference derived from frontend services |
+| [mcp-integration.md](mcp-integration.md) | MCP (Model Context Protocol) — AI agent integration via SSE |
 | [backend/database.md](backend/database.md) | Database schema, indexes, and Alembic migrations |
 | [backend/docker-build-push.md](backend/docker-build-push.md) | Docker image build, multi-stage Dockerfile, Nexus registry push, and container runtime configuration |
 | **shared/** | |

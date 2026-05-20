@@ -20,6 +20,7 @@
 - **Backend**
   - [Overview](backend/overview.md)
   - [API Reference](backend/api.md)
+  - [MCP Integration](mcp-integration.md)
   - [Database](backend/database.md)
   - [Docker Build & Push](backend/docker-build-push.md)
   - [Samples](backend/samples.md)
