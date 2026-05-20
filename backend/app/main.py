@@ -183,6 +183,11 @@ def create_app() -> FastAPI:
     app.include_router(admin.router, prefix=prefix)
     app.include_router(admin_email.router, prefix=prefix)
 
+    # MCP SSE endpoint — mounted outside /api/v1 so the SSE path is /mcp/sse
+    from app.mcp import sse_router as mcp_sse_router
+
+    app.include_router(mcp_sse_router.router, prefix="/mcp")
+
     @app.get("/health")
     async def health():
         # Readiness probe: verify DB connectivity before declaring healthy

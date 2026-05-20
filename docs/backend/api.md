@@ -2,6 +2,8 @@
 
 All endpoints are prefixed with `/api/v1`. All request and response bodies are JSON. See [../shared/data-model.md](../shared/data-model.md) for full type definitions. OpenAPI docs are available at `http://localhost:8000/docs` while the backend is running.
 
+> **MCP Endpoint:** The backend also exposes an MCP (Model Context Protocol) SSE endpoint at `/mcp/sse` for AI agent integration. See [../mcp-integration.md](../mcp-integration.md) for details.
+
 ---
 
 ## Authentication

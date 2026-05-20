@@ -44,6 +44,14 @@
                         │    Jira     │
                         │   (Cloud)   │
                         └─────────────┘
+
+# MCP (Model Context Protocol)
+# AI agents connect to the same Backend API via SSE at /mcp/sse
+# ──
+#  ┌──────────────┐
+#  │ AI Agent /   │  HTTP SSE ──▶ /mcp/sse (same FastAPI app)
+#  │ MCP Client   │  POST ──────▶ /mcp/messages
+#  └──────────────┘
 ```
 
 ### Design Decisions
@@ -56,6 +64,7 @@
 | **DB-aware readiness probe** | `/health` now checks PostgreSQL connectivity. K8s removes pod from Service endpoints until DB is reachable. |
 | `pool_pre_ping=True` | Already enabled in `database.py`. Prevents "stale connection" errors after pod rescheduling. |
 | **PolarDB PostgreSQL (external)** | Managed clustered PostgreSQL with automatic failover. No StatefulSet in K8s — the cluster endpoint is provided via `DATABASE_URL` secret. |
+| **MCP embedded in API** | The MCP SSE endpoint (`/mcp/sse`) runs inside the same FastAPI process as the REST API. No separate deployment — reuses auth, DB pooling, and HPA. |
 
 ## 3. Horizontal Pod Autoscaling (HPA)
 
@@ -95,6 +104,20 @@ We use **[Higress](https://higress.io/)** as the ingress gateway instead of ngin
 | Cert-Manager | `cert-manager.io/cluster-issuer` | **Compatible** — works with any Ingress class |
 
 > CORS is intentionally handled by FastAPI (`CORSMiddleware`) so that Higress does not inject conflicting headers.
+
+### MCP SSE Considerations
+
+The MCP endpoint (`/mcp/sse`) uses **Server-Sent Events** — long-lived HTTP connections that remain open for the duration of an agent session. This has implications for ingress and load balancing:
+
+| Concern | Recommendation |
+|---------|----------------|
+| **Idle timeout** | Higress/Envoy default idle timeouts (often 300s) may drop idle SSE connections. Configure `IdleTimeout` or `RequestTimeout` CRDs to be longer, or disable timeout for `/mcp/sse` paths. |
+| **Response buffering** | Ensure the gateway does **not** buffer the response body. SSE requires immediate flush of each event. Higress/Envoy typically streams by default, but verify with your specific configuration. |
+| **Connection limits** | SSE connections are held open. If agent adoption is high, concurrent connection counts may exceed typical REST API levels. Monitor `backend-api` pod connection counts and scale HPA `maxReplicas` accordingly. |
+| **Load balancing** | SSE sessions are stateful within a pod (the MCP transport maintains session state in memory). Ensure your ingress/load balancer supports **sticky sessions** (session affinity) if clients reconnect, or accept that reconnects may land on a different pod and require re-initialization. |
+| **Readiness probe** | The existing `/health` probe is sufficient. SSE traffic is routed to the same `backend-api` Service and pods as REST traffic. |
+
+> **Note:** No new K8s Deployment, Service, or port is required for MCP. The SSE endpoint is embedded in the existing FastAPI application and runs on port 8000 alongside the REST API.
 
 ## 6. Deployment Order
 
@@ -178,3 +201,14 @@ kubectl apply -k k8s/base
 
 6. **Cert-Manager**.
    - Automate TLS certificate provisioning via Let's Encrypt.
+
+7. **MCP SSE Ingress Tuning**.
+   - Verify Higress/Envoy idle timeouts for `/mcp/sse` — set to 0 (disabled) or a very high value to prevent mid-session disconnects.
+   - Add a separate Higress route rule for `/mcp/*` if you need different timeout/buffering behavior from the REST API.
+   - Consider rate-limiting `/mcp/sse` connections per source IP to prevent abuse.
+
+8. **MCP Phase 2 — Write Tools** (future).
+   - The current MCP tools are read-only. If adding write tools (e.g., reordering wave projects, triggering Jira jobs), consider:
+     - A separate `backend-mcp` Deployment with its own HPA if agent traffic dwarfs human API traffic.
+     - Stricter auth (e.g., admin-only API keys) for write operations.
+     - Audit logging for all MCP-initiated mutations.

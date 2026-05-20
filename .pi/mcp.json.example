@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "migration-hub": {
+      "url": "http://localhost:8000/mcp/sse",
+      "headers": {
+        "X-API-Key": "mhub_<your-api-key-here>"
+      },
+      "auth": false,
+      "lifecycle": "lazy",
+      "directTools": true
+    }
+  }
+}
