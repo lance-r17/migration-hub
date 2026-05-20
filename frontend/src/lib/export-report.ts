@@ -4,7 +4,7 @@ import { getProjects } from '@/services/projects'
 import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
-import type { Project } from '@/types'
+import type { Project, Risk } from '@/types'
 
 function calcTaskCost(effort?: number, effortTime?: number, rate?: number): number {
   return (effort ?? 0) * (effortTime ?? 0) * (rate ?? 0)
@@ -594,6 +594,87 @@ export function getMigrationEffortSummary(project: Project): {
 
   const totalCost = groups.reduce((sum, g) => sum + g.subTotalCost, 0)
   return { totalCost, groups }
+}
+
+export async function exportProjectRisksAndBlockersReport() {
+  const toastId = toast.loading('Generating project risks & blockers report...')
+
+  try {
+    const projects = await getProjects(['basic', 'risks'])
+
+    const rows: Record<string, string | number>[] = []
+    for (const project of projects) {
+      const risks = project.risks ?? []
+      if (risks.length === 0) {
+        rows.push({
+          'Project ID': project.id,
+          'Project Name': project.name,
+          'Risk Title': '—',
+          'Risk Description': '—',
+          'Severity': '—',
+          'Mitigation': '—',
+          'Owner': '—',
+          'Risk Status': '—',
+        })
+      } else {
+        for (const risk of risks) {
+          rows.push({
+            'Project ID': project.id,
+            'Project Name': project.name,
+            'Risk Title': risk.title,
+            'Risk Description': risk.description,
+            'Severity': risk.severity,
+            'Mitigation': risk.mitigation ?? '',
+            'Owner': risk.owner ?? '',
+            'Risk Status': risk.riskStatus ?? '',
+          })
+        }
+      }
+    }
+
+    if (rows.length === 0) {
+      toast.info('No risk data found across projects.', { id: toastId })
+      return
+    }
+
+    const headers = [
+      'Project ID',
+      'Project Name',
+      'Risk Title',
+      'Risk Description',
+      'Severity',
+      'Mitigation',
+      'Owner',
+      'Risk Status',
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+    const lastRow = rows.length
+    const lastCol = XLSX.utils.encode_col(headers.length - 1)
+    worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
+    worksheet['!cols'] = [
+      { wch: 18 }, { wch: 28 }, { wch: 32 }, { wch: 40 },
+      { wch: 10 }, { wch: 32 }, { wch: 20 }, { wch: 12 },
+    ]
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Risks')
+
+    workbook.Workbook = workbook.Workbook || {}
+    workbook.Workbook.Names = [
+      {
+        Name: 'RisksData',
+        Ref: `'Risks'!$A$1:$${lastCol}$${lastRow}`,
+        Sheet: 0,
+      },
+    ]
+
+    XLSX.writeFile(workbook, `project-risks-blockers-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Report downloaded', { id: toastId })
+  } catch {
+    toast.error('Failed to generate report', { id: toastId })
+  }
 }
 
 export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[]) {

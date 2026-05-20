@@ -244,6 +244,8 @@ async def get_all(
         options.append(selectinload(Project.approvals))
     if "cloud_resources" in rels:
         options.append(selectinload(Project.cloud_resources))
+    if "risks" in rels:
+        options.append(selectinload(Project.risks))
     if "wave" in rels:
         options.append(selectinload(Project.wave))
     if "project_users" in rels:

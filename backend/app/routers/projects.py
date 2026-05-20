@@ -14,7 +14,7 @@ from app.schemas.cloud_resource import (
     ResourcesBatchDelete,
     ResourcesBatchUpsert,
 )
-from app.schemas.risk import RiskHomeOut
+from app.schemas.risk import RiskHomeOut, RiskOut
 from app.schemas.survey import SurveyDraftOut, SurveyDraftSave
 from app.schemas.project import (
     GovernanceRolesOut,
@@ -233,6 +233,9 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
         data["approvals"] = [
             ApprovalOut.model_validate(a) for a in (p.approvals or [])
         ]
+
+    if "risks" in fields:
+        data["risks"] = [RiskOut.model_validate(r) for r in (p.risks or [])]
 
     return ProjectListItem(**data)
 

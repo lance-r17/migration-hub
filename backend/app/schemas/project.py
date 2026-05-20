@@ -64,6 +64,7 @@ class ProjectListItem(BaseModel):
     approvals: list[ApprovalOut] | None = None
     cloud_resources: list[CloudResourceOut] | None = None
     resource_sets: list[str] | None = None
+    risks: list[RiskOut] | None = None
 
 
 class ProjectDetail(BaseModel):
