@@ -18,6 +18,10 @@ from app.models.email_template import EmailTemplate
 from app.models.email_job import EmailJob
 from app.models.project_attachment import ProjectAttachment
 from app.models.survey_draft import SurveyDraft
+from app.models.engagement import Engagement
+from app.models.note_template import NoteTemplate
+from app.models.note_template_version import NoteTemplateVersion
+from app.models.confluence_parent_page import ConfluenceParentPage
 
 __all__ = [
     "Base",
@@ -39,4 +43,8 @@ __all__ = [
     "EmailTemplate",
     "EmailJob",
     "SurveyDraft",
+    "Engagement",
+    "NoteTemplate",
+    "NoteTemplateVersion",
+    "ConfluenceParentPage",
 ]

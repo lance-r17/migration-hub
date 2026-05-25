@@ -61,6 +61,7 @@ class ProjectListItem(BaseModel):
     data_persistence: dict[str, Any] | None = None
     nfrs: dict[str, Any] | None = None
     target_architecture: dict[str, Any] | None = None
+    engagement: dict[str, Any] | None = None
     approvals: list[ApprovalOut] | None = None
     cloud_resources: list[CloudResourceOut] | None = None
     resource_sets: list[str] | None = None
@@ -98,6 +99,7 @@ class ProjectDetail(BaseModel):
     nfrs: dict[str, Any] | None = None
     migration_constraints: dict[str, Any] | None = None
     target_architecture: dict[str, Any] | None = None
+    engagement: dict[str, Any] | None = None
     cloud_resources: list[CloudResourceOut] = []
     risks: list[RiskOut] = []
     approvals: list[ApprovalOut] = []
@@ -125,6 +127,7 @@ class ProjectHomeItem(BaseModel):
     stage_progress: dict[str, int] | None = None
     team: list[dict[str, Any]] | None = None
     migration_constraints: dict[str, Any] | None = None
+    engagement: dict[str, Any] | None = None
     approvals: list[ApprovalOut] | None = None
     cloud_resources: list[CloudResourceHomeOut] | None = None
     risks: list[RiskHomeOut] | None = None

@@ -8,6 +8,7 @@ from sqlalchemy.orm import attributes, selectinload
 
 from app.models.approval import Approval
 from app.models.cloud_resource import CloudResource
+from app.models.engagement import Engagement
 from app.models.project import Project
 from app.models.risk import Risk
 from app.models.survey_draft import SurveyDraft
@@ -27,6 +28,7 @@ _FIELD_REL_REQUIREMENTS: dict[str, set[str]] = {
     "resource_sets": {"cloud_resources"},
     "risks": {"risks"},
     "approvals": {"approvals"},
+    "engagement": {"engagement"},
 }
 
 
@@ -57,6 +59,7 @@ SECTION_COLUMN_MAP: dict[str, str | None] = {
     "currentInfrastructure": None,
     "risks": None,
     "approvals": None,
+    "engagement": None,
 }
 
 SECTION_LABELS: dict[str, str] = {
@@ -68,6 +71,7 @@ SECTION_LABELS: dict[str, str] = {
     "migrationConstraints": "Migration Constraints",
     "targetArchitecture": "Target Architecture",
     "migrationEffortEstimation": "Migration Effort Estimation",
+    "engagement": "Engagement",
     "status": "Project Status",
     "waveId": "Migration Wave",
 }
@@ -230,6 +234,7 @@ def _project_options():
         selectinload(Project.approvals),
         selectinload(Project.wave),
         selectinload(Project.project_users).selectinload(ProjectUser.user),
+        selectinload(Project.engagement),
     ]
 
 
@@ -238,7 +243,7 @@ async def get_all(
 ) -> list[Project]:
     from app.models.project_user import ProjectUser
 
-    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "wave", "project_users"})
+    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "wave", "project_users", "engagement"})
     options = []
     if "approvals" in rels:
         options.append(selectinload(Project.approvals))
@@ -250,6 +255,8 @@ async def get_all(
         options.append(selectinload(Project.wave))
     if "project_users" in rels:
         options.append(selectinload(Project.project_users).selectinload(ProjectUser.user))
+    if "engagement" in rels:
+        options.append(selectinload(Project.engagement))
 
     q = select(Project).options(*options)
     if user_id:
@@ -265,7 +272,7 @@ async def get_all_home(
 ) -> list[Project]:
     from app.models.project_user import ProjectUser
 
-    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "risks", "project_users"})
+    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "risks", "project_users", "engagement"})
     options = []
     if "approvals" in rels:
         options.append(selectinload(Project.approvals))
@@ -275,6 +282,8 @@ async def get_all_home(
         options.append(selectinload(Project.risks))
     if "project_users" in rels:
         options.append(selectinload(Project.project_users).selectinload(ProjectUser.user))
+    if "engagement" in rels:
+        options.append(selectinload(Project.engagement))
 
     q = select(Project).options(*options)
     if user_id:
@@ -400,6 +409,12 @@ def _collect_attachment_ids(obj: Any) -> list[str]:
     return ids
 
 
+def _engagement_to_dict(project: Project) -> dict[str, Any] | None:
+    if project.engagement is None:
+        return None
+    return project.engagement.to_dict()
+
+
 async def update_section(
     session: AsyncSession,
     project: Project,
@@ -417,6 +432,8 @@ async def update_section(
             await _replace_risks(session, project, value, actor)
         elif section_key == "approvals":
             await _replace_approvals(session, project, value, actor)
+        elif section_key == "engagement":
+            await _replace_engagement(session, project, value, actor)
     else:
         if section_key == "waveId" and value:
             await _check_wave_completed(session, value)
@@ -661,6 +678,54 @@ async def _replace_approvals(
         session, project_id=project.id, event_type="approval_submitted",
         entity_type="approval", actor=actor, changes=[],
     )
+
+
+async def _replace_engagement(
+    session: AsyncSession, project: Project, value: Any, actor: dict[str, Any]
+) -> None:
+    engagement_data = value if isinstance(value, dict) else {}
+
+    engagement = project.engagement
+    if engagement is None:
+        engagement = Engagement(
+            id=str(uuid.uuid4()),
+            project_id=project.id,
+        )
+        session.add(engagement)
+        project.engagement = engagement
+        old_dict = {}
+    else:
+        old_dict = engagement.to_dict()
+
+    engagement.status = engagement_data.get("status")
+    engagement.interview_subject = engagement_data.get("interviewSubject")
+    engagement.planned_slots = engagement_data.get("plannedSlots")
+    engagement.participant_ids = engagement_data.get("participantIds")
+    engagement.engagement_manager_id = engagement_data.get("engagementManagerId")
+    engagement.notes = engagement_data.get("notes")
+    engagement.confluence_page_id = engagement_data.get("confluencePageId")
+    engagement.confluence_page_url = engagement_data.get("confluencePageUrl")
+    engagement.zoom_meeting_url = engagement_data.get("zoomMeetingUrl")
+    engagement.zoom_meeting_id = engagement_data.get("zoomMeetingId")
+
+    changes = _diff_section(old_dict, engagement_data)
+    if changes:
+        await audit_service.append_entry(
+            session,
+            project_id=project.id,
+            event_type="section_updated",
+            entity_type="section",
+            actor=actor,
+            section_key="engagement",
+            section_label="Engagement",
+            changes=changes,
+        )
+
+    attachment_ids = _collect_attachment_ids(engagement_data)
+    if attachment_ids:
+        await attachment_service.confirm_attachments(session, project.id, attachment_ids)
+
+    await session.flush()
 
 
 async def batch_update_resource_specs(

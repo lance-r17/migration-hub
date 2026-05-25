@@ -122,7 +122,10 @@ _OPENAPI_TAGS = [
     {"name": "jira",       "description": "Jira integration jobs"},
     {"name": "embargos",   "description": "Change freeze embargo windows"},
     {"name": "dashboard",  "description": "Summary statistics"},
+    {"name": "zoom",       "description": "Zoom meeting scheduling (optional)"},
+    {"name": "confluence", "description": "Confluence page export and parent page management"},
     {"name": "admin-email", "description": "Email event config and job log (admin only)"},
+    {"name": "note-templates", "description": "Reusable note block templates"},
 ]
 
 
@@ -152,16 +155,19 @@ def create_app() -> FastAPI:
         admin_email,
         audit,
         billing,
+        confluence,
         dashboard,
         email_templates,
         embargos,
         jira,
+        note_templates,
         oauth,
         product_categories,
         projects,
         survey,
         users,
         waves,
+        zoom,
     )
 
     prefix = "/api/v1"
@@ -180,6 +186,9 @@ def create_app() -> FastAPI:
     app.include_router(jira.admin_router, prefix=prefix)
     app.include_router(product_categories.router, prefix=prefix)
     app.include_router(email_templates.router, prefix=prefix)
+    app.include_router(note_templates.router, prefix=prefix)
+    app.include_router(zoom.router, prefix=prefix)
+    app.include_router(confluence.router, prefix=prefix)
     app.include_router(admin.router, prefix=prefix)
     app.include_router(admin_email.router, prefix=prefix)
 

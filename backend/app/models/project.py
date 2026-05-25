@@ -54,3 +54,6 @@ class Project(Base, TimestampMixin):
     jira_jobs: Mapped[list["JiraJob"]] = relationship(
         "JiraJob", back_populates="project", cascade="all, delete-orphan"
     )
+    engagement: Mapped["Engagement | None"] = relationship(
+        "Engagement", back_populates="project", uselist=False, cascade="all, delete-orphan"
+    )

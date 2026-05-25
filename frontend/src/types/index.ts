@@ -191,6 +191,30 @@ export interface MigrationEffortEstimation {
   tableMode?: 'single' | 'multiple'
 }
 
+// ─── Section 8.6: Engagement ────────────────────────────────────────────────
+
+export type EngagementStatus = 'pending' | 'scheduled' | 'completed' | 'cancelled' | 'no_show'
+
+export interface EngagementSlot {
+  id: string
+  start: string   // ISO datetime
+  end: string     // ISO datetime
+  isActual?: boolean
+}
+
+export interface Engagement {
+  status: EngagementStatus
+  interviewSubject?: string
+  plannedSlots: EngagementSlot[]
+  participantIds: string[]
+  engagementManagerId?: string
+  notes?: unknown[] | string
+  confluencePageId?: string
+  confluencePageUrl?: string
+  zoomMeetingUrl?: string
+  zoomMeetingId?: string
+}
+
 // ─── Section 9: Risks & Blockers ─────────────────────────────────────────────
 
 export interface Risk {
@@ -240,6 +264,35 @@ export interface ProjectPlanning {
   milestones: PlanningMilestone[]
 }
 
+// ─── Note Template ───────────────────────────────────────────────────────────
+
+export interface NoteTemplate {
+  id: string
+  name: string
+  description?: string
+  labels: string[]
+  blocks: unknown[]
+  scope: 'global' | 'private' | 'function'
+  sharedRoles?: string[]
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface NoteTemplateVersion {
+  id: string
+  templateId: string
+  versionNumber: number
+  name: string
+  description?: string
+  labels: string[]
+  blocks: unknown[]
+  scope: 'global' | 'private' | 'function'
+  sharedRoles?: string[]
+  createdBy?: string
+  createdAt?: string
+}
+
 // ─── Project ─────────────────────────────────────────────────────────────────
 
 export interface StageProgress {
@@ -278,6 +331,7 @@ export interface Project {
   migrationConstraints?: MigrationConstraints
   targetArchitecture?: TargetArchitecture
   migrationEffortEstimation?: MigrationEffortEstimation
+  engagement?: Engagement
   risks: Risk[]
   approvals: Approval[]
   // Wave planning

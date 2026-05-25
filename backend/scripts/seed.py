@@ -32,6 +32,8 @@ from app.models import (  # noqa: F401 — ensure all models are registered
     EmailTemplate,
     EmbargoRecord,
     JiraJob,
+    NoteTemplate,
+    NoteTemplateVersion,
     Project,
     ProjectUser,
     Risk,
@@ -251,6 +253,44 @@ def seed_email_templates(session: Session) -> None:
             ))
 
 
+def seed_note_templates(session: Session) -> None:
+    print("Seeding note templates...")
+    data = load("note_templates.json")
+
+    for t in data.get("templates", []):
+        existing = session.get(NoteTemplate, t["id"])
+        if not existing:
+            session.add(NoteTemplate(
+                id=t["id"],
+                name=t["name"],
+                description=t.get("description"),
+                labels=t.get("labels", []),
+                blocks=t.get("blocks", []),
+                scope=t.get("scope", "private"),
+                shared_roles=t.get("shared_roles", []),
+                created_by=t.get("created_by"),
+                created_at=datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")) if t.get("created_at") else None,
+                updated_at=datetime.fromisoformat(t["updated_at"].replace("Z", "+00:00")) if t.get("updated_at") else None,
+            ))
+
+    for v in data.get("versions", []):
+        existing = session.get(NoteTemplateVersion, v["id"])
+        if not existing:
+            session.add(NoteTemplateVersion(
+                id=v["id"],
+                template_id=v["template_id"],
+                version_number=v["version_number"],
+                name=v["name"],
+                description=v.get("description"),
+                labels=v.get("labels", []),
+                blocks=v.get("blocks", []),
+                scope=v.get("scope", "private"),
+                shared_roles=v.get("shared_roles", []),
+                created_by=v.get("created_by"),
+                created_at=datetime.fromisoformat(v["created_at"].replace("Z", "+00:00")) if v.get("created_at") else None,
+            ))
+
+
 def _seed_all(session: Session) -> None:
     seed_users(session)
     seed_waves(session)
@@ -261,6 +301,7 @@ def _seed_all(session: Session) -> None:
     seed_billing(session)
     seed_config(session)
     seed_email_templates(session)
+    seed_note_templates(session)
     session.commit()
     print("Seed complete.")
 
@@ -281,6 +322,7 @@ def seed(
         "billing": True,
         "config": True,
         "email_templates": True,
+        "note_templates": True,
     }
     active = {k: v for k, v in (targets or {}).items() if v} or all_targets
     has_selective = bool(targets and any(targets.values()))
@@ -319,12 +361,15 @@ def seed(
                     _clear_table(session, "config_store")
             if active.get("email_templates"):
                 _clear_table(session, "email_templates")
+            if active.get("note_templates"):
+                _clear_table(session, "note_template_versions")
+                _clear_table(session, "note_templates")
         else:
             for table in [
                 "jira_jobs", "audit_log_entries", "approvals", "risks",
                 "cloud_resources", "project_users", "projects", "waves",
                 "users", "embargo_records", "billing_records", "config_store",
-                "email_templates",
+                "email_templates", "note_template_versions", "note_templates",
             ]:
                 _clear_table(session, table)
         session.flush()
@@ -347,6 +392,8 @@ def seed(
             seed_config(session)
     if active.get("email_templates"):
         seed_email_templates(session)
+    if active.get("note_templates"):
+        seed_note_templates(session)
 
     session.commit()
     print("Seed complete.")
@@ -366,6 +413,7 @@ def main() -> None:
     parser.add_argument("--config-billing-threshold-config", action="store_true", help="Refresh billing threshold config only")
     parser.add_argument("--config-migration-settings", action="store_true", help="Refresh migration settings only")
     parser.add_argument("--email-templates", action="store_true", help="Refresh email templates only")
+    parser.add_argument("--note-templates", action="store_true", help="Refresh note templates only")
     args = parser.parse_args()
 
     config_targets = {
@@ -383,6 +431,7 @@ def main() -> None:
         "billing": args.billing,
         "config": args.config or any(config_targets.values()),
         "email_templates": args.email_templates,
+        "note_templates": args.note_templates,
     }
     has_selective = any(targets.values())
 

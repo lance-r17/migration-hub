@@ -149,6 +149,7 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
             data_persistence=p.data_persistence,
             nfrs=p.nfrs,
             target_architecture=p.target_architecture,
+            engagement=project_service._engagement_to_dict(p),
             approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
             cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
         )
@@ -215,6 +216,9 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
     if "target_architecture" in fields:
         data["target_architecture"] = p.target_architecture
 
+    if "engagement" in fields:
+        data["engagement"] = project_service._engagement_to_dict(p)
+
     if "resources" in fields or "resources_full" in fields:
         data["cloud_resources"] = [
             CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])
@@ -263,6 +267,7 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
             stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
             team=_team_from_project_users(p),
             migration_constraints=p.migration_constraints,
+            engagement=project_service._engagement_to_dict(p),
             approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
             cloud_resources=[CloudResourceHomeOut.model_validate(r) for r in (p.cloud_resources or [])],
             risks=[RiskHomeOut.model_validate(r) for r in (p.risks or [])],
@@ -304,6 +309,9 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
 
     if "itso_delegate" in fields:
         data["itso_delegate"] = _itso_delegate_name(p)
+
+    if "engagement" in fields:
+        data["engagement"] = project_service._engagement_to_dict(p)
 
     if "resources" in fields:
         data["cloud_resources"] = [
@@ -352,6 +360,7 @@ def _project_detail(p) -> ProjectDetail:
         nfrs=p.nfrs,
         migration_constraints=p.migration_constraints,
         target_architecture=p.target_architecture,
+        engagement=project_service._engagement_to_dict(p),
         cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
         risks=[RiskOut.model_validate(r) for r in (p.risks or [])],
         approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],

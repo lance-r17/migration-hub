@@ -18,6 +18,7 @@ const SECTION_LABELS: Partial<Record<keyof Project, string>> = {
   migrationConstraints:   'Migration Constraints',
   targetArchitecture:     'Target Architecture',
   migrationEffortEstimation: 'Migration Effort Estimation',
+  engagement:             'Engagement',
   risks:                  'Risks & Blockers',
   approvals:              'Sign-off',
   status:                 'Project Status',
@@ -77,6 +78,16 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
     attachmentIds: 'Attachments',
     tables: 'Effort Tables',
     tableMode: 'Table Mode',
+  },
+  engagement: {
+    status: 'Status',
+    interviewSubject: 'Interview Subject',
+    plannedSlots: 'Planned Slots',
+    participantIds: 'Participants',
+    engagementManagerId: 'Engagement Manager',
+    notes: 'Notes',
+    confluencePageUrl: 'Confluence Page',
+    zoomMeetingUrl: 'Zoom Meeting',
   },
   status: { status: 'Status' },
   waveId: { waveId: 'Wave' },
@@ -242,6 +253,7 @@ interface ProjectsState {
   projects: Project[]
   loading: boolean
   error: string | null
+  refresh: () => void
 }
 
 export function useProjects(options?: { home?: boolean; fields?: string[] }): ProjectsState {
@@ -249,7 +261,9 @@ export function useProjects(options?: { home?: boolean; fields?: string[] }): Pr
     projects: [],
     loading: true,
     error: null,
+    refresh: () => {},
   })
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const { user } = useCurrentUser()
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
@@ -264,20 +278,23 @@ export function useProjects(options?: { home?: boolean; fields?: string[] }): Pr
 
     fetch
       .then(projects => {
-        if (!cancelled) setState({ projects, loading: false, error: null })
+        if (!cancelled) setState(prev => ({ ...prev, projects, loading: false, error: null }))
       })
       .catch((err: unknown) => {
-        if (!cancelled) setState({
+        if (!cancelled) setState(prev => ({
+          ...prev,
           projects: [],
           loading: false,
           error: err instanceof Error ? err.message : 'Failed to load projects',
-        })
+        }))
       })
 
     return () => { cancelled = true }
-  }, [user?.id, user?.role, options?.home, JSON.stringify(options?.fields)]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role, options?.home, JSON.stringify(options?.fields), refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  return state
+  const refresh = useCallback(() => setRefreshKey(k => k + 1), [])
+
+  return { ...state, refresh }
 }
 
 interface ProjectState {

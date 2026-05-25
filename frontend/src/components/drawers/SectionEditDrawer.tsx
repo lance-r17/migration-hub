@@ -20,6 +20,7 @@ interface SectionEditDrawerProps {
   saveDisabled?: boolean
   children: ReactNode
   widthClass?: string
+  footerExtra?: ReactNode
 }
 
 export function SectionEditDrawer({
@@ -31,6 +32,7 @@ export function SectionEditDrawer({
   saveDisabled,
   children,
   widthClass = 'w-[600px] sm:!max-w-[600px]',
+  footerExtra,
 }: SectionEditDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -47,6 +49,7 @@ export function SectionEditDrawer({
           {children}
         </div>
         <SheetFooter className="border-t px-6 py-4 flex flex-row gap-2 justify-end">
+          {footerExtra}
           <SheetClose asChild>
             <Button variant="outline">Cancel</Button>
           </SheetClose>

@@ -70,6 +70,23 @@ class Settings(BaseSettings):
 
     console_email: bool = False  # Log emails to stdout instead of sending (dev mode)
 
+    # Confluence integration
+    confluence_base_url: str = ""
+    confluence_api_token: str = ""
+    confluence_user_email: str = ""
+    confluence_space_key: str = ""
+    # 'basic' (default, Cloud + DC with username/password) or 'bearer' (DC Personal Access Token)
+    confluence_auth_type: str = "basic"
+
+    # Zoom Server-to-Server OAuth
+    zoom_account_id: str = ""
+    zoom_client_id: str = ""
+    zoom_client_secret: str = ""
+
+    @property
+    def confluence_api_base(self) -> str:
+        return self.confluence_base_url.rstrip("/")
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

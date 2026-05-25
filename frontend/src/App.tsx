@@ -6,6 +6,9 @@ import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
 import { LoginPage } from './pages/LoginPage'
 import { WavesPage } from './pages/WavesPage'
 import { WaveGanttPage } from './pages/WaveGanttPage'
+import { EngagementCalendarPage } from './pages/EngagementCalendarPage'
+import { EngagementNotesPage } from './pages/EngagementNotesPage'
+import { EngagementNotesEditPage } from './pages/EngagementNotesEditPage'
 import { FinancePage } from './pages/FinancePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SettingsHome } from './pages/SettingsHome'
@@ -17,6 +20,8 @@ import { MigrationSettingsPage } from './pages/MigrationSettingsPage'
 import { EmailTemplatesPage } from './pages/EmailTemplatesPage'
 import { EmailBuilderPage } from './pages/EmailBuilderPage'
 import { EmailPreviewPage } from './pages/EmailPreviewPage'
+import { NoteTemplatesPage } from './pages/NoteTemplatesPage'
+import { TemplatePreviewPage } from './pages/TemplatePreviewPage'
 import { CallbackPage } from './pages/CallbackPage'
 import { AdminJiraJobsPage } from './pages/AdminJiraJobsPage'
 import { ServiceAccountsPage } from './pages/ServiceAccountsPage'
@@ -51,6 +56,9 @@ function App() {
         <Route path="/callback" element={<CallbackPage />} />
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
         <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
+        <Route path="/engagements" element={<ProtectedRoute><EngagementCalendarPage /></ProtectedRoute>} />
+        <Route path="/engagements/:projectId" element={<ProtectedRoute><EngagementNotesPage /></ProtectedRoute>} />
+        <Route path="/engagements/:projectId/edit" element={<ProtectedRoute><EngagementNotesEditPage /></ProtectedRoute>} />
         <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
         <Route path="/waves/gantt" element={<ProtectedRoute><WaveGanttPage /></ProtectedRoute>} />
         <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
@@ -58,6 +66,8 @@ function App() {
         <Route path="/email/new" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
         <Route path="/email/:id/edit" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
         <Route path="/email/:id/preview" element={<ProtectedRoute><EmailPreviewPage /></ProtectedRoute>} />
+        <Route path="/templates" element={<ProtectedRoute><NoteTemplatesPage /></ProtectedRoute>} />
+        <Route path="/templates/:id" element={<ProtectedRoute><TemplatePreviewPage /></ProtectedRoute>} />
         <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
           <Route index element={<AdminHome />} />

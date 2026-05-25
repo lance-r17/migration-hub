@@ -1,0 +1,219 @@
+/* Notion Editor scoped styles */
+
+/* contentEditable placeholders + inline tags */
+.notion-editable {
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  caret-color: var(--foreground);
+  min-height: 1.5em;
+}
+.notion-editable[data-empty="true"]:focus::before {
+  content: attr(data-placeholder);
+  color: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  pointer-events: none;
+}
+
+/* inline hint after "/" when slash menu is open with empty query */
+.notion-editable[data-slash-empty="true"]::after {
+  content: "Type to search";
+  color: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  pointer-events: none;
+  margin-left: 1px;
+}
+.notion-editable a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in oklab, var(--primary) 40%, transparent);
+}
+.notion-editable code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--foreground);
+}
+
+/* table border seams */
+.rich-table th + th,
+.rich-table td + td {
+  border-left: 0;
+}
+.rich-table tr + tr th,
+.rich-table tr + tr td {
+  border-top: 0;
+}
+
+/* table handles */
+.rt-handle {
+  position: absolute;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 100ms ease;
+  -webkit-user-drag: element;
+}
+.rt-handle.show {
+  opacity: 1;
+}
+.rt-handle[draggable="true"] {
+  cursor: grab;
+}
+.rt-handle[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.rt-handle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--muted-foreground);
+  border-radius: 3px;
+  transition: width 120ms ease, height 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+.rt-handle:hover::before {
+  background: var(--foreground);
+}
+.rt-handle.active::before {
+  background: var(--primary);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+}
+.rt-handle.active:hover::before {
+  background: var(--primary / 0.9);
+}
+
+/* focused state (cell focused, not menu/drag) — white border, transparent bg */
+.rt-handle.focused::before {
+  background: transparent;
+  border: 1.5px solid var(--primary);
+  box-shadow: 0 0 0 1px var(--background);
+}
+.rt-handle.focused:hover::before {
+  background: var(--muted);
+}
+
+.rt-handle.col {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 20px;
+}
+.rt-handle.row {
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 36px;
+}
+.rt-handle.cell {
+  right: 0;
+  top: 50%;
+  transform: translate(50%, -50%);
+  width: 18px;
+  height: 32px;
+  z-index: 5;
+}
+
+.rt-handle.col::before {
+  width: 30px;
+  height: 5px;
+}
+.rt-handle.row::before {
+  width: 5px;
+  height: 30px;
+}
+.rt-handle.cell::before {
+  width: 5px;
+  height: 30px;
+}
+
+.rt-handle.col:hover::before,
+.rt-handle.col.active::before {
+  width: 26px;
+  height: 13px;
+}
+.rt-handle.row:hover::before,
+.rt-handle.row.active::before {
+  width: 13px;
+  height: 26px;
+}
+.rt-handle.cell:hover::before,
+.rt-handle.cell.active::before {
+  width: 13px;
+  height: 26px;
+}
+
+.rt-handle .grip {
+  position: relative;
+  z-index: 1;
+  display: none;
+  gap: 1px;
+}
+/* show grip on hover (primary dots) or active (white dots) */
+.rt-handle:hover .grip,
+.rt-handle.active .grip {
+  display: flex;
+}
+.rt-handle.col:hover .grip,
+.rt-handle.col.active .grip {
+  flex-direction: row;
+}
+.rt-handle.row:hover .grip,
+.rt-handle.row.active .grip,
+.rt-handle.cell:hover .grip,
+.rt-handle.cell.active .grip {
+  flex-direction: column;
+}
+.rt-handle .grip span {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  display: block;
+}
+/* hovered but not active → primary dots */
+.rt-handle:hover .grip span {
+  background: var(--primary);
+}
+/* active (drag/menu) → white dots; overrides hover */
+.rt-handle.active .grip span {
+  background: rgb(255 255 255 / 0.9);
+}
+
+/* drop indicator line for table row/col reorder */
+.rt-drop-line {
+  position: absolute;
+  background: var(--primary);
+  border-radius: 2px;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 8px 2px var(--primary / 0.35);
+}
+
+/* block-reorder drop indicators on the parent BlockRow */
+.block-row.drop-above::before,
+.block-row.drop-below::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.block-row.drop-above::before {
+  top: -1px;
+}
+.block-row.drop-below::after {
+  bottom: -1px;
+}

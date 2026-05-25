@@ -13,6 +13,7 @@ import type {
   MigrationConstraints,
   TargetArchitecture,
   MigrationEffortEstimation,
+  Engagement,
   CloudResource,
   Risk,
   Approval,
@@ -98,6 +99,7 @@ interface ProjectListItemApi {
   data_persistence: DataPersistence | null
   nfrs: NonFunctionalRequirements | null
   target_architecture: TargetArchitecture | null
+  engagement: Engagement | null
   approvals: ApprovalApi[]
   cloud_resources: CloudResourceApi[]
   resource_sets: string[] | null
@@ -122,6 +124,7 @@ interface ProjectApiResponse extends ProjectListItemApi {
   migration_constraints: MigrationConstraints | null
   target_architecture: TargetArchitecture | null
   migration_effort_estimation: MigrationEffortEstimation | null
+  engagement: Engagement | null
   cloud_resources: CloudResourceApi[]
   risks: RiskApi[]
 }
@@ -199,6 +202,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     dataPersistence: raw.data_persistence ?? undefined,
     nfrs: raw.nfrs ?? undefined,
     targetArchitecture: raw.target_architecture ?? undefined,
+    engagement: raw.engagement ?? undefined,
     risks: (raw.risks ?? []).map(mapRisk),
     approvals: (raw.approvals ?? []).map(mapApproval),
     currentInfrastructure: raw.cloud_resources?.length
@@ -230,6 +234,7 @@ function fromApi(raw: ProjectApiResponse): Project {
     migrationConstraints: raw.migration_constraints ?? undefined,
     targetArchitecture: raw.target_architecture ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
+    engagement: raw.engagement ?? undefined,
     currentInfrastructure: raw.cloud_resources?.length
       ? { resources: raw.cloud_resources.map(mapResource) }
       : undefined,

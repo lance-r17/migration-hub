@@ -19,9 +19,11 @@ import {
   Waves,
   DollarSign,
   Mail,
+  FileText,
   UserCog,
   FolderOpen,
   GanttChart,
+  CalendarDays,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
@@ -49,6 +51,12 @@ const data = {
       requiresRole: "platform_migration_lead",
     },
     {
+      title: "Engagements",
+      url: "/engagements",
+      icon: <CalendarDays />,
+      requiresRole: "platform_migration_lead",
+    },
+    {
       title: "Waves",
       url: "/waves",
       icon: <Waves />,
@@ -64,6 +72,12 @@ const data = {
       title: "Email",
       url: "/email",
       icon: <Mail />,
+      requiresRole: "platform_migration_lead",
+    },
+    {
+      title: "Templates",
+      url: "/templates",
+      icon: <FileText />,
       requiresRole: "platform_migration_lead",
     },
     {
