@@ -622,6 +622,8 @@ export function NotionEditor({
         <BlockMenu
           pos={blockMenu.pos}
           blockType={localBlocks[blockMenu.index]?.type || 'paragraph'}
+          hideColor={['code', 'tabs', 'table', 'divider'].includes(localBlocks[blockMenu.index]?.type)}
+          hideTurnInto={['tabs', 'table', 'divider'].includes(localBlocks[blockMenu.index]?.type)}
           onClose={() => setBlockMenu(null)}
           onDelete={() => {
             const b = localBlocks[blockMenu.index]

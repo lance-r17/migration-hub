@@ -271,7 +271,7 @@ export function MonthCalendar({
 
         // Apply that time to the target day
         const targetDay = weekDays[eventDrag.newColumn]
-        const newStart = new Date(targetDay)
+        let newStart = new Date(targetDay)
         newStart.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0)
         let newEnd = new Date(newStart.getTime() + duration)
 

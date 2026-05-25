@@ -39,7 +39,7 @@ export function HomePage() {
   const { stats: globalStats, activity: allActivity, loading: dashLoading } = useDashboard({ enabled: isPlatformLead })
   const { projects, loading: projectsLoading } = useProjects({
     home: true,
-    fields: ['basic', 'progress', 'planning', 'risks', 'team', 'approvals'],
+    fields: ['basic', 'progress', 'planning', 'risks', 'team', 'approvals', 'engagement'],
   })
   const { waves, loading: wavesLoading } = useWaves({ enabled: isPlatformLead })
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])

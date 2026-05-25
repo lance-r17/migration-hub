@@ -13,6 +13,7 @@ interface OverallProgressCardProps {
 
 const ACTIVITY_COLORS: Record<string, string> = {
   survey: '#8B5CF6',
+  engagement: '#EC4899',
   signoff: '#F59E0B',
   migration: '#10B981',
 }
@@ -89,11 +90,21 @@ function getMonthlyMigrationActivity(projects: Project[], waves: Wave[]) {
       let signoff = 0
       let migration = 0
 
+      let engagement = 0
+
       for (const project of projects) {
         // Survey: shown in the month it was submitted (UTC)
         if (project.surveySubmittedAt) {
           if (isDateInMonth(project.surveySubmittedAt, year, month)) {
             survey++
+          }
+        }
+
+        // Engagement: shown in the month of the actual slot (isActual=true), only when completed
+        if (project.engagement?.status === 'completed') {
+          const actualSlot = project.engagement.plannedSlots?.find(s => s.isActual)
+          if (actualSlot && isDateInMonth(actualSlot.start, year, month)) {
+            engagement++
           }
         }
 
@@ -123,12 +134,13 @@ function getMonthlyMigrationActivity(projects: Project[], waves: Wave[]) {
 
       const segments: { label: string; value: number; color: string }[] = []
       if (survey > 0) segments.push({ label: 'Survey', value: survey, color: ACTIVITY_COLORS.survey })
+      if (engagement > 0) segments.push({ label: 'Engagement', value: engagement, color: ACTIVITY_COLORS.engagement })
       if (signoff > 0) segments.push({ label: 'Signoff', value: signoff, color: ACTIVITY_COLORS.signoff })
       if (migration > 0) segments.push({ label: 'Migration', value: migration, color: ACTIVITY_COLORS.migration })
 
       months.push({
         label,
-        value: survey + signoff + migration,
+        value: survey + engagement + signoff + migration,
         segments,
       })
     }

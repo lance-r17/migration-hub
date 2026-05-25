@@ -335,6 +335,7 @@ export function ProjectsPage() {
                               <span className="cursor-help border-b border-dashed border-muted-foreground/50">{summaryText}</span>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="max-w-none bg-popover text-popover-foreground border border-border shadow-lg px-0 py-2" sideOffset={4} arrowClassName="fill-popover bg-popover">
+                              <div className="flex flex-col">
                               <div className="overflow-auto max-h-[320px]">
                                 <table className="w-full text-xs">
                                   <thead>
@@ -383,8 +384,9 @@ export function ProjectsPage() {
                                 </table>
                               </div>
                               {hasThirdParty && (
-                                <p className="text-[10px] text-muted-foreground px-3 pt-2">* Third-party effort</p>
+                                <p className="text-[10px] text-muted-foreground italic px-3 pt-2 pb-1 border-t border-border/50 mt-1 bg-muted/50">* Third-party effort</p>
                               )}
+                              </div>
                             </TooltipContent>
                           </Tooltip>
                         )

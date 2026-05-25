@@ -5,7 +5,6 @@ import {
   Trash2,
   ChevronRight,
   Link,
-  CornerUpRight,
   Highlighter,
 } from 'lucide-react'
 import { Icon } from './icons'
@@ -22,6 +21,8 @@ interface BlockMenuProps {
   onSetTextColor: (color: string) => void
   onSetBgColor: (color: string) => void
   currentColors?: { textColor: string; bgColor: string }
+  hideColor?: boolean
+  hideTurnInto?: boolean
 }
 
 const CONVERT_TARGETS = [
@@ -65,7 +66,7 @@ const TYPE_LABEL: Record<string, string> = {
   columns: 'Columns',
 }
 
-export function BlockMenu({ pos, blockType, onClose, onDelete, onDuplicate, onConvertTo, onSetTextColor, onSetBgColor, currentColors }: BlockMenuProps) {
+export function BlockMenu({ pos, blockType, onClose, onDelete, onDuplicate, onConvertTo, onSetTextColor, onSetBgColor, currentColors, hideColor, hideTurnInto }: BlockMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [turnSubmenu, setTurnSubmenu] = useState(false)
   const [colorSubmenu, setColorSubmenu] = useState(false)
@@ -118,52 +119,56 @@ export function BlockMenu({ pos, blockType, onClose, onDelete, onDuplicate, onCo
       </div>
 
       {/* Turn into */}
-      <div
-        className={`${row} mx-1 relative`}
-        onMouseEnter={() => { computeSubmenuSide(); setTurnSubmenu(true) }}
-        onMouseLeave={() => setTurnSubmenu(false)}
-      >
-        <span className="w-4 grid place-items-center text-muted-foreground"><Replace size={14} /></span>
-        Turn into
-        <span className={kbd}><ChevronRight size={14} /></span>
-        {turnSubmenu && (
-          <div
-            className={`absolute ${submenuLeft ? 'right-[calc(100%+4px)]' : 'left-[calc(100%+4px)]'} -top-1 w-[180px] p-1 rounded-lg bg-popover border border-border shadow-md z-[60]`}
-            onMouseEnter={() => setTurnSubmenu(true)}
-            onMouseLeave={() => setTurnSubmenu(false)}
-          >
-            {CONVERT_TARGETS.map(t => (
-              <div key={t.type} className={row} onClick={() => { onConvertTo(t.type); onClose() }}>
-                <span className="w-4 grid place-items-center text-muted-foreground"><Icon name={t.icon} size={14} /></span> {t.title}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {!hideTurnInto && (
+        <div
+          className={`${row} mx-1 relative`}
+          onMouseEnter={() => { computeSubmenuSide(); setTurnSubmenu(true) }}
+          onMouseLeave={() => setTurnSubmenu(false)}
+        >
+          <span className="w-4 grid place-items-center text-muted-foreground"><Replace size={14} /></span>
+          Turn into
+          <span className={kbd}><ChevronRight size={14} /></span>
+          {turnSubmenu && (
+            <div
+              className={`absolute ${submenuLeft ? 'right-[calc(100%+4px)]' : 'left-[calc(100%+4px)]'} -top-1 w-[180px] p-1 rounded-lg bg-popover border border-border shadow-md z-[60]`}
+              onMouseEnter={() => setTurnSubmenu(true)}
+              onMouseLeave={() => setTurnSubmenu(false)}
+            >
+              {CONVERT_TARGETS.map(t => (
+                <div key={t.type} className={row} onClick={() => { onConvertTo(t.type); onClose() }}>
+                  <span className="w-4 grid place-items-center text-muted-foreground"><Icon name={t.icon} size={14} /></span> {t.title}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Color */}
-      <div
-        className={`${row} mx-1 relative`}
-        onMouseEnter={() => { computeSubmenuSide(); setColorSubmenu(true) }}
-        onMouseLeave={() => setColorSubmenu(false)}
-      >
-        <span className="w-4 grid place-items-center text-muted-foreground"><Highlighter size={14} /></span>
-        Color
-        <span className={kbd}><ChevronRight size={14} /></span>
-        {colorSubmenu && (
-          <div
-            className={`absolute ${submenuLeft ? 'right-[calc(100%+4px)]' : 'left-[calc(100%+4px)]'} -top-1 z-[60]`}
-            onMouseEnter={() => setColorSubmenu(true)}
-            onMouseLeave={() => setColorSubmenu(false)}
-          >
-            <ColorPicker
-              current={currentColors || { textColor: 'default', bgColor: 'default' }}
-              onSetTextColor={(v) => { onSetTextColor(v); onClose() }}
-              onSetBgColor={(v) => { onSetBgColor(v); onClose() }}
-            />
-          </div>
-        )}
-      </div>
+      {!hideColor && (
+        <div
+          className={`${row} mx-1 relative`}
+          onMouseEnter={() => { computeSubmenuSide(); setColorSubmenu(true) }}
+          onMouseLeave={() => setColorSubmenu(false)}
+        >
+          <span className="w-4 grid place-items-center text-muted-foreground"><Highlighter size={14} /></span>
+          Color
+          <span className={kbd}><ChevronRight size={14} /></span>
+          {colorSubmenu && (
+            <div
+              className={`absolute ${submenuLeft ? 'right-[calc(100%+4px)]' : 'left-[calc(100%+4px)]'} -top-1 z-[60]`}
+              onMouseEnter={() => setColorSubmenu(true)}
+              onMouseLeave={() => setColorSubmenu(false)}
+            >
+              <ColorPicker
+                current={currentColors || { textColor: 'default', bgColor: 'default' }}
+                onSetTextColor={(v) => { onSetTextColor(v); onClose() }}
+                onSetBgColor={(v) => { onSetBgColor(v); onClose() }}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="h-px bg-border mx-2 my-1" />
 
@@ -181,14 +186,7 @@ export function BlockMenu({ pos, blockType, onClose, onDelete, onDuplicate, onCo
         <span className={kbd}>⌘D</span>
       </div>
 
-      {/* Move to */}
-      <div className={`${row} mx-1`} onClick={() => { onClose() }}>
-        <span className="w-4 grid place-items-center text-muted-foreground"><CornerUpRight size={14} /></span>
-        Move to
-        <span className={kbd}>⌘⇧P</span>
-      </div>
-
-      {/* Delete */}
+{/* Delete */}
       <div
         className="flex items-center gap-2.5 px-2 py-1.5 rounded text-[13px] cursor-pointer hover:bg-destructive/10 mx-1 text-destructive"
         onClick={() => { onDelete(); onClose() }}

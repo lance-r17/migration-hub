@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import { PieChart as PieChartIcon, ClipboardCheck, Database } from 'lucide-react'
+import { PieChart as PieChartIcon, ClipboardCheck, Database, Users } from 'lucide-react'
 import { getAssetStats } from '@/services/projects'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PieChart } from '@/components/shared/PieChart'
 import { getProjectStage, STAGE_META } from '@/lib/project-stages'
 import type { Project } from '@/types'
+
+const ENGAGEMENT_STATUS_META: { key: string; label: string; color: string }[] = [
+  { key: 'pending',   label: 'Pending',    color: '#F59E0B' },
+  { key: 'scheduled', label: 'Scheduled',  color: '#3B82F6' },
+  { key: 'completed', label: 'Completed',  color: '#10B981' },
+  { key: 'cancelled', label: 'Cancelled',  color: '#EF4444' },
+  { key: 'no_show',   label: 'No Show',    color: '#94A3B8' },
+  { key: 'none',      label: 'Not Started',color: '#CBD5E1' },
+]
 
 interface ProjectStatusChartCardProps {
   projects: Project[]
@@ -45,6 +54,17 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
       value: counts.get(meta.key) ?? 0,
       color: meta.colorVar,
     })).filter((d) => d.value > 0)
+  }, [projects])
+
+  const engagementData = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const project of projects) {
+      const key = project.engagement?.status ?? 'none'
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return ENGAGEMENT_STATUS_META
+      .map(meta => ({ label: meta.label, value: counts.get(meta.key) ?? 0, color: meta.color }))
+      .filter(d => d.value > 0)
   }, [projects])
 
   const draftIdSet = useMemo(() => new Set(draftProjectIds), [draftProjectIds])
@@ -94,6 +114,10 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
               <ClipboardCheck size={14} />
               Surveys
             </TabsTrigger>
+            <TabsTrigger value="engagement" className="flex-1 gap-1.5">
+              <Users size={14} />
+              Engagement
+            </TabsTrigger>
             <TabsTrigger value="assets" className="flex-1 gap-1.5">
               <Database size={14} />
               Assets
@@ -125,6 +149,20 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
             </div>
             <p className="text-xs text-muted-foreground text-center">
               Projects that have submitted their migration surveys
+            </p>
+          </TabsContent>
+          <TabsContent value="engagement" className="flex flex-col gap-2">
+            <div className="w-full flex justify-center">
+              {engagementData.length > 0 ? (
+                <PieChart data={engagementData} size={180} />
+              ) : (
+                <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
+                  No engagement data available
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Distribution of project engagement statuses
             </p>
           </TabsContent>
           <TabsContent value="assets" className="flex flex-col gap-2">
