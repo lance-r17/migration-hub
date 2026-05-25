@@ -36,11 +36,7 @@ def _parent_page_out(p: ConfluenceParentPage) -> dict[str, Any]:
 
 @router.get("/status")
 async def confluence_status() -> dict[str, Any]:
-    configured = bool(
-        settings.confluence_base_url
-        and settings.confluence_api_token
-        and settings.confluence_user_email
-    )
+    configured = confluence_service.is_configured()
     space_check: dict[str, Any] | None = None
     if configured and settings.confluence_space_key:
         space_check = await confluence_service.validate_space(settings.confluence_space_key)
@@ -65,11 +61,7 @@ async def search_space_pages(
     _: User = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """Search pages in the configured Confluence space."""
-    if not (
-        settings.confluence_base_url
-        and settings.confluence_api_token
-        and settings.confluence_user_email
-    ):
+    if not confluence_service.is_configured():
         raise HTTPException(status_code=503, detail="Confluence integration is not configured")
     if not settings.confluence_space_key:
         raise HTTPException(status_code=503, detail="CONFLUENCE_SPACE_KEY is not configured")
@@ -123,7 +115,7 @@ async def get_page_parent_page_id(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, str | None]:
     """Return the direct parent Confluence page ID for the given page."""
-    if not (settings.confluence_base_url and settings.confluence_api_token and settings.confluence_user_email):
+    if not confluence_service.is_configured():
         raise HTTPException(status_code=503, detail="Confluence integration is not configured")
     parent_id = await confluence_service.get_page_parent_id(page_id)
     return {"parentPageId": parent_id}
@@ -137,11 +129,7 @@ async def export_engagement_notes(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     """Export or update engagement notes as a Confluence page."""
-    if not (
-        settings.confluence_base_url
-        and settings.confluence_api_token
-        and settings.confluence_user_email
-    ):
+    if not confluence_service.is_configured():
         raise HTTPException(status_code=503, detail="Confluence integration is not configured")
 
     project = await project_service.get_by_id(db, project_id)

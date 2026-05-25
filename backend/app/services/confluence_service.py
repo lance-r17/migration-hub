@@ -4,16 +4,19 @@ from typing import Any
 
 import httpx
 
-from app.config import settings
+from app.config import HTTP_CLIENT_VERIFY, settings
 
 logger = logging.getLogger(__name__)
 
-def _is_configured() -> bool:
+def is_configured() -> bool:
     if not settings.confluence_base_url or not settings.confluence_api_token:
         return False
     if settings.confluence_auth_type == "bearer":
         return True
     return bool(settings.confluence_user_email)
+
+
+_is_configured = is_configured
 
 
 def _auth_headers() -> dict[str, str]:
@@ -38,7 +41,7 @@ async def _request(
         "Accept": "application/json",
         **_auth_headers(),
     }
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=HTTP_CLIENT_VERIFY) as client:
         resp = await client.request(
             method,
             url,
