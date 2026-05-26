@@ -135,12 +135,6 @@ export function NoteTemplatesPage() {
                 <Skeleton key={i} className="h-[180px] rounded-xl" />
               ))}
             </div>
-          ) : templates.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-10 text-center">
-              <p className="text-sm text-muted-foreground">
-                No templates yet. Save your first template from an engagement notes page.
-              </p>
-            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {/* Create Template Card */}

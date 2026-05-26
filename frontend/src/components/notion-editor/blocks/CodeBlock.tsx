@@ -7,12 +7,34 @@ import type { BlockRendererProps } from './types'
 const LANGUAGES = [
   'javascript', 'typescript', 'jsx', 'tsx', 'python', 'rust', 'go',
   'java', 'cpp', 'csharp', 'html', 'css', 'json', 'bash', 'sql',
-  'yaml', 'markdown', 'ruby', 'php',
+  'yaml', 'markdown', 'ruby', 'php', 'mermaid',
 ]
 
 const ACTIVE_THEME = themes.vsDark
 const BG = ACTIVE_THEME.plain.backgroundColor as string
 const FG = ACTIVE_THEME.plain.color as string
+
+function MermaidDiagram({ code }: { code: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!code.trim() || !ref.current) return
+    import('mermaid').then(({ default: mermaid }) => {
+      mermaid.initialize({ startOnLoad: false, theme: 'dark' })
+      const id = `mmd-${Math.random().toString(36).slice(2, 9)}`
+      mermaid.render(id, code)
+        .then(({ svg }) => {
+          if (ref.current) ref.current.innerHTML = svg
+          setError(null)
+        })
+        .catch((err: Error) => setError(err.message ?? 'Invalid diagram'))
+    })
+  }, [code])
+
+  if (error) return <div className="text-[12px] text-red-400 px-1 py-2 whitespace-pre-wrap font-mono">{error}</div>
+  return <div ref={ref} className="flex justify-center py-2" />
+}
 
 function decodeHtml(html: string) {
   const el = document.createElement('div')
@@ -121,6 +143,18 @@ export function CodeBlock({ block, onChange, onKeyDown, onFocus, autoFocus, read
             blockId={block.id}
             readOnly={false}
           />
+        ) : b.language === 'mermaid' ? (
+          <div
+            className="cursor-text outline-none"
+            onClick={() => { if (!readOnly) { setOpenLangPick(false); setFocused(true) } }}
+            onFocus={() => { if (!readOnly) { setOpenLangPick(false); setFocused(true) } }}
+            tabIndex={readOnly ? undefined : 0}
+          >
+            {codeText
+              ? <MermaidDiagram code={codeText} />
+              : <span style={{ opacity: 0.4, color: FG }}>{'// mermaid diagram'}</span>
+            }
+          </div>
         ) : (
           <Highlight theme={ACTIVE_THEME} code={codeText || ' '} language={b.language as Parameters<typeof Highlight>[0]['language']}>
             {({ tokens, getLineProps, getTokenProps }) => (
