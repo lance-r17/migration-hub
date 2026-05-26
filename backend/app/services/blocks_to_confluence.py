@@ -105,15 +105,15 @@ def _image_macro(
         px = max(50, round(width_pct * 680 / 100))
         width_attr = f' ac:width="{px}"'
 
-    caption_xml = f"<ac:caption><p>{html.escape(caption)}</p></ac:caption>" if caption else ""
-
     if is_cloud:
-        # Cloud: ac:align is supported; data: URLs render inline in the browser.
+        # Cloud: ac:align + ac:caption are supported; data: URLs render inline in the browser.
         align_attr = f' ac:align="{align}"' if align in ("left", "center", "right") else ""
         ri_ref = f'<ri:url ri:value="{html.escape(src)}"/>'
+        caption_xml = f"<ac:caption><p>{_inline_html(caption)}</p></ac:caption>" if caption else ""
         return f"<ac:image{align_attr}{width_attr}>{ri_ref}{caption_xml}</ac:image>"
     else:
-        # DC: ac:align is not supported; data: URLs must be uploaded as attachments.
+        # DC: ac:align and ac:caption are not supported.
+        # data: URLs must be uploaded as attachments.
         if src.startswith("data:") and attachments is not None:
             try:
                 header, encoded = src.split(",", 1)
@@ -131,10 +131,12 @@ def _image_macro(
         else:
             ri_ref = f'<ri:url ri:value="{html.escape(src)}"/>'
 
-        image_tag = f"<ac:image{width_attr}>{ri_ref}{caption_xml}</ac:image>"
+        image_tag = f"<ac:image{width_attr}>{ri_ref}</ac:image>"
+        # Caption rendered as a plain paragraph below the image (ac:caption is Cloud-only).
+        caption_p = f"<p><em>{_inline_html(caption)}</em></p>" if caption else ""
         if align in ("left", "center", "right"):
-            return f'<p style="text-align:{align};">{image_tag}</p>'
-        return image_tag
+            return f'<p style="text-align:{align};">{image_tag}</p>{caption_p}'
+        return f"{image_tag}{caption_p}"
 
 
 _TEXT_COLOR_MAP: dict[str, str] = {
