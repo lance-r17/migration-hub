@@ -13,6 +13,8 @@
   - [Hooks](frontend/hooks.md)
   - [Services](frontend/services.md)
   - [Components](frontend/components.md)
+  - [Engagements](frontend/engagements.md)
+  - [Note Templates](frontend/note-templates.md)
   - [Best Practices](frontend/best-practices.md)
   - [Testing](frontend/testing.md)
   - [Docker Build & Push](frontend/docker-build-push.md)

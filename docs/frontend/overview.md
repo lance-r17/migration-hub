@@ -7,14 +7,19 @@ frontend/src/
 ├── main.tsx                    # React root — mounts <App> inside <UserProvider>
 ├── App.tsx                     # BrowserRouter + route definitions + ProtectedRoute
 ├── pages/
-│   ├── HomePage.tsx            # Dashboard — stats, project cards, activity feed
-│   ├── ProjectsPage.tsx        # All projects table (Platform Migration Lead only)
-│   ├── ProjectDetailsPage.tsx  # Full project register with all 10 sections
-│   ├── WavesPage.tsx          # Wave planning (Platform Migration Lead only)
-│   ├── LoginPage.tsx          # Mock SSO login
-│   ├── EmailTemplatesPage.tsx  # Email template list + create/delete
-│   ├── EmailBuilderPage.tsx    # Visual email template editor
-│   └── EmailPreviewPage.tsx    # Template preview + Send Test
+│   ├── HomePage.tsx                  # Dashboard — stats, project cards, activity feed
+│   ├── ProjectsPage.tsx              # All projects table (Platform Migration Lead only)
+│   ├── ProjectDetailsPage.tsx        # Full project register with all 10 sections
+│   ├── WavesPage.tsx                 # Wave planning (Platform Migration Lead only)
+│   ├── LoginPage.tsx                 # Mock SSO login
+│   ├── EngagementCalendarPage.tsx    # Month calendar of all project engagements
+│   ├── EngagementNotesPage.tsx       # Read-only engagement notes view
+│   ├── EngagementNotesEditPage.tsx   # Notion editor for engagement notes (auto-save)
+│   ├── NoteTemplatesPage.tsx         # Template card gallery
+│   ├── TemplatePreviewPage.tsx       # Template view/edit with version history
+│   ├── EmailTemplatesPage.tsx        # Email template list + create/delete
+│   ├── EmailBuilderPage.tsx          # Visual email template editor
+│   └── EmailPreviewPage.tsx          # Template preview + Send Test
 ├── components/
 │   ├── layout/                 # App shell, sidebar, header, nav
 │   ├── project/                # Per-section display components
@@ -24,6 +29,14 @@ frontend/src/
 │   ├── shared/                 # Reusable cross-page components
 │   ├── ui/                     # shadcn/ui primitives
 │   ├── audit/                  # Audit log timeline
+│   ├── engagement/             # Engagement feature components
+│   │   ├── EngagementDrawer.tsx       # Metadata drawer (slots, participants, Zoom)
+│   │   ├── MonthCalendar.tsx          # Month-grid with status-coloured pills
+│   │   └── ConfluenceExportDialog.tsx # Blocks → Confluence XHTML export
+│   ├── note-template/          # Note template feature components
+│   │   ├── TemplatePicker.tsx         # Searchable apply-template dialog
+│   │   ├── SaveTemplateDialog.tsx     # Save notes as template with smart replacements
+│   │   └── TemplateMetaPanel.tsx      # Name/description/labels/scope form
 │   └── email-builder/          # Email builder UI
 │       ├── builder/            # Editor layout, canvas, left/right panels
 │       │   ├── canvas/         # Row, column, component, toolbar, rich text editor
@@ -32,6 +45,7 @@ frontend/src/
 │       └── preview/            # BrowserContainer, TemplateRenderer
 ├── hooks/                      # Custom hooks (data + business logic)
 ├── services/                   # API layer (one file per domain)
+│   └── noteTemplates.ts        # CRUD + version control for note templates
 ├── context/
 │   └── UserContext.tsx         # Auth context
 ├── types/
@@ -42,11 +56,13 @@ frontend/src/
 ├── data/
 │   ├── mock.ts                 # Seed data
 │   ├── store.ts                # In-memory session store
-│   └── emailTemplates.ts       # In-memory email template store
+│   ├── emailTemplates.ts       # In-memory email template store
+│   └── noteTemplates.ts        # Predefined seed templates (global + function-specific)
 ├── utils/
 │   └── diff.ts                 # Object diff engine for audit logging
 └── lib/
-    └── utils.ts                # cn() helper
+    ├── utils.ts                # cn() helper
+    └── noteTemplateUtils.ts    # Block sanitisation, variable resolution, smart replacement
 ```
 
 ## Path alias

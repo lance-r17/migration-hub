@@ -18,6 +18,7 @@ type MigrationStrategy = 'Lift & Shift' | 'Refactor' | 'Deboard'
 type ResourceCategory = 'computing' | 'security' | 'networking' | 'database' | 'storage' | 'middleware' | 'analytics-computing' | 'monitoring'
 type TaskType         = 'onboarding' | 'migrate-computing' | 'migrate-database' | 'migrate-storage' | 'migrate-logs' | 'migrate-big-data' | 'custom'
 type TaskStatus       = 'todo' | 'in-progress' | 'done'
+type EngagementStatus = 'pending' | 'scheduled' | 'completed' | 'cancelled' | 'no_show'
 ```
 
 > **Backend deviation:** `ApprovalStatus` in the backend is stored as `'pending' | 'approved' | 'rejected'`. The frontend type retains `'waiting'` for historical UI states but the backend never returns it.
@@ -446,6 +447,77 @@ interface AuditChange {
   label: string
   oldValue: unknown
   newValue: unknown
+}
+```
+
+---
+
+## Engagement
+
+An engagement is created 1:1 per project to track migration interview scheduling and notes. It is embedded in the `Project` object returned by the API and updated via `PATCH /api/v1/projects/:id/sections/engagement`.
+
+```ts
+interface EngagementSlot {
+  id: string
+  start: string       // ISO datetime
+  end: string         // ISO datetime
+  isActual?: boolean  // true for the confirmed interview slot
+}
+
+interface Engagement {
+  status: EngagementStatus
+  interviewSubject?: string
+  plannedSlots: EngagementSlot[]
+  participantIds: string[]        // user IDs
+  engagementManagerId?: string    // user ID of the responsible platform lead
+  notes?: unknown[]               // Notion Block[] stored as JSONB
+  confluencePageId?: string       // set after first Confluence export
+  confluencePageUrl?: string
+  zoomMeetingUrl?: string
+  zoomMeetingId?: string
+}
+```
+
+---
+
+## NoteTemplate
+
+Reusable Notion-block collections with scope-based visibility. Managed via `/api/v1/note-templates`.
+
+```ts
+interface NoteTemplate {
+  id: string
+  name: string
+  description?: string
+  labels: string[]
+  blocks: unknown[]                          // Notion Block[]
+  scope: 'global' | 'private' | 'function'
+  sharedRoles?: string[]                     // roles that can view (scope='function')
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+```
+
+---
+
+## NoteTemplateVersion
+
+Immutable snapshot of a `NoteTemplate` at a point in time. A snapshot is created automatically before every update and before every restore.
+
+```ts
+interface NoteTemplateVersion {
+  id: string
+  templateId: string
+  versionNumber: number
+  name: string
+  description?: string
+  labels: string[]
+  blocks: unknown[]
+  scope: 'global' | 'private' | 'function'
+  sharedRoles?: string[]
+  createdBy?: string
+  createdAt?: string
 }
 ```
 

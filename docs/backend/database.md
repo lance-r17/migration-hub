@@ -202,6 +202,68 @@
 | `created_at` | `TIMESTAMPTZ NOT NULL` | |
 | `updated_at` | `TIMESTAMPTZ NOT NULL` | |
 
+### `engagements`
+
+One engagement per project (unique constraint on `project_id`). Stores interview scheduling metadata and Notion-block notes.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT PK` | |
+| `project_id` | `TEXT FK → projects.id UNIQUE NOT NULL` | 1:1 with project |
+| `status` | `TEXT` | nullable; `'pending'\|'scheduled'\|'completed'\|'cancelled'\|'no_show'` |
+| `interview_subject` | `TEXT` | nullable; used as Confluence page title |
+| `engagement_manager_id` | `TEXT` | nullable; FK-by-convention to `users.id` |
+| `confluence_page_id` | `TEXT` | nullable; set after first Confluence export |
+| `confluence_page_url` | `TEXT` | nullable; full URL of the Confluence page |
+| `zoom_meeting_url` | `TEXT` | nullable; join URL created by Zoom integration |
+| `zoom_meeting_id` | `TEXT` | nullable; Zoom meeting ID |
+| `planned_slots` | `JSONB` | nullable; `EngagementSlot[]` — `[{id, start, end, isActual?}]` |
+| `participant_ids` | `JSONB` | nullable; `string[]` of user IDs |
+| `notes` | `JSONB` | nullable; Notion `Block[]` — the interview notes |
+| `created_at` | `TIMESTAMPTZ NOT NULL` | |
+| `updated_at` | `TIMESTAMPTZ NOT NULL` | |
+
+> Migrations: `0023_add_engagement_to_projects`, `0024_extract_engagement_to_table`, `0028_add_confluence_parent_pages_and_engagement_page_id`
+
+### `note_templates`
+
+Reusable Notion-block templates with scope-based visibility.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT PK` | UUID |
+| `name` | `TEXT NOT NULL` | |
+| `description` | `TEXT` | nullable |
+| `labels` | `JSONB NOT NULL` | `string[]` — e.g. `['engagement', 'architecture']` |
+| `blocks` | `JSONB NOT NULL` | Notion `Block[]` |
+| `scope` | `TEXT NOT NULL` | `'global'\|'private'\|'function'`; default `'private'` |
+| `shared_roles` | `JSONB NOT NULL` | `string[]`; roles that can view/use when `scope='function'` |
+| `created_by` | `TEXT` | nullable; user ID of the creator |
+| `created_at` | `TIMESTAMPTZ NOT NULL` | |
+| `updated_at` | `TIMESTAMPTZ NOT NULL` | |
+
+> Migrations: `0025_add_note_templates`, `0026_add_shared_roles_to_note_templates`
+
+### `note_template_versions`
+
+Immutable snapshots of a `note_templates` row. A snapshot is created automatically before every update and before every restore. Deleted (cascade) when the parent template is deleted.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT PK` | UUID |
+| `template_id` | `TEXT FK → note_templates.id CASCADE NOT NULL` | |
+| `version_number` | `INTEGER NOT NULL` | auto-incremented per template |
+| `name` | `TEXT NOT NULL` | snapshot of `note_templates.name` at save time |
+| `description` | `TEXT` | nullable |
+| `labels` | `JSONB NOT NULL` | snapshot of `labels` |
+| `blocks` | `JSONB NOT NULL` | snapshot of `blocks` |
+| `scope` | `TEXT NOT NULL` | snapshot of `scope` |
+| `shared_roles` | `JSONB NOT NULL` | snapshot of `shared_roles` |
+| `created_by` | `TEXT` | nullable; user ID who triggered the snapshot |
+| `created_at` | `TIMESTAMPTZ NOT NULL` | |
+
+> Migration: `0027_add_note_template_versions`
+
 ## Indexes
 
 | Index | Table | Columns | Purpose |

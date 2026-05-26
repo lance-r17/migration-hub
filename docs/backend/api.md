@@ -170,6 +170,7 @@ Replaces one section on a project. `:key` is a camelCase section name (e.g. `app
 | `currentInfrastructure` | Delegates to `cloud_resources` table (replace-all) |
 | `risks` | Delegates to `risks` table (replace-all) |
 | `approvals` | Delegates to `approvals` table (replace-all) |
+| `engagement` | Delegates to `engagements` table (upsert 1:1 record) |
 
 ---
 
@@ -688,6 +689,122 @@ Replaces the billing threshold configuration.
 Returns the static product → category mapping used to group cloud resources.
 
 **Response:** `Record<string, string>`
+
+---
+
+## Note Templates
+
+Note templates are reusable Notion-block collections with variable placeholder support. See [Note Templates](../frontend/note-templates.md) for the full feature guide.
+
+**Authorization summary:**
+
+| Action | Requirement |
+|---|---|
+| View `global` templates | Any authenticated user |
+| View `function` templates | User's role overlaps `sharedRoles` |
+| View `private` templates | Creator only |
+| Create `private` | Any authenticated user |
+| Create `global` or `function` | Platform Migration Lead or Admin |
+| Edit / delete | Creator, or Platform Migration Lead / Admin (for `global`/`function`) |
+| Change scope to `global`/`function` | Platform Migration Lead or Admin |
+
+---
+
+### `GET /api/v1/note-templates`
+
+List all templates visible to the current user. Returns global templates, the caller's own private templates, and function-specific templates where the caller's role overlaps `sharedRoles`.
+
+**Query params:**
+- `label` (optional) — filter to templates whose `labels` array contains this string
+
+**Response:** `NoteTemplate[]` ordered by name
+
+---
+
+### `GET /api/v1/note-templates/:id`
+
+Return a single template.
+
+**Response:** `NoteTemplate`
+
+**Errors:**
+- `404` — template not found
+- `403` — caller is not authorized to view this template
+
+---
+
+### `POST /api/v1/note-templates`
+
+Create a new template.
+
+**Request body:**
+```json
+{
+  "name": "string",
+  "description": "string (optional)",
+  "labels": ["string"],
+  "blocks": [],
+  "scope": "private | global | function",
+  "sharedRoles": ["string"] 
+}
+```
+
+**Response:** `NoteTemplate` — `201 Created`
+
+**Errors:**
+- `403` — caller tried to create a `global` or `function` template without the required role
+
+---
+
+### `PUT /api/v1/note-templates/:id`
+
+Update a template. The current state is **automatically snapshotted** as a `NoteTemplateVersion` before any changes are applied, so no history is ever lost.
+
+**Request body:** same shape as `POST` — only keys present in the body are updated.
+
+**Scope change rules:** promoting to `global` or `function` requires Platform Migration Lead or Admin. Downgrading to `private` is allowed by the creator.
+
+**Response:** `NoteTemplate`
+
+**Errors:**
+- `403` — not authorized to update, or scope change not permitted
+- `404` — template not found
+
+---
+
+### `DELETE /api/v1/note-templates/:id`
+
+Delete a template and all its version snapshots (cascade).
+
+**Response:** `204 No Content`
+
+**Errors:**
+- `403` — not authorized to delete
+- `404` — template not found
+
+---
+
+### `GET /api/v1/note-templates/:id/versions`
+
+List all version snapshots for a template, ordered newest-first.
+
+**Response:** `NoteTemplateVersion[]`
+
+**Errors:**
+- `403` — not authorized to view the template
+- `404` — template not found
+
+---
+
+### `POST /api/v1/note-templates/:id/versions/:versionId/restore`
+
+Restore a previous version as the current template state. The live state is snapshotted before restoring, so the restore itself is reversible.
+
+**Response:** `NoteTemplate` — the updated template after restore
+
+**Errors:**
+- `403` — not authorized to manage the template
+- `404` — template or version not found
 
 ---
 
