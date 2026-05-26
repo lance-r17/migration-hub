@@ -90,17 +90,16 @@ def _code_macro(language: str, content: str) -> str:
     )
 
 
-def _image_macro(src: str, caption: str = "") -> str:
-    macro = (
-        f'<ac:structured-macro ac:name="info">'
-        f'<ac:rich-text-body><p><ac:image>'
-        f'<ri:url ri:value="{html.escape(src)}" />'
-        f'</ac:image>'
-    )
-    if caption:
-        macro += f" {html.escape(caption)}"
-    macro += "</p></ac:rich-text-body></ac:structured-macro>"
-    return macro
+def _image_macro(src: str, caption: str = "", align: str = "", width_pct: int = 0) -> str:
+    attrs = ""
+    if align in ("left", "center", "right"):
+        attrs += f' ac:align="{align}"'
+    if 0 < width_pct < 100:
+        # Convert % to pixels relative to a ~680 px Confluence content column
+        px = max(50, round(width_pct * 680 / 100))
+        attrs += f' ac:width="{px}"'
+    caption_xml = f"<ac:caption><p>{html.escape(caption)}</p></ac:caption>" if caption else ""
+    return f'<ac:image{attrs}><ri:url ri:value="{html.escape(src)}" />{caption_xml}</ac:image>'
 
 
 _TEXT_COLOR_MAP: dict[str, str] = {
@@ -255,9 +254,11 @@ def _flatten_blocks(blocks: list[dict[str, Any]]) -> str:
 
         elif btype == "image":
             src = block.get("src", "")
-            caption = block.get("caption", "")
+            caption = block.get("caption", "") or ""
+            align = block.get("align", "") or ""
+            width_pct = int(block.get("width") or 0)
             if src:
-                parts.append(_image_macro(src, caption))
+                parts.append(_image_macro(src, caption, align, width_pct))
             else:
                 parts.append("<p>[Image]</p>")
 

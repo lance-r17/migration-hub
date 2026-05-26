@@ -53,6 +53,11 @@ export interface ImageBlock extends BaseBlock {
   type: 'image'
   src: string
   caption?: string
+  width?: number              // percentage 10-100
+  align?: 'left' | 'center' | 'right'
+  originalSrc?: string        // preserved before first crop; cleared on restore
+  cropRect?: { x: number; y: number; w: number; h: number } // last crop in 0-100 %
+  cropAspectRatio?: string    // last selected aspect ratio key
 }
 
 export interface BookmarkBlock extends BaseBlock {
