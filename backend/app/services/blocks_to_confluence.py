@@ -1,4 +1,6 @@
+import base64 as _b64
 import html
+import uuid
 from typing import Any
 
 # Confluence storage-format namespace wrapper.
@@ -90,16 +92,49 @@ def _code_macro(language: str, content: str) -> str:
     )
 
 
-def _image_macro(src: str, caption: str = "", align: str = "", width_pct: int = 0) -> str:
-    attrs = ""
-    if align in ("left", "center", "right"):
-        attrs += f' ac:align="{align}"'
+def _image_macro(
+    src: str,
+    caption: str = "",
+    align: str = "",
+    width_pct: int = 0,
+    is_cloud: bool = True,
+    attachments: "list[dict[str, Any]] | None" = None,
+) -> str:
+    width_attr = ""
     if 0 < width_pct < 100:
-        # Convert % to pixels relative to a ~680 px Confluence content column
         px = max(50, round(width_pct * 680 / 100))
-        attrs += f' ac:width="{px}"'
+        width_attr = f' ac:width="{px}"'
+
     caption_xml = f"<ac:caption><p>{html.escape(caption)}</p></ac:caption>" if caption else ""
-    return f'<ac:image{attrs}><ri:url ri:value="{html.escape(src)}" />{caption_xml}</ac:image>'
+
+    if is_cloud:
+        # Cloud: ac:align is supported; data: URLs render inline in the browser.
+        align_attr = f' ac:align="{align}"' if align in ("left", "center", "right") else ""
+        ri_ref = f'<ri:url ri:value="{html.escape(src)}"/>'
+        return f"<ac:image{align_attr}{width_attr}>{ri_ref}{caption_xml}</ac:image>"
+    else:
+        # DC: ac:align is not supported; data: URLs must be uploaded as attachments.
+        if src.startswith("data:") and attachments is not None:
+            try:
+                header, encoded = src.split(",", 1)
+                mime = header.split(":")[1].split(";")[0]
+                ext = (mime.split("/")[1] if "/" in mime else "png").split("+")[0]
+                filename = f"image-{uuid.uuid4().hex[:10]}.{ext}"
+                attachments.append({
+                    "filename": filename,
+                    "content": _b64.b64decode(encoded),
+                    "content_type": mime,
+                })
+                ri_ref = f'<ri:attachment ri:filename="{filename}"/>'
+            except Exception:
+                ri_ref = f'<ri:url ri:value="{html.escape(src)}"/>'
+        else:
+            ri_ref = f'<ri:url ri:value="{html.escape(src)}"/>'
+
+        image_tag = f"<ac:image{width_attr}>{ri_ref}{caption_xml}</ac:image>"
+        if align in ("left", "center", "right"):
+            return f'<p style="text-align:{align};">{image_tag}</p>'
+        return image_tag
 
 
 _TEXT_COLOR_MAP: dict[str, str] = {
@@ -151,12 +186,16 @@ def _bookmark_block(block: dict[str, Any]) -> str:
     return "".join(parts)
 
 
-def _tabs_macro(tabs: list[dict[str, Any]]) -> str:
+def _tabs_macro(
+    tabs: list[dict[str, Any]],
+    is_cloud: bool = True,
+    attachments: "list[dict[str, Any]] | None" = None,
+) -> str:
     if _TAB_RENDER == "third_party":
         inner = "".join(
             f'<ac:structured-macro ac:name="tab">'
             f'<ac:parameter ac:name="title">{html.escape(t.get("title", "Tab"))}</ac:parameter>'
-            f'<ac:rich-text-body>{_flatten_blocks(t.get("blocks", []))}</ac:rich-text-body>'
+            f'<ac:rich-text-body>{_flatten_blocks(t.get("blocks", []), is_cloud, attachments)}</ac:rich-text-body>'
             f'</ac:structured-macro>'
             for t in tabs
         )
@@ -176,7 +215,7 @@ def _tabs_macro(tabs: list[dict[str, Any]]) -> str:
             menu_items.append(f'<li class="menu-item{active_li}"><a href="#{tab_id}">{title}</a></li>')
             panes.append(
                 f'<div class="tabs-pane{active_div}" id="{tab_id}">'
-                f'{_flatten_blocks(t.get("blocks", []))}'
+                f'{_flatten_blocks(t.get("blocks", []), is_cloud, attachments)}'
                 f'</div>'
             )
         aui_html = (
@@ -194,13 +233,13 @@ def _tabs_macro(tabs: list[dict[str, Any]]) -> str:
         return "".join(
             f'<ac:structured-macro ac:name="expand">'
             f'<ac:parameter ac:name="title">{html.escape(t.get("title", "Tab"))}</ac:parameter>'
-            f'<ac:rich-text-body>{_flatten_blocks(t.get("blocks", []))}</ac:rich-text-body>'
+            f'<ac:rich-text-body>{_flatten_blocks(t.get("blocks", []), is_cloud, attachments)}</ac:rich-text-body>'
             f'</ac:structured-macro>'
             for t in tabs
         )
 
 
-def _flatten_blocks(blocks: list[dict[str, Any]]) -> str:
+def _flatten_blocks(blocks: list[dict[str, Any]], is_cloud: bool = True, attachments: "list[dict[str, Any]] | None" = None) -> str:
     """Convert a flat list of blocks into a sequence of XHTML fragments."""
     parts: list[str] = []
     i = 0
@@ -258,7 +297,7 @@ def _flatten_blocks(blocks: list[dict[str, Any]]) -> str:
             align = block.get("align", "") or ""
             width_pct = int(block.get("width") or 0)
             if src:
-                parts.append(_image_macro(src, caption, align, width_pct))
+                parts.append(_image_macro(src, caption, align, width_pct, is_cloud, attachments))
             else:
                 parts.append("<p>[Image]</p>")
 
@@ -266,7 +305,7 @@ def _flatten_blocks(blocks: list[dict[str, Any]]) -> str:
             parts.append(_bookmark_block(block))
 
         elif btype == "tabs":
-            parts.append(_tabs_macro(block.get("tabs", [])))
+            parts.append(_tabs_macro(block.get("tabs", []), is_cloud, attachments))
 
         elif btype == "columns":
             columns = block.get("columns", [])
@@ -274,7 +313,7 @@ def _flatten_blocks(blocks: list[dict[str, Any]]) -> str:
             if n == 0:
                 pass
             elif n == 1:
-                cells = f"<ac:layout-cell>{_flatten_blocks(columns[0])}</ac:layout-cell>"
+                cells = f"<ac:layout-cell>{_flatten_blocks(columns[0], is_cloud, attachments)}</ac:layout-cell>"
                 parts.append(
                     f'<ac:layout><ac:layout-section ac:type="single">'
                     f"{cells}</ac:layout-section></ac:layout>"
@@ -289,7 +328,7 @@ def _flatten_blocks(blocks: list[dict[str, Any]]) -> str:
                     chunk_size = len(chunk)
                     layout_type = _LAYOUT_TYPES.get(chunk_size, "two_equal")
                     cells = "".join(
-                        f"<ac:layout-cell>{_flatten_blocks(col)}</ac:layout-cell>"
+                        f"<ac:layout-cell>{_flatten_blocks(col, is_cloud, attachments)}</ac:layout-cell>"
                         for col in chunk
                     )
                     layout_parts.append(
@@ -309,7 +348,15 @@ def _flatten_blocks(blocks: list[dict[str, Any]]) -> str:
     return "".join(parts)
 
 
-def convert(blocks: list[dict[str, Any]]) -> str:
-    """Convert a list of custom Block dicts into a Confluence storage-format string."""
-    body = _flatten_blocks(blocks)
-    return f"{_NS_WRAPPER_OPEN}{body}{_NS_WRAPPER_CLOSE}"
+def convert(blocks: list[dict[str, Any]], is_cloud: bool = True) -> tuple[str, list[dict[str, Any]]]:
+    """Convert blocks to a Confluence storage-format XHTML string plus a list of attachments.
+
+    Pass is_cloud=False for Data Center / Server targets to use DC-compatible image rendering
+    (paragraph-wrapped alignment, data: URLs extracted as page attachments).
+
+    Each attachment dict: { "filename": str, "content": bytes, "content_type": str }.
+    Upload attachments to the page after create/update so <ri:attachment> refs resolve.
+    """
+    attachments: list[dict[str, Any]] = []
+    body = _flatten_blocks(blocks, is_cloud, attachments)
+    return f"{_NS_WRAPPER_OPEN}{body}{_NS_WRAPPER_CLOSE}", attachments

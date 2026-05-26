@@ -8,6 +8,11 @@ from app.config import HTTP_CLIENT_VERIFY, settings
 
 logger = logging.getLogger(__name__)
 
+def is_cloud() -> bool:
+    """Return True when the configured Confluence instance is Atlassian Cloud (*.atlassian.net)."""
+    return ".atlassian.net" in settings.confluence_base_url
+
+
 def is_configured() -> bool:
     if not settings.confluence_base_url or not settings.confluence_api_token:
         return False
@@ -193,6 +198,36 @@ async def update_page(
     return data
 
 
+async def upload_attachments(page_id: str, attachments: list[dict[str, Any]]) -> None:
+    """Upload binary attachments to a Confluence page.
+
+    Each item: { "filename": str, "content": bytes, "content_type": str }.
+    Uses the multipart attachment API — works on both DC and Cloud.
+    """
+    if not _is_configured():
+        return
+    url = f"{settings.confluence_api_base}/rest/api/content/{page_id}/child/attachment"
+    headers = {
+        "Accept": "application/json",
+        "X-Atlassian-Token": "no-check",
+        **_auth_headers(),
+    }
+    async with httpx.AsyncClient(verify=HTTP_CLIENT_VERIFY) as client:
+        for att in attachments:
+            files = {
+                "file": (att["filename"], att["content"], att["content_type"]),
+                "comment": (None, "Uploaded by Migration Hub"),
+            }
+            resp = await client.post(url, headers=headers, files=files)
+            if resp.status_code not in (200, 201):
+                logger.warning(
+                    "Attachment upload failed for %s: %s %s",
+                    att["filename"],
+                    resp.status_code,
+                    resp.text[:200],
+                )
+
+
 def _build_page_url(data: dict[str, Any]) -> str:
     """Build a human-readable page URL from the Confluence API response."""
     links = data.get("_links", {})
@@ -222,7 +257,7 @@ async def export_engagement_notes(
 
     from app.services.blocks_to_confluence import convert as blocks_to_xhtml
 
-    xhtml = blocks_to_xhtml(notes)
+    xhtml, attachments = blocks_to_xhtml(notes, is_cloud=is_cloud())
     title = interview_subject or f"Engagement Notes — {project_name}"
 
     if existing_page_id:
@@ -236,6 +271,9 @@ async def export_engagement_notes(
         )
 
     page_id = str(data.get("id", ""))
+    if attachments:
+        await upload_attachments(page_id, attachments)
+
     page_url = _build_page_url(data)
     return {
         "confluencePageId": page_id,
