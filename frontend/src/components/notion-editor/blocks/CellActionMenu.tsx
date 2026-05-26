@@ -15,6 +15,8 @@ import { TEXT_COLORS, BG_COLORS } from './table-constants'
 interface CellActionMenuProps {
   kind: 'col' | 'row'
   pos: { left: number; top: number }
+  index: number
+  total: number
   onClose: () => void
   onAction: (id: string) => void
   currentTextColor?: string
@@ -26,6 +28,8 @@ interface CellActionMenuProps {
 export function CellActionMenu({
   kind,
   pos,
+  index,
+  total,
   onClose,
   onAction,
   currentTextColor,
@@ -66,11 +70,16 @@ export function CellActionMenu({
     setShowColors(true)
   }, [])
 
+  const isFirst = index === 0
+  const isLast = index === total - 1
+
   const items =
     kind === 'col'
       ? [
           { id: 'insert-left', title: 'Insert left', icon: ArrowLeft },
           { id: 'insert-right', title: 'Insert right', icon: ArrowRight },
+          { id: 'move-left', title: 'Move left', icon: ArrowLeft, disabled: isFirst },
+          { id: 'move-right', title: 'Move right', icon: ArrowRight, disabled: isLast },
           { id: 'duplicate', title: 'Duplicate', icon: Copy, kbd: '⌘D' },
           { id: 'clear', title: 'Clear contents', icon: CircleX },
           { id: 'delete', title: 'Delete', icon: Trash2, danger: true },
@@ -78,6 +87,8 @@ export function CellActionMenu({
       : [
           { id: 'insert-above', title: 'Insert above', icon: ArrowUp },
           { id: 'insert-below', title: 'Insert below', icon: ArrowDown },
+          { id: 'move-up', title: 'Move up', icon: ArrowUp, disabled: isFirst },
+          { id: 'move-down', title: 'Move down', icon: ArrowDown, disabled: isLast },
           { id: 'duplicate', title: 'Duplicate', icon: Copy, kbd: '⌘D' },
           { id: 'clear', title: 'Clear contents', icon: CircleX },
           { id: 'delete', title: 'Delete', icon: Trash2, danger: true },
@@ -132,10 +143,14 @@ export function CellActionMenu({
                 <div className="h-px bg-border mx-1.5 my-1" />
               )}
             <div
-              className={`flex items-center gap-2.5 px-2 py-1.5 rounded cursor-pointer hover:bg-muted ${
-                it.danger ? 'text-destructive' : 'text-foreground'
+              className={`flex items-center gap-2.5 px-2 py-1.5 rounded ${
+                it.disabled
+                  ? 'opacity-40 cursor-not-allowed'
+                  : it.danger
+                    ? 'text-destructive cursor-pointer hover:bg-muted'
+                    : 'text-foreground cursor-pointer hover:bg-muted'
               }`}
-              onClick={() => onAction(it.id)}
+              onClick={() => { if (!it.disabled) onAction(it.id) }}
             >
               <span
                 className={`w-4 grid place-items-center ${

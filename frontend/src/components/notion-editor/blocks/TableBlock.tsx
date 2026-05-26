@@ -22,6 +22,39 @@ export function TableBlock({ block, onChange, readOnly }: BlockRendererProps) {
   const tableRef = useRef<HTMLTableElement>(null)
 
   const apply = (patch: Partial<Extract<Block, { type: 'table' }>>) => onChange(patch)
+  const applyRef = useRef(apply)
+  applyRef.current = apply
+
+  // Column widths (% each, sum = 100). null means equal distribution.
+  const effectiveWidths = b.colWidths?.length === cols ? b.colWidths : null
+  const [liveWidths, setLiveWidths] = useState<number[] | null>(null)
+  const currentWidths = liveWidths ?? effectiveWidths
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeRef = useRef<{ col: number; startX: number; startWidths: number[]; tableWidth: number } | null>(null)
+  const pendingWidthsRef = useRef<number[] | null>(null)
+
+  const onResizeStart = (col: number) => (e: React.MouseEvent) => {
+    if (readOnly) return
+    e.preventDefault()
+    e.stopPropagation()
+    const tableEl = tableRef.current
+    if (!tableEl) return
+    const startWidths = currentWidths
+      ? [...currentWidths]
+      : Array.from({ length: cols }, () => 100 / cols)
+    resizeRef.current = { col, startX: e.clientX, startWidths, tableWidth: tableEl.getBoundingClientRect().width }
+    pendingWidthsRef.current = [...startWidths]
+    setLiveWidths([...startWidths])
+    setIsResizing(true)
+  }
+
+  // Pre-compute handle positions for the overlay
+  const colHandlePositions = (() => {
+    if (readOnly) return []
+    const widths = currentWidths ?? Array.from({ length: cols }, () => 100 / cols)
+    let cum = 0
+    return widths.slice(0, -1).map((w, i) => { cum += w; return { col: i, leftPct: cum } })
+  })()
 
   const setCell = (r: number, c: number, html: string) => {
     apply({ rows: rows.map((row, i) => i === r ? row.map((cell, j) => j === c ? html : cell) : row) })
@@ -115,6 +148,18 @@ export function TableBlock({ block, onChange, readOnly }: BlockRendererProps) {
       const i = menu.index!
       if (id === 'insert-left') addCol(i)
       if (id === 'insert-right') addCol(i + 1)
+      if (id === 'move-left' && i > 0) {
+        const next = rows.map(r => { const cp = [...r]; const [m] = cp.splice(i, 1); cp.splice(i - 1, 0, m); return cp })
+        const nw = effectiveWidths ? [...effectiveWidths] : null
+        if (nw) { const [m] = nw.splice(i, 1); nw.splice(i - 1, 0, m) }
+        apply({ rows: next, cellStyles: remapStyles(cellStyles, 'col', i, i - 1), ...(nw ? { colWidths: nw } : {}) })
+      }
+      if (id === 'move-right' && i < cols - 1) {
+        const next = rows.map(r => { const cp = [...r]; const [m] = cp.splice(i, 1); cp.splice(i + 1, 0, m); return cp })
+        const nw = effectiveWidths ? [...effectiveWidths] : null
+        if (nw) { const [m] = nw.splice(i, 1); nw.splice(i + 1, 0, m) }
+        apply({ rows: next, cellStyles: remapStyles(cellStyles, 'col', i, i + 1), ...(nw ? { colWidths: nw } : {}) })
+      }
       if (id === 'duplicate') dupCol(i)
       if (id === 'clear') clearCol(i)
       if (id === 'delete') delCol(i)
@@ -122,6 +167,14 @@ export function TableBlock({ block, onChange, readOnly }: BlockRendererProps) {
       const i = menu.index!
       if (id === 'insert-above') addRow(i)
       if (id === 'insert-below') addRow(i + 1)
+      if (id === 'move-up' && i > 0) {
+        const next = [...rows]; const [m] = next.splice(i, 1); next.splice(i - 1, 0, m)
+        apply({ rows: next, cellStyles: remapStyles(cellStyles, 'row', i, i - 1) })
+      }
+      if (id === 'move-down' && i < rows.length - 1) {
+        const next = [...rows]; const [m] = next.splice(i, 1); next.splice(i + 1, 0, m)
+        apply({ rows: next, cellStyles: remapStyles(cellStyles, 'row', i, i + 1) })
+      }
       if (id === 'duplicate') dupRow(i)
       if (id === 'clear') clearRow(i)
       if (id === 'delete') delRow(i)
@@ -142,6 +195,44 @@ export function TableBlock({ block, onChange, readOnly }: BlockRendererProps) {
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
+
+  useEffect(() => {
+    if (!isResizing) return
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    const onMouseMove = (e: MouseEvent) => {
+      const state = resizeRef.current
+      if (!state) return
+      const delta = e.clientX - state.startX
+      const deltaPercent = (delta / state.tableWidth) * 100
+      const { col, startWidths } = state
+      const minPct = 5
+      const total = startWidths[col] + startWidths[col + 1]
+      const newLeft = Math.max(minPct, Math.min(total - minPct, startWidths[col] + deltaPercent))
+      const newWidths = [...startWidths]
+      newWidths[col] = newLeft
+      newWidths[col + 1] = total - newLeft
+      pendingWidthsRef.current = newWidths
+      setLiveWidths(newWidths)
+    }
+    const onMouseUp = () => {
+      if (pendingWidthsRef.current) applyRef.current({ colWidths: pendingWidthsRef.current })
+      setIsResizing(false)
+      setLiveWidths(null)
+      resizeRef.current = null
+      pendingWidthsRef.current = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing])
 
   /* drag reorder */
   const [drag, setDrag] = useState<{ kind: 'row' | 'col'; from: number } | null>(null)
@@ -253,7 +344,9 @@ export function TableBlock({ block, onChange, readOnly }: BlockRendererProps) {
           cp.splice(to, 0, m)
           return cp
         })
-        apply({ rows: next, cellStyles: remapStyles(cellStyles, 'col', from, to) })
+        const nw = effectiveWidths ? [...effectiveWidths] : null
+        if (nw) { const [m] = nw.splice(from, 1); nw.splice(to, 0, m) }
+        apply({ rows: next, cellStyles: remapStyles(cellStyles, 'col', from, to), ...(nw ? { colWidths: nw } : {}) })
       }
     }
     onHandleDragEnd()
@@ -312,7 +405,14 @@ export function TableBlock({ block, onChange, readOnly }: BlockRendererProps) {
 
   return (
     <div className="relative block pb-3 rich-table-wrap" ref={wrapRef}>
+      <div className="relative">
       <table ref={tableRef} className="rich-table w-full table-fixed text-[14.5px] bg-background" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+        <colgroup>
+          {currentWidths
+            ? currentWidths.map((w, i) => <col key={i} style={{ width: `${w}%` }} />)
+            : Array.from({ length: cols }, (_, i) => <col key={i} />)
+          }
+        </colgroup>
         <tbody>
           {rows.map((row, r) => (
             <tr key={r}>
@@ -402,6 +502,23 @@ export function TableBlock({ block, onChange, readOnly }: BlockRendererProps) {
           ))}
         </tbody>
       </table>
+      {colHandlePositions.length > 0 && (
+        <div className="absolute inset-0 pointer-events-none">
+          {colHandlePositions.map(({ col, leftPct }) => (
+            <div
+              key={col}
+              className="absolute top-0 h-full w-[12px] cursor-col-resize pointer-events-auto group/rh"
+              style={{ left: `calc(${leftPct}% - 6px)` }}
+              onMouseDown={onResizeStart(col)}
+            >
+              <div className={`absolute inset-y-0 left-1/2 -translate-x-px w-[1px] transition-colors ${
+                isResizing && resizeRef.current?.col === col ? 'bg-primary/80' : 'bg-primary/0 group-hover/rh:bg-primary/40'
+              }`} />
+            </div>
+          ))}
+        </div>
+      )}
+      </div>
 
       {!readOnly && (
         <>
@@ -532,6 +649,8 @@ export function TableBlock({ block, onChange, readOnly }: BlockRendererProps) {
         <CellActionMenu
           kind={menu.kind}
           pos={menu.pos}
+          index={menu.index!}
+          total={menu.kind === 'col' ? cols : rows.length}
           onClose={() => setMenu(null)}
           onAction={handleAction}
           currentTextColor={getConsensusColor(menu.kind as 'col' | 'row', menu.index!, 'textColor')}

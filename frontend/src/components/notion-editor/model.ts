@@ -47,6 +47,7 @@ export interface TableBlock extends BaseBlock {
   cols: number
   rows: string[][]
   cellStyles?: Record<string, { textColor?: string; bgColor?: string }>
+  colWidths?: number[]  // per-column % widths; must sum to 100
 }
 
 export interface ImageBlock extends BaseBlock {
@@ -77,6 +78,7 @@ export interface ColumnsBlock extends BaseBlock {
   type: 'columns'
   count: number
   columns: Block[][]
+  colWidths?: number[]  // flex-ratio widths (pixel widths at time of drag); sum not fixed
 }
 
 export type Block =

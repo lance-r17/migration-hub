@@ -156,7 +156,15 @@ def _table_block(block: dict[str, Any]) -> str:
     if not rows:
         return ""
     cell_styles: dict[str, dict[str, str]] = block.get("cellStyles", {}) or {}
-    html_parts = ["<table><tbody>"]
+    col_widths: list[float] | None = block.get("colWidths") or None
+    cols = block.get("cols", len(rows[0]) if rows else 0)
+
+    colgroup = ""
+    if col_widths and len(col_widths) == cols:
+        col_tags = "".join(f'<col style="width:{w:.4g}%;"/>' for w in col_widths)
+        colgroup = f"<colgroup>{col_tags}</colgroup>"
+
+    html_parts = [f"<table>{colgroup}<tbody>"]
     for r_idx, row in enumerate(rows):
         html_parts.append("<tr>")
         for c_idx, cell in enumerate(row):
@@ -311,6 +319,7 @@ def _flatten_blocks(blocks: list[dict[str, Any]], is_cloud: bool = True, attachm
 
         elif btype == "columns":
             columns = block.get("columns", [])
+            col_widths = block.get("colWidths") or None
             n = len(columns)
             if n == 0:
                 pass
@@ -321,7 +330,14 @@ def _flatten_blocks(blocks: list[dict[str, Any]], is_cloud: bool = True, attachm
                     f"{cells}</ac:layout-section></ac:layout>"
                 )
             else:
-                # Emit sections of up to 3 columns using equal-width types
+                # Convert flex-ratio colWidths → integer percentages summing to 100
+                int_pcts: list[int] | None = None
+                if col_widths and len(col_widths) == n:
+                    total = sum(col_widths)
+                    if total > 0:
+                        int_pcts = [round(w / total * 100) for w in col_widths]
+                        int_pcts[-1] += 100 - sum(int_pcts)  # absorb rounding error
+
                 _LAYOUT_TYPES = {2: "two_equal", 3: "three_equal"}
                 chunk_start = 0
                 layout_parts: list[str] = ["<ac:layout>"]
@@ -329,12 +345,23 @@ def _flatten_blocks(blocks: list[dict[str, Any]], is_cloud: bool = True, attachm
                     chunk = columns[chunk_start : chunk_start + 3]
                     chunk_size = len(chunk)
                     layout_type = _LAYOUT_TYPES.get(chunk_size, "two_equal")
-                    cells = "".join(
-                        f"<ac:layout-cell>{_flatten_blocks(col, is_cloud, attachments)}</ac:layout-cell>"
-                        for col in chunk
+
+                    # Re-normalise this chunk's percentages to sum to 100
+                    chunk_pcts: list[int] | None = None
+                    if int_pcts:
+                        raw = int_pcts[chunk_start : chunk_start + chunk_size]
+                        s = sum(raw)
+                        if s > 0:
+                            chunk_pcts = [round(p / s * 100) for p in raw]
+                            chunk_pcts[-1] += 100 - sum(chunk_pcts)
+
+                    cells_html = "".join(
+                        f'<ac:layout-cell{f" ac:width=\"{chunk_pcts[j]}\"" if chunk_pcts else ""}>'
+                        f'{_flatten_blocks(col, is_cloud, attachments)}</ac:layout-cell>'
+                        for j, col in enumerate(chunk)
                     )
                     layout_parts.append(
-                        f'<ac:layout-section ac:type="{layout_type}">{cells}</ac:layout-section>'
+                        f'<ac:layout-section ac:type="{layout_type}">{cells_html}</ac:layout-section>'
                     )
                     chunk_start += chunk_size
                 layout_parts.append("</ac:layout>")
