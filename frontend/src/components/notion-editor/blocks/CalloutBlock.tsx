@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Editable } from '../Editable'
+import { EmojiPickerPopover } from './EmojiPickerPopover'
 import type { Block } from '../model'
 import type { BlockRendererProps } from './types'
 
 export function CalloutBlock({ block, onChange, onKeyDown, onFocus, autoFocus, readOnly }: BlockRendererProps) {
   const [openIconPick, setOpenIconPick] = useState(false)
+  const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
   const b = block as Extract<Block, { type: 'callout' }>
-  const icons = ['💡', '⚠️', '✅', '🔥', '📌', 'ℹ️', '🎯', '🧠', '✨', '🚧']
 
   const hasBg = !!b.bgColor
   const calloutStyle: React.CSSProperties = {
@@ -16,33 +18,50 @@ export function CalloutBlock({ block, onChange, onKeyDown, onFocus, autoFocus, r
     borderRadius: 10,
   }
 
+  const handleTriggerClick = () => {
+    if (readOnly) return
+    if (openIconPick) {
+      setOpenIconPick(false)
+      setTriggerRect(null)
+    } else {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect) setTriggerRect(rect)
+      setOpenIconPick(true)
+    }
+  }
+
+  const isImageIcon = b.icon?.startsWith('data:') || b.icon?.startsWith('http')
+
   return (
     <div className="flex gap-3 px-4 py-3.5 rounded-[10px]" style={calloutStyle}>
       <div
-        className="flex-none w-[22px] h-[22px] text-[18px] leading-[1.4] grid place-items-center cursor-pointer relative"
-        onClick={() => !readOnly && setOpenIconPick(s => !s)}
-        onMouseDown={(e) => e.preventDefault()}
+        ref={triggerRef}
+        className="flex-none w-[28px] h-[28px] text-[24px] leading-[1.4] grid place-items-center cursor-pointer"
+        onMouseDown={e => e.preventDefault()}
+        onClick={handleTriggerClick}
       >
-        {b.icon || '💡'}
-        {openIconPick && !readOnly && (
-          <div className="absolute z-50 top-7 left-0 w-[180px] flex flex-wrap gap-1 p-1.5 rounded-md bg-popover border border-border shadow-md">
-            {icons.map(i => (
-              <button
-                key={i}
-                className="w-[26px] h-[26px] rounded border border-border text-base hover:bg-muted"
-                onClick={(e) => { e.stopPropagation(); onChange({ icon: i }); setOpenIconPick(false) }}
-              >
-                {i}
-              </button>
-            ))}
-          </div>
+        {isImageIcon ? (
+          <img src={b.icon} alt="" className="w-[26px] h-[26px] object-cover rounded-sm" />
+        ) : (
+          b.icon || '💡'
         )}
       </div>
+
+      {openIconPick && triggerRect && (
+        <EmojiPickerPopover
+          triggerRef={triggerRef}
+          triggerRect={triggerRect}
+          onSelect={icon => onChange({ icon })}
+          onRemove={() => onChange({ icon: '' })}
+          onClose={() => { setOpenIconPick(false); setTriggerRect(null) }}
+        />
+      )}
+
       <Editable
         className="flex-1 min-w-0 text-[15.5px] leading-[1.55]"
         style={{ color: b.textColor }}
         value={block.content}
-        onChange={(html) => onChange({ content: html })}
+        onChange={html => onChange({ content: html })}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
         placeholder="Write something…"

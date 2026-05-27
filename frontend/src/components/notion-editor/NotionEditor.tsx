@@ -134,72 +134,58 @@ export function NotionEditor({
   }, [blocks])
 
   const patchBlock = useCallback((id: string, patch: Partial<Block>) => {
-    setLocalBlocks(prev => {
-      const next = prev.map(b => b.id === id ? { ...b, ...patch } as Block : b)
-      onBlocksChangeRef.current?.(next)
-      return next
-    })
+    const next = blocksRef.current.map(b => b.id === id ? { ...b, ...patch } as Block : b)
+    setLocalBlocks(next)
+    onBlocksChangeRef.current?.(next)
   }, [])
 
   const insertBlock = useCallback((index: number, block: Block, focus = true) => {
-    setLocalBlocks(prev => {
-      const next = [...prev]
-      next.splice(index, 0, block)
-      onBlocksChangeRef.current?.(next)
-      return next
-    })
+    const next = [...blocksRef.current]
+    next.splice(index, 0, block)
+    setLocalBlocks(next)
+    onBlocksChangeRef.current?.(next)
     if (focus) setAutoFocusId(block.id)
   }, [])
 
   const removeBlock = useCallback((id: string) => {
-    let focusTargetId: string | null = null
-    setLocalBlocks(prev => {
-      const idx = prev.findIndex(b => b.id === id)
-      if (idx === -1) return prev
-      const next = prev.filter(b => b.id !== id)
-      if (next.length === 0 && !allowEmpty) next.push(createBlock('paragraph'))
-      const focusTarget = next[Math.max(0, idx - 1)]
-      if (focusTarget) focusTargetId = focusTarget.id
-      onBlocksChangeRef.current?.(next)
-      return next
-    })
-    if (focusTargetId) setAutoFocusId(focusTargetId)
+    const idx = blocksRef.current.findIndex(b => b.id === id)
+    if (idx === -1) return
+    const next = blocksRef.current.filter(b => b.id !== id)
+    if (next.length === 0 && !allowEmpty) next.push(createBlock('paragraph'))
+    const focusTarget = next[Math.max(0, idx - 1)]
+    setLocalBlocks(next)
+    onBlocksChangeRef.current?.(next)
+    if (focusTarget) setAutoFocusId(focusTarget.id)
   }, [allowEmpty])
 
   const extractBlock = useCallback((id: string) => {
-    setLocalBlocks(prev => {
-      const next = prev.filter(b => b.id !== id)
-      if (next.length === 0 && !allowEmpty) next.push(createBlock('paragraph'))
-      onBlocksChangeRef.current?.(next)
-      return next
-    })
+    const next = blocksRef.current.filter(b => b.id !== id)
+    if (next.length === 0 && !allowEmpty) next.push(createBlock('paragraph'))
+    setLocalBlocks(next)
+    onBlocksChangeRef.current?.(next)
   }, [allowEmpty])
 
   const replaceBlock = useCallback((id: string, newBlock: Block, { keepContent = true } = {}) => {
-    setLocalBlocks(prev => {
-      const next = prev.map(b => {
-        if (b.id !== id) return b
-        const merged = { ...newBlock, id: b.id }
-        if (keepContent && 'content' in b && newBlock.type !== 'divider' && newBlock.type !== 'table' && newBlock.type !== 'image' && newBlock.type !== 'bookmark' && newBlock.type !== 'columns') {
-          merged.content = (b as { content?: string }).content || ''
-        }
-        return merged as Block
-      })
-      onBlocksChangeRef.current?.(next)
-      return next
+    const next = blocksRef.current.map(b => {
+      if (b.id !== id) return b
+      const merged = { ...newBlock, id: b.id }
+      if (keepContent && 'content' in b && newBlock.type !== 'divider' && newBlock.type !== 'table' && newBlock.type !== 'image' && newBlock.type !== 'bookmark' && newBlock.type !== 'columns') {
+        merged.content = (b as { content?: string }).content || ''
+      }
+      return merged as Block
     })
+    setLocalBlocks(next)
+    onBlocksChangeRef.current?.(next)
     setAutoFocusId(id)
   }, [])
 
   const flattenBlock = useCallback((id: string, blocks: Block[]) => {
-    setLocalBlocks(prev => {
-      const idx = prev.findIndex(b => b.id === id)
-      if (idx === -1) return prev
-      const next = [...prev]
-      next.splice(idx, 1, ...blocks)
-      onBlocksChangeRef.current?.(next)
-      return next
-    })
+    const idx = blocksRef.current.findIndex(b => b.id === id)
+    if (idx === -1) return
+    const next = [...blocksRef.current]
+    next.splice(idx, 1, ...blocks)
+    setLocalBlocks(next)
+    onBlocksChangeRef.current?.(next)
   }, [])
 
   const onBlockKeyDown = (block: Block, index: number) => (e: React.KeyboardEvent<HTMLDivElement>) => {
