@@ -23,7 +23,7 @@ RUN apt-get update && \
 
 # Copy dependency manifests and install
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
