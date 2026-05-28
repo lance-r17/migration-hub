@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 20+ and npm
+- Node.js 20+ and pnpm
 - Git
 
 For backend development:
@@ -15,13 +15,13 @@ For backend development:
 
 ```bash
 cd frontend
-npm install
+pnpm install
 ```
 
 ### Run the dev server
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 The app starts at `http://localhost:5173` (or the port Vite selects). It binds to all interfaces (`--host`) so it works inside Docker / dev containers.
@@ -29,14 +29,14 @@ The app starts at `http://localhost:5173` (or the port Vite selects). It binds t
 ### Build for production
 
 ```bash
-npm run build      # type-check + Vite bundle → dist/
-npm run preview    # preview the production build locally
+pnpm build      # type-check + Vite bundle → dist/
+pnpm preview    # preview the production build locally
 ```
 
 ### Lint
 
 ```bash
-npm run lint
+pnpm lint
 ```
 
 ### E2E tests
@@ -46,10 +46,10 @@ npm run lint
 npx playwright install chromium
 
 # Run all tests (headless, spins up Vite automatically)
-npm run test:e2e
+pnpm test:e2e
 
 # Interactive UI mode (useful for debugging)
-npm run test:e2e:ui
+pnpm test:e2e:ui
 ```
 
 46 tests cover auth, navigation, wave planning, cloud resources, and RBAC.
@@ -205,7 +205,7 @@ Required: `DATABASE_URL`. Conditionally required: `OAUTH_CLIENT_SECRET` and `SES
 ```bash
 cd frontend
 echo "VITE_API_BASE_URL=http://localhost:8000" > .env.local
-npm run dev   # all service calls now hit the real API
+pnpm dev   # all service calls now hit the real API
 ```
 
 OpenAPI docs are available at `http://localhost:8000/docs` while the backend is running.

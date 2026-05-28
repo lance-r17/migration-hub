@@ -1,22 +1,28 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { TEMPLATE_VARIABLES } from '@/lib/noteTemplateUtils'
+
+export interface VariableOption {
+  key: string
+  label: string
+  example: string
+}
 
 interface VariableMenuProps {
   query: string
   pos: { left: number; top: number }
+  variables: readonly VariableOption[]
   onPick: (key: string) => void
   onClose: () => void
 }
 
-export function VariableMenu({ query, pos, onPick, onClose }: VariableMenuProps) {
+export function VariableMenu({ query, pos, variables, onPick, onClose }: VariableMenuProps) {
   const [sel, setSel] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const filtered = useMemo(() => {
     const q = (query || '').trim().toLowerCase()
-    if (!q) return TEMPLATE_VARIABLES
-    return TEMPLATE_VARIABLES.filter(
+    if (!q) return variables
+    return variables.filter(
       (v) =>
         v.key.toLowerCase().includes(q) ||
         v.label.toLowerCase().includes(q),

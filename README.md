@@ -47,8 +47,8 @@ migration-hub/
 
 ```bash
 cd frontend
-npm install
-npm run dev          # http://localhost:5173
+pnpm install
+pnpm dev          # http://localhost:5173
 ```
 
 **Full stack:**
@@ -64,7 +64,7 @@ uvicorn app.main:app --reload
 # Terminal 2 — frontend
 cd frontend
 echo "VITE_API_BASE_URL=http://localhost:8000" > .env.local
-npm run dev
+pnpm dev
 ```
 
 See [docs/getting-started.md](docs/getting-started.md) for detailed setup, environment variables, and troubleshooting.
@@ -73,7 +73,7 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed setup, envir
 
 ```bash
 cd frontend
-npm run docs:dev     # http://localhost:4000
+pnpm docs:dev     # http://localhost:4000
 ```
 
 ## Documentation

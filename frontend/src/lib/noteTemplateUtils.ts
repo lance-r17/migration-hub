@@ -1,5 +1,5 @@
-import type { Block } from '@/components/notion-editor/model'
-import { cloneBlock } from '@/components/notion-editor/model'
+import type { Block } from '@frontend/notion-editor'
+import { cloneBlock } from '@frontend/notion-editor'
 
 /**
  * Deep clone and sanitize blocks before saving them as a template.

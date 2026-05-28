@@ -3,9 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { FilePlus, BookOpen, Save, MoreVertical } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
-import { NotionEditor } from '@/components/notion-editor/NotionEditor'
+import { NotionEditor, createBlock } from '@frontend/notion-editor'
 import { apiClient } from '@/services/client'
-import { createBlock } from '@/components/notion-editor/model'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -23,10 +22,10 @@ import {
 } from '@/components/ui/breadcrumb'
 import { TemplatePicker } from '@/components/note-template/TemplatePicker'
 import { SaveTemplateDialog } from '@/components/note-template/SaveTemplateDialog'
-import { resolveTemplateVariables, buildTemplateContext } from '@/lib/noteTemplateUtils'
+import { resolveTemplateVariables, buildTemplateContext, TEMPLATE_VARIABLES } from '@/lib/noteTemplateUtils'
 import { useCurrentUser } from '@/context/UserContext'
 import type { Project } from '@/types'
-import type { Block } from '@/components/notion-editor/model'
+import type { Block } from '@frontend/notion-editor'
 
 const DEBOUNCE_MS = 1500
 
@@ -316,6 +315,7 @@ export function EngagementNotesEditPage() {
             )}
             <NotionEditor
               blocks={blocks}
+              variables={TEMPLATE_VARIABLES}
               onBlocksChange={setBlocks}
             />
           </>

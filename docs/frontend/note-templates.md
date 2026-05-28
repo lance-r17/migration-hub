@@ -108,6 +108,27 @@ Every `PUT` call to update a template automatically snapshots the previous state
 | `TemplatePicker` | `src/components/note-template/TemplatePicker.tsx` | Searchable dialog for selecting and applying a template |
 | `SaveTemplateDialog` | `src/components/note-template/SaveTemplateDialog.tsx` | Dialog for saving engagement notes as a template with smart replacements |
 | `TemplateMetaPanel` | `src/components/note-template/TemplateMetaPanel.tsx` | Reusable form for name, description, labels, scope, and shared roles |
+| `NotionEditor` | `packages/notion-editor/src/NotionEditor.tsx` | Block editor root (workspace package `@frontend/notion-editor`) |
+
+### Editor workspace package
+
+The Notion-style block editor lives in the workspace package `@frontend/notion-editor` (`frontend/packages/notion-editor/`). It exports:
+
+```ts
+export { NotionEditor } from './NotionEditor'
+export type { NotionEditorProps } from './NotionEditor'
+export { createBlock, cloneBlock, SLASH_ITEMS, uid } from './model'
+export type { Block, SlashItem, BaseBlock } from './model'
+```
+
+Import it from the app like any workspace dependency:
+
+```ts
+import { NotionEditor, createBlock, cloneBlock } from '@frontend/notion-editor'
+import type { Block } from '@frontend/notion-editor'
+```
+
+The editor package has no dependency on app-specific utilities. The `{{variable}}` autocomplete (`VariableMenu`) accepts a `variables` prop so callers supply their own variable definitions (e.g. `TEMPLATE_VARIABLES` from `src/lib/noteTemplateUtils.ts`).
 
 ---
 

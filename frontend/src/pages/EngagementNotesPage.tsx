@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Pencil, Share2, FileText, AlertTriangle } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
-import { NotionEditor } from '@/components/notion-editor/NotionEditor'
+import { NotionEditor } from '@frontend/notion-editor'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -23,7 +23,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import type { Project } from '@/types'
-import type { Block } from '@/components/notion-editor/model'
+import type { Block } from '@frontend/notion-editor'
 
 export function EngagementNotesPage() {
   const { projectId } = useParams<{ projectId: string }>()

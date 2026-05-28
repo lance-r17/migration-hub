@@ -6,7 +6,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { NotionEditor } from '@/components/notion-editor/NotionEditor'
+import { NotionEditor } from '@frontend/notion-editor'
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,7 @@ import {
   restoreTemplateVersion,
 } from '@/services/noteTemplates'
 import type { NoteTemplate, NoteTemplateVersion } from '@/types'
-import type { Block } from '@/components/notion-editor/model'
+import type { Block } from '@frontend/notion-editor'
 
 export function NoteTemplatesPage() {
   const navigate = useNavigate()

@@ -21,9 +21,15 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends nginx && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy dependency manifests and install
-COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy workspace manifests and lockfile
+COPY pnpm-workspace.yaml .npmrc package.json pnpm-lock.yaml ./
+COPY packages/notion-editor/package.json ./packages/notion-editor/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .

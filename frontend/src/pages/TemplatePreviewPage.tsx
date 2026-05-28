@@ -18,13 +18,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { NotionEditor } from '@/components/notion-editor/NotionEditor'
+import { NotionEditor, createBlock } from '@frontend/notion-editor'
+import type { Block } from '@frontend/notion-editor'
 import { TemplateMetaPanel } from '@/components/note-template/TemplateMetaPanel'
 import { getNoteTemplate, getTemplateVersions } from '@/services/noteTemplates'
 import { updateNoteTemplate } from '@/services/noteTemplates'
 import { useCurrentUser } from '@/context/UserContext'
-import { createBlock } from '@/components/notion-editor/model'
-import type { Block } from '@/components/notion-editor/model'
+import { TEMPLATE_VARIABLES } from '@/lib/noteTemplateUtils'
 import type { NoteTemplate, NoteTemplateVersion } from '@/types'
 
 export function TemplatePreviewPage() {
@@ -302,6 +302,7 @@ export function TemplatePreviewPage() {
                   onBlocksChange={isEditing ? setEditorBlocks : undefined}
                   readOnly={!isEditing}
                   allowEmpty
+                  variables={TEMPLATE_VARIABLES}
                 />
               </div>
             )}

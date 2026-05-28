@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Prevent accidental npm lockfile if someone runs npm install
+package-lock.json
+
 # Environment files
 .env
 .env.*

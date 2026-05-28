@@ -3,66 +3,90 @@
 ## Directory structure
 
 ```
-frontend/src/
-├── main.tsx                    # React root — mounts <App> inside <UserProvider>
-├── App.tsx                     # BrowserRouter + route definitions + ProtectedRoute
-├── pages/
-│   ├── HomePage.tsx                  # Dashboard — stats, project cards, activity feed
-│   ├── ProjectsPage.tsx              # All projects table (Platform Migration Lead only)
-│   ├── ProjectDetailsPage.tsx        # Full project register with all 10 sections
-│   ├── WavesPage.tsx                 # Wave planning (Platform Migration Lead only)
-│   ├── LoginPage.tsx                 # Mock SSO login
-│   ├── EngagementCalendarPage.tsx    # Month calendar of all project engagements
-│   ├── EngagementNotesPage.tsx       # Read-only engagement notes view
-│   ├── EngagementNotesEditPage.tsx   # Notion editor for engagement notes (auto-save)
-│   ├── NoteTemplatesPage.tsx         # Template card gallery
-│   ├── TemplatePreviewPage.tsx       # Template view/edit with version history
-│   ├── EmailTemplatesPage.tsx        # Email template list + create/delete
-│   ├── EmailBuilderPage.tsx          # Visual email template editor
-│   └── EmailPreviewPage.tsx          # Template preview + Send Test
-├── components/
-│   ├── layout/                 # App shell, sidebar, header, nav
-│   ├── project/                # Per-section display components
-│   ├── drawers/                # Right-side edit panels (Sheet-based)
-│   ├── modals/                 # Modal dialogs (sign-off workflow)
-│   ├── home/                   # Home page widget components
-│   ├── shared/                 # Reusable cross-page components
-│   ├── ui/                     # shadcn/ui primitives
-│   ├── audit/                  # Audit log timeline
-│   ├── engagement/             # Engagement feature components
-│   │   ├── EngagementDrawer.tsx       # Metadata drawer (slots, participants, Zoom)
-│   │   ├── MonthCalendar.tsx          # Month-grid with status-coloured pills
-│   │   └── ConfluenceExportDialog.tsx # Blocks → Confluence XHTML export
-│   ├── note-template/          # Note template feature components
-│   │   ├── TemplatePicker.tsx         # Searchable apply-template dialog
-│   │   ├── SaveTemplateDialog.tsx     # Save notes as template with smart replacements
-│   │   └── TemplateMetaPanel.tsx      # Name/description/labels/scope form
-│   └── email-builder/          # Email builder UI
-│       ├── builder/            # Editor layout, canvas, left/right panels
-│       │   ├── canvas/         # Row, column, component, toolbar, rich text editor
-│       │   ├── left-panel/     # Layouts tab, library tab
-│       │   └── right-panel/    # Config, content, style tabs
-│       └── preview/            # BrowserContainer, TemplateRenderer
-├── hooks/                      # Custom hooks (data + business logic)
-├── services/                   # API layer (one file per domain)
-│   └── noteTemplates.ts        # CRUD + version control for note templates
-├── context/
-│   └── UserContext.tsx         # Auth context
-├── types/
-│   ├── index.ts                # Core domain types
-│   ├── audit.ts                # Audit log types
-│   ├── wave.ts                 # Wave + Jira job types
-│   └── email.ts                # Email template types (EmailTemplate, EmailComponent, etc.)
-├── data/
-│   ├── mock.ts                 # Seed data
-│   ├── store.ts                # In-memory session store
-│   ├── emailTemplates.ts       # In-memory email template store
-│   └── noteTemplates.ts        # Predefined seed templates (global + function-specific)
-├── utils/
-│   └── diff.ts                 # Object diff engine for audit logging
-└── lib/
-    ├── utils.ts                # cn() helper
-    └── noteTemplateUtils.ts    # Block sanitisation, variable resolution, smart replacement
+frontend/
+├── pnpm-workspace.yaml         # pnpm workspace definition
+├── package.json                # @frontend/app
+├── src/
+│   ├── main.tsx                    # React root — mounts <App> inside <UserProvider>
+│   ├── App.tsx                     # BrowserRouter + route definitions + ProtectedRoute
+│   ├── pages/
+│   │   ├── HomePage.tsx                  # Dashboard — stats, project cards, activity feed
+│   │   ├── ProjectsPage.tsx              # All projects table (Platform Migration Lead only)
+│   │   ├── ProjectDetailsPage.tsx        # Full project register with all 10 sections
+│   │   ├── WavesPage.tsx                 # Wave planning (Platform Migration Lead only)
+│   │   ├── LoginPage.tsx                 # Mock SSO login
+│   │   ├── EngagementCalendarPage.tsx    # Month calendar of all project engagements
+│   │   ├── EngagementNotesPage.tsx       # Read-only engagement notes view
+│   │   ├── EngagementNotesEditPage.tsx   # Notion editor for engagement notes (auto-save)
+│   │   ├── NoteTemplatesPage.tsx         # Template card gallery
+│   │   ├── TemplatePreviewPage.tsx       # Template view/edit with version history
+│   │   ├── EmailTemplatesPage.tsx        # Email template list + create/delete
+│   │   ├── EmailBuilderPage.tsx          # Visual email template editor
+│   │   └── EmailPreviewPage.tsx          # Template preview + Send Test
+│   ├── components/
+│   │   ├── layout/                 # App shell, sidebar, header, nav
+│   │   ├── project/                # Per-section display components
+│   │   ├── drawers/                # Right-side edit panels (Sheet-based)
+│   │   ├── modals/                 # Modal dialogs (sign-off workflow)
+│   │   ├── home/                   # Home page widget components
+│   │   ├── shared/                 # Reusable cross-page components
+│   │   ├── ui/                     # shadcn/ui primitives
+│   │   ├── audit/                  # Audit log timeline
+│   │   ├── engagement/             # Engagement feature components
+│   │   │   ├── EngagementDrawer.tsx       # Metadata drawer (slots, participants, Zoom)
+│   │   │   ├── MonthCalendar.tsx          # Month-grid with status-coloured pills
+│   │   │   └── ConfluenceExportDialog.tsx # Blocks → Confluence XHTML export
+│   │   ├── note-template/          # Note template feature components
+│   │   │   ├── TemplatePicker.tsx         # Searchable apply-template dialog
+│   │   │   ├── SaveTemplateDialog.tsx     # Save notes as template with smart replacements
+│   │   │   └── TemplateMetaPanel.tsx      # Name/description/labels/scope form
+│   │   └── email-builder/          # Email builder UI
+│   │       ├── builder/            # Editor layout, canvas, left/right panels
+│   │       │   ├── canvas/         # Row, column, component, toolbar, rich text editor
+│   │       │   ├── left-panel/     # Layouts tab, library tab
+│   │       │   └── right-panel/    # Config, content, style tabs
+│   │       └── preview/            # BrowserContainer, TemplateRenderer
+│   ├── hooks/                      # Custom hooks (data + business logic)
+│   ├── services/                   # API layer (one file per domain)
+│   │   └── noteTemplates.ts        # CRUD + version control for note templates
+│   ├── context/
+│   │   └── UserContext.tsx         # Auth context
+│   ├── types/
+│   │   ├── index.ts                # Core domain types
+│   │   ├── audit.ts                # Audit log types
+│   │   ├── wave.ts                 # Wave + Jira job types
+│   │   └── email.ts                # Email template types (EmailTemplate, EmailComponent, etc.)
+│   ├── data/
+│   │   ├── mock.ts                 # Seed data
+│   │   ├── store.ts                # In-memory session store
+│   │   ├── emailTemplates.ts       # In-memory email template store
+│   │   └── noteTemplates.ts        # Predefined seed templates (global + function-specific)
+│   ├── utils/
+│   │   └── diff.ts                 # Object diff engine for audit logging
+│   └── lib/
+│       ├── utils.ts                # cn() helper
+│       └── noteTemplateUtils.ts    # Block sanitisation, variable resolution, smart replacement
+│
+└── packages/
+    └── notion-editor/              # @frontend/notion-editor workspace package
+        ├── package.json
+        ├── tsconfig.json
+        └── src/
+            ├── index.ts            # Public API exports
+            ├── NotionEditor.tsx    # Block editor root component
+            ├── VariableMenu.tsx    # {{variable}} autocomplete
+            ├── model.ts            # Block types + helpers (createBlock, cloneBlock)
+            ├── SlashMenu.tsx
+            ├── Editable.tsx
+            ├── InlineToolbar.tsx
+            └── …
+```
+
+The `frontend/` directory is a **pnpm workspace**. The app (`@frontend/app`) and the editor package (`@frontend/notion-editor`) are resolved locally via `workspace:*` links. Vite follows the symlinks automatically, so HMR and Tailwind class scanning work transparently for code in `packages/`. Install from the `frontend/` root:
+
+```bash
+cd frontend
+pnpm install
 ```
 
 ## Path alias
@@ -116,7 +140,7 @@ Set `VITE_API_BASE_URL` in `.env.local` to point at a real backend. Nothing else
 ## Build
 
 ```bash
-npm run build   # tsc -b && vite build → dist/
+pnpm build   # tsc -b && vite build → dist/
 ```
 
 TypeScript strict mode is enabled. The build fails on type errors. No `any` escape hatches in production code.
@@ -137,6 +161,8 @@ Run locally:
 docker run -d -p 8080:8080 migration-hub-frontend:latest
 ```
 
-> **Note:** The Docker build uses `npx vite build` directly (skipping `tsc -b`) because the codebase currently has pre-existing TypeScript errors. Fix the type errors to restore `npm run build` in the Dockerfile.
+> **Note:** The Docker build uses `npx vite build` directly (skipping `tsc -b`) because the codebase currently has pre-existing TypeScript errors. Fix the type errors to restore `pnpm build` in the Dockerfile.
+>
+> The workspace requires `pnpm-workspace.yaml`, `.npmrc`, `pnpm-lock.yaml`, and both `package.json` files to be copied into the builder before `pnpm install --frozen-lockfile` is run.
 >
 > The builder stage installs nginx and copies it (binary + all shared libraries) into the runtime image, so you can use a distroless or hardened runtime. The builder and runtime must use the same C library (musl or glibc).

@@ -4,7 +4,8 @@ import { X, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { NotionEditor } from '@/components/notion-editor/NotionEditor'
+import { NotionEditor } from '@frontend/notion-editor'
+import type { Block } from '@frontend/notion-editor'
 import { TemplateMetaPanel } from '@/components/note-template/TemplateMetaPanel'
 import { createNoteTemplate } from '@/services/noteTemplates'
 import {
@@ -16,7 +17,6 @@ import {
   TEMPLATE_VARIABLES,
 } from '@/lib/noteTemplateUtils'
 import { useCurrentUser } from '@/context/UserContext'
-import type { Block } from '@/components/notion-editor/model'
 
 interface SaveTemplateDialogProps {
   open: boolean
@@ -144,6 +144,7 @@ export function SaveTemplateDialog({ open, onOpenChange, blocks, project, userNa
               blocks={editorBlocks}
               onBlocksChange={setEditorBlocks}
               allowEmpty
+              variables={TEMPLATE_VARIABLES}
             />
           </div>
         </div>

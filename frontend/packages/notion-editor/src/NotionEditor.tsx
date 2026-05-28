@@ -4,7 +4,7 @@ import { BlockRow } from './BlockRow'
 import { BlockHoverControls } from './BlockHoverControls'
 import BLOCK_RENDERERS from './blocks'
 import { SlashMenu } from './SlashMenu'
-import { VariableMenu } from './VariableMenu'
+import { VariableMenu, type VariableOption } from './VariableMenu'
 import { BlockMenu } from './BlockMenu'
 import { InlineToolbar } from './InlineToolbar'
 import { createBlock, cloneBlock, SLASH_ITEMS, type Block } from './model'
@@ -12,7 +12,6 @@ import { TEXT_COLOR_MAP, BG_COLOR_MAP, TEXT_CSS_TO_VALUE, BG_CSS_TO_VALUE } from
 import {
   startDrag, getDraggedBlock, finishDrag, cancelDrag,
   subscribeDropTarget, getDropTarget, setDropTarget, clearDropTarget,
-  type DropTarget,
 } from './drag-state'
 
 function isEmptyHTML(html: string) {
@@ -77,6 +76,7 @@ export interface NotionEditorProps {
   showTitle?: boolean
   nested?: boolean
   allowEmpty?: boolean
+  variables?: readonly VariableOption[]
 }
 
 export function NotionEditor({
@@ -88,6 +88,7 @@ export function NotionEditor({
   showTitle = false,
   nested = false,
   allowEmpty = false,
+  variables,
 }: NotionEditorProps) {
   const [localBlocks, setLocalBlocks] = useState<Block[]>(blocks)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -909,8 +910,8 @@ export function NotionEditor({
       {!readOnly && slash && (
         <SlashMenu query={slash.query} pos={slash.pos} onPick={pickSlash} onClose={() => setSlash(null)} />
       )}
-      {!readOnly && varMenu && (
-        <VariableMenu query={varMenu.query} pos={varMenu.pos} onPick={pickVar} onClose={() => setVarMenu(null)} />
+      {!readOnly && varMenu && variables && variables.length > 0 && (
+        <VariableMenu query={varMenu.query} pos={varMenu.pos} variables={variables} onPick={pickVar} onClose={() => setVarMenu(null)} />
       )}
       {!readOnly && hoveredIdx !== null && localBlocks[hoveredIdx] && localBlocks[hoveredIdx].type !== 'columns' && (
         <BlockHoverControls

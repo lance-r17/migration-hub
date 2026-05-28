@@ -1,0 +1,27 @@
+{
+  "name": "@frontend/notion-editor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "lucide-react": "^0.577.0",
+    "prism-react-renderer": "^2.4.1",
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.1"
+  }
+}

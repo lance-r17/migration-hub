@@ -27,8 +27,12 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends nginx && \
     rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
-RUN npm ci
+# Install pnpm
+RUN npm install -g pnpm
+# Copy workspace manifests and lockfile
+COPY pnpm-workspace.yaml .npmrc package.json pnpm-lock.yaml ./
+COPY packages/notion-editor/package.json ./packages/notion-editor/
+RUN pnpm install --frozen-lockfile
 COPY . .
 RUN npx vite build
 
@@ -48,10 +52,11 @@ CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
 
 Key points:
 - **Multi-stage**: the `builder` stage installs nginx, compiles the Vite bundle, and assembles a complete rootfs with nginx + all shared libraries. The runtime stage receives only the rootfs and static files — no Node.js, no package manager, no shell.
+- **pnpm workspace**: the frontend is a pnpm monorepo. The builder copies `pnpm-workspace.yaml`, `.npmrc`, `pnpm-lock.yaml`, the root `package.json`, and the `packages/notion-editor/package.json` before running `pnpm install --frozen-lockfile`. This ensures workspace dependencies (including `@frontend/notion-editor`) are resolved correctly.
 - **Configurable base images**: `BUILD_IMAGE`, `RUNTIME_IMAGE`, and `GO_BUILD_IMAGE` are set via `ARG` and can be overridden at build time.
 - **Builder installs nginx**: nginx is installed in the builder (the only stage with a package manager) and copied — binary, config, mime.types, and every shared library — into the runtime. This lets you use a distroless or hardened runtime image that has no package manager.
 - **Go builder**: a separate stage compiles the `entrypoint` Go binary. The Go builder image is independent of the frontend builder and runtime, so you can use an internal Go mirror (e.g. `your-registry/golang:1.22-alpine`) without affecting nginx compatibility.
-- `package*.json` is copied and installed **before** the rest of the source so Docker layer caching works for dependency-only changes.
+- Workspace manifests (`pnpm-workspace.yaml`, `.npmrc`, `pnpm-lock.yaml`, both `package.json` files) are copied **before** the rest of the source so Docker layer caching works for dependency-only changes.
 - `.dockerignore` excludes `node_modules`, `dist`, `.env`, test files, and editor configs from the build context.
 
 ### Choosing base images

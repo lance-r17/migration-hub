@@ -28,18 +28,18 @@ cd frontend
 npx playwright install chromium
 
 # Run all tests (headless, Vite starts automatically)
-npm run test:e2e
+pnpm test:e2e
 
 # Interactive UI mode (recommended for debugging)
-npm run test:e2e:ui
+pnpm test:e2e:ui
 
 # View last HTML report
-npm run test:e2e:report
+pnpm test:e2e:report
 ```
 
 ### Interactive UI in a dev container
 
-`npm run test:e2e:ui` requires a virtual display. The dev container includes `xvfb`, so the
+`pnpm test:e2e:ui` requires a virtual display. The dev container includes `xvfb`, so the
 command works without a display server. After a container rebuild, `xvfb-run` is available and
 the script will launch without crashing.
 
