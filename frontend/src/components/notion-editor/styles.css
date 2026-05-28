@@ -1,5 +1,77 @@
 /* Notion Editor scoped styles */
 
+/* ------------------------------------------------------------------
+   Layout grid (matches Notion's .layout system)
+   ------------------------------------------------------------------ */
+.notion-layout {
+  --content-width: minmax(auto, 720px);
+  --margin-width: minmax(96px, 1fr);
+  grid-template-columns:
+    [full-start] var(--margin-left-width, var(--margin-width))
+    [content-start] var(--content-width) [content-end]
+    var(--margin-right-width, var(--margin-width)) [full-end];
+  width: 100%;
+  display: grid;
+}
+
+.notion-layout-wide {
+  --content-width: 1fr;
+  --margin-width: 96px;
+}
+
+.notion-layout-reskin-wider {
+  /* --content-width: minmax(auto, 720px); */
+}
+
+/* Nested editors do not use the page-level grid */
+.notion-layout[data-nested-editor="true"] {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Content sits in the centre column of the grid */
+.notion-layout-content {
+  grid-column: content;
+  min-width: 0;
+}
+
+/* Full-bleed spans the entire grid */
+.notion-layout-full {
+  grid-column: full;
+}
+
+/* Phone / small screens */
+@media (max-width: 768px) {
+  .notion-layout {
+    --margin-width: 24px;
+  }
+}
+
+
+/* ------------------------------------------------------------------
+   Notion selectable blocks (matches Notion's .notion-selectable)
+   ------------------------------------------------------------------ */
+.notion-selectable {
+  width: 100%;
+}
+.notion-selectable::selection,
+.notion-selectable ::selection {
+  background: rgba(35, 131, 226, 0.14);
+}
+
+.notion-column_list-block {
+  align-self: center;
+}
+
+.notion-callout-block,
+.notion-tab-block,
+.notion-quote-block {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-inline: 8px;
+}
+
 /* contentEditable placeholders + inline tags */
 .notion-editable {
   outline: none;
@@ -199,21 +271,33 @@
   box-shadow: 0 0 0 2px var(--background), 0 0 8px 2px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
-/* block-reorder drop indicators on the parent BlockRow */
-.block-row.drop-above::before,
-.block-row.drop-below::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--primary);
-  border-radius: 2px;
-  pointer-events: none;
+/* Column items fade in when mounted (e.g. new column added) */
+.col-item {
+  animation: col-mount 200ms ease;
 }
-.block-row.drop-above::before {
-  top: -1px;
+
+@keyframes col-mount {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-.block-row.drop-below::after {
-  bottom: -1px;
+
+/* Column spacer — hidden by default, visible on hover / resize / drop */
+.spacer-line {
+  opacity: 0;
+  transition: opacity 150ms ease, background-color 150ms ease;
+}
+
+.group\/cols:hover .spacer-line,
+.group\/cols[data-resizing="true"] .spacer-line,
+[data-column-spacer][data-drop-active] .spacer-line {
+  opacity: 1;
+}
+
+/* Column spacer highlighted as drop zone */
+[data-column-spacer][data-drop-active] .spacer-line {
+  background: hsl(var(--primary)) !important;
 }

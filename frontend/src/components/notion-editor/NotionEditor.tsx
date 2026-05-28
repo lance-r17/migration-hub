@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from 'react'
 import './styles.css'
 import { BlockRow } from './BlockRow'
 import { BlockHoverControls } from './BlockHoverControls'
@@ -9,7 +9,11 @@ import { BlockMenu } from './BlockMenu'
 import { InlineToolbar } from './InlineToolbar'
 import { createBlock, cloneBlock, SLASH_ITEMS, type Block } from './model'
 import { TEXT_COLOR_MAP, BG_COLOR_MAP, TEXT_CSS_TO_VALUE, BG_CSS_TO_VALUE } from './blocks/table-constants'
-import { beginDrag, getDraggedBlock, commitDrop, cancelDrag } from './drag-state'
+import {
+  startDrag, getDraggedBlock, finishDrag, cancelDrag,
+  subscribeDropTarget, getDropTarget, setDropTarget, clearDropTarget,
+  type DropTarget,
+} from './drag-state'
 
 function isEmptyHTML(html: string) {
   if (!html) return true
@@ -91,11 +95,13 @@ export function NotionEditor({
   const [slash, setSlash] = useState<{ blockId: string; pos: { left: number; top: number }; query: string } | null>(null)
   const [varMenu, setVarMenu] = useState<{ blockId: string; pos: { left: number; top: number }; query: string } | null>(null)
   const [blockMenu, setBlockMenu] = useState<{ index: number; pos: { left: number; top: number } } | null>(null)
-  const [dragIdx, setDragIdx] = useState<number | null>(null)
-  const [dropTarget, setDropTarget] = useState<{ index: number; where: 'above' | 'below' } | null>(null)
+  const dropTarget = useSyncExternalStore(subscribeDropTarget, getDropTarget)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wasMenuOpenRef = useRef(false)
+  const layoutRef = useRef<HTMLDivElement>(null)
+  const editorIdRef = useRef<string>(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2))
+  const editorId = editorIdRef.current
 
   const scheduleHide = useCallback(() => {
     if (slash || varMenu || blockMenu) return
@@ -128,41 +134,73 @@ export function NotionEditor({
   const onBlocksChangeRef = useRef(onBlocksChange)
   useEffect(() => { onBlocksChangeRef.current = onBlocksChange }, [onBlocksChange])
 
+  /* Highlight the correct column spacer when column-insert is active */
+  useEffect(() => {
+    document.querySelectorAll('[data-column-spacer][data-drop-active]').forEach(el => {
+      el.removeAttribute('data-drop-active')
+    })
+    if (!dropTarget || dropTarget.editorId !== editorId || dropTarget.where !== 'column-insert') return
+
+    const block = localBlocks[dropTarget.index]
+    if (!block || block.type !== 'columns') return
+
+    const row = document.querySelector(`[data-block-id="${block.id}"]`)
+    if (!row) return
+
+    const spacers = row.querySelectorAll('[data-column-spacer]')
+    const spacer = spacers[dropTarget.columnInsertAt || 0]
+    if (spacer) {
+      spacer.setAttribute('data-drop-active', 'true')
+    }
+
+    return () => {
+      spacer?.removeAttribute('data-drop-active')
+    }
+  }, [dropTarget, localBlocks])
+
   // Sync external blocks
   useEffect(() => {
     setLocalBlocks(blocks)
   }, [blocks])
 
   const patchBlock = useCallback((id: string, patch: Partial<Block>) => {
-    const next = blocksRef.current.map(b => b.id === id ? { ...b, ...patch } as Block : b)
-    setLocalBlocks(next)
-    onBlocksChangeRef.current?.(next)
+    setLocalBlocks(prev => {
+      const next = prev.map(b => b.id === id ? { ...b, ...patch } as Block : b)
+      onBlocksChangeRef.current?.(next)
+      return next
+    })
   }, [])
 
   const insertBlock = useCallback((index: number, block: Block, focus = true) => {
-    const next = [...blocksRef.current]
-    next.splice(index, 0, block)
-    setLocalBlocks(next)
-    onBlocksChangeRef.current?.(next)
+    setLocalBlocks(prev => {
+      const next = [...prev]
+      next.splice(index, 0, block)
+      onBlocksChangeRef.current?.(next)
+      return next
+    })
     if (focus) setAutoFocusId(block.id)
   }, [])
 
   const removeBlock = useCallback((id: string) => {
-    const idx = blocksRef.current.findIndex(b => b.id === id)
-    if (idx === -1) return
-    const next = blocksRef.current.filter(b => b.id !== id)
-    if (next.length === 0 && !allowEmpty) next.push(createBlock('paragraph'))
-    const focusTarget = next[Math.max(0, idx - 1)]
-    setLocalBlocks(next)
-    onBlocksChangeRef.current?.(next)
-    if (focusTarget) setAutoFocusId(focusTarget.id)
+    setLocalBlocks(prev => {
+      const idx = prev.findIndex(b => b.id === id)
+      if (idx === -1) return prev
+      const next = prev.filter(b => b.id !== id)
+      if (next.length === 0 && !allowEmpty) next.push(createBlock('paragraph'))
+      const focusTarget = next[Math.max(0, idx - 1)]
+      onBlocksChangeRef.current?.(next)
+      if (focusTarget) setAutoFocusId(focusTarget.id)
+      return next
+    })
   }, [allowEmpty])
 
   const extractBlock = useCallback((id: string) => {
-    const next = blocksRef.current.filter(b => b.id !== id)
-    if (next.length === 0 && !allowEmpty) next.push(createBlock('paragraph'))
-    setLocalBlocks(next)
-    onBlocksChangeRef.current?.(next)
+    setLocalBlocks(prev => {
+      const next = prev.filter(b => b.id !== id)
+      if (next.length === 0 && !allowEmpty) next.push(createBlock('paragraph'))
+      onBlocksChangeRef.current?.(next)
+      return next
+    })
   }, [allowEmpty])
 
   const replaceBlock = useCallback((id: string, newBlock: Block, { keepContent = true } = {}) => {
@@ -400,16 +438,14 @@ export function NotionEditor({
   /* block drag/drop reorder */
   const onDragStart = (e: React.DragEvent, idx: number) => {
     if (readOnly) return
-    setDragIdx(idx)
     const block = localBlocks[idx]
-    beginDrag(block, () => extractBlock(block.id))
+    startDrag(block, () => extractBlock(block.id))
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', String(idx))
 
     const row = document.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement | null
     if (row) {
       const ghost = row.cloneNode(true) as HTMLElement
-      ghost.classList.remove('active', 'drop-above', 'drop-below')
+      ghost.classList.remove('active')
       ghost.removeAttribute('data-block-id')
       const rect = row.getBoundingClientRect()
       ghost.style.width = `${rect.width}px`
@@ -432,44 +468,361 @@ export function NotionEditor({
       })
     }
   }
+
   const onDragOverRow = (e: React.DragEvent, idx: number) => {
     if (readOnly) return
-    const hasDrag = dragIdx !== null || getDraggedBlock()
-    if (!hasDrag) return
+    const dragged = getDraggedBlock()
+    if (!dragged) return
     e.preventDefault()
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const where = (e.clientY - rect.top) < rect.height / 2 ? 'above' : 'below'
-    setDropTarget({ index: idx, where })
+
+    const rowEl = e.currentTarget as HTMLElement
+
+    // If the event originated from inside a nested editor AND this BlockRow
+    // is a top-level row (not inside a nested editor itself), skip handling
+    // so the nested editor can manage its own indicator.
+    const isThisRowNested = !!rowEl.closest('[data-nested-editor]')
+    if (!isThisRowNested && (e.target as HTMLElement).closest?.('[data-nested-editor]')) {
+      return
+    }
+    const rect = rowEl.getBoundingClientRect()
+    const xRel = e.clientX - rect.left
+    const xPct = xRel / rect.width
+    const yRel = e.clientY - rect.top
+    const target = localBlocks[idx]
+
+    // --- Parent columns block handling ---
+    if (target?.type === 'columns' && dragged.type !== 'columns') {
+      const cb = target as Extract<Block, { type: 'columns' }>
+      const margin = 8
+
+      // Near top/bottom of the columns block itself
+      if (yRel < margin) {
+        setDropTarget({ editorId, index: idx, where: 'above' })
+        return
+      }
+      if (yRel > rect.height - margin) {
+        setDropTarget({ editorId, index: idx, where: 'below' })
+        return
+      }
+
+      // Near a column spacer (divider) — show column-insert on the handle
+      const colsContainer = rowEl.querySelector('[data-columns-container]') as HTMLElement | null
+      if (colsContainer && cb.count < 4) {
+        const xRel = e.clientX - rect.left
+        const children = Array.from(colsContainer.children) as HTMLElement[]
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i]
+          if (!child.hasAttribute('data-column-spacer')) continue
+          const childRect = child.getBoundingClientRect()
+          const spacerCenter = (childRect.left - rect.left) + childRect.width / 2
+          if (Math.abs(xRel - spacerCenter) < 30) {
+            const insertAt = Math.floor(i / 2)
+            setDropTarget({ editorId, index: idx, where: 'column-insert', columnInsertAt: insertAt })
+            return
+          }
+        }
+      }
+
+      // Over nested content — let nested editor handle the rest
+      const isOverNested = !!(e.target as HTMLElement).closest?.('[data-nested-editor]')
+      if (isOverNested) {
+        if (dropTarget?.editorId === editorId && dropTarget?.index === idx) clearDropTarget()
+        return
+      }
+
+      // Fallback for gaps between nested editors (e.g. empty columns)
+      if (cb.count < 4) {
+        const insertAt = Math.min(Math.round(xPct * cb.count), cb.count)
+        setDropTarget({ editorId, index: idx, where: 'column-insert', columnInsertAt: insertAt })
+        return
+      }
+    }
+
+    // --- Nested editor handling ---
+    // If near a shared column edge (spacer between columns), clear our indicator
+    // and let the parent columns block show the divider highlight.
+    const nestedEditor = rowEl.closest('[data-nested-editor]') as HTMLElement | null
+    if (nestedEditor) {
+      const colItem = nestedEditor.parentElement?.parentElement as HTMLElement | null
+      if (colItem) {
+        const colRect = colItem.getBoundingClientRect()
+        const xInCol = e.clientX - colRect.left
+        const edgeMargin = 24
+        const nearLeftEdge = xInCol < edgeMargin
+        const nearRightEdge = xInCol > colRect.width - edgeMargin
+        const hasLeftSpacer = !!colItem.previousElementSibling?.hasAttribute('data-column-spacer')
+        const hasRightSpacer = !!colItem.nextElementSibling?.hasAttribute('data-column-spacer')
+
+        if ((nearLeftEdge && hasLeftSpacer) || (nearRightEdge && hasRightSpacer)) {
+          if (dropTarget?.editorId === editorId && dropTarget?.index === idx) clearDropTarget()
+          return
+        }
+      }
+    }
+
+    if (dragged.id === target?.id) {
+      if (dropTarget?.editorId === editorId && dropTarget?.index === idx) clearDropTarget()
+      return
+    }
+
+    // Inside block row — show bottom horizontal indicator
+    setDropTarget({ editorId, index: idx, where: 'below' })
   }
-  const onDropRow = (e: React.DragEvent, idx: number) => {
+
+  const onDropRow = (e: React.DragEvent, targetIdx: number) => {
     if (readOnly) return
     e.preventDefault()
-    const externalBlock = getDraggedBlock()
-    if (dragIdx !== null) {
-      const next = [...localBlocks]
-      const [m] = next.splice(dragIdx, 1)
-      let target = idx
-      if (dragIdx < idx) target -= 1
-      const where = dropTarget?.where || 'below'
-      const insertAt = where === 'above' ? target : target + 1
-      next.splice(insertAt, 0, m)
-      setLocalBlocks(next)
-      onBlocksChangeRef.current?.(next)
-    } else if (externalBlock) {
-      const where = dropTarget?.where || 'below'
-      const insertAt = where === 'above' ? idx : idx + 1
-      const next = [...localBlocks]
-      next.splice(insertAt, 0, externalBlock)
-      setLocalBlocks(next)
-      onBlocksChangeRef.current?.(next)
-      commitDrop()
+
+    const dragged = getDraggedBlock()
+    if (!dragged) {
+      clearDropTarget()
+      return
     }
-    setDragIdx(null)
-    setDropTarget(null)
+
+    // If near a shared column edge, let the parent columns block handle the drop.
+    // Don't stop propagation so the parent's onDropRow can process it.
+    const rowEl = e.currentTarget as HTMLElement
+    const nestedEditor = rowEl.closest('[data-nested-editor]') as HTMLElement | null
+    if (nestedEditor) {
+      const colItem = nestedEditor.parentElement?.parentElement as HTMLElement | null
+      if (colItem) {
+        const colRect = colItem.getBoundingClientRect()
+        const xInCol = e.clientX - colRect.left
+        const edgeMargin = 24
+        const nearLeftEdge = xInCol < edgeMargin
+        const nearRightEdge = xInCol > colRect.width - edgeMargin
+        const hasLeftSpacer = !!colItem.previousElementSibling?.hasAttribute('data-column-spacer')
+        const hasRightSpacer = !!colItem.nextElementSibling?.hasAttribute('data-column-spacer')
+
+        if ((nearLeftEdge && hasLeftSpacer) || (nearRightEdge && hasRightSpacer)) {
+          clearDropTarget()
+          return
+        }
+      }
+    }
+
+    e.stopPropagation()
+
+    const target = localBlocks[targetIdx]
+    let where = (dropTarget?.editorId === editorId ? dropTarget?.where : undefined) || 'below'
+
+    // Guard: never create nested columns. Fallback to below.
+    if ((where === 'left' || where === 'right') && dragged.type === 'columns') {
+      where = 'below'
+    }
+
+    // Guard: blocks inside a columns block never get left/right drops.
+    const isInsideColumns = !!(rowEl.closest('[data-nested-editor]') as HTMLElement | null)
+    if (isInsideColumns && (where === 'left' || where === 'right')) {
+      where = 'below'
+    }
+
+    switch (where) {
+      case 'column-insert': {
+        if (target?.type !== 'columns') break
+        const cb = target as Extract<Block, { type: 'columns' }>
+        const insertAt = (dropTarget?.editorId === editorId ? dropTarget?.columnInsertAt : undefined) ?? 0
+
+        // Is the dragged block already inside this columns block?
+        const srcColIdx = cb.columns.findIndex(col => col.some(b => b.id === dragged.id))
+
+        if (srcColIdx !== -1) {
+          // Atomic column reorder within the same columns block
+          let newCols = cb.columns.map((col, j) =>
+            j === srcColIdx ? col.filter(b => b.id !== dragged.id) : col
+          )
+          let adj = insertAt
+          if (newCols[srcColIdx].length === 0) {
+            if (srcColIdx < insertAt) adj--
+            newCols = newCols.filter((_, j) => j !== srcColIdx)
+          }
+          newCols.splice(adj, 0, [dragged])
+          const next =
+            newCols.length <= 1
+              ? localBlocks.flatMap((b, i) => (i === targetIdx ? (newCols[0] ?? [createBlock('paragraph')]) : [b]))
+              : localBlocks.map((b, i) => (i === targetIdx ? { ...cb, count: newCols.length, columns: newCols } as Block : b))
+          setLocalBlocks(next)
+          blocksRef.current = next
+          onBlocksChangeRef.current?.(next)
+          cancelDrag()
+        } else {
+          // Add dragged block as a new column from outside
+          const newCols = [...cb.columns]
+          newCols.splice(insertAt, 0, [dragged])
+          const next = localBlocks.map((b, i) =>
+            i === targetIdx ? { ...cb, count: cb.count + 1, columns: newCols } as Block : b
+          )
+          setLocalBlocks(next)
+          blocksRef.current = next
+          onBlocksChangeRef.current?.(next)
+          finishDrag()
+        }
+        break
+      }
+
+      case 'left':
+      case 'right': {
+        if (!target || dragged.id === target.id) {
+          cancelDrag()
+          break
+        }
+
+        if (target.type === 'columns') {
+          const cb = target as Extract<Block, { type: 'columns' }>
+          const insertAt = where === 'left' ? 0 : cb.count
+
+          // Is the dragged block already inside this columns block?
+          const srcColIdx = cb.columns.findIndex(col => col.some(b => b.id === dragged.id))
+
+          if (srcColIdx !== -1) {
+            let newCols = cb.columns.map((col, j) =>
+              j === srcColIdx ? col.filter(b => b.id !== dragged.id) : col
+            )
+            let adj = insertAt
+            if (newCols[srcColIdx].length === 0) {
+              if (srcColIdx < insertAt) adj--
+              newCols = newCols.filter((_, j) => j !== srcColIdx)
+            }
+            newCols.splice(adj, 0, [dragged])
+            const next =
+              newCols.length <= 1
+                ? localBlocks.flatMap((b, i) => (i === targetIdx ? (newCols[0] ?? [createBlock('paragraph')]) : [b]))
+                : localBlocks.map((b, i) => (i === targetIdx ? { ...cb, count: newCols.length, columns: newCols } as Block : b))
+            setLocalBlocks(next)
+            blocksRef.current = next
+            onBlocksChangeRef.current?.(next)
+            cancelDrag()
+          } else {
+            const newCols = [...cb.columns]
+            newCols.splice(insertAt, 0, [dragged])
+            const next = localBlocks.map((b, i) =>
+              i === targetIdx ? { ...cb, count: cb.count + 1, columns: newCols } as Block : b
+            )
+            setLocalBlocks(next)
+            blocksRef.current = next
+            onBlocksChangeRef.current?.(next)
+            finishDrag()
+          }
+          break
+        }
+
+        const [left, right] = where === 'left' ? [dragged, target] : [target, dragged]
+        const colBlock = { ...createBlock('columns'), count: 2, columns: [[left], [right]] } as Block
+
+        const dragIdx = localBlocks.findIndex(b => b.id === dragged.id)
+        const blocksWithoutDrag = dragIdx !== -1 ? localBlocks.filter((_, i) => i !== dragIdx) : localBlocks
+        const tidx = blocksWithoutDrag.findIndex(b => b.id === target.id)
+        const next = blocksWithoutDrag.map((b, i) => (i === tidx ? colBlock : b))
+
+        setLocalBlocks(next)
+        blocksRef.current = next
+        onBlocksChangeRef.current?.(next)
+        if (dragIdx !== -1) cancelDrag()
+        else finishDrag()
+        break
+      }
+
+      case 'above':
+      case 'below': {
+        const dragIdx = localBlocks.findIndex(b => b.id === dragged.id)
+        const next = [...localBlocks]
+        let insertAt = targetIdx
+        if (dragIdx !== -1) {
+          next.splice(dragIdx, 1)
+          if (dragIdx < targetIdx) insertAt -= 1
+        }
+        insertAt = where === 'below' ? insertAt + 1 : insertAt
+        next.splice(insertAt, 0, dragged)
+
+        setLocalBlocks(next)
+        blocksRef.current = next
+        onBlocksChangeRef.current?.(next)
+        if (dragIdx !== -1) cancelDrag()
+        else finishDrag()
+        break
+      }
+    }
+
+    clearDropTarget()
   }
+
+  const onLayoutDragOver = (e: React.DragEvent) => {
+    if (readOnly) return
+    const dragged = getDraggedBlock()
+    if (!dragged) return
+    e.preventDefault()
+
+    const root = layoutRef.current
+    if (!root) return
+
+    // If the cursor is over a nested editor, let the nested editor handle its own
+    // indicators. Don't clear the global drop target here.
+    if ((e.target as HTMLElement).closest?.('[data-nested-editor]')) {
+      return
+    }
+
+    // Find the top-level block row whose vertical range contains the cursor
+    const rows = Array.from(root.querySelectorAll('.block-row')).filter((row) => {
+      const nested = row.closest('[data-nested-editor]')
+      return !nested
+    }) as HTMLElement[]
+
+    let targetRow: HTMLElement | null = null
+    let targetIdx = -1
+    for (let i = 0; i < rows.length; i++) {
+      const rect = rows[i].getBoundingClientRect()
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        targetRow = rows[i]
+        targetIdx = i
+        break
+      }
+    }
+
+    if (!targetRow || targetIdx === -1) {
+      clearDropTarget()
+      return
+    }
+
+    const layoutRect = root.getBoundingClientRect()
+    const rowRect = targetRow.getBoundingClientRect()
+    const target = localBlocks[targetIdx]
+    if (!target) return
+    if (dragged.type === 'columns' || dragged.id === target.id) {
+      clearDropTarget()
+      return
+    }
+
+    // Left: cursor is in the left margin (layout left edge → row left edge)
+    if (e.clientX >= layoutRect.left && e.clientX < rowRect.left) {
+      setDropTarget({ editorId, index: targetIdx, where: 'left' })
+      return
+    }
+    // Right: cursor is in the right margin (row right edge → layout right edge)
+    if (e.clientX > rowRect.right && e.clientX <= layoutRect.right) {
+      setDropTarget({ editorId, index: targetIdx, where: 'right' })
+      return
+    }
+
+    // Inside block — let onDragOverRow handle the bottom horizontal indicator
+  }
+
+  const onLayoutDragLeave = (e: React.DragEvent) => {
+    const root = layoutRef.current
+    if (!root) return
+    const related = e.relatedTarget as Node | null
+    if (!related || !root.contains(related)) {
+      clearDropTarget()
+    }
+  }
+
+  const onLayoutDrop = (e: React.DragEvent) => {
+    if (readOnly) return
+    if (!dropTarget) return
+    onDropRow(e, dropTarget.index)
+  }
+
   const onDragEnd = () => {
-    setDragIdx(null)
-    setDropTarget(null)
+    clearDropTarget()
     if (getDraggedBlock()) {
       cancelDrag()
     }
@@ -486,9 +839,17 @@ export function NotionEditor({
   }, [localBlocks])
 
   return (
-    <div className={`flex flex-col min-w-0 ${nested ? '' : ''}`}>
+    <div
+      ref={nested ? undefined : layoutRef}
+      className={nested ? 'flex flex-col min-w-0' : 'notion-layout notion-layout-wide notion-layout-reskin-wider'}
+      style={nested ? undefined : { paddingBottom: '30vh' }}
+      {...(nested ? { 'data-nested-editor': 'true' } : {})}
+      onDragOver={nested ? undefined : onLayoutDragOver}
+      onDragLeave={nested ? undefined : onLayoutDragLeave}
+      onDrop={nested ? undefined : onLayoutDrop}
+    >
       {!nested && showTitle && (
-        <div className="w-full px-8 pt-8 pb-2">
+        <div className="notion-layout-content pt-8 pb-2">
           <h1
             className="notion-editable text-[40px] font-bold tracking-[-0.02em] leading-[1.1] outline-none m-0 mb-2 text-foreground"
             contentEditable={!readOnly}
@@ -507,46 +868,20 @@ export function NotionEditor({
         </div>
       )}
 
-      <div className={`w-full ${nested ? '' : 'px-8 pb-20'}`}>
+      <div className={nested ? 'w-full' : 'notion-layout-content'}>
         <div className="flex flex-col">
           {localBlocks.map((block, i) => {
             const Renderer = BLOCK_RENDERERS[block.type] || BLOCK_RENDERERS.paragraph
             const isActive = activeId === block.id
-            const dragOver = dropTarget && dropTarget.index === i
-              ? (dropTarget.where === 'above' ? 'drop-above' : 'drop-below') : ''
-            if (block.type === 'columns') {
-              return (
-                <div
-                  key={block.id}
-                  data-block-id={block.id}
-                  className={`block-row group relative ${isActive ? 'active' : ''} ${dragOver || ''}`}
-                  onMouseEnter={() => { setHoveredIdx(i); cancelHide() }}
-                  onMouseLeave={scheduleHide}
-                  onDragOver={(e) => onDragOverRow(e, i)}
-                  onDragLeave={() => {}}
-                  onDrop={(e) => onDropRow(e, i)}
-                >
-                  <div className="min-w-0 py-[3px] px-[2px]" onMouseDown={() => setActiveId(block.id)}>
-                    <Renderer
-                      block={block}
-                      onChange={(patch) => patchBlock(block.id, patch)}
-                      onDelete={() => removeBlock(block.id)}
-                      onFlatten={(blocks) => flattenBlock(block.id, blocks)}
-                      onKeyDown={onBlockKeyDown(block, i)}
-                      onFocus={() => setActiveId(block.id)}
-                      autoFocus={autoFocusId === block.id}
-                      readOnly={readOnly}
-                    />
-                  </div>
-                </div>
-              )
-            }
+            const dropWhere = (dropTarget?.editorId === editorId && dropTarget?.index === i && dropTarget.where !== 'column-insert')
+              ? dropTarget.where
+              : undefined
             return (
               <BlockRow
                 key={block.id}
                 block={block}
                 active={isActive}
-                dragOver={dragOver}
+                dropWhere={dropWhere}
                 onSetActive={setActiveId}
                 onMouseEnter={() => { setHoveredIdx(i); cancelHide() }}
                 onMouseLeave={scheduleHide}

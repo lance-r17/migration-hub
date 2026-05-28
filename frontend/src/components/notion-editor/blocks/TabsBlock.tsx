@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Plus, Pencil, Smile, Link, Trash2 } from 'lucide-react'
 import { NotionEditor } from '../NotionEditor'
 import { createBlock } from '../model'
-import { getDraggedBlock, commitDrop } from '../drag-state'
+import { getDraggedBlock, finishDrag, cancelDrag } from '../drag-state'
 import type { Block } from '../model'
 import type { BlockRendererProps } from './types'
 
@@ -170,11 +170,17 @@ export function TabsBlock({ block, onChange, readOnly }: BlockRendererProps) {
               onDragLeave={() => setDragOverEmpty(false)}
               onDrop={(e) => {
                 e.preventDefault()
+                e.stopPropagation()
                 setDragOverEmpty(false)
                 const dragged = getDraggedBlock()
                 if (dragged && !readOnly) {
                   updateTabBlocks(safeIdx, [dragged])
-                  commitDrop()
+                  const isFromSameTab = activeTab.blocks.some(b => b.id === dragged.id)
+                  if (isFromSameTab) {
+                    cancelDrag()
+                  } else {
+                    finishDrag()
+                  }
                 }
               }}
             >
