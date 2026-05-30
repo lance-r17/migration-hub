@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BadgeCheck, CalendarRange, ClipboardList, DollarSign, Settings2, ShieldAlert } from 'lucide-react'
+import { BadgeCheck, Building2, CalendarRange, ClipboardList, DollarSign, Settings2, ShieldAlert } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const SETTINGS_SECTIONS = [
@@ -14,6 +14,12 @@ const SETTINGS_SECTIONS = [
     description: 'Set the platform migration period and configurable duration options for migration windows.',
     icon: <CalendarRange size={20} className="text-primary" />,
     href: '/settings/migration',
+  },
+  {
+    title: 'GBI Hierarchy',
+    description: 'Manage the organizational structure and link projects to GBI tiers.',
+    icon: <Building2 size={20} className="text-primary" />,
+    href: '/settings/gbi',
   },
   {
     title: 'Embargo Periods',

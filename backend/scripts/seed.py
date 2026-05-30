@@ -218,6 +218,7 @@ def seed_config(session: Session, keys: list[str] | None = None) -> None:
         "resource_survey_config": ("resource_survey_config.json", "resource_survey_config"),
         "billing_threshold_config": ("billing_config.json", "billing_threshold_config"),
         "migration_settings": ("migration_settings.json", "migration_settings"),
+        "gbi_hierarchy": ("gbi_hierarchy.json", "gbi_hierarchy"),
     }
     to_seed = keys if keys else list(CONFIG_FILES.keys())
     for key in to_seed:
@@ -412,6 +413,7 @@ def main() -> None:
     parser.add_argument("--config-resource-survey-config", action="store_true", help="Refresh resource survey config only")
     parser.add_argument("--config-billing-threshold-config", action="store_true", help="Refresh billing threshold config only")
     parser.add_argument("--config-migration-settings", action="store_true", help="Refresh migration settings only")
+    parser.add_argument("--config-gbi-hierarchy", action="store_true", help="Refresh GBI hierarchy only")
     parser.add_argument("--email-templates", action="store_true", help="Refresh email templates only")
     parser.add_argument("--note-templates", action="store_true", help="Refresh note templates only")
     args = parser.parse_args()
@@ -421,6 +423,7 @@ def main() -> None:
         "resource_survey_config": args.config_resource_survey_config,
         "billing_threshold_config": args.config_billing_threshold_config,
         "migration_settings": args.config_migration_settings,
+        "gbi_hierarchy": args.config_gbi_hierarchy,
     }
 
     targets = {

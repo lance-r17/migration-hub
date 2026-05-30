@@ -1,0 +1,66 @@
+{
+  "id": "1234",
+  "name": "GCIO",
+  "children": [
+    {
+      "id": "1235",
+      "name": "CTO",
+      "children": [
+        {
+          "id": "1238",
+          "name": "CTO infrastructure",
+          "children": [
+            {
+              "id": "1241",
+              "name": "Cloud Service"
+            },
+            {
+              "id": "1242",
+              "name": "Networking"
+            }
+          ]
+        },
+        {
+          "id": "1239",
+          "name": "CTO Platform",
+          "children": [
+            {
+              "id": "1243",
+              "name": "CAEP"
+            }
+          ]
+        },
+        {
+          "id": "1240",
+          "name": "CTO Data",
+          "children": [
+            {
+              "id": "1244",
+              "name": "Data Science"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1236",
+      "name": "Whole Sale",
+      "children": [
+        {
+          "id": "1245",
+          "name": "Core Banking"
+        }
+      ]
+    },
+    {
+      "id": "1237",
+      "name": "WPB",
+      "children": [
+        {
+          "id": "1246",
+          "name": "IWPB Technology"
+        }
+      ]
+    }
+  ]
+}

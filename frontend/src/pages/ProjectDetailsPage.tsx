@@ -364,6 +364,9 @@ export function ProjectDetailsPage() {
                   )}
                 </span>
               )}
+              {project.gbi_id && (
+                <span>GBI: <strong className="text-foreground">{project.gbi_id}</strong></span>
+              )}
               {project.itso && (
                 <span>ITSO: <strong className="text-foreground">{project.itso}</strong></span>
               )}
@@ -417,6 +420,7 @@ export function ProjectDetailsPage() {
           <ApplicationOverviewSection
             data={project.applicationOverview}
             governanceRoles={project.governanceRoles}
+            gbiId={project.gbi_id}
             canEditGovernanceRoles={isPlatformLead}
             projectId={project.id}
             onSave={!isLocked ? (d) => handleSave('applicationOverview', d) : undefined}

@@ -126,6 +126,7 @@ _OPENAPI_TAGS = [
     {"name": "confluence", "description": "Confluence page export and parent page management"},
     {"name": "admin-email", "description": "Email event config and job log (admin only)"},
     {"name": "note-templates", "description": "Reusable note block templates"},
+    {"name": "gbi", "description": "GBI hierarchy and project assignment"},
 ]
 
 
@@ -159,6 +160,7 @@ def create_app() -> FastAPI:
         dashboard,
         email_templates,
         embargos,
+        gbi,
         jira,
         note_templates,
         oauth,
@@ -189,6 +191,7 @@ def create_app() -> FastAPI:
     app.include_router(note_templates.router, prefix=prefix)
     app.include_router(zoom.router, prefix=prefix)
     app.include_router(confluence.router, prefix=prefix)
+    app.include_router(gbi.router, prefix=prefix)
     app.include_router(admin.router, prefix=prefix)
     app.include_router(admin_email.router, prefix=prefix)
 

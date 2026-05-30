@@ -11,6 +11,7 @@ class UserOut(BaseModel):
     team: str | None = None
     initials: str
     role: str | None = None
+    gbi_id: str | None = None
 
 
 class UserCreate(BaseModel):
@@ -21,6 +22,14 @@ class UserCreate(BaseModel):
     team: str | None = None
     initials: str | None = None
     role: str | None = None
+
+
+class GbiCloudLeadCreate(BaseModel):
+    name: str
+    email: str
+    department: str
+    team: str | None = None
+    gbi_id: str | None = None
 
 
 class BatchUserCreateRequest(BaseModel):
@@ -53,6 +62,7 @@ class UserAdminUpdate(BaseModel):
     department: str | None = None
     team: str | None = None
     role: str | None = None
+    gbi_id: str | None = None
 
 
 class UserProjectRoleOut(BaseModel):

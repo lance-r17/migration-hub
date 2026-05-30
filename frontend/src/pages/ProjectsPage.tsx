@@ -125,8 +125,10 @@ export function ProjectsPage() {
   )
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
+  const canViewProjects = isPlatformLead || isGbiCloudLead
 
-  if (!isPlatformLead) {
+  if (!canViewProjects) {
     return (
       <AppShell title="Projects">
         <div className="max-w-screen-xl mx-auto w-full">

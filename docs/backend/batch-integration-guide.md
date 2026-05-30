@@ -260,6 +260,59 @@ for pid in ["acme-123456-appone-prod", "acme-123456-appone-dev", "acme-123457-ap
 
 ---
 
+## Scenario 2b - Batch assign GBI tiers to projects (one-off or regular refresh)
+
+Projects can be linked to a **GBI (Global Business Identifier)** node in the organizational hierarchy. This assignment is used by the `gbi_cloud_lead` role to scope project visibility.
+
+**Authorization:** `platform_migration_lead` or `admin` role required.
+
+```python
+import csv
+
+GBI_ASSIGN_CSV = """
+project_id,gbi_id
+acme-123456-appone-prod,CTO-INFRA
+acme-123456-appone-dev,CTO-INFRA
+acme-123457-apptwo-prod,CTO-APPS
+""".strip()
+
+
+def batch_assign_gbi(csv_text: str):
+    reader = csv.DictReader(csv_text.splitlines())
+    for row in reader:
+        project_id = row["project_id"]
+        gbi_id = row["gbi_id"]
+        try:
+            client.post(
+                "/gbi/assign-projects",
+                json={"gbi_id": gbi_id, "project_ids": [project_id]},
+            )
+            print(f"  ASSIGNED {project_id} -> {gbi_id}")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                print(f"  SKIP {project_id} — project or GBI node not found")
+            else:
+                raise
+
+
+batch_assign_gbi(GBI_ASSIGN_CSV)
+```
+
+**Key points**
+- `POST /gbi/assign-projects` accepts a `gbi_id` and a list of `project_ids`. Every project in the list is set to that `gbi_id`.
+- `POST /gbi/unassign-projects` clears the `gbi_id` for the given projects (sets it to `null`).
+- A project can belong to exactly one GBI node at a time; re-assigning overwrites the previous value.
+- The GBI hierarchy itself is managed via `PUT /gbi` (see [api.md](api.md)) and is typically set up once via the Settings UI or a JSON import.
+
+**Read-back:** After assignment, each project list item includes `gbi_id`:
+```python
+projects = client.get("/projects")
+for p in projects:
+    print(f"{p['id']}: gbi_id={p.get('gbi_id')}")
+```
+
+---
+
 ## Scenario 3 - Batch add resources to projects (on-demand)
 
 Import a discovered inventory into existing projects without touching resources that are already tracked. `PATCH /projects/{id}/resources` is an **upsert**: existing `resource_id`s are updated, missing ones are created, and anything not in the payload is left alone.
@@ -444,7 +497,7 @@ reset_project("acme-123456-appone-prod")
 
 ## End-to-end script template
 
-Combine all four scenarios into a single runnable script:
+Combine all scenarios into a single runnable script:
 
 ```python
 #!/usr/bin/env python3
@@ -454,6 +507,7 @@ Scenario order:
   1. Create projects (one-off)
   1b. Ensure users exist (one-off or regular)
   2. Refresh metadata + governance (regular)
+  2b. Assign GBI tiers (one-off or regular)
   3. Add discovered resources (on-demand)
   4. Update resource state post-migration (on-demand)
   5. Reset project (administrative — optional)
@@ -558,6 +612,13 @@ def main():
             if assignments:
                 client.put(f"/projects/{pid}/project-user-roles", json=assignments)
             print(f"GOVERNANCE {pid}")
+
+        # 2b. Assign GBI tiers (requires platform_migration_lead role)
+        # client.post("/gbi/assign-projects", json={
+        #     "gbi_id": "CTO-INFRA",
+        #     "project_ids": ["acme-123456-appone-prod", "acme-123456-appone-dev"],
+        # })
+        # print("GBI assigned")
 
         # 3. Add resources
         client.patch(

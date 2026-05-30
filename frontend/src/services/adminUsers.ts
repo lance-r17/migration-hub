@@ -11,6 +11,7 @@ export interface UserAdminUpdate {
   department?: string
   team?: string
   role?: string
+  gbi_id?: string | null
 }
 
 export interface UserProjectRole {
@@ -35,4 +36,31 @@ export async function deleteAdminUser(id: string): Promise<void> {
 
 export async function getAllUserProjectRoles(): Promise<UserProjectRole[]> {
   return apiClient.get<UserProjectRole[]>(PROJECT_ROLES_ENDPOINT)
+}
+
+const GBI_CLOUD_LEADS_ENDPOINT = '/api/v1/admin/gbi-cloud-leads'
+
+export interface GbiCloudLeadCreate {
+  name: string
+  email: string
+  department: string
+  team?: string
+  gbi_id?: string | null
+}
+
+export async function getGbiCloudLeads(): Promise<User[]> {
+  const raw = await apiClient.get<Record<string, unknown>[]>(GBI_CLOUD_LEADS_ENDPOINT)
+  return raw.map(userFromApi)
+}
+
+export async function createGbiCloudLead(data: GbiCloudLeadCreate): Promise<User> {
+  return userFromApi(await apiClient.post<Record<string, unknown>>(GBI_CLOUD_LEADS_ENDPOINT, data))
+}
+
+export async function updateGbiCloudLead(id: string, data: UserAdminUpdate): Promise<User> {
+  return userFromApi(await apiClient.patch<Record<string, unknown>>(`${GBI_CLOUD_LEADS_ENDPOINT}/${id}`, data))
+}
+
+export async function deleteGbiCloudLead(id: string): Promise<void> {
+  return apiClient.delete<void>(`${GBI_CLOUD_LEADS_ENDPOINT}/${id}`)
 }

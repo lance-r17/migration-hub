@@ -603,8 +603,9 @@ export function UserAccountsPage() {
                   value={formData.role ?? ''}
                   onChange={(e) => setFormData((d) => ({ ...d, role: e.target.value }))}
                   placeholder="e.g. admin, platform_migration_lead"
+                  disabled
                 />
-                <p className="text-xs text-muted-foreground">Comma-separated list of roles.</p>
+                <p className="text-xs text-muted-foreground">Roles are managed via SSO and cannot be edited here.</p>
               </div>
             </div>
 

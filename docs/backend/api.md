@@ -464,6 +464,81 @@ Batch create human users. Existing users matched by `email` are skipped, but the
 
 ---
 
+## GBI Hierarchy
+
+GBI (Global Business Identifier) provides an organizational tree used to scope project visibility. The hierarchy is stored as a single JSON blob and is managed by Platform Migration Leads or Admins.
+
+### `GET /api/v1/gbi`
+
+Returns the GBI hierarchy.
+
+**Response:** `{ "id": "ROOT", "name": "CTO Office", "children": [...] } | null`
+
+---
+
+### `PUT /api/v1/gbi`
+
+Replaces the entire GBI hierarchy.
+
+**Authorization:** Requires `platform_migration_lead` or `admin` role.
+
+**Request body:**
+```json
+{
+  "root": {
+    "id": "CTO",
+    "name": "CTO Office",
+    "children": [
+      { "id": "CTO-INFRA", "name": "Infrastructure" },
+      { "id": "CTO-APPS", "name": "Applications" }
+    ]
+  }
+}
+```
+
+**Response:** The saved hierarchy root node.
+
+---
+
+### `POST /api/v1/gbi/assign-projects`
+
+Assigns one or more projects to a GBI node.
+
+**Authorization:** Requires `platform_migration_lead` or `admin` role.
+
+**Request body:**
+```json
+{
+  "gbi_id": "CTO-INFRA",
+  "project_ids": ["acme-123456-appone-prod", "acme-123456-appone-dev"]
+}
+```
+
+**Response:** `204 No Content`
+
+**Key points**
+- Each project can belong to exactly one GBI node; re-assigning overwrites the previous value.
+- Projects list responses include `gbi_id` after assignment.
+
+---
+
+### `POST /api/v1/gbi/unassign-projects`
+
+Clears the GBI assignment for one or more projects (sets `gbi_id` to `null`).
+
+**Authorization:** Requires `platform_migration_lead` or `admin` role.
+
+**Request body:**
+```json
+{
+  "project_ids": ["acme-123456-appone-prod"]
+}
+```
+
+**Response:** `204 No Content`
+
+---
+
 ## Waves
 
 ### `GET /api/v1/waves`

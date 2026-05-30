@@ -66,6 +66,7 @@ class ProjectListItem(BaseModel):
     cloud_resources: list[CloudResourceOut] | None = None
     resource_sets: list[str] | None = None
     risks: list[RiskOut] | None = None
+    gbi_id: str | None = None
 
 
 class ProjectDetail(BaseModel):
@@ -103,6 +104,7 @@ class ProjectDetail(BaseModel):
     cloud_resources: list[CloudResourceOut] = []
     risks: list[RiskOut] = []
     approvals: list[ApprovalOut] = []
+    gbi_id: str | None = None
 
 
 class ProjectHomeItem(BaseModel):
@@ -131,6 +133,7 @@ class ProjectHomeItem(BaseModel):
     approvals: list[ApprovalOut] | None = None
     cloud_resources: list[CloudResourceHomeOut] | None = None
     risks: list[RiskHomeOut] | None = None
+    gbi_id: str | None = None
 
 
 class ProjectCreate(BaseModel):
@@ -154,6 +157,7 @@ class ProjectPatch(BaseModel):
     jira_job_status: str | None = None
     jira_subtask_config: dict[str, Any] | None = None
     migration_effort_estimation: dict[str, Any] | None = None
+    gbi_id: str | None = None
 
 
 class SectionPatch(BaseModel):

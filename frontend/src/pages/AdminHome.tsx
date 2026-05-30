@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MonitorDot, Key, Paperclip, UserCog, Users, Mail, Bell } from 'lucide-react'
+import { MonitorDot, Key, Paperclip, UserCog, Users, Mail, Bell, Building2 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const ADMIN_SECTIONS = [
@@ -8,6 +8,12 @@ const ADMIN_SECTIONS = [
     description: 'Manage human user accounts across the platform.',
     icon: <Users size={20} className="text-primary" />,
     href: '/admin/users',
+  },
+  {
+    title: 'GBI Cloud Leads',
+    description: 'Create and assign GBI cloud lead users to org tiers.',
+    icon: <Building2 size={20} className="text-primary" />,
+    href: '/admin/gbi-cloud-leads',
   },
   {
     title: 'Job Monitor',

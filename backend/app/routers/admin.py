@@ -26,11 +26,13 @@ from app.schemas.service_account import (
 from app.schemas.user import (
     BatchUserCreateRequest,
     BatchUserCreateResponse,
+    GbiCloudLeadCreate,
     UserAdminUpdate,
     UserOut,
     UserProjectRoleOut,
 )
 from app.services import attachment_service, user_service
+from app.auth import _user_has_gbi_cloud_lead_role
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -335,4 +337,117 @@ async def batch_create_users(
         skipped=skipped,
         users=[UserOut.model_validate(u) for u in result_users],
     )
+
+
+# ─── GBI Cloud Leads ─────────────────────────────────────────────────────────
+
+@router.get("/gbi-cloud-leads", response_model=list[UserOut])
+async def list_gbi_cloud_leads(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """List all human users with the gbi_cloud_lead role."""
+    result = await db.execute(
+        select(User)
+        .where(User.is_service_account == False)
+        .order_by(User.name)
+    )
+    users = result.scalars().all()
+    return [u for u in users if _user_has_gbi_cloud_lead_role(u.role)]
+
+
+@router.post("/gbi-cloud-leads", response_model=UserOut, status_code=201)
+async def create_gbi_cloud_lead(
+    body: GbiCloudLeadCreate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Create or reuse a user and assign them the gbi_cloud_lead role."""
+    existing = await db.execute(select(User).where(User.email == body.email))
+    user = existing.scalar_one_or_none()
+
+    words = body.name.split()
+    initials = "".join(w[0].upper() for w in words[:2]) if words else "GL"
+
+    if user:
+        # Update existing user
+        user.name = body.name
+        user.department = body.department
+        user.team = body.team
+        user.initials = initials
+        user.gbi_id = body.gbi_id
+        existing_roles = {r.strip() for r in (user.role or "").split(",") if r.strip()}
+        existing_roles.add("gbi_cloud_lead")
+        user.role = ",".join(sorted(existing_roles))
+        await db.flush()
+        return user
+
+    user = User(
+        id=f"usr-{uuid.uuid4().hex[:8]}",
+        name=body.name,
+        email=body.email,
+        department=body.department,
+        team=body.team,
+        initials=initials,
+        role="gbi_cloud_lead",
+        gbi_id=body.gbi_id,
+    )
+    db.add(user)
+    await db.flush()
+    return user
+
+
+@router.patch("/gbi-cloud-leads/{user_id}", response_model=UserOut)
+async def update_gbi_cloud_lead(
+    user_id: str,
+    body: UserAdminUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Update a GBI cloud lead user."""
+    user = await db.get(User, user_id)
+    if not user or user.is_service_account:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if body.email is not None and body.email != user.email:
+        existing = await db.execute(select(User).where(User.email == body.email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email already in use")
+        user.email = body.email
+
+    if body.name is not None:
+        user.name = body.name
+        words = body.name.split()
+        user.initials = "".join(w[0].upper() for w in words[:2]) if words else "GL"
+
+    if body.department is not None:
+        user.department = body.department
+
+    if body.team is not None:
+        user.team = body.team
+
+    if body.role is not None:
+        user.role = body.role
+
+    if body.gbi_id is not None:
+        user.gbi_id = body.gbi_id
+
+    await db.flush()
+    return user
+
+
+@router.delete("/gbi-cloud-leads/{user_id}", status_code=204)
+async def delete_gbi_cloud_lead(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Delete a GBI cloud lead user."""
+    user = await db.get(User, user_id)
+    if not user or user.is_service_account:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await db.execute(delete(ProjectUser).where(ProjectUser.user_id == user_id))
+    await db.delete(user)
+    await db.flush()
 

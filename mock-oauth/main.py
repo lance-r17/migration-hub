@@ -99,6 +99,14 @@ MOCK_USERS = {
             "CN=platform-product,OU=abcd,OU=Ali,OU=Application,OU=Groups,DC=InfoDir,DC=Prod,DC=xxxx",
         ],
     },
+    "u101": {
+        "staff_id": "u101",
+        "email": "billy.jean@corp.com",
+        "name": "Billy Jean",
+        "given_name": "Billy",
+        "family_name": "Jean",
+        "member_of": [],
+    },
 }
 
 

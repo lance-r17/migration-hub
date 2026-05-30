@@ -112,6 +112,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation()
   const { user } = useCurrentUser()
 
+  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
+
+  const visibleItems = data.navMain.filter(item => {
+    if (isGbiCloudLead) {
+      // GBI cloud leads only see Dashboard, Projects, and Wave Gantt
+      return ['/', '/projects', '/waves/gantt'].includes(item.url)
+    }
+    if (item.requiresRole && !(user?.role.includes(item.requiresRole) ?? false)) return false
+    if (item.excludesRole && (user?.role.includes(item.excludesRole) ?? false)) return false
+    return true
+  })
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -131,11 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain
-          items={data.navMain.filter(item => {
-            if (item.requiresRole && !(user?.role.includes(item.requiresRole) ?? false)) return false
-            if (item.excludesRole && (user?.role.includes(item.excludesRole) ?? false)) return false
-            return true
-          })}
+          items={visibleItems}
           pathname={location.pathname}
         />
         <NavSecondary items={data.navSecondary} className="mt-auto" />

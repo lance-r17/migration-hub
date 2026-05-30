@@ -267,12 +267,14 @@ export function useProjects(options?: { home?: boolean; fields?: string[] }): Pr
 
   const { user } = useCurrentUser()
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
+  const isLead = isPlatformLead || isGbiCloudLead
 
   useEffect(() => {
     if (!user) return
     let cancelled = false
 
-    const fetch = isPlatformLead
+    const fetch = isLead
       ? (options?.home ? getProjectsHome(options?.fields) : getProjects(options?.fields))
       : (options?.home ? getProjectsHomeForUser(user.id, options?.fields) : getProjectsForUser(user.id, options?.fields))
 

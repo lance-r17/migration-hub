@@ -17,4 +17,4 @@ bash "$DOTFILES_TMP/install.sh"
 rm -rf "$DOTFILES_TMP"
 
 # Install pi extension
-pi -e npm:@plannotator/pi-extension || true
+pi install npm:@plannotator/pi-extension

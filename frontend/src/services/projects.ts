@@ -104,6 +104,7 @@ interface ProjectListItemApi {
   cloud_resources: CloudResourceApi[]
   resource_sets: string[] | null
   risks: RiskApi[]
+  gbi_id: string | null
 }
 
 interface GovernanceRolesApi {
@@ -209,6 +210,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
       ? { resources: raw.cloud_resources.map(mapResource) }
       : undefined,
     resourceSets: raw.resource_sets ?? undefined,
+    gbi_id: raw.gbi_id ?? undefined,
   }
 }
 
