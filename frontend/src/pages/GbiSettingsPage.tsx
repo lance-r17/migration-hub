@@ -307,8 +307,8 @@ export function GbiSettingsPage() {
   )
 
   return (
-    <div className="space-y-8">
-      <Breadcrumb>
+    <div className="flex flex-col flex-1 min-h-0 gap-6 overflow-hidden max-h-[calc(100dvh-6rem)]">
+      <Breadcrumb className="shrink-0">
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink onClick={() => navigate('/settings')} className="cursor-pointer">
@@ -322,7 +322,7 @@ export function GbiSettingsPage() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div>
+      <div className="shrink-0">
         <div className="flex items-center gap-2 mb-1">
           <Building2 className="size-5 text-muted-foreground" />
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">GBI Hierarchy</h1>
@@ -332,7 +332,7 @@ export function GbiSettingsPage() {
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         <Button variant="outline" onClick={handleImportJson}>
           <Upload className="size-4 mr-1.5" />
           Import JSON
@@ -353,30 +353,32 @@ export function GbiSettingsPage() {
           <Skeleton className="h-8 w-full" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-            <h3 className="text-sm font-semibold">Organization Structure</h3>
-            {root ? (
-              <GbiTree
-                nodes={[root]}
-                selectedIds={selectedId ? new Set([selectedId]) : new Set()}
-                excludedIds={new Set()}
-                onSelect={(node) => setSelectedId(node.id)}
-                onAddChild={handleAddChild}
-                onDelete={handleDeletePrompt}
-                onRename={handleRename}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                No GBI data. Import JSON or add a root node.
-              </p>
-            )}
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-6 overflow-hidden">
+          <div className="flex-1 min-w-0 min-h-0 rounded-lg border border-border bg-card p-4 flex flex-col overflow-hidden">
+            <h3 className="text-sm font-semibold shrink-0">Organization Structure</h3>
+            <div className="flex-1 overflow-y-auto min-h-0 mt-2">
+              {root ? (
+                <GbiTree
+                  nodes={[root]}
+                  selectedIds={selectedId ? new Set([selectedId]) : new Set()}
+                  excludedIds={new Set()}
+                  onSelect={(node) => setSelectedId(node.id)}
+                  onAddChild={handleAddChild}
+                  onDelete={handleDeletePrompt}
+                  onRename={handleRename}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No GBI data. Import JSON or add a root node.
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+          <div className="flex-1 min-w-0 min-h-0 rounded-lg border border-border bg-card p-4 flex flex-col overflow-hidden">
             {selectedNode ? (
-              <>
-                <div className="space-y-1">
+              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <div className="space-y-1 shrink-0">
                   <h3 className="text-sm font-semibold">Node Details</h3>
                   <div className="text-sm">
                     <span className="text-muted-foreground">ID:</span>{' '}
@@ -387,8 +389,8 @@ export function GbiSettingsPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-border pt-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                <div className="border-t border-border pt-4 space-y-3 flex flex-col flex-1 min-h-0 overflow-hidden">
+                  <div className="flex items-center justify-between shrink-0">
                     <h3 className="text-sm font-semibold">
                       Assigned Projects
                       {assignedCount > 0 && (
@@ -398,7 +400,7 @@ export function GbiSettingsPage() {
                       )}
                     </h3>
                   </div>
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                       placeholder="Search projects…"
@@ -407,7 +409,7 @@ export function GbiSettingsPage() {
                       className="pl-9"
                     />
                   </div>
-                  <div className="max-h-80 overflow-y-auto space-y-1">
+                  <div className="flex-1 overflow-y-auto min-h-0 space-y-1">
                     {filteredProjects.length === 0 ? (
                       <p className="text-sm text-muted-foreground py-2 text-center">
                         No projects found.
@@ -446,11 +448,13 @@ export function GbiSettingsPage() {
                     )}
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                Select a node from the tree to view details and assign projects.
-              </p>
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-sm text-muted-foreground text-center">
+                  Select a node from the tree to view details and assign projects.
+                </p>
+              </div>
             )}
           </div>
         </div>

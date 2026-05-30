@@ -10,6 +10,7 @@ interface ApplicationOverviewSectionProps {
   data?: ApplicationOverview
   governanceRoles?: GovernanceRoles
   gbiId?: string | null
+  gbiName?: string | null
   canEditGovernanceRoles?: boolean
   projectId?: string
   onSave?: (data: ApplicationOverview) => void
@@ -65,6 +66,7 @@ export function ApplicationOverviewSection({
   data,
   governanceRoles,
   gbiId,
+  gbiName,
   canEditGovernanceRoles,
   projectId,
   onSave,
@@ -109,10 +111,14 @@ export function ApplicationOverviewSection({
                 </div>
               )}
 
-              {gbiId && (
+              {(gbiId || gbiName) && (
                 <div>
                   <Label>GBI</Label>
-                  <code className="font-mono text-xs bg-muted px-2 py-1 rounded">{gbiId}</code>
+                  {gbiName ? (
+                    <span className="text-sm font-medium text-foreground">{gbiName}</span>
+                  ) : (
+                    <code className="font-mono text-xs bg-muted px-2 py-1 rounded">{gbiId}</code>
+                  )}
                 </div>
               )}
 

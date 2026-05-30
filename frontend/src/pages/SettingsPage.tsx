@@ -11,7 +11,7 @@ export function SettingsPage() {
   if (!user?.role.includes('platform_migration_lead')) {
     return (
       <AppShell title="Settings">
-        <div className="max-w-screen-xl mx-auto w-full">
+        <div className="max-w-screen-xl mx-auto w-full flex flex-col flex-1 min-h-0 overflow-hidden">
           <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
             <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
               <Lock className="size-5 text-muted-foreground" />
@@ -34,7 +34,7 @@ export function SettingsPage() {
 
   return (
     <AppShell title="Settings">
-      <div className="max-w-screen-xl mx-auto w-full">
+      <div className="max-w-screen-xl mx-auto w-full flex flex-col flex-1 min-h-0 overflow-hidden">
         <Outlet />
       </div>
     </AppShell>
