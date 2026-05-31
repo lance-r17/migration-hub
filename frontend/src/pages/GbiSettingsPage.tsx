@@ -22,9 +22,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { GbiTree } from '@/components/gbi/GbiTree'
 import { getGbiHierarchy, setGbiHierarchy, assignProjectsToGbi, unassignProjectsFromGbi } from '@/services/gbi'
 import { getProjects } from '@/services/projects'
+import { getMigrationSettings, saveMigrationSettings } from '@/services/migrationSettings'
 import type { GbiNode } from '@/types/gbi'
 import type { Project } from '@/types'
 
@@ -67,6 +75,11 @@ function collectAllIds(node: GbiNode): string[] {
   return [node.id, ...(node.children?.flatMap(collectAllIds) ?? [])]
 }
 
+function getTreeDepth(node: GbiNode): number {
+  if (!node.children || node.children.length === 0) return 1
+  return 1 + Math.max(...node.children.map(getTreeDepth))
+}
+
 export function GbiSettingsPage() {
   const navigate = useNavigate()
   const [root, setRoot] = useState<GbiNode | null>(null)
@@ -76,6 +89,30 @@ export function GbiSettingsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [projectSearch, setProjectSearch] = useState('')
   const [assigning, setAssigning] = useState(false)
+
+  // Tier depth display setting (platform-wide)
+  const [tierDepth, setTierDepth] = useState<string>('all')
+  const [savingTierDepth, setSavingTierDepth] = useState(false)
+
+  const actualMaxDepth = useMemo(() => {
+    if (!root) return 0
+    return getTreeDepth(root)
+  }, [root])
+
+  // Load platform tier depth setting
+  useEffect(() => {
+    getMigrationSettings()
+      .then((settings) => {
+        setTierDepth(settings.gbiTierDepth != null ? String(settings.gbiTierDepth) : 'all')
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (tierDepth !== 'all' && actualMaxDepth > 0 && Number(tierDepth) > actualMaxDepth) {
+      setTierDepth('all')
+    }
+  }, [actualMaxDepth, tierDepth])
 
   // Create node dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -156,6 +193,24 @@ export function GbiSettingsPage() {
       setSaving(false)
     }
   }, [root])
+
+  const handleTierDepthChange = useCallback(async (value: string) => {
+    setTierDepth(value)
+    setSavingTierDepth(true)
+    try {
+      const settings = await getMigrationSettings()
+      const updated = await saveMigrationSettings({
+        ...settings,
+        gbiTierDepth: value === 'all' ? undefined : Number(value),
+      })
+      setTierDepth(updated.gbiTierDepth != null ? String(updated.gbiTierDepth) : 'all')
+      toast.success('Tier depth setting saved')
+    } catch {
+      toast.error('Failed to save tier depth setting')
+    } finally {
+      setSavingTierDepth(false)
+    }
+  }, [])
 
   const openCreateDialog = useCallback((parentId: string | null) => {
     setCreateParentId(parentId)
@@ -344,6 +399,22 @@ export function GbiSettingsPage() {
         <Button onClick={handleSaveHierarchy} disabled={saving || !root}>
           {saving ? 'Saving…' : 'Save Hierarchy'}
         </Button>
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-sm text-muted-foreground">Show tiers:</span>
+          <Select value={tierDepth} onValueChange={handleTierDepthChange}>
+            <SelectTrigger className="w-28" disabled={savingTierDepth}>
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              {Array.from({ length: actualMaxDepth }, (_, i) => (
+                <SelectItem key={i + 1} value={String(i + 1)}>
+                  {i + 1}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
@@ -366,6 +437,7 @@ export function GbiSettingsPage() {
                   onAddChild={handleAddChild}
                   onDelete={handleDeletePrompt}
                   onRename={handleRename}
+                  maxDepth={tierDepth === 'all' ? undefined : Number(tierDepth)}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground py-4 text-center">

@@ -9,6 +9,7 @@ _DEFAULT = {
     "platform_period": None,
     "new_cloud_setup_period": {"start_date": "2026-04-01", "end_date": "2026-12-12"},
     "duration_options": [15, 30, 45],
+    "gbi_tier_depth": None,
 }
 
 
@@ -19,6 +20,7 @@ async def get_migration_settings(session: AsyncSession) -> MigrationSettingsOut:
         platform_period=data.get("platform_period"),
         new_cloud_setup_period=data.get("new_cloud_setup_period"),
         duration_options=data.get("duration_options", _DEFAULT["duration_options"]),
+        gbi_tier_depth=data.get("gbi_tier_depth"),
     )
 
 
@@ -38,6 +40,8 @@ async def update_migration_settings(
         )
     if patch.duration_options is not None:
         current["duration_options"] = patch.duration_options
+    if "gbi_tier_depth" in patch.model_fields_set:
+        current["gbi_tier_depth"] = patch.gbi_tier_depth
 
     if row:
         row.value = current
@@ -50,4 +54,5 @@ async def update_migration_settings(
         platform_period=current.get("platform_period"),
         new_cloud_setup_period=current.get("new_cloud_setup_period"),
         duration_options=current.get("duration_options", _DEFAULT["duration_options"]),
+        gbi_tier_depth=current.get("gbi_tier_depth"),
     )

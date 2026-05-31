@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download } from 'lucide-react'
+import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download, Network, X } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   Table,
@@ -25,11 +25,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
 import { getSurveyDraftProjectIds } from '@/services/projects'
+import { getGbiHierarchy } from '@/services/gbi'
+import { GbiTree } from '@/components/gbi/GbiTree'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import {
   exportProjectsToExcel,
@@ -39,12 +46,144 @@ import {
   getMigrationEffortSummary,
 } from '@/lib/export-report'
 import type { Project } from '@/types'
+import type { GbiNode, SelectAction } from '@/types/gbi'
 
 function getProgressVariant(project: Project) {
   if (project.progress === 100) return 'tertiary'
   if (project.status === 'blocked') return 'error'
   if (project.status === 'planning') return 'muted'
   return 'primary'
+}
+
+function collectAllIds(node: GbiNode): string[] {
+  return [node.id, ...(node.children?.flatMap(collectAllIds) ?? [])]
+}
+
+function findNodeById(node: GbiNode, id: string): GbiNode | null {
+  if (node.id === id) return node
+  for (const child of node.children ?? []) {
+    const found = findNodeById(child, id)
+    if (found) return found
+  }
+  return null
+}
+
+function isDescendantOf(root: GbiNode, targetId: string, ancestorId: string): boolean {
+  if (targetId === ancestorId) return false
+  const ancestor = findNodeById(root, ancestorId)
+  if (!ancestor) return false
+  return collectAllIds(ancestor).includes(targetId)
+}
+
+function getAncestorIds(root: GbiNode, targetId: string): string[] {
+  const result: string[] = []
+  function walk(node: GbiNode, path: string[]): boolean {
+    if (node.id === targetId) {
+      result.push(...path)
+      return true
+    }
+    for (const child of node.children ?? []) {
+      if (walk(child, [...path, node.id])) return true
+    }
+    return false
+  }
+  walk(root, [])
+  return result
+}
+
+function hasCoveredDescendants(
+  root: GbiNode,
+  nodeId: string,
+  selectedIds: Set<string>,
+  excludedIds: Set<string>,
+): boolean {
+  const node = findNodeById(root, nodeId)
+  if (!node?.children || node.children.length === 0) return false
+
+  function walk(n: GbiNode, ancestorSelected: boolean): boolean {
+    const covered = selectedIds.has(n.id) || (ancestorSelected && !excludedIds.has(n.id))
+    if (covered) return true
+    const nowSelected = selectedIds.has(n.id)
+    for (const child of n.children ?? []) {
+      if (walk(child, nowSelected || ancestorSelected)) return true
+    }
+    return false
+  }
+
+  for (const child of node.children) {
+    if (walk(child, selectedIds.has(node.id))) return true
+  }
+  return false
+}
+
+function pruneEmptySelections(
+  root: GbiNode,
+  selectedIds: Set<string>,
+  excludedIds: Set<string>,
+): Set<string> {
+  const result = new Set(selectedIds)
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const id of result) {
+      const node = findNodeById(root, id)
+      if (node?.children && node.children.length > 0 && !hasCoveredDescendants(root, id, result, excludedIds)) {
+        result.delete(id)
+        changed = true
+        break
+      }
+    }
+  }
+  return result
+}
+
+function isFullySelected(
+  node: GbiNode,
+  selectedIds: Set<string>,
+  excludedIds: Set<string>,
+  ancestorSelected: boolean,
+): boolean {
+  const covered = selectedIds.has(node.id) || (ancestorSelected && !excludedIds.has(node.id))
+  if (covered) return true
+  if (!node.children || node.children.length === 0) return false
+  const nowSelected = selectedIds.has(node.id)
+  return node.children.every(child =>
+    isFullySelected(child, selectedIds, excludedIds, nowSelected || ancestorSelected),
+  )
+}
+
+function promoteFullSelections(
+  root: GbiNode,
+  selectedIds: Set<string>,
+  excludedIds: Set<string>,
+  changedId: string,
+): { selected: Set<string>; excluded: Set<string> } {
+  let currentSelected = new Set(selectedIds)
+  let currentExcluded = new Set(excludedIds)
+
+  const ancestors = getAncestorIds(root, changedId)
+  for (const parentId of ancestors) {
+    const parent = findNodeById(root, parentId)
+    if (!parent?.children) continue
+
+    const allChildrenFullySelected = parent.children.every(child =>
+      isFullySelected(child, currentSelected, currentExcluded, currentSelected.has(parent.id)),
+    )
+
+    if (allChildrenFullySelected) {
+      for (const child of parent.children) {
+        collectAllIds(child).forEach(id => currentSelected.delete(id))
+      }
+      currentSelected.add(parent.id)
+      for (const ex of currentExcluded) {
+        if (isDescendantOf(root, ex, parent.id)) {
+          currentExcluded.delete(ex)
+        }
+      }
+    }
+  }
+
+  return { selected: currentSelected, excluded: currentExcluded }
 }
 
 export function ProjectsPage() {
@@ -60,6 +199,14 @@ export function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
+  const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
+  const [gbiPopoverOpen, setGbiPopoverOpen] = useState(false)
+  const [selectedGbiIds, setSelectedGbiIds] = useState<Set<string>>(new Set())
+  const [excludedGbiIds, setExcludedGbiIds] = useState<Set<string>>(new Set())
+
+  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
+  const canViewProjects = isPlatformLead || isGbiCloudLead
 
   useEffect(() => {
     let cancelled = false
@@ -72,6 +219,52 @@ export function ProjectsPage() {
       })
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    getGbiHierarchy()
+      .then(data => {
+        if (!cancelled) setGbiRoot(data)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!isPlatformLead && user?.gbi_id) {
+      setSelectedGbiIds(new Set([user.gbi_id]))
+      setExcludedGbiIds(new Set())
+    }
+  }, [isPlatformLead, user?.gbi_id])
+
+  const gbiNameMap = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!gbiRoot) return map
+    function walk(node: GbiNode) {
+      map.set(node.id, node.name)
+      node.children?.forEach(walk)
+    }
+    walk(gbiRoot)
+    return map
+  }, [gbiRoot])
+
+  const selectedGbiDescendantIds = useMemo(() => {
+    if (!gbiRoot || selectedGbiIds.size === 0) return null
+    const allIds = new Set<string>()
+    for (const id of selectedGbiIds) {
+      const node = findNodeById(gbiRoot, id)
+      if (node) {
+        collectAllIds(node).forEach(i => allIds.add(i))
+      }
+    }
+    for (const eid of excludedGbiIds) {
+      const node = findNodeById(gbiRoot, eid)
+      if (node) {
+        collectAllIds(node).forEach(i => allIds.delete(i))
+      }
+    }
+    return allIds
+  }, [gbiRoot, selectedGbiIds, excludedGbiIds])
 
   const filteredProjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -92,6 +285,9 @@ export function ProjectsPage() {
         } else if (p.status !== statusFilter) {
           return false
         }
+      }
+      if (selectedGbiDescendantIds != null) {
+        if (!p.gbi_id || !selectedGbiDescendantIds.has(p.gbi_id)) return false
       }
       if (query) {
         const matchesName = p.name.toLowerCase().includes(query)
@@ -114,7 +310,7 @@ export function ProjectsPage() {
           return true
       }
     })
-  }, [projects, migrationRange, statusFilter, searchQuery, draftProjectIds])
+  }, [projects, migrationRange, statusFilter, selectedGbiDescendantIds, searchQuery, draftProjectIds])
 
   const totalPages = Math.ceil(filteredProjects.length / pageSize)
   const startIndex = (currentPage - 1) * pageSize
@@ -123,10 +319,6 @@ export function ProjectsPage() {
     () => filteredProjects.slice(startIndex, endIndex),
     [filteredProjects, startIndex, endIndex]
   )
-
-  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
-  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
-  const canViewProjects = isPlatformLead || isGbiCloudLead
 
   if (!canViewProjects) {
     return (
@@ -193,6 +385,91 @@ export function ProjectsPage() {
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
+          <Popover open={gbiPopoverOpen} onOpenChange={setGbiPopoverOpen}>
+            <PopoverTrigger asChild>
+              <button className="h-7 px-2.5 flex items-center gap-1.5 rounded-lg border border-input bg-transparent text-sm whitespace-nowrap hover:bg-muted/50 transition-colors">
+                <Network className="size-4 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  {selectedGbiIds.size === 0 ? 'Filter by GBI' : `${selectedGbiIds.size} selected`}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="start">
+              <div className="p-3 border-b border-border">
+                <p className="text-sm font-semibold">GBI Hierarchy</p>
+                <p className="text-xs text-muted-foreground">Select tiers to filter projects</p>
+              </div>
+              <div className="max-h-80 overflow-y-auto p-2">
+                {gbiRoot ? (
+                  <GbiTree
+                    nodes={[gbiRoot]}
+                    selectedIds={selectedGbiIds}
+                    excludedIds={excludedGbiIds}
+                    scopeId={isPlatformLead ? null : (user?.gbi_id ?? null)}
+                    onSelect={(node, action: SelectAction) => {
+                      if (action === 'select') {
+                        let nextSelected = new Set([...selectedGbiIds, node.id])
+                        let nextExcluded = new Set(excludedGbiIds)
+                        if (gbiRoot) {
+                          for (const ex of excludedGbiIds) {
+                            if (isDescendantOf(gbiRoot, ex, node.id)) {
+                              nextExcluded.delete(ex)
+                            }
+                          }
+                          const promoted = promoteFullSelections(gbiRoot, nextSelected, nextExcluded, node.id)
+                          nextSelected = promoted.selected
+                          nextExcluded = promoted.excluded
+                        }
+                        setSelectedGbiIds(nextSelected)
+                        setExcludedGbiIds(nextExcluded)
+                        setCurrentPage(1)
+                      } else if (action === 'unselect') {
+                        const nextSelected = new Set(selectedGbiIds)
+                        nextSelected.delete(node.id)
+                        const nextExcluded = new Set(excludedGbiIds)
+                        if (gbiRoot) {
+                          for (const ex of excludedGbiIds) {
+                            if (isDescendantOf(gbiRoot, ex, node.id)) {
+                              nextExcluded.delete(ex)
+                            }
+                          }
+                          const pruned = pruneEmptySelections(gbiRoot, nextSelected, nextExcluded)
+                          setSelectedGbiIds(pruned)
+                        } else {
+                          setSelectedGbiIds(nextSelected)
+                        }
+                        setExcludedGbiIds(nextExcluded)
+                        setCurrentPage(1)
+                      } else if (action === 'exclude') {
+                        const nextExcluded = new Set(excludedGbiIds)
+                        nextExcluded.add(node.id)
+                        if (gbiRoot) {
+                          const pruned = pruneEmptySelections(gbiRoot, selectedGbiIds, nextExcluded)
+                          setSelectedGbiIds(pruned)
+                        }
+                        setExcludedGbiIds(nextExcluded)
+                        setCurrentPage(1)
+                      } else if (action === 'unexclude') {
+                        let nextExcluded = new Set(excludedGbiIds)
+                        nextExcluded.delete(node.id)
+                        if (gbiRoot) {
+                          const promoted = promoteFullSelections(gbiRoot, selectedGbiIds, nextExcluded, node.id)
+                          setSelectedGbiIds(promoted.selected)
+                          setExcludedGbiIds(promoted.excluded)
+                        } else {
+                          setExcludedGbiIds(nextExcluded)
+                        }
+                        setCurrentPage(1)
+                      }
+                    }}
+                    readOnly
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No GBI hierarchy available.</p>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Select
             value={migrationRange}
             onValueChange={(value) => {
@@ -234,6 +511,49 @@ export function ProjectsPage() {
           </button>
         </div>
 
+        {/* Active GBI filters */}
+        {selectedGbiIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 -mt-4">
+            {Array.from(selectedGbiIds).map((id) => {
+              const node = gbiRoot ? findNodeById(gbiRoot, id) : null
+              if (!node) return null
+              return (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1.5 text-xs bg-accent text-accent-foreground px-2.5 py-1 rounded-full"
+                >
+                  <Network size={12} />
+                  {node.name}
+                  <button
+                    onClick={() => {
+                      const nextSelected = new Set(selectedGbiIds)
+                      nextSelected.delete(id)
+                      const nextExcluded = new Set(excludedGbiIds)
+                      if (gbiRoot) {
+                        for (const ex of excludedGbiIds) {
+                          if (isDescendantOf(gbiRoot, ex, id)) {
+                            nextExcluded.delete(ex)
+                          }
+                        }
+                        const pruned = pruneEmptySelections(gbiRoot, nextSelected, nextExcluded)
+                        setSelectedGbiIds(pruned)
+                      } else {
+                        setSelectedGbiIds(nextSelected)
+                      }
+                      setExcludedGbiIds(nextExcluded)
+                      setCurrentPage(1)
+                    }}
+                    className="ml-0.5 hover:text-destructive transition-colors"
+                    title="Remove filter"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )
+            })}
+          </div>
+        )}
+
         {/* Projects Table */}
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>
@@ -241,6 +561,7 @@ export function ProjectsPage() {
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Name</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ID</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">GBI</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Progress</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ITSO</TableHead>
@@ -259,14 +580,14 @@ export function ProjectsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 13 }).map((_, j) => (
+                    {Array.from({ length: 14 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filteredProjects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={13} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={14} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -282,6 +603,9 @@ export function ProjectsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground font-mono">
                       {project.id}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {project.gbi_id ? (gbiNameMap.get(project.gbi_id) ?? project.gbi_id) : '—'}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={project.status} stageProgress={project.stageProgress} hasSurveyDraft={draftProjectIds.includes(project.id)} surveySubmittedAt={project.surveySubmittedAt} />

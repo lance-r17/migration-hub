@@ -16,6 +16,7 @@ interface GbiTreeProps {
   level?: number
   readOnly?: boolean
   scopeId?: string | null
+  maxDepth?: number
 }
 
 function computeTreeState(
@@ -73,6 +74,7 @@ function GbiTreeNode({
   readOnly = false,
   scopeId = null,
   inScope = false,
+  maxDepth,
 }: {
   node: GbiNode
   selectedIds: Set<string>
@@ -86,6 +88,7 @@ function GbiTreeNode({
   readOnly?: boolean
   scopeId?: string | null
   inScope?: boolean
+  maxDepth?: number
 }) {
   const [expanded, setExpanded] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -225,7 +228,7 @@ function GbiTreeNode({
         )}
       </div>
 
-      {expanded && hasChildren && (
+      {expanded && hasChildren && (!maxDepth || level + 1 < maxDepth) && (
         <div>
           {node.children!.map((child) => (
             <GbiTreeNode
@@ -242,6 +245,7 @@ function GbiTreeNode({
               readOnly={readOnly}
               scopeId={scopeId}
               inScope={isInScope}
+              maxDepth={maxDepth}
             />
           ))}
         </div>
@@ -250,7 +254,7 @@ function GbiTreeNode({
   )
 }
 
-export function GbiTree({ nodes, selectedIds, excludedIds, onSelect, onAddChild, onDelete, onRename, readOnly, scopeId }: GbiTreeProps) {
+export function GbiTree({ nodes, selectedIds, excludedIds, onSelect, onAddChild, onDelete, onRename, readOnly, scopeId, maxDepth }: GbiTreeProps) {
   const stateMap = buildStateMap(nodes, selectedIds, excludedIds)
   return (
     <div className="space-y-0.5">
@@ -267,6 +271,7 @@ export function GbiTree({ nodes, selectedIds, excludedIds, onSelect, onAddChild,
           onRename={onRename}
           readOnly={readOnly}
           scopeId={scopeId}
+          maxDepth={maxDepth}
         />
       ))}
     </div>

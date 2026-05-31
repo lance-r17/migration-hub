@@ -17,6 +17,7 @@ import { useDashboard } from '@/hooks/use-dashboard'
 import { useProjects } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { getSurveyDraftProjectIds } from '@/services/projects'
 import { getGbiHierarchy } from '@/services/gbi'
 import { GbiTree } from '@/components/gbi/GbiTree'
@@ -185,6 +186,7 @@ export function HomePage() {
     fields: ['basic', 'progress', 'planning', 'risks', 'team', 'approvals', 'engagement'],
   })
   const { waves, loading: wavesLoading } = useWaves({ enabled: isPlatformLead })
+  const { settings: migrationSettings } = useMigrationSettings()
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
   const [draftsLoading, setDraftsLoading] = useState(true)
   const [gbiOpen, setGbiOpen] = useState(false)
@@ -429,6 +431,7 @@ export function HomePage() {
                         }}
                         readOnly
                         scopeId={user?.gbi_id ?? null}
+                        maxDepth={migrationSettings?.gbiTierDepth}
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground py-4 text-center">

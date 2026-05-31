@@ -13,6 +13,7 @@ interface MigrationSettingsApi {
   platform_period: PeriodApi | null
   new_cloud_setup_period: PeriodApi | null
   duration_options: number[]
+  gbi_tier_depth: number | null
 }
 
 function periodFromApi(raw: PeriodApi | null): { startDate?: string; endDate?: string } | undefined {
@@ -36,6 +37,7 @@ function fromApi(raw: MigrationSettingsApi): MigrationSettings {
     platformPeriod: periodFromApi(raw.platform_period),
     cloudSetupPeriod: periodFromApi(raw.new_cloud_setup_period),
     durationOptions: raw.duration_options,
+    gbiTierDepth: raw.gbi_tier_depth ?? undefined,
   }
 }
 
@@ -44,6 +46,7 @@ function toApi(config: MigrationSettings): MigrationSettingsApi {
     platform_period: periodToApi(config.platformPeriod),
     new_cloud_setup_period: periodToApi(config.cloudSetupPeriod),
     duration_options: config.durationOptions,
+    gbi_tier_depth: config.gbiTierDepth ?? null,
   }
 }
 

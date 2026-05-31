@@ -16,4 +16,5 @@ export interface MigrationSettings {
   platformPeriod?: PlatformPeriod
   cloudSetupPeriod?: CloudSetupPeriod
   durationOptions: number[]
+  gbiTierDepth?: number
 }
