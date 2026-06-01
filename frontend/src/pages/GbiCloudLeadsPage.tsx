@@ -167,7 +167,7 @@ export function GbiCloudLeadsPage() {
     setEditingUser(null)
     setCreateMode('existing')
     setSelectedExistingUser(null)
-    setFormData({ name: '', email: '', department: '', team: '', gbi_id: null })
+    setFormData({ id: '', name: '', email: '', department: '', team: '', gbi_id: null })
     setFormError(null)
     setFormOpen(true)
   }
@@ -243,6 +243,7 @@ export function GbiCloudLeadsPage() {
     }
 
     // createMode === 'new'
+    if (!formData.id?.trim()) { setFormError('User ID is required.'); return }
     if (!formData.name?.trim()) { setFormError('Name is required.'); return }
     if (!formData.email?.trim()) { setFormError('Email is required.'); return }
     if (!formData.department?.trim()) { setFormError('Department is required.'); return }
@@ -250,6 +251,7 @@ export function GbiCloudLeadsPage() {
     setFormSaving(true)
     try {
       await createGbiCloudLead({
+        id: formData.id,
         name: formData.name,
         email: formData.email,
         department: formData.department,
@@ -577,6 +579,19 @@ export function GbiCloudLeadsPage() {
             {/* New user fields */}
             {(editingUser || createMode === 'new') && (
               <>
+                {!editingUser && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="gl-id">
+                      User ID <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="gl-id"
+                      value={formData.id ?? ''}
+                      onChange={(e) => setFormData((d) => ({ ...d, id: e.target.value }))}
+                      placeholder="e.g. u12345"
+                    />
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <Label htmlFor="gl-name">
                     Name <span className="text-destructive">*</span>

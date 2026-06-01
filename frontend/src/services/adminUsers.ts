@@ -41,6 +41,7 @@ export async function getAllUserProjectRoles(): Promise<UserProjectRole[]> {
 const GBI_CLOUD_LEADS_ENDPOINT = '/api/v1/admin/gbi-cloud-leads'
 
 export interface GbiCloudLeadCreate {
+  id?: string
   name: string
   email: string
   department: string

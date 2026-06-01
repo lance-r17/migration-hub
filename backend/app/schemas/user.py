@@ -25,6 +25,7 @@ class UserCreate(BaseModel):
 
 
 class GbiCloudLeadCreate(BaseModel):
+    id: str | None = None
     name: str
     email: str
     department: str

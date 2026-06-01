@@ -383,7 +383,7 @@ async def create_gbi_cloud_lead(
         return user
 
     user = User(
-        id=f"usr-{uuid.uuid4().hex[:8]}",
+        id=body.id or f"usr-{uuid.uuid4().hex[:8]}",
         name=body.name,
         email=body.email,
         department=body.department,

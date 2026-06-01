@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { getProjects } from '@/services/projects'
+import { getGbiHierarchy } from '@/services/gbi'
 import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
@@ -328,6 +329,7 @@ export async function exportProjectDetailsReport() {
     const baseHeaders = [
       'Project ID',
       'Project Name',
+      'GBI',
       'Status',
       'Blocked Reason',
       'Description',
@@ -392,6 +394,16 @@ export async function exportProjectDetailsReport() {
 
     const headers = [...baseHeaders, ...freezeHeaders]
 
+    const gbiRoot = await getGbiHierarchy().catch(() => null)
+    const gbiNameMap = new Map<string, string>()
+    if (gbiRoot) {
+      function walk(node: { id: string; name: string; children?: { id: string; name: string; children?: unknown[] }[] }) {
+        gbiNameMap.set(node.id, node.name)
+        node.children?.forEach(walk)
+      }
+      walk(gbiRoot)
+    }
+
     const rows: Record<string, string | number>[] = []
 
     for (const project of projects) {
@@ -406,6 +418,7 @@ export async function exportProjectDetailsReport() {
       const row: Record<string, string | number> = {
         'Project ID': project.id,
         'Project Name': project.name,
+        'GBI': project.gbi_id ? (gbiNameMap.get(project.gbi_id) ?? project.gbi_id) : '',
         'Status': project.status,
         'Blocked Reason': project.blockedReason ?? '',
         'Description': project.description ?? '',
@@ -677,7 +690,7 @@ export async function exportProjectRisksAndBlockersReport() {
   }
 }
 
-export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[]) {
+export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[], gbiNameMap?: Map<string, string>) {
   const toastId = toast.loading('Generating projects report...')
 
   try {
@@ -689,6 +702,7 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
       return {
         'Name': p.name,
         'ID': p.id,
+        'GBI': p.gbi_id ? (gbiNameMap?.get(p.gbi_id) ?? p.gbi_id) : '—',
         'Status': getStatusLabel(p.status, p.stageProgress, draftProjectIds.includes(p.id)),
         'Progress (%)': p.progress,
         'ITSO': p.itso ?? '—',
@@ -710,7 +724,7 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
 
     const worksheet = XLSX.utils.json_to_sheet(rows)
     worksheet['!cols'] = [
-      { wch: 32 }, { wch: 18 }, { wch: 14 }, { wch: 12 },
+      { wch: 32 }, { wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 12 },
       { wch: 24 }, { wch: 24 }, { wch: 8 }, { wch: 8 },
       { wch: 8 }, { wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 14 },
     ]

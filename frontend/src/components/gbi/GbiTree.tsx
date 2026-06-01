@@ -30,7 +30,7 @@ function computeTreeState(
   const children = node.children ?? []
 
   for (const child of children) {
-    computeTreeState(child, selectedIds, excludedIds, covered || ancestorSelected, map)
+    computeTreeState(child, selectedIds, excludedIds, covered, map)
   }
 
   if (children.length === 0) {
@@ -95,6 +95,7 @@ function GbiTreeNode({
   const [editName, setEditName] = useState(node.name)
   const checkboxRef = useRef<HTMLInputElement>(null)
   const hasChildren = (node.children?.length ?? 0) > 0
+  const canExpand = hasChildren && (!maxDepth || level + 1 < maxDepth)
   const isSelfSelected = selectedIds.has(node.id)
   const isExcluded = excludedIds.has(node.id)
   const isInScope = !scopeId || inScope || node.id === scopeId
@@ -137,10 +138,10 @@ function GbiTreeNode({
       >
         <button
           type="button"
-          onClick={() => hasChildren && setExpanded((e) => !e)}
+          onClick={() => canExpand && setExpanded((e) => !e)}
           className={cn(
             'size-5 flex items-center justify-center rounded-sm transition-colors shrink-0',
-            hasChildren ? 'hover:bg-muted cursor-pointer' : 'invisible',
+            canExpand ? 'hover:bg-muted cursor-pointer' : 'invisible',
           )}
         >
           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
@@ -167,7 +168,13 @@ function GbiTreeNode({
             !isInScope && 'cursor-not-allowed',
           )}
         >
-          <span className="text-xs font-mono text-muted-foreground shrink-0">{node.id}</span>
+          {readOnly ? (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+              L{level + 1}
+            </span>
+          ) : (
+            <span className="text-xs font-mono text-muted-foreground shrink-0">{node.id}</span>
+          )}
           {editing ? (
             <input
               autoFocus
@@ -228,7 +235,7 @@ function GbiTreeNode({
         )}
       </div>
 
-      {expanded && hasChildren && (!maxDepth || level + 1 < maxDepth) && (
+      {expanded && canExpand && (
         <div>
           {node.children!.map((child) => (
             <GbiTreeNode

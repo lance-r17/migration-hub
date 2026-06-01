@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, Plus, FolderOpen, ArrowRight, ChevronDown, Network, X } from 'lucide-react'
+import { Download, Plus, FolderOpen, ArrowRight, ChevronDown, Network, X, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AppShell } from '@/components/layout/AppShell'
 import { OverallProgressCard } from '@/components/home/OverallProgressCard'
@@ -13,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Input } from '@/components/ui/input'
 import { useDashboard } from '@/hooks/use-dashboard'
 import { useProjects } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
@@ -36,6 +37,25 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { OverallStats } from '@/types'
 import type { GbiNode } from '@/types/gbi'
+
+function filterGbiTree(nodes: GbiNode[], query: string): GbiNode[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return nodes
+
+  function walk(node: GbiNode): GbiNode | null {
+    const matches = node.name.toLowerCase().includes(q)
+    if (matches) {
+      return { ...node }
+    }
+    const children = node.children?.map(walk).filter(Boolean) as GbiNode[] | undefined
+    if (children && children.length > 0) {
+      return { ...node, children }
+    }
+    return null
+  }
+
+  return nodes.map(walk).filter(Boolean) as GbiNode[]
+}
 
 function collectAllIds(node: GbiNode): string[] {
   return [node.id, ...(node.children?.flatMap(collectAllIds) ?? [])]
@@ -190,6 +210,7 @@ export function HomePage() {
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
   const [draftsLoading, setDraftsLoading] = useState(true)
   const [gbiOpen, setGbiOpen] = useState(false)
+  const [gbiSearchQuery, setGbiSearchQuery] = useState('')
   const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
   const [selectedGbiIds, setSelectedGbiIds] = useState<Set<string>>(new Set(user?.gbi_id ? [user.gbi_id] : []))
   const [excludedGbiIds, setExcludedGbiIds] = useState<Set<string>>(new Set())
@@ -230,6 +251,12 @@ export function HomePage() {
       setExcludedGbiIds(new Set())
     }
   }, [user?.gbi_id])
+
+  const filteredGbiRoot = useMemo(() => {
+    if (!gbiRoot) return null
+    const filtered = filterGbiTree([gbiRoot], gbiSearchQuery)
+    return filtered[0] ?? null
+  }, [gbiRoot, gbiSearchQuery])
 
   const selectedGbiDescendantIds = useMemo(() => {
     if (!gbiRoot) return null
@@ -364,17 +391,28 @@ export function HomePage() {
                     <Network size={18} />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-80 p-0">
+                <PopoverContent align="end" className="w-96 p-0">
                   <div className="p-3 border-b border-border">
                     <p className="text-sm font-semibold">GBI Hierarchy</p>
                     <p className="text-xs text-muted-foreground">
                       Select a tier to filter projects
                     </p>
                   </div>
+                  <div className="p-2 border-b border-border">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Search GBI..."
+                        value={gbiSearchQuery}
+                        onChange={(e) => setGbiSearchQuery(e.target.value)}
+                        className="pl-8 h-8 text-sm"
+                      />
+                    </div>
+                  </div>
                   <div className="max-h-80 overflow-y-auto p-2">
-                    {gbiRoot ? (
+                    {filteredGbiRoot ? (
                       <GbiTree
-                        nodes={[gbiRoot]}
+                        nodes={[filteredGbiRoot]}
                         selectedIds={selectedGbiIds}
                         excludedIds={excludedGbiIds}
                         onSelect={(node, action) => {

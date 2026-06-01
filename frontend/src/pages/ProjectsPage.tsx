@@ -36,6 +36,7 @@ import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
 import { getSurveyDraftProjectIds } from '@/services/projects'
 import { getGbiHierarchy } from '@/services/gbi'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { GbiTree } from '@/components/gbi/GbiTree'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import {
@@ -47,6 +48,25 @@ import {
 } from '@/lib/export-report'
 import type { Project } from '@/types'
 import type { GbiNode, SelectAction } from '@/types/gbi'
+
+function filterGbiTree(nodes: GbiNode[], query: string): GbiNode[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return nodes
+
+  function walk(node: GbiNode): GbiNode | null {
+    const matches = node.name.toLowerCase().includes(q)
+    if (matches) {
+      return { ...node }
+    }
+    const children = node.children?.map(walk).filter(Boolean) as GbiNode[] | undefined
+    if (children && children.length > 0) {
+      return { ...node, children }
+    }
+    return null
+  }
+
+  return nodes.map(walk).filter(Boolean) as GbiNode[]
+}
 
 function getProgressVariant(project: Project) {
   if (project.progress === 100) return 'tertiary'
@@ -201,12 +221,14 @@ export function ProjectsPage() {
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
   const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
   const [gbiPopoverOpen, setGbiPopoverOpen] = useState(false)
+  const [gbiSearchQuery, setGbiSearchQuery] = useState('')
   const [selectedGbiIds, setSelectedGbiIds] = useState<Set<string>>(new Set())
   const [excludedGbiIds, setExcludedGbiIds] = useState<Set<string>>(new Set())
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
   const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
   const canViewProjects = isPlatformLead || isGbiCloudLead
+  const { settings: migrationSettings } = useMigrationSettings()
 
   useEffect(() => {
     let cancelled = false
@@ -236,6 +258,12 @@ export function ProjectsPage() {
       setExcludedGbiIds(new Set())
     }
   }, [isPlatformLead, user?.gbi_id])
+
+  const filteredGbiRoot = useMemo(() => {
+    if (!gbiRoot) return null
+    const filtered = filterGbiTree([gbiRoot], gbiSearchQuery)
+    return filtered[0] ?? null
+  }, [gbiRoot, gbiSearchQuery])
 
   const gbiNameMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -394,15 +422,26 @@ export function ProjectsPage() {
                 </span>
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="start">
+            <PopoverContent className="w-96 p-0" align="start">
               <div className="p-3 border-b border-border">
                 <p className="text-sm font-semibold">GBI Hierarchy</p>
                 <p className="text-xs text-muted-foreground">Select tiers to filter projects</p>
               </div>
+              <div className="p-2 border-b border-border">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search GBI..."
+                    value={gbiSearchQuery}
+                    onChange={(e) => setGbiSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-sm"
+                  />
+                </div>
+              </div>
               <div className="max-h-80 overflow-y-auto p-2">
-                {gbiRoot ? (
+                {filteredGbiRoot ? (
                   <GbiTree
-                    nodes={[gbiRoot]}
+                    nodes={[filteredGbiRoot]}
                     selectedIds={selectedGbiIds}
                     excludedIds={excludedGbiIds}
                     scopeId={isPlatformLead ? null : (user?.gbi_id ?? null)}
@@ -411,6 +450,12 @@ export function ProjectsPage() {
                         let nextSelected = new Set([...selectedGbiIds, node.id])
                         let nextExcluded = new Set(excludedGbiIds)
                         if (gbiRoot) {
+                          const selectedNode = findNodeById(gbiRoot, node.id)
+                          if (selectedNode) {
+                            collectAllIds(selectedNode).forEach((id) => {
+                              if (id !== node.id) nextSelected.delete(id)
+                            })
+                          }
                           for (const ex of excludedGbiIds) {
                             if (isDescendantOf(gbiRoot, ex, node.id)) {
                               nextExcluded.delete(ex)
@@ -463,6 +508,7 @@ export function ProjectsPage() {
                       }
                     }}
                     readOnly
+                    maxDepth={migrationSettings?.gbiTierDepth}
                   />
                 ) : (
                   <p className="text-sm text-muted-foreground py-4 text-center">No GBI hierarchy available.</p>
@@ -505,7 +551,7 @@ export function ProjectsPage() {
           </div>
           <button
             className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2"
-            onClick={() => exportProjectsToExcel(filteredProjects, draftProjectIds)}
+            onClick={() => exportProjectsToExcel(filteredProjects, draftProjectIds, gbiNameMap)}
           >
             <Download size={14} /> Export
           </button>
