@@ -29,6 +29,7 @@ _FIELD_REL_REQUIREMENTS: dict[str, set[str]] = {
     "risks": {"risks"},
     "approvals": {"approvals"},
     "engagement": {"engagement"},
+    "category_milestones": {"category_milestones"},
 }
 
 
@@ -235,6 +236,7 @@ def _project_options():
         selectinload(Project.wave),
         selectinload(Project.project_users).selectinload(ProjectUser.user),
         selectinload(Project.engagement),
+        selectinload(Project.category_milestones),
     ]
 
 
@@ -243,7 +245,7 @@ async def get_all(
 ) -> list[Project]:
     from app.models.project_user import ProjectUser
 
-    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "wave", "project_users", "engagement"})
+    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "wave", "project_users", "engagement", "category_milestones"})
     options = []
     if "approvals" in rels:
         options.append(selectinload(Project.approvals))
@@ -257,6 +259,8 @@ async def get_all(
         options.append(selectinload(Project.project_users).selectinload(ProjectUser.user))
     if "engagement" in rels:
         options.append(selectinload(Project.engagement))
+    # Always load category_milestones because _project_list_item unconditionally reads it
+    options.append(selectinload(Project.category_milestones))
 
     q = select(Project).options(*options)
     if user_id:
@@ -274,7 +278,7 @@ async def get_all_home(
 ) -> list[Project]:
     from app.models.project_user import ProjectUser
 
-    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "risks", "project_users", "engagement"})
+    rels = _resolve_rels(fields, {"approvals", "cloud_resources", "risks", "project_users", "engagement", "category_milestones"})
     options = []
     if "approvals" in rels:
         options.append(selectinload(Project.approvals))
@@ -286,6 +290,8 @@ async def get_all_home(
         options.append(selectinload(Project.project_users).selectinload(ProjectUser.user))
     if "engagement" in rels:
         options.append(selectinload(Project.engagement))
+    # Always load category_milestones because _project_home_item unconditionally reads it
+    options.append(selectinload(Project.category_milestones))
 
     q = select(Project).options(*options)
     if user_id:

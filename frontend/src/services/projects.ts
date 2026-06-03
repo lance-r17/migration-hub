@@ -105,6 +105,7 @@ interface ProjectListItemApi {
   resource_sets: string[] | null
   risks: RiskApi[]
   gbi_id: string | null
+  category_milestone_ids: string[] | null
 }
 
 interface GovernanceRolesApi {
@@ -211,6 +212,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
       : undefined,
     resourceSets: raw.resource_sets ?? undefined,
     gbi_id: raw.gbi_id ?? undefined,
+    categoryMilestoneIds: raw.category_milestone_ids ?? undefined,
   }
 }
 

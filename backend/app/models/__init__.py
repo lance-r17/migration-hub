@@ -2,6 +2,7 @@
 from app.models.base import Base, TimestampMixin
 from app.models.user import User
 from app.models.wave import Wave
+from app.models.category_milestone import CategoryMilestone, project_category_milestone
 from app.models.project import Project
 from app.models.project_user import ProjectUser
 from app.models.cloud_resource import CloudResource
@@ -28,6 +29,8 @@ __all__ = [
     "TimestampMixin",
     "User",
     "Wave",
+    "CategoryMilestone",
+    "project_category_milestone",
     "Project",
     "ProjectUser",
     "CloudResource",

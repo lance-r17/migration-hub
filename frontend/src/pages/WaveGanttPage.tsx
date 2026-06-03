@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { WaveGanttChart } from '@/components/waves/WaveGanttChart'
 import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
+import { useCategoryMilestones } from '@/hooks/use-category-milestones'
 import { useCurrentUser } from '@/context/UserContext'
 import { updatePlanning, updateProject } from '@/services/projects'
 import { updateProjectOrder } from '@/services/waves'
@@ -20,6 +21,7 @@ export function WaveGanttPage() {
   const { projects: initialProjects, loading: projectsLoading } = useProjects({
     fields: ['basic', 'progress', 'planning'],
   })
+  const { categoryMilestones, loading: cmLoading } = useCategoryMilestones()
 
   const [liveWaves, setLiveWaves] = useState<Wave[]>(initialWaves)
   const [liveProjects, setLiveProjects] = useState<Project[]>(initialProjects)
@@ -88,7 +90,7 @@ export function WaveGanttPage() {
   }
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
-  const isLoading = wavesLoading || projectsLoading
+  const isLoading = wavesLoading || projectsLoading || cmLoading
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -135,6 +137,7 @@ export function WaveGanttPage() {
           <WaveGanttChart
             waves={sortedWaves}
             projects={liveProjects}
+            categoryMilestones={categoryMilestones}
             onUpdatePlanning={handleUpdatePlanning}
             onUpdateProjectOrder={isPlatformLead ? handleUpdateProjectOrder : undefined}
             onAssign={isPlatformLead ? handleAssign : undefined}

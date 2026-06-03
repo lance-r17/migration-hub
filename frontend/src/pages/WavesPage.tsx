@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Waves, Download, Plus, Lock, GanttChart, AlertTriangle } from 'lucide-react'
+import {
+  Waves, Download, Plus, Lock, GanttChart, AlertTriangle, Tag, Users, Link, Pencil, Trash2,
+} from 'lucide-react'
 import { isBefore, isAfter } from 'date-fns'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
@@ -22,10 +24,15 @@ import { useProjects } from '@/hooks/use-projects'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { useCurrentUser } from '@/context/UserContext'
 import { EditWaveDrawer } from '@/components/drawers/EditWaveDrawer'
+import { CategoryMilestoneDrawer } from '@/components/drawers/CategoryMilestoneDrawer'
+import { AssignCategoryMilestoneDrawer } from '@/components/drawers/AssignCategoryMilestoneDrawer'
+import { useCategoryMilestones } from '@/hooks/use-category-milestones'
 import { updateProject } from '@/services/projects'
 import { appendAuditEntryMock } from '@/services/auditLog'
 import { USE_MOCK } from '@/services/client'
 import type { Wave, WaveStatus } from '@/types/wave'
+import type { CategoryMilestone } from '@/types/categoryMilestone'
+import { CATEGORY_MILESTONE_ICON_MAP } from '@/lib/categoryMilestoneIcons'
 
 function WaveStatusBadge({ status }: { status: WaveStatus }) {
   const config: Record<WaveStatus, { label: string; className: string }> = {
@@ -63,6 +70,24 @@ export function WavesPage() {
 
   const [liveWaves, setLiveWaves] = useState(waves)
   const [liveProjects, setLiveProjects] = useState(initialProjects)
+
+  const {
+    categoryMilestones,
+    loading: cmLoading,
+    createCategoryMilestone,
+    updateCategoryMilestone,
+    deleteCategoryMilestone,
+    batchAssign,
+    refresh: refreshCM,
+  } = useCategoryMilestones()
+
+  const [cmDrawerOpen, setCmDrawerOpen] = useState(false)
+  const [editingCM, setEditingCM] = useState<CategoryMilestone | null>(null)
+  const [cmSaving, setCmSaving] = useState(false)
+
+  const [assignDrawerOpen, setAssignDrawerOpen] = useState(false)
+  const [assigningCM, setAssigningCM] = useState<CategoryMilestone | null>(null)
+  const [assignLoading, setAssignLoading] = useState(false)
   
   useEffect(() => {
     setLiveProjects(initialProjects)
@@ -142,6 +167,62 @@ export function WavesPage() {
 
   const projectCountByWave = (waveId: string) =>
     liveProjects.filter(p => p.waveId === waveId).length
+
+  const projectCountByCM = (cmId: string) =>
+    liveProjects.filter(p => p.categoryMilestoneIds?.includes(cmId)).length
+
+  const handleCreateOrUpdateCM = async (data: Omit<CategoryMilestone, 'id' | 'createdAt'>) => {
+    setCmSaving(true)
+    try {
+      if (editingCM) {
+        await updateCategoryMilestone(editingCM.id, data)
+        toast.success('Category milestone updated')
+      } else {
+        await createCategoryMilestone(data)
+        toast.success('Category milestone created')
+      }
+      setCmDrawerOpen(false)
+      setEditingCM(null)
+    } catch {
+      toast.error('Failed to save category milestone')
+    } finally {
+      setCmSaving(false)
+    }
+  }
+
+  const handleDeleteCM = async (cm: CategoryMilestone) => {
+    try {
+      await deleteCategoryMilestone(cm.id)
+      toast.success('Category milestone deleted')
+    } catch {
+      toast.error('Failed to delete category milestone')
+    }
+  }
+
+  const handleOpenAssign = (cm: CategoryMilestone) => {
+    setAssigningCM(cm)
+    setAssignDrawerOpen(true)
+  }
+
+  const handleBatchAssign = async (cmId: string, projectIds: string[], unassign: boolean) => {
+    setAssignLoading(true)
+    try {
+      await batchAssign(cmId, projectIds, unassign)
+      // Optimistically update local project state
+      setLiveProjects(prev => prev.map(p => {
+        if (!projectIds.includes(p.id)) return p
+        const ids = new Set(p.categoryMilestoneIds ?? [])
+        if (unassign) ids.delete(cmId)
+        else ids.add(cmId)
+        return { ...p, categoryMilestoneIds: Array.from(ids) }
+      }))
+      refreshCM()
+    } catch {
+      throw new Error('Failed to assign')
+    } finally {
+      setAssignLoading(false)
+    }
+  }
 
   const handleCreated = (wave: Wave) => {
     toast.success(`Wave created`, {
@@ -281,6 +362,119 @@ export function WavesPage() {
             </TableBody>
           </Table>
         </div>
+        {/* Category Milestones Table */}
+        <div className="space-y-4" data-testid="category-milestones-section">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Tag className="size-5 text-muted-foreground" />
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">Category Milestones</h2>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                Maintain category milestones and batch-assign them to projects.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => { setEditingCM(null); setCmDrawerOpen(true) }} data-testid="create-category-milestone-btn">
+              <Plus className="size-4 mr-2" />
+              Create Category Milestone
+            </Button>
+          </div>
+
+          <div className="rounded-lg border border-border overflow-hidden">
+            <Table data-testid="category-milestones-table">
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Name</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Start Date</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">End Date</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider w-[60px]">Icon</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Projects</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cmLoading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : categoryMilestones.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
+                      No category milestones yet. Create one to get started.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  [...categoryMilestones].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((cm) => {
+                    const Icon = cm.icon ? CATEGORY_MILESTONE_ICON_MAP[cm.icon] : null
+                    return (
+                    <TableRow key={cm.id} className="hover:bg-muted/40" data-testid="category-milestone-row">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="shrink-0 size-3 rounded-full"
+                            style={{ background: cm.color ?? '#3B82F6' }}
+                          />
+                          <span className="font-medium text-foreground">{cm.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(cm.startDate)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(cm.endDate)}
+                      </TableCell>
+                      <TableCell>
+                        {Icon ? <Icon className="size-4 text-muted-foreground" /> : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {projectCountByCM(cm.id)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => handleOpenAssign(cm)}
+                            title="Assign projects"
+                            data-testid="assign-category-milestone-btn"
+                          >
+                            <Link className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => { setEditingCM(cm); setCmDrawerOpen(true) }}
+                            title="Edit"
+                            data-testid="edit-category-milestone-btn"
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteCM(cm)}
+                            title="Delete"
+                            data-testid="delete-category-milestone-btn"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </div>
 
       <CreateWaveDrawer
@@ -301,6 +495,23 @@ export function WavesPage() {
         onOpenChange={setEditOpen}
         wave={selectedWave}
         onUpdated={handleWaveUpdated}
+      />
+
+      <CategoryMilestoneDrawer
+        open={cmDrawerOpen}
+        onOpenChange={setCmDrawerOpen}
+        categoryMilestone={editingCM}
+        onSave={handleCreateOrUpdateCM}
+        saving={cmSaving}
+      />
+
+      <AssignCategoryMilestoneDrawer
+        open={assignDrawerOpen}
+        onOpenChange={setAssignDrawerOpen}
+        categoryMilestone={assigningCM}
+        projects={liveProjects}
+        onAssign={handleBatchAssign}
+        loading={assignLoading}
       />
     </AppShell>
   )

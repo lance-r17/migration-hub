@@ -13,6 +13,7 @@ import {
   mockBillingTarget,
   mockBillingBreakdown,
   mockEmbargos,
+  mockCategoryMilestones,
 } from '@/data/mock'
 import type { Project, User, OverallStats, Activity, ProductCategoryEntry } from '@/types'
 import type { AuditLogEntry } from '@/types/audit'
@@ -39,6 +40,7 @@ let _auditLogs: Record<string, AuditLogEntry[]> = structuredClone(mockAuditEntri
 let _surveyConfig: SurveyConfig | null = structuredClone(mockSurveyConfig)
 let _resourceSurveyConfig: ResourceSurveyConfig = structuredClone(mockResourceSurveyConfig)
 let _embargos: EmbargoRecord[] = structuredClone(mockEmbargos)
+let _categoryMilestones: CategoryMilestone[] = structuredClone(mockCategoryMilestones)
 let _billingThresholdConfig: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120, currency: 'CNY', baselineMonth: undefined, ytdStartMonth: undefined }
 let _signoffConfig: SignoffConfig = { enabled: true }
 let _migrationSettings: MigrationSettings = { platformPeriod: undefined, cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' }, durationOptions: [15, 30, 45], gbiTierDepth: undefined }
@@ -300,6 +302,48 @@ export const store = {
   setMigrationSettings(config: MigrationSettings): MigrationSettings {
     _migrationSettings = { ...config }
     return _migrationSettings
+  },
+
+  // ─── Category Milestones ───────────────────────────────────────────────────
+
+  getCategoryMilestones(): CategoryMilestone[] {
+    return _categoryMilestones
+  },
+
+  getCategoryMilestone(id: string): CategoryMilestone | undefined {
+    return _categoryMilestones.find(cm => cm.id === id)
+  },
+
+  addCategoryMilestone(cm: CategoryMilestone): CategoryMilestone {
+    _categoryMilestones.push(cm)
+    return cm
+  },
+
+  updateCategoryMilestone(id: string, patch: Partial<CategoryMilestone>): CategoryMilestone {
+    const idx = _categoryMilestones.findIndex(cm => cm.id === id)
+    if (idx === -1) throw new Error(`Category milestone not found: ${id}`)
+    _categoryMilestones[idx] = { ..._categoryMilestones[idx], ...patch }
+    return _categoryMilestones[idx]
+  },
+
+  deleteCategoryMilestone(id: string): void {
+    const idx = _categoryMilestones.findIndex(cm => cm.id === id)
+    if (idx === -1) throw new Error(`Category milestone not found: ${id}`)
+    _categoryMilestones.splice(idx, 1)
+  },
+
+  batchAssignCategoryMilestone(categoryMilestoneId: string, projectIds: string[], unassign: boolean = false): void {
+    for (const pid of projectIds) {
+      const p = _projects.find(pr => pr.id === pid)
+      if (!p) continue
+      const ids = new Set(p.categoryMilestoneIds ?? [])
+      if (unassign) {
+        ids.delete(categoryMilestoneId)
+      } else {
+        ids.add(categoryMilestoneId)
+      }
+      p.categoryMilestoneIds = Array.from(ids)
+    }
   },
 
   // ─── Product-Category Map ──────────────────────────────────────────────────

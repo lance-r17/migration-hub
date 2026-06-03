@@ -757,6 +757,73 @@ Replaces the billing threshold configuration.
 
 ---
 
+## Category Milestones
+
+Master-data milestones that can be assigned to multiple projects. Used to overlay category-level timelines across the wave Gantt chart.
+
+### `GET /api/v1/category-milestones`
+
+Returns all category milestones.
+
+**Response:** `CategoryMilestoneOut[]`
+
+---
+
+### `POST /api/v1/category-milestones`
+
+Creates a new category milestone.
+
+**Request body:**
+```json
+{
+  "id": "string (optional)",
+  "name": "string",
+  "start_date": "2026-05-01",
+  "end_date": "2026-06-30",
+  "color": "#E07A5F (optional)",
+  "icon": "string (optional)"
+}
+```
+
+**Response:** `CategoryMilestoneOut` — `201 Created`
+
+---
+
+### `PATCH /api/v1/category-milestones/:id`
+
+Updates a category milestone. Only included fields are changed.
+
+**Request body:** partial `CategoryMilestoneUpdate`
+
+**Response:** `CategoryMilestoneOut`
+
+---
+
+### `DELETE /api/v1/category-milestones/:id`
+
+Deletes a category milestone and all project associations.
+
+**Response:** `204 No Content`
+
+---
+
+### `POST /api/v1/category-milestones/batch-assign`
+
+Assigns (or unassigns) a category milestone to multiple projects in one call.
+
+**Request body:**
+```json
+{
+  "category_milestone_id": "string",
+  "project_ids": ["string"],
+  "unassign": false
+}
+```
+
+**Response:** `204 No Content`
+
+---
+
 ## Product Categories
 
 ### `GET /api/v1/product-category-map`

@@ -167,6 +167,13 @@ Drawers are right-side slide-in panels built on the shadcn/ui `Sheet` component.
 | `ImportWaveDrawer` | Import an existing Jira epic by key |
 | `AssignWaveDrawer` | Assign the current project to a wave |
 
+### Category Milestone drawers
+
+| Drawer | Purpose |
+|---|---|
+| `CategoryMilestoneDrawer` | Create or edit a category milestone (name, dates, colour, icon) |
+| `AssignCategoryMilestoneDrawer` | Assign/unassign category milestones to the current project |
+
 ### Other drawers
 
 | Drawer | Purpose |

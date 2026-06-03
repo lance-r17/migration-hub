@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+from app.models.category_milestone import project_category_milestone
 
 
 class Project(Base, TimestampMixin):
@@ -57,4 +58,9 @@ class Project(Base, TimestampMixin):
     )
     engagement: Mapped["Engagement | None"] = relationship(
         "Engagement", back_populates="project", uselist=False, cascade="all, delete-orphan"
+    )
+    category_milestones: Mapped[list["CategoryMilestone"]] = relationship(
+        "CategoryMilestone",
+        secondary="project_category_milestone",
+        back_populates="projects",
     )

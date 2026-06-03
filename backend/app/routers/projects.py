@@ -86,6 +86,10 @@ def _itso_delegate_email(p) -> str | None:
     return None
 
 
+def _category_milestone_ids(p) -> list[str]:
+    return [cm.id for cm in (p.category_milestones or [])]
+
+
 def _team_from_project_users(p) -> list[dict]:
     return [
         {"id": pu.user.id, "name": pu.user.name, "initials": pu.user.initials}
@@ -163,6 +167,7 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
             approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
             cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
             gbi_id=p.gbi_id,
+            category_milestone_ids=_category_milestone_ids(p),
         )
 
     data: dict[str, Any] = {}
@@ -253,6 +258,7 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
         data["risks"] = [RiskOut.model_validate(r) for r in (p.risks or [])]
 
     data["gbi_id"] = p.gbi_id
+    data["category_milestone_ids"] = _category_milestone_ids(p)
 
     return ProjectListItem(**data)
 
@@ -285,6 +291,7 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
             cloud_resources=[CloudResourceHomeOut.model_validate(r) for r in (p.cloud_resources or [])],
             risks=[RiskHomeOut.model_validate(r) for r in (p.risks or [])],
             gbi_id=p.gbi_id,
+            category_milestone_ids=_category_milestone_ids(p),
         )
 
     data: dict[str, Any] = {}
@@ -341,6 +348,7 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
         ]
 
     data["gbi_id"] = p.gbi_id
+    data["category_milestone_ids"] = _category_milestone_ids(p)
 
     return ProjectHomeItem(**data)
 
@@ -381,6 +389,7 @@ def _project_detail(p) -> ProjectDetail:
         risks=[RiskOut.model_validate(r) for r in (p.risks or [])],
         approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
         gbi_id=p.gbi_id,
+        category_milestone_ids=_category_milestone_ids(p),
     )
 
 

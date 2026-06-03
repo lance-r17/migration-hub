@@ -264,6 +264,31 @@ Immutable snapshots of a `note_templates` row. A snapshot is created automatical
 
 > Migration: `0027_add_note_template_versions`
 
+### `category_milestones`
+
+Master-data milestones that can be assigned to multiple projects.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT PK` | |
+| `name` | `TEXT NOT NULL` | |
+| `start_date` | `TEXT NOT NULL` | ISO date string |
+| `end_date` | `TEXT NOT NULL` | ISO date string |
+| `color` | `TEXT` | nullable; hex colour for Gantt overlay |
+| `icon` | `TEXT` | nullable; icon name for Gantt overlay |
+| `created_at` | `TIMESTAMPTZ NOT NULL` | |
+
+### `project_category_milestone`
+
+Many-to-many association between projects and category milestones.
+
+| Column | Type | Notes |
+|---|---|---|
+| `project_id` | `TEXT FK → projects.id CASCADE` | composite PK |
+| `category_milestone_id` | `TEXT FK → category_milestones.id CASCADE` | composite PK |
+
+> Migration: `0030_add_category_milestones`
+
 ## Indexes
 
 | Index | Table | Columns | Purpose |

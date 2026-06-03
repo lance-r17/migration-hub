@@ -67,6 +67,7 @@ class ProjectListItem(BaseModel):
     resource_sets: list[str] | None = None
     risks: list[RiskOut] | None = None
     gbi_id: str | None = None
+    category_milestone_ids: list[str] | None = None
 
 
 class ProjectDetail(BaseModel):
@@ -105,6 +106,7 @@ class ProjectDetail(BaseModel):
     risks: list[RiskOut] = []
     approvals: list[ApprovalOut] = []
     gbi_id: str | None = None
+    category_milestone_ids: list[str] | None = None
 
 
 class ProjectHomeItem(BaseModel):
@@ -134,6 +136,7 @@ class ProjectHomeItem(BaseModel):
     cloud_resources: list[CloudResourceHomeOut] | None = None
     risks: list[RiskHomeOut] | None = None
     gbi_id: str | None = None
+    category_milestone_ids: list[str] | None = None
 
 
 class ProjectCreate(BaseModel):

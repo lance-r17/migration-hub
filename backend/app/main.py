@@ -121,6 +121,7 @@ _OPENAPI_TAGS = [
     {"name": "billing",    "description": "Billing records and thresholds"},
     {"name": "jira",       "description": "Jira integration jobs"},
     {"name": "embargos",   "description": "Change freeze embargo windows"},
+    {"name": "category-milestones", "description": "Category milestone master data and project assignment"},
     {"name": "dashboard",  "description": "Summary statistics"},
     {"name": "zoom",       "description": "Zoom meeting scheduling (optional)"},
     {"name": "confluence", "description": "Confluence page export and parent page management"},
@@ -159,6 +160,7 @@ def create_app() -> FastAPI:
         confluence,
         dashboard,
         email_templates,
+        category_milestones,
         embargos,
         gbi,
         jira,
@@ -181,6 +183,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboard.router, prefix=prefix)
     app.include_router(audit.router, prefix=prefix)
     app.include_router(survey.router, prefix=prefix)
+    app.include_router(category_milestones.router, prefix=prefix)
     app.include_router(embargos.router, prefix=prefix)
     app.include_router(billing.router, prefix=prefix)
     app.include_router(billing.settings_router, prefix=prefix)

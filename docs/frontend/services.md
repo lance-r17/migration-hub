@@ -193,3 +193,25 @@ interface SendEmailPayload {
   htmlContent: string   // pre-rendered email HTML
 }
 ```
+
+---
+
+## Category Milestones (`services/categoryMilestones.ts`)
+
+```ts
+import {
+  getCategoryMilestones, createCategoryMilestone,
+  updateCategoryMilestone, deleteCategoryMilestone,
+  batchAssignCategoryMilestone,
+} from '@/services/categoryMilestones'
+```
+
+| Function | Signature | Endpoint | Description |
+|---|---|---|---|
+| `getCategoryMilestones` | `() => Promise<CategoryMilestone[]>` | `GET /api/v1/category-milestones` | Returns all category milestones |
+| `createCategoryMilestone` | `(data: Omit<CategoryMilestone, 'id' \| 'createdAt'>) => Promise<CategoryMilestone>` | `POST /api/v1/category-milestones` | Creates a new category milestone |
+| `updateCategoryMilestone` | `(id, patch) => Promise<CategoryMilestone>` | `PATCH /api/v1/category-milestones/:id` | Updates fields on a category milestone |
+| `deleteCategoryMilestone` | `(id: string) => Promise<void>` | `DELETE /api/v1/category-milestones/:id` | Removes the milestone and all project associations |
+| `batchAssignCategoryMilestone` | `(cmId, projectIds, unassign?) => Promise<void>` | `POST /api/v1/category-milestones/batch-assign` | Assigns or unassigns the milestone from multiple projects |
+
+All functions perform snake_case ↔ camelCase field mapping at the service boundary. Mock delays: create/update/delete use 200–300 ms.

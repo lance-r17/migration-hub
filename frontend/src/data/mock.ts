@@ -4,6 +4,37 @@ import type { Wave } from '@/types/wave'
 import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
 import type { BillingBreakdownRecord, BillingRecord } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
+import type { CategoryMilestone } from '@/types/categoryMilestone'
+
+export const mockCategoryMilestones: CategoryMilestone[] = [
+  {
+    id: 'cm-ai',
+    name: 'AI / ML Integration',
+    startDate: '2026-05-01',
+    endDate: '2026-07-31',
+    color: '#9D4EDD',
+    icon: 'brain-circuit',
+    createdAt: '2026-04-01T10:00:00.000Z',
+  },
+  {
+    id: 'cm-bi',
+    name: 'Business Intelligence',
+    startDate: '2026-06-01',
+    endDate: '2026-08-31',
+    color: '#D4A373',
+    icon: 'bar-chart-3',
+    createdAt: '2026-04-01T10:00:00.000Z',
+  },
+  {
+    id: 'cm-api',
+    name: 'API Gateway Modernization',
+    startDate: '2026-04-15',
+    endDate: '2026-06-15',
+    color: '#2A9D8F',
+    icon: 'webhook',
+    createdAt: '2026-04-01T10:00:00.000Z',
+  },
+]
 
 export const mockProductCategoryMap: ProductCategoryEntry[] = [
   { product: 'ecs',            product_name: 'Elastic Compute Service',          category: 'computing' },
@@ -415,6 +446,7 @@ export const mockProjects: Project[] = [
       { id: 'a2', role: 'business_owner', status: 'approved', approver: 'Sarah Jenkins', timestamp: '21 Mar 2026', icon: '' },
       { id: 'a3', role: 'platform_migration_lead', status: 'pending', icon: '' },
     ],
+    categoryMilestoneIds: ['cm-ai', 'cm-api'],
   },
   {
     id: 'M-11029',
@@ -592,6 +624,7 @@ export const mockProjects: Project[] = [
     },
 
     risks: [],
+    categoryMilestoneIds: ['cm-bi'],
   },
   {
     id: 'M-88271',

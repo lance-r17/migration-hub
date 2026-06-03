@@ -181,6 +181,35 @@ Listens to a media query and returns `true` on narrow viewports. Used to adjust 
 
 ---
 
+## `useCategoryMilestones`
+
+```ts
+import { useCategoryMilestones } from '@/hooks/use-category-milestones'
+
+const {
+  categoryMilestones, loading, error,
+  createCategoryMilestone, updateCategoryMilestone,
+  deleteCategoryMilestone, batchAssign, refresh,
+} = useCategoryMilestones()
+```
+
+Fetches all category milestones on mount and provides CRUD + batch-assign mutations. Used by `WaveGanttPage` and the category-milestone drawers.
+
+**Returns:**
+
+| Property | Type | Description |
+|---|---|---|
+| `categoryMilestones` | `CategoryMilestone[]` | All category milestones |
+| `loading` | `boolean` | `true` during initial fetch |
+| `error` | `string \| null` | Error message if fetch failed |
+| `createCategoryMilestone` | `(data: Omit<CategoryMilestone, 'id' \| 'createdAt'>) => Promise<CategoryMilestone>` | Adds a new milestone to local state on success |
+| `updateCategoryMilestone` | `(id, patch) => Promise<CategoryMilestone>` | Replaces the milestone in local state on success |
+| `deleteCategoryMilestone` | `(id: string) => Promise<void>` | Removes the milestone from local state on success |
+| `batchAssign` | `(cmId, projectIds, unassign?) => Promise<void>` | Assigns or unassigns the milestone from projects |
+| `refresh` | `() => void` | Re-fetches the list on demand |
+
+---
+
 ## `useCurrentUser`
 
 ```ts

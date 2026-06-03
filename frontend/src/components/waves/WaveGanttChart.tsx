@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
-import { ChevronDown, ChevronRight, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label'
 import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, MilestoneStatus } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { EmbargoRecord } from '@/types/embargo'
+import type { CategoryMilestone } from '@/types/categoryMilestone'
+import { CATEGORY_MILESTONE_ICON_MAP } from '@/lib/categoryMilestoneIcons'
 import { useEmbargos } from '@/hooks/use-embargos'
 
 import { Button } from '../ui/button'
@@ -50,6 +52,7 @@ interface DragState {
   originalStart: string
   originalEnd: string
   originalMilestones?: { id: string; start: string; end: string }[]
+  originalCategoryMilestoneOverrides?: Record<string, { start: string; end: string; status?: MilestoneStatus }>
 }
 
 interface ConnState {
@@ -98,6 +101,7 @@ const MILESTONE_TYPE_META: Record<MilestoneType, { bg: string; color: string; la
   'prd-data-migration':     { bg: 'oklch(0.92 0.04 240)', color: 'oklch(0.35 0.15 260)', label: 'PrdData', icon: BarChart2   },
   'prd-cutover':            { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'PrdCut', icon: Sparkles    },
   'custom':                 { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'Custom', icon: Pencil      },
+  'category-milestone':     { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'Category', icon: Pencil      },
 }
 
 const WAVE_STATUS_META: Record<string, { bg: string; color: string }> = {
@@ -383,13 +387,14 @@ interface ProjRowDragState {
 interface Props {
   waves: Wave[]
   projects: Project[]
+  categoryMilestones?: CategoryMilestone[]
   onUpdatePlanning: (projectId: string, planning: ProjectPlanning) => Promise<void>
   onUpdateProjectOrder?: (waveId: string, projectIds: string[]) => Promise<void>
   onAssign?: (projectId: string, waveId: string | undefined) => void
   readOnly?: boolean
 }
 
-export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly }: Props) {
+export function WaveGanttChart({ waves, projects, categoryMilestones = [], onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly }: Props) {
   const [showCompleted, setShowCompleted] = useState(true)
   const scrollRef    = useRef<HTMLDivElement>(null)
   const milestoneGhostRef     = useRef<HTMLDivElement>(null)
@@ -416,6 +421,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   const [durationFilter, setDurationFilter]     = useState('all')
   const [statusDialog, setStatusDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; nextStatus: MilestoneStatus } | null>(null)
   const [deleteDialog, setDeleteDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; milestoneName: string } | null>(null)
+  const [cmFilter, setCmFilter]                 = useState<Set<string>>(new Set())
 
   const colPx      = ZOOM_COL_PX[zoom]
   const daysPerCol = ZOOM_DAYS_PER_COL[zoom]
@@ -506,17 +512,28 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   }
 
   function effectiveMilestoneDates(projectId: string, milestone: PlanningMilestone): { start: string; end: string } {
-    const t = (localPlanning[projectId]?.milestones ?? []).find(lt => lt.id === milestone.id)
+    const project = projects.find(p => p.id === projectId)
+    if (!project) return { start: milestone.start, end: milestone.end }
+    const planning = getEffectivePlanning(project)
+    const t = planning.milestones?.find(lt => lt.id === milestone.id)
     if (t) return { start: t.start, end: t.end }
+    const override = planning.categoryMilestoneOverrides?.[milestone.id]
+    if (override) return { start: override.start, end: override.end }
     return { start: milestone.start, end: milestone.end }
   }
 
   function getEffectivePlanning(p: Project): ProjectPlanning {
-    if (localPlanning[p.id]) return localPlanning[p.id]!
-    if (p.planning) return p.planning
-    const wave = p.waveId ? waveMap.get(p.waveId) : undefined
-    const today = toIso(new Date())
-    return { startDate: wave?.startDate ?? today, endDate: wave?.cutoverDate ?? addDays(today, 30), milestones: [] }
+    let planning = localPlanning[p.id] ?? p.planning
+    if (!planning) {
+      const wave = p.waveId ? waveMap.get(p.waveId) : undefined
+      const today = toIso(new Date())
+      return { startDate: wave?.startDate ?? today, endDate: wave?.cutoverDate ?? addDays(today, 30), milestones: [] }
+    }
+    const assignedCmIds = new Set(p.categoryMilestoneIds ?? [])
+    return {
+      ...planning,
+      milestones: (planning.milestones ?? []).filter(m => !assignedCmIds.has(m.id)),
+    }
   }
 
   // ─── Client X → ISO date ─────────────────────────────────────────────────────
@@ -534,7 +551,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   // ─── Drag handlers ────────────────────────────────────────────────────────────
 
   function onPointerDown(e: React.PointerEvent, projectId: string, milestoneId: string | null, type: DragType, start: string, end: string) {
-    if (readOnly && milestoneId === null) return
+    if (readOnly) return
     e.preventDefault(); e.stopPropagation()
     setDragState({ projectId, milestoneId, type, startX: e.clientX, originalStart: start, originalEnd: end })
     document.body.style.cursor = type === 'move' ? 'grabbing' : 'col-resize'
@@ -664,7 +681,8 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
     setLocalPlanning(prev => {
       const { projectId, milestoneId } = dragState
-      const base = prev[projectId] ?? projects.find(p => p.id === projectId)?.planning ?? { startDate: newStart, endDate: newEnd, milestones: [] }
+      const project = projects.find(p => p.id === projectId)
+      const base = prev[projectId] ?? (project ? getEffectivePlanning(project) : { startDate: newStart, endDate: newEnd, milestones: [] })
       if (milestoneId === null) {
         if (dragState.type === 'move' && dragState.originalMilestones) {
           const actualMoveDelta = daysBetween(parseDate(dragState.originalStart), parseDate(newStart))
@@ -673,10 +691,23 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
             if (!orig) return t
             return { ...t, start: addDays(orig.start, actualMoveDelta), end: addDays(orig.end, actualMoveDelta) }
           })
-          return { ...prev, [projectId]: { ...base, startDate: newStart, endDate: newEnd, milestones } }
+          const categoryMilestoneOverrides = dragState.originalCategoryMilestoneOverrides
+            ? Object.fromEntries(
+                Object.entries(dragState.originalCategoryMilestoneOverrides).map(([id, o]) => [
+                  id,
+                  { ...o, start: addDays(o.start, actualMoveDelta), end: addDays(o.end, actualMoveDelta) },
+                ])
+              )
+            : base.categoryMilestoneOverrides
+          return { ...prev, [projectId]: { ...base, startDate: newStart, endDate: newEnd, milestones, categoryMilestoneOverrides } }
         }
         return { ...prev, [projectId]: { ...base, startDate: newStart, endDate: newEnd } }
       } else {
+        const isCategoryMilestoneId = project?.categoryMilestoneIds?.includes(milestoneId)
+        if (isCategoryMilestoneId) {
+          const overrides = { ...(base.categoryMilestoneOverrides ?? {}), [milestoneId]: { start: newStart, end: newEnd } }
+          return { ...prev, [projectId]: { ...base, categoryMilestoneOverrides: overrides } }
+        }
         const milestones = (base.milestones ?? []).map(t => t.id === milestoneId ? { ...t, start: newStart, end: newEnd } : t)
         return { ...prev, [projectId]: { ...base, milestones } }
       }
@@ -726,23 +757,30 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   const onRowMilestonePointerUp = useCallback(async () => {
     if (!rowMilestoneDragState) return
     document.body.style.cursor = ''
-    const { projectId, sourceIndex, overIndex } = rowMilestoneDragState
+    const { projectId, milestoneId, sourceIndex, overIndex } = rowMilestoneDragState
     setRowMilestoneDragState(null)
     if (overIndex === sourceIndex || overIndex === sourceIndex + 1) return
     const project = projects.find(p => p.id === projectId)
     if (!project) return
     const base = getEffectivePlanning(project)
     const milestones = [...(base.milestones ?? [])]
-    const [moved] = milestones.splice(sourceIndex, 1)
+    const sourceIdxInMilestones = milestones.findIndex(m => m.id === milestoneId)
+    if (sourceIdxInMilestones === -1) return
+    const [moved] = milestones.splice(sourceIdxInMilestones, 1)
     if (!moved) return
-    const insertAt = overIndex > sourceIndex ? overIndex - 1 : overIndex
-    milestones.splice(insertAt, 0, moved)
+    // Category milestones are rendered first, so regular milestone indices are offset
+    const assignedCmIds = new Set(project.categoryMilestoneIds ?? [])
+    const cmCount = categoryMilestones.filter(cm => assignedCmIds.has(cm.id)).length
+    const visualSourceIndex = cmCount + sourceIdxInMilestones
+    const visualDropIndex = overIndex > visualSourceIndex ? overIndex - 1 : overIndex
+    const insertAt = Math.max(0, visualDropIndex - cmCount)
+    milestones.splice(Math.min(insertAt, milestones.length), 0, moved)
     const updated = { ...base, milestones }
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
     try { await onUpdatePlanning(projectId, updated) }
     catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rowMilestoneDragState, projects, onUpdatePlanning])
+  }, [rowMilestoneDragState, projects, onUpdatePlanning, categoryMilestones])
 
   useEffect(() => {
     if (!rowMilestoneDragState) return
@@ -844,7 +882,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     if (fromId === toId) return false
     const milestoneMap = new Map<string, PlanningMilestone>()
     for (const p of projects) {
-      const milestones = (localPlanning[p.id] ?? p.planning)?.milestones ?? []
+      const milestones = getEffectivePlanning(p).milestones ?? []
       for (const t of milestones) milestoneMap.set(t.id, t)
     }
     const visited = new Set<string>()
@@ -862,8 +900,8 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   async function addDep(fromId: string, toId: string) {
     if (!isDAGSafe(fromId, toId)) return
     for (const p of projects) {
-      const planning = localPlanning[p.id] ?? p.planning
-      if (!planning?.milestones) continue
+      const planning = getEffectivePlanning(p)
+      if (!planning.milestones?.length) continue
       const milestone = planning.milestones.find(t => t.id === toId)
       if (milestone && !milestone.deps.includes(fromId)) {
         const updated = { ...planning, milestones: planning.milestones.map(t => t.id === toId ? { ...t, deps: [...t.deps, fromId] } : t) }
@@ -898,6 +936,20 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
   async function changeMilestoneStatus(projectId: string, milestoneId: string, status: MilestoneStatus) {
     const project = projects.find(p => p.id === projectId)
     if (!project) return
+    const isCategoryMilestoneId = project.categoryMilestoneIds?.includes(milestoneId)
+    if (isCategoryMilestoneId) {
+      const base = getEffectivePlanning(project)
+      const existing = base.categoryMilestoneOverrides?.[milestoneId]
+      const overrides = {
+        ...(base.categoryMilestoneOverrides ?? {}),
+        [milestoneId]: { ...(existing ?? { start: '', end: '' }), status },
+      }
+      const updated: ProjectPlanning = { ...base, categoryMilestoneOverrides: overrides }
+      setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
+      try { await onUpdatePlanning(projectId, updated) }
+      catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
+      return
+    }
     const base = getEffectivePlanning(project)
     const updated: ProjectPlanning = {
       ...base,
@@ -910,8 +962,8 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
   async function removeDep(fromId: string, toId: string) {
     for (const p of projects) {
-      const planning = localPlanning[p.id] ?? p.planning
-      if (!planning?.milestones) continue
+      const planning = getEffectivePlanning(p)
+      if (!planning.milestones?.length) continue
       const milestone = planning.milestones.find(t => t.id === toId)
       if (milestone) {
         const updated = {
@@ -1127,6 +1179,9 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
   function getMilestonesForProject(p: Project): PlanningMilestone[] {
     let milestones = (localPlanning[p.id] ?? p.planning)?.milestones ?? []
+    // Remove any category milestones already in planning to avoid duplication
+    const assignedCmIds = new Set(p.categoryMilestoneIds ?? [])
+    milestones = milestones.filter(m => !assignedCmIds.has(m.id))
     if (rowMilestoneDragState?.projectId === p.id && milestones.length > 0) {
       const arr = [...milestones]
       const [moved] = arr.splice(rowMilestoneDragState.sourceIndex, 1)
@@ -1138,7 +1193,24 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
         milestones = arr
       }
     }
-    return milestones
+    // Inject category milestones (with per-project overrides), sorted by creation date
+    const assignedCMs = (p.categoryMilestoneIds ?? [])
+      .map(cmId => categoryMilestones.find(cm => cm.id === cmId))
+      .filter((cm): cm is CategoryMilestone => cm !== undefined)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .map(cm => {
+        const override = (localPlanning[p.id] ?? p.planning)?.categoryMilestoneOverrides?.[cm.id]
+        return {
+          id: cm.id,
+          name: cm.name,
+          type: 'category-milestone' as MilestoneType,
+          start: override?.start ?? cm.startDate,
+          end: override?.end ?? cm.endDate,
+          status: override?.status ?? 'todo' as MilestoneStatus,
+          deps: [],
+        }
+      })
+    return [...assignedCMs, ...milestones]
   }
 
   // ─── Search filter ───────────────────────────────────────────────────────────
@@ -1200,6 +1272,16 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     return set
   }, [hasDurationFilter, durationFilter, projects, localPlanning])
 
+  const hasCmFilter = cmFilter.size > 0
+  const matchingCmIds = useMemo(() => {
+    if (!hasCmFilter) return new Set<string>()
+    const set = new Set<string>()
+    for (const p of projects) {
+      if (p.categoryMilestoneIds?.some(id => cmFilter.has(id))) set.add(p.id)
+    }
+    return set
+  }, [hasCmFilter, cmFilter, projects])
+
   const rows = useMemo<RowItem[]>(() => {
     const result: RowItem[] = []
     let projectCounter = 0
@@ -1222,10 +1304,11 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
       const waveProjectsRaw = projectsByWave.get(wave.id) ?? []
       const visibleWaveProjects = waveProjectsRaw.filter(p =>
         (!hasSearch || matchingProjectIds.has(p.id)) &&
-        (!hasDurationFilter || matchingDurationIds.has(p.id))
+        (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
+        (!hasCmFilter || matchingCmIds.has(p.id))
       )
 
-      if ((hasSearch || hasDurationFilter) && visibleWaveProjects.length === 0) continue
+      if ((hasSearch || hasDurationFilter || hasCmFilter) && visibleWaveProjects.length === 0) continue
 
       result.push({ type: 'wave', wave })
       if (!collapsedWaves.has(wave.id)) {
@@ -1256,7 +1339,8 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
 
     const visibleUnassigned = unassignedProjects.filter(p =>
       (!hasSearch || matchingProjectIds.has(p.id)) &&
-      (!hasDurationFilter || matchingDurationIds.has(p.id))
+      (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
+      (!hasCmFilter || matchingCmIds.has(p.id))
     )
 
     if (visibleUnassigned.length > 0) {
@@ -1276,7 +1360,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
     }
     return result
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds])
+  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, categoryMilestones])
 
   // ─── Row height helpers ──────────────────────────────────────────────────────
 
@@ -1394,20 +1478,79 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
           </Label>
         </div>
         <div className="flex-1" />
+        {categoryMilestones.length > 0 && (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-[12px] text-[var(--g-text-muted)] mr-2" data-testid="category-milestone-filter-btn">
+                  <ListFilter size={13} className={cmFilter.size > 0 ? 'text-[oklch(0.48_0.20_260)]' : ''} />
+                  <span>Category Milestones</span>
+                  {cmFilter.size > 0 && (
+                    <span className="absolute -top-1 -right-4 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
+                      {cmFilter.size}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[200px]">
+                {[...categoryMilestones].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map(cm => (
+                  <DropdownMenuItem
+                    key={cm.id}
+                    onClick={() => {
+                      setCmFilter(prev => {
+                        const next = new Set(prev)
+                        if (next.has(cm.id)) next.delete(cm.id)
+                        else next.add(cm.id)
+                        return next
+                      })
+                    }}
+                    className={cn(
+                      'text-[12px] flex items-center gap-2',
+                      cmFilter.has(cm.id) && 'bg-[var(--g-accent-soft)] text-[var(--g-accent)] font-medium',
+                    )}
+                  >
+                    <span className="w-3.5 flex items-center justify-center">
+                      {cmFilter.has(cm.id) && <Check size={12} />}
+                    </span>
+                    <span
+                      className="shrink-0 size-2.5 rounded-full"
+                      style={{ background: cm.color ?? '#3B82F6' }}
+                    />
+                    {cm.name}
+                  </DropdownMenuItem>
+                ))}
+                {cmFilter.size > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setCmFilter(new Set())}
+                      className="text-[12px] text-muted-foreground"
+                    >
+                      Clear filter
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="w-px h-3 bg-[var(--g-border)]" />
+          </>
+        )}
         <button
           onClick={() => { setCollapsedWaves(new Set()); setCollapsedProjects(new Set()) }}
-          className="text-[12px] text-[var(--g-text-muted)] bg-transparent border-none cursor-pointer"
+          className="text-[12px] text-[var(--g-text-muted)] bg-transparent border-none cursor-pointer flex items-center gap-1"
         >
+          <ChevronsDownUp size={13} />
           Expand all
         </button>
-        <span className="text-[var(--g-text-subtle)] text-[12px]">·</span>
+        <div className="w-px h-3 bg-[var(--g-border)]" />
         <button
           onClick={() => {
             setCollapsedWaves(new Set(waves.map(w => w.id).concat(['__unassigned__'])))
             setCollapsedProjects(new Set(projects.map(p => p.id)))
           }}
-          className="text-[12px] text-[var(--g-text-muted)] bg-transparent border-none cursor-pointer"
+          className="text-[12px] text-[var(--g-text-muted)] bg-transparent border-none cursor-pointer flex items-center gap-1"
         >
+          <ChevronsUpDown size={13} />
           Collapse all
         </button>
       </div>
@@ -1454,7 +1597,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
               : row.type === 'embargo'           ? `embargo-${row.embargo.id}`
               : row.type === 'wave'              ? row.wave.id
               : row.type === 'unassigned-header' ? '__unassigned__'
-              : row.type === 'milestone'              ? `milestone-${row.milestone.id}`
+              : row.type === 'milestone'              ? `milestone-${row.project.id}-${row.milestone.id}`
               : row.project.id
 
             const rh = rowHeight(row)
@@ -1723,6 +1866,13 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
               const taskMeta      = MILESTONE_TYPE_META[milestone.type]
               const milestoneIdx0      = milestoneIndex - 1
               const isDraggedMilestone = rowMilestoneDragState?.milestoneId === milestone.id
+              const isCategoryMilestone = milestone.type === 'category-milestone'
+              const categoryMilestone = isCategoryMilestone
+                ? categoryMilestones.find(cm => cm.id === milestone.id)
+                : undefined
+              const CategoryIcon = categoryMilestone?.icon
+                ? CATEGORY_MILESTONE_ICON_MAP[categoryMilestone.icon]
+                : undefined
 
               return (
                 <div
@@ -1753,14 +1903,20 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                     </div>
                     {/* Name col */}
                     <div className={cn(cellClass, 'pl-6 group/taskname gap-[5px] text-[13px] text-[var(--g-text)]')}>
-                      <GripVertical
-                        className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-grab"
-                        onPointerDown={e => {
-                          e.preventDefault(); e.stopPropagation()
-                          setRowMilestoneDragState({ projectId: project.id, milestoneId: milestone.id, sourceIndex: milestoneIdx0, overIndex: milestoneIdx0 })
-                          document.body.style.cursor = 'grabbing'
-                        }}
-                      />
+                      {!isCategoryMilestone ? (
+                        <GripVertical
+                          className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-grab"
+                          onPointerDown={e => {
+                            e.preventDefault(); e.stopPropagation()
+                            setRowMilestoneDragState({ projectId: project.id, milestoneId: milestone.id, sourceIndex: milestoneIdx0, overIndex: milestoneIdx0 })
+                            document.body.style.cursor = 'grabbing'
+                          }}
+                        />
+                      ) : (
+                        <Tag
+                          className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)]"
+                        />
+                      )}
                       {editingTaskId === milestone.id ? (
                         <input
                           autoFocus
@@ -1782,16 +1938,18 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                           >
                             {milestone.name}
                           </span>
-                          <button
-                            className="opacity-0 group-hover/taskname:opacity-100 shrink-0 bg-transparent border-none cursor-pointer text-[var(--g-text-subtle)] p-0.5 rounded-[4px] flex items-center transition-[opacity] duration-[100ms]"
-                            onClick={e => {
-                              e.stopPropagation()
-                              setEditingMilestoneId(milestone.id)
-                              setEditingMilestoneName(milestone.name)
-                            }}
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </button>
+                          {!isCategoryMilestone && (
+                            <button
+                              className="opacity-0 group-hover/taskname:opacity-100 shrink-0 bg-transparent border-none cursor-pointer text-[var(--g-text-subtle)] p-0.5 rounded-[4px] flex items-center transition-[opacity] duration-[100ms]"
+                              onClick={e => {
+                                e.stopPropagation()
+                                setEditingMilestoneId(milestone.id)
+                                setEditingMilestoneName(milestone.name)
+                              }}
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -1817,9 +1975,11 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                       {taskMeta && (
                         <span
                           className="w-[22px] h-[22px] rounded-full inline-flex items-center justify-center shrink-0"
-                          style={{ background: taskMeta.bg, color: taskMeta.color }}
+                          style={categoryMilestone?.color
+                            ? { background: hexToRgba(categoryMilestone.color, 0.15), color: categoryMilestone.color }
+                            : { background: taskMeta.bg, color: taskMeta.color }}
                         >
-                          <taskMeta.icon size={13} />
+                          {CategoryIcon ? <CategoryIcon size={13} /> : <taskMeta.icon size={13} />}
                         </span>
                       )}
                     </div>
@@ -1851,13 +2011,15 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                             )
                           })()}
                           {nextMilestoneStatus(milestone.status) && <DropdownMenuSeparator />}
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeleteDialog({ open: true, projectId: project.id, milestoneId: milestone.id, milestoneName: milestone.name })}
-                          >
-                            <Trash2 className="w-[13px] h-[13px] mr-1.5" />
-                            Remove
-                          </DropdownMenuItem>
+                          {!isCategoryMilestone && (
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setDeleteDialog({ open: true, projectId: project.id, milestoneId: milestone.id, milestoneName: milestone.name })}
+                            >
+                              <Trash2 className="w-[13px] h-[13px] mr-1.5" />
+                              Remove
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -1878,7 +2040,9 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                           left: barLeft(start),
                           width: Math.max(8, barWidth(start, end)),
                           height: 22,
-                          background: taskMeta?.bg ?? softColor,
+                          background: categoryMilestone?.color
+                            ? hexToRgba(categoryMilestone.color, 0.25)
+                            : (taskMeta?.bg ?? softColor),
                           boxShadow: isConnTarget
                             ? '0 0 0 2px var(--g-bg), 0 0 0 4px var(--g-accent)'
                             : isSelected
@@ -1895,7 +2059,7 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                           className="absolute left-0 top-0 bottom-0 pointer-events-none"
                           style={{ width: `${progress}%`, background: milestone.status !== 'todo'
                             ? MILESTONE_STATUS_META[milestone.status].bg
-                            : (taskMeta?.color ?? waveColor), borderRadius: '3px 0 0 3px' }}
+                            : (categoryMilestone?.color ?? taskMeta?.color ?? waveColor), borderRadius: '3px 0 0 3px' }}
                         />
                         {/* Status icon */}
                         {(() => {
@@ -2180,8 +2344,10 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
                       onPointerDown={e => {
                         if (readOnly) return
                         e.preventDefault(); e.stopPropagation()
-                        const origTasks = (getEffectivePlanning(p).milestones ?? []).map(t => ({ id: t.id, start: t.start, end: t.end }))
-                        setDragState({ projectId: p.id, milestoneId: null, type: 'move', startX: e.clientX, originalStart: projectDates.start, originalEnd: projectDates.end, originalMilestones: origTasks })
+                        const planning = getEffectivePlanning(p)
+                        const origTasks = (planning.milestones ?? []).map(t => ({ id: t.id, start: t.start, end: t.end }))
+                        const origOverrides = { ...(planning.categoryMilestoneOverrides ?? {}) }
+                        setDragState({ projectId: p.id, milestoneId: null, type: 'move', startX: e.clientX, originalStart: projectDates.start, originalEnd: projectDates.end, originalMilestones: origTasks, originalCategoryMilestoneOverrides: origOverrides })
                         document.body.style.cursor = 'grabbing'
                         setSelectedBarId(p.id)
                       }}
@@ -2287,6 +2453,13 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
         if (!milestoneGhostRow || milestoneGhostRow.type !== 'milestone') return null
         const { milestone, projectIndex, milestoneIndex } = milestoneGhostRow
         const taskMeta = MILESTONE_TYPE_META[milestone.type]
+        const isCategoryMilestone = milestone.type === 'category-milestone'
+        const categoryMilestone = isCategoryMilestone
+          ? categoryMilestones.find(cm => cm.id === milestone.id)
+          : undefined
+        const CategoryIcon = categoryMilestone?.icon
+          ? CATEGORY_MILESTONE_ICON_MAP[categoryMilestone.icon]
+          : undefined
         return (
           <div
             ref={milestoneGhostRef}
@@ -2309,14 +2482,20 @@ export function WaveGanttChart({ waves, projects, onUpdatePlanning, onUpdateProj
               {projectIndex}.{milestoneIndex}
             </div>
             <div className={cn(cellClass, 'gap-[5px] text-[13px] text-[var(--g-text)]')}>
-              <GripVertical className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)]" />
+              {isCategoryMilestone && CategoryIcon ? (
+                <CategoryIcon className="w-[13px] h-[13px] shrink-0" style={{ color: categoryMilestone?.color ?? 'var(--g-text-subtle)' }} />
+              ) : (
+                <GripVertical className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)]" />
+              )}
               <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0">{milestone.name}</span>
             </div>
             <div className={cellClass} />
             <div className={cellClass}>
               {taskMeta && (
-                <span className="w-[22px] h-[22px] rounded-full inline-flex items-center justify-center shrink-0" style={{ background: taskMeta.bg, color: taskMeta.color }}>
-                  <taskMeta.icon size={13} />
+                <span className="w-[22px] h-[22px] rounded-full inline-flex items-center justify-center shrink-0" style={categoryMilestone?.color
+                  ? { background: hexToRgba(categoryMilestone.color, 0.15), color: categoryMilestone.color }
+                  : { background: taskMeta.bg, color: taskMeta.color }}>
+                  {CategoryIcon ? <CategoryIcon size={13} /> : <taskMeta.icon size={13} />}
                 </span>
               )}
             </div>

@@ -242,7 +242,7 @@ export interface Approval {
 
 // ─── Wave planning milestones ─────────────────────────────────────────────────
 
-export type MilestoneType = 'env-provision' | 'dev-resource-provision' | 'dev-data-migration' | 'dev-cutover' | 'prd-resource-provision' | 'prd-data-migration' | 'prd-cutover' | 'custom'
+export type MilestoneType = 'env-provision' | 'dev-resource-provision' | 'dev-data-migration' | 'dev-cutover' | 'prd-resource-provision' | 'prd-data-migration' | 'prd-cutover' | 'custom' | 'category-milestone'
 export type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 
 export interface PlanningMilestone {
@@ -263,6 +263,8 @@ export interface ProjectPlanning {
   estimatedStartDate?: string
   estimatedEndDate?: string
   milestones: PlanningMilestone[]
+  /** Per-project overrides for assigned category milestones (cmId → dates + status) */
+  categoryMilestoneOverrides?: Record<string, { start: string; end: string; status?: MilestoneStatus }>
 }
 
 // ─── Note Template ───────────────────────────────────────────────────────────
@@ -342,6 +344,7 @@ export interface Project {
   jiraSubtaskConfig?: JiraSubtaskConfig
   jiraStoryKey?: string        // e.g. "MIG-42", populated by async Jira job
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
+  categoryMilestoneIds?: string[]
   // Lean fields
   resourceSets?: string[]      // deduplicated resource_set values from cloud_resources
 }

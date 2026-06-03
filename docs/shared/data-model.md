@@ -19,6 +19,7 @@ type ResourceCategory = 'computing' | 'security' | 'networking' | 'database' | '
 type TaskType         = 'onboarding' | 'migrate-computing' | 'migrate-database' | 'migrate-storage' | 'migrate-logs' | 'migrate-big-data' | 'custom'
 type TaskStatus       = 'todo' | 'in-progress' | 'done'
 type EngagementStatus = 'pending' | 'scheduled' | 'completed' | 'cancelled' | 'no_show'
+type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 ```
 
 > **Backend deviation:** `ApprovalStatus` in the backend is stored as `'pending' | 'approved' | 'rejected'`. The frontend type retains `'waiting'` for historical UI states but the backend never returns it.
@@ -95,6 +96,7 @@ interface Project {
   jiraSubtaskConfig?: JiraSubtaskConfig
   jiraStoryKey?: string
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
+  categoryMilestoneIds?: string[]
 }
 ```
 
@@ -317,6 +319,7 @@ interface ProjectPlanning {
   startDate: string
   endDate: string
   tasks: PlanningTask[]
+  categoryMilestoneOverrides?: Record<string, { start: string; end: string; status?: MilestoneStatus }>
 }
 
 interface PlanningTask {
@@ -479,6 +482,24 @@ interface Engagement {
 ```
 
 ---
+
+## CategoryMilestone
+
+Master-data milestones that can be assigned to multiple projects. Used to overlay category-level timelines (e.g. "Compute migration window") across the wave Gantt chart.
+
+```ts
+interface CategoryMilestone {
+  id: string
+  name: string
+  startDate: string       // ISO date 'yyyy-MM-dd'
+  endDate: string         // ISO date 'yyyy-MM-dd'
+  color?: string
+  icon?: string
+  createdAt: string       // ISO 8601
+}
+```
+
+Assignments are many-to-many: a project can have multiple category milestones, and a category milestone can belong to multiple projects. The backend stores this via the `project_category_milestone` association table.
 
 ## NoteTemplate
 
