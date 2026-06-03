@@ -629,12 +629,93 @@ async def update_section(
 
 
 @router.get("/{project_id}/audit-log", response_model=AuditLogResponse)
-async def get_project_audit_log(project_id: str, db: AsyncSession = Depends(get_db)):
-    entries = await audit_service.get_by_project(db, project_id)
+async def get_project_audit_log(
+    project_id: str,
+    limit: int = Query(100, ge=1, le=1000, description="Maximum entries to return"),
+    offset: int = Query(0, ge=0, description="Number of entries to skip"),
+    db: AsyncSession = Depends(get_db),
+):
+    entries = await audit_service.get_by_project(db, project_id, limit=limit, offset=offset)
+    total = await audit_service.count_by_project(db, project_id)
     return AuditLogResponse(
         entries=[AuditLogEntryOut.from_orm_entry(e) for e in entries],
-        total=len(entries),
+        total=total,
+        limit=limit,
+        offset=offset,
     )
+
+
+@router.post("/{project_id}/audit-log/{entry_id}/restore", response_model=ProjectDetail)
+async def restore_audit_log_entry(
+    project_id: str,
+    entry_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Restore a section from an audit log entry (admin only). Currently supports applicationOverview."""
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    entry = await audit_service.get_by_id(db, entry_id)
+    if not entry or entry.project_id != project_id:
+        raise HTTPException(status_code=404, detail="Audit log entry not found")
+
+    if entry.event_type != "section_updated":
+        raise HTTPException(status_code=400, detail="Only section update entries can be restored")
+
+    if entry.section_key != "applicationOverview":
+        raise HTTPException(status_code=400, detail="Only applicationOverview sections can be restored")
+
+    actor = _user_to_actor(current_user)
+
+    # Snapshot the current section before restoring
+    column = project_service.SECTION_COLUMN_MAP.get(entry.section_key)
+    current_state = getattr(project, column, None) or {}
+
+    if entry.old_snapshot:
+        restored = entry.old_snapshot
+    else:
+        # Best-effort reconstruction from current section + reverse changes
+        restored = dict(current_state)
+        for change in (entry.changes or []):
+            field = change.get("field")
+            old_value = change.get("old_value")
+            if field is not None:
+                restored[field] = old_value
+
+    # Compute the actual field-level diff for the audit log
+    restore_changes = project_service._diff_section(current_state, restored)
+
+    project = await project_service.update_section(
+        db, project, "applicationOverview", restored, actor, skip_audit=True
+    )
+
+    # Build comprehensive changes: restored fields + metadata
+    audit_changes: list[dict[str, Any]] = [
+        {
+            "field": "restored_from_entry",
+            "label": "Restored from entry",
+            "old_value": None,
+            "new_value": entry_id,
+        },
+        *restore_changes,
+    ]
+
+    # Log the restore action itself
+    await audit_service.append_entry(
+        db,
+        project_id=project_id,
+        event_type="section_restored",
+        entity_type="section",
+        actor=actor,
+        section_key="applicationOverview",
+        section_label=project_service.SECTION_LABELS.get("applicationOverview", "applicationOverview"),
+        changes=audit_changes,
+    )
+    await db.flush()
+    await db.refresh(project)
+    return _project_detail(project)
 
 
 @router.post("/{project_id}/resources/specs", status_code=204)

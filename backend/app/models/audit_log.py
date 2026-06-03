@@ -24,6 +24,7 @@ class AuditLogEntry(Base):
     entity_label: Mapped[str | None] = mapped_column(String, nullable=True)
     section_key: Mapped[str | None] = mapped_column(String, nullable=True)
     section_label: Mapped[str | None] = mapped_column(String, nullable=True)
+    old_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     changes: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
 
     project: Mapped["Project"] = relationship("Project", back_populates="audit_logs")

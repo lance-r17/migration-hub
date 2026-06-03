@@ -231,7 +231,7 @@ function buildEntry(
   entityType: AuditEntityType,
   sectionKey: keyof Project,
   changes: AuditChange[],
-  extra: { entityId?: string; entityLabel?: string } = {},
+  extra: { entityId?: string; entityLabel?: string; oldSnapshot?: Record<string, unknown> } = {},
 ): AuditLogEntry {
   return {
     id,
@@ -243,6 +243,7 @@ function buildEntry(
     sectionKey: String(sectionKey),
     sectionLabel: SECTION_LABELS[sectionKey],
     changes,
+    oldSnapshot: extra.oldSnapshot,
     ...extra,
   }
 }
@@ -444,6 +445,7 @@ export function useProject(id: string | undefined): ProjectState {
             entryId, id, actorId, actorName, actorInitials,
             'section_updated', 'section', key,
             changes,
+            { oldSnapshot: previous[key] as Record<string, unknown> | undefined },
           ))
         }
       }

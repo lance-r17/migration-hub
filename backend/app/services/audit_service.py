@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit_log import AuditLogEntry
@@ -19,6 +19,7 @@ async def append_entry(
     entity_label: str | None = None,
     section_key: str | None = None,
     section_label: str | None = None,
+    old_snapshot: dict[str, Any] | None = None,
 ) -> AuditLogEntry:
     entry = AuditLogEntry(
         id=str(uuid.uuid4()),
@@ -31,6 +32,7 @@ async def append_entry(
         entity_label=entity_label,
         section_key=section_key,
         section_label=section_label,
+        old_snapshot=old_snapshot,
         changes=changes or [],
     )
     session.add(entry)
@@ -38,14 +40,36 @@ async def append_entry(
 
 
 async def get_by_project(
-    session: AsyncSession, project_id: str
+    session: AsyncSession,
+    project_id: str,
+    limit: int | None = None,
+    offset: int | None = None,
 ) -> list[AuditLogEntry]:
-    result = await session.execute(
+    stmt = (
         select(AuditLogEntry)
         .where(AuditLogEntry.project_id == project_id)
         .order_by(AuditLogEntry.timestamp.desc())
     )
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    if offset is not None:
+        stmt = stmt.offset(offset)
+    result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_by_id(session: AsyncSession, entry_id: str) -> AuditLogEntry | None:
+    result = await session.execute(
+        select(AuditLogEntry).where(AuditLogEntry.id == entry_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def count_by_project(session: AsyncSession, project_id: str) -> int:
+    result = await session.execute(
+        select(func.count()).select_from(AuditLogEntry).where(AuditLogEntry.project_id == project_id)
+    )
+    return result.scalar() or 0
 
 
 async def clear_by_project(session: AsyncSession, project_id: str) -> int:

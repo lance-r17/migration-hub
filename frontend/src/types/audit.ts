@@ -1,5 +1,6 @@
 export type AuditEventType =
   | 'section_updated'
+  | 'section_restored'
   | 'status_changed'
   | 'approval_submitted'
   | 'risk_created'
@@ -45,5 +46,6 @@ export interface AuditLogEntry {
   entityLabel?: string      // human-readable entity name
   sectionKey?: string       // keyof Project being updated
   sectionLabel?: string     // e.g. "Application Overview"
+  oldSnapshot?: Record<string, unknown>
   changes: AuditChange[]
 }

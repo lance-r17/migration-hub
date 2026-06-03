@@ -428,6 +428,7 @@ async def update_section(
     section_key: str,
     value: Any,
     actor: dict[str, Any],
+    skip_audit: bool = False,
 ) -> Project:
     column = SECTION_COLUMN_MAP.get(section_key)
 
@@ -445,9 +446,15 @@ async def update_section(
         if section_key == "waveId" and value:
             await _check_wave_completed(session, value)
         old = getattr(project, column, None)
-        setattr(project, column, value)
-        changes = _diff_section(old, value)
-        if changes:
+        # Merge dict values for JSONB columns so PATCH only updates provided keys
+        if isinstance(old, dict) and isinstance(value, dict):
+            merged = {**old, **value}
+            setattr(project, column, merged)
+            changes = _diff_section(old, merged)
+        else:
+            setattr(project, column, value)
+            changes = _diff_section(old, value)
+        if changes and not skip_audit:
             await audit_service.append_entry(
                 session,
                 project_id=project.id,
@@ -457,6 +464,7 @@ async def update_section(
                 section_key=section_key,
                 section_label=SECTION_LABELS.get(section_key, section_key),
                 changes=changes,
+                old_snapshot=old if isinstance(old, dict) else None,
             )
 
         # Confirm any attachment IDs referenced in the saved section data
@@ -715,7 +723,7 @@ async def _replace_engagement(
     engagement.zoom_meeting_url = engagement_data.get("zoomMeetingUrl")
     engagement.zoom_meeting_id = engagement_data.get("zoomMeetingId")
 
-    changes = _diff_section(old_dict, engagement_data)
+    changes = [c for c in _diff_section(old_dict, engagement_data) if c.get("field") != "notes"]
     if changes:
         await audit_service.append_entry(
             session,

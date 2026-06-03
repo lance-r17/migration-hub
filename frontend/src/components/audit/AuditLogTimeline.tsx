@@ -12,6 +12,8 @@ import {
   ExternalLink,
   GitBranch,
   CircleDot,
+  RotateCcw,
+  History,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatValue } from '@/utils/diff'
@@ -103,6 +105,12 @@ const EVENT_CONFIG: Record<AuditEventType, {
     iconClass: 'text-teal-600 dark:text-teal-400',
     dotClass: 'bg-teal-500',
   },
+  section_restored: {
+    icon: History,
+    label: 'Restored from history',
+    iconClass: 'text-sky-600 dark:text-sky-400',
+    dotClass: 'bg-sky-500',
+  },
 }
 
 // ─── Date grouping ────────────────────────────────────────────────────────────
@@ -133,12 +141,19 @@ const DEFAULT_CONFIG = {
   dotClass: 'bg-slate-500',
 }
 
-function AuditEntry({ entry }: { entry: AuditLogEntry }) {
+function AuditEntry({ entry, showId, isAdmin, onRestore, restoredIds }: { entry: AuditLogEntry; showId?: boolean; isAdmin?: boolean; onRestore?: (entryId: string) => void; restoredIds?: Set<string> }) {
   const config = EVENT_CONFIG[entry.eventType] ?? DEFAULT_CONFIG
   const Icon = config.icon
   const time = format(parseISO(entry.timestamp), 'HH:mm')
 
   const title = entry.entityLabel ?? entry.sectionLabel ?? config.label
+
+  const isRestored = restoredIds?.has(entry.id) ?? false
+  const canRestore =
+    !isRestored &&
+    isAdmin &&
+    entry.eventType === 'section_updated' &&
+    entry.sectionKey === 'applicationOverview'
 
   return (
     <div className="flex gap-3">
@@ -161,6 +176,28 @@ function AuditEntry({ entry }: { entry: AuditLogEntry }) {
           <span className="font-medium">{entry.actor.name}</span>
           <span>·</span>
           <span>{time}</span>
+          {showId && (
+            <>
+              <span>·</span>
+              <span className="font-mono opacity-50" title="Audit log entry ID">{entry.id}</span>
+            </>
+          )}
+          {isRestored && (
+            <span className="ml-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted">
+              <History className="size-3 opacity-60" />
+              Restored
+            </span>
+          )}
+          {canRestore && (
+            <button
+              onClick={() => onRestore?.(entry.id)}
+              className="ml-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950 transition-colors"
+              title="Restore this version"
+            >
+              <RotateCcw className="size-3" />
+              Restore
+            </button>
+          )}
         </div>
 
         {entry.changes.length > 0 && (
@@ -189,9 +226,12 @@ function AuditEntry({ entry }: { entry: AuditLogEntry }) {
 
 interface Props {
   entries: AuditLogEntry[]
+  showIds?: boolean
+  isAdmin?: boolean
+  onRestore?: (entryId: string) => void
 }
 
-export function AuditLogTimeline({ entries }: Props) {
+export function AuditLogTimeline({ entries, showIds, isAdmin, onRestore }: Props) {
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -206,6 +246,17 @@ export function AuditLogTimeline({ entries }: Props) {
     )
   }
 
+  // Build a set of entry IDs that have been restored via section_restored events
+  const restoredIds = new Set<string>()
+  for (const e of entries) {
+    if (e.eventType === 'section_restored') {
+      const ref = e.changes.find(c => c.field === 'restored_from_entry')
+      if (ref?.newValue && typeof ref.newValue === 'string') {
+        restoredIds.add(ref.newValue)
+      }
+    }
+  }
+
   const groups = groupByDate(entries)
 
   return (
@@ -217,7 +268,7 @@ export function AuditLogTimeline({ entries }: Props) {
           </p>
           <div>
             {groupEntries.map(entry => (
-              <AuditEntry key={entry.id} entry={entry} />
+              <AuditEntry key={entry.id} entry={entry} showId={showIds} isAdmin={isAdmin} onRestore={onRestore} restoredIds={restoredIds} />
             ))}
           </div>
         </div>

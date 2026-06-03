@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BadgeCheck, Ban, ClipboardList, History, Lock } from 'lucide-react'
+import { restoreAuditEntry } from '@/services/auditLog'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -529,6 +530,19 @@ export function ProjectDetailsPage() {
         projectId={project.id}
         open={auditLogOpen}
         onClose={() => setAuditLogOpen(false)}
+        showIds={user?.role.includes('admin')}
+        isAdmin={user?.role.includes('admin')}
+        onRestore={async (entryId) => {
+          try {
+            await restoreAuditEntry(project.id, entryId)
+            await refreshProject()
+            toast.success('Application Overview restored', {
+              description: 'The section has been reverted to the selected version.',
+            })
+          } catch {
+            toast.error('Failed to restore. Please try again.')
+          }
+        }}
       />
 
       <AssignWaveDrawer

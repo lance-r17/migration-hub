@@ -29,6 +29,7 @@ class AuditLogEntryOut(BaseModel):
     entity_label: str | None = None
     section_key: str | None = None
     section_label: str | None = None
+    old_snapshot: dict[str, Any] | None = None
     changes: list[dict[str, Any]] = []
 
     @classmethod
@@ -44,6 +45,7 @@ class AuditLogEntryOut(BaseModel):
             entity_label=entry.entity_label,
             section_key=entry.section_key,
             section_label=entry.section_label,
+            old_snapshot=entry.old_snapshot,
             changes=entry.changes or [],
         )
 
@@ -51,3 +53,5 @@ class AuditLogEntryOut(BaseModel):
 class AuditLogResponse(BaseModel):
     entries: list[AuditLogEntryOut]
     total: int
+    limit: int | None = None
+    offset: int | None = None

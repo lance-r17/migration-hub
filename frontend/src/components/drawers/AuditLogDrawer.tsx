@@ -18,6 +18,7 @@ const FILTERS: Array<{ key: AuditEventType | 'all'; label: string }> = [
 
 // Consolidate related event types under a single filter key
 const FILTER_GROUPS: Partial<Record<AuditEventType | 'all', AuditEventType[]>> = {
+  section_updated:  ['section_updated', 'section_restored'],
   risk_created:     ['risk_created', 'risk_updated', 'risk_deleted'],
   resource_updated: ['resource_updated', 'resource_sync_completed'],
 }
@@ -26,9 +27,12 @@ interface Props {
   projectId: string
   open: boolean
   onClose: () => void
+  showIds?: boolean
+  isAdmin?: boolean
+  onRestore?: (entryId: string) => void
 }
 
-export function AuditLogDrawer({ projectId, open, onClose }: Props) {
+export function AuditLogDrawer({ projectId, open, onClose, showIds, isAdmin, onRestore }: Props) {
   const { entries, loading, refresh } = useAuditLog(open ? projectId : undefined)
   const [activeFilter, setActiveFilter] = useState<AuditEventType | 'all'>('all')
 
@@ -88,7 +92,7 @@ export function AuditLogDrawer({ projectId, open, onClose }: Props) {
               ))}
             </div>
           ) : (
-            <AuditLogTimeline entries={filtered} />
+            <AuditLogTimeline entries={filtered} showIds={showIds} isAdmin={isAdmin} onRestore={onRestore} />
           )}
         </div>
       </SheetContent>
