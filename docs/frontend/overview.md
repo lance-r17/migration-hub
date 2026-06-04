@@ -64,8 +64,10 @@ frontend/
 │   ├── utils/
 │   │   └── diff.ts                 # Object diff engine for audit logging
 │   └── lib/
-│       ├── utils.ts                # cn() helper
-│       └── noteTemplateUtils.ts    # Block sanitisation, variable resolution, smart replacement
+│       ├── utils.ts                   # cn() helper
+│       ├── noteTemplateUtils.ts       # Block sanitisation, variable resolution, smart replacement
+│       ├── gbi-utils.ts               # GBI tree helpers (filter, collectAllIds, findNodeById, prune, promote)
+│       └── categoryMilestoneIcons.ts  # Icon map for category milestone Gantt overlay
 │
 └── packages/
     └── notion-editor/              # @frontend/notion-editor workspace package

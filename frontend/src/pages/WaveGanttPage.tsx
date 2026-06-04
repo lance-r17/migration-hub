@@ -7,12 +7,15 @@ import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
 import { useCategoryMilestones } from '@/hooks/use-category-milestones'
 import { useCurrentUser } from '@/context/UserContext'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { updatePlanning, updateProject } from '@/services/projects'
 import { updateProjectOrder } from '@/services/waves'
 import { appendAuditEntryMock } from '@/services/auditLog'
+import { getGbiHierarchy } from '@/services/gbi'
 import { USE_MOCK } from '@/services/client'
 import type { Project, ProjectPlanning } from '@/types'
 import type { Wave } from '@/types/wave'
+import type { GbiNode } from '@/types/gbi'
 
 export function WaveGanttPage() {
   const navigate = useNavigate()
@@ -25,9 +28,18 @@ export function WaveGanttPage() {
 
   const [liveWaves, setLiveWaves] = useState<Wave[]>(initialWaves)
   const [liveProjects, setLiveProjects] = useState<Project[]>(initialProjects)
+  const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
 
   useEffect(() => { setLiveWaves(initialWaves) }, [initialWaves])
   useEffect(() => { setLiveProjects(initialProjects) }, [initialProjects])
+
+  useEffect(() => {
+    let cancelled = false
+    getGbiHierarchy()
+      .then(data => { if (!cancelled) setGbiRoot(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   const sortedWaves = useMemo(() => {
     return [...liveWaves].sort((a, b) => {
@@ -90,7 +102,10 @@ export function WaveGanttPage() {
   }
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
+  const canUseGbiFilter = isPlatformLead || isGbiCloudLead
   const isLoading = wavesLoading || projectsLoading || cmLoading
+  const { settings: migrationSettings } = useMigrationSettings()
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -138,6 +153,9 @@ export function WaveGanttPage() {
             waves={sortedWaves}
             projects={liveProjects}
             categoryMilestones={categoryMilestones}
+            gbiRoot={canUseGbiFilter ? gbiRoot : null}
+            gbiScopeId={isPlatformLead ? null : (user?.gbi_id ?? null)}
+            gbiMaxDepth={migrationSettings?.gbiTierDepth ?? null}
             onUpdatePlanning={handleUpdatePlanning}
             onUpdateProjectOrder={isPlatformLead ? handleUpdateProjectOrder : undefined}
             onAssign={isPlatformLead ? handleAssign : undefined}

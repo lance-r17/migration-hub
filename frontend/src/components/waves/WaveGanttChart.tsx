@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -10,8 +10,17 @@ import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, Milest
 import type { Wave } from '@/types/wave'
 import type { EmbargoRecord } from '@/types/embargo'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
+import type { GbiNode, SelectAction } from '@/types/gbi'
 import { CATEGORY_MILESTONE_ICON_MAP } from '@/lib/categoryMilestoneIcons'
 import { useEmbargos } from '@/hooks/use-embargos'
+import {
+  filterGbiTree,
+  collectAllIds,
+  findNodeById,
+  isDescendantOf,
+  pruneEmptySelections,
+  promoteFullSelections,
+} from '@/lib/gbi-utils'
 
 import { Button } from '../ui/button'
 import {
@@ -38,6 +47,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Input } from '@/components/ui/input'
+import { GbiTree } from '@/components/gbi/GbiTree'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -388,13 +404,16 @@ interface Props {
   waves: Wave[]
   projects: Project[]
   categoryMilestones?: CategoryMilestone[]
+  gbiRoot?: GbiNode | null
+  gbiScopeId?: string | null
+  gbiMaxDepth?: number | null
   onUpdatePlanning: (projectId: string, planning: ProjectPlanning) => Promise<void>
   onUpdateProjectOrder?: (waveId: string, projectIds: string[]) => Promise<void>
   onAssign?: (projectId: string, waveId: string | undefined) => void
   readOnly?: boolean
 }
 
-export function WaveGanttChart({ waves, projects, categoryMilestones = [], onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly }: Props) {
+export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRoot = null, gbiScopeId = null, gbiMaxDepth = null, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly }: Props) {
   const [showCompleted, setShowCompleted] = useState(true)
   const scrollRef    = useRef<HTMLDivElement>(null)
   const milestoneGhostRef     = useRef<HTMLDivElement>(null)
@@ -422,6 +441,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], onUpd
   const [statusDialog, setStatusDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; nextStatus: MilestoneStatus } | null>(null)
   const [deleteDialog, setDeleteDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; milestoneName: string } | null>(null)
   const [cmFilter, setCmFilter]                 = useState<Set<string>>(new Set())
+  const [gbiFilterOpen, setGbiFilterOpen]       = useState(false)
+  const [gbiFilterSearch, setGbiFilterSearch]   = useState('')
+  const [selectedGbiIds, setSelectedGbiIds]     = useState<Set<string>>(new Set())
+  const [excludedGbiIds, setExcludedGbiIds]     = useState<Set<string>>(new Set())
 
   const colPx      = ZOOM_COL_PX[zoom]
   const daysPerCol = ZOOM_DAYS_PER_COL[zoom]
@@ -1282,6 +1305,28 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], onUpd
     return set
   }, [hasCmFilter, cmFilter, projects])
 
+  const filteredGbiRoot = useMemo(() => {
+    if (!gbiRoot) return null
+    const filtered = filterGbiTree([gbiRoot], gbiFilterSearch)
+    return filtered[0] ?? null
+  }, [gbiRoot, gbiFilterSearch])
+
+  const selectedGbiDescendantIds = useMemo(() => {
+    if (!gbiRoot || selectedGbiIds.size === 0) return null
+    const allIds = new Set<string>()
+    for (const id of selectedGbiIds) {
+      const node = findNodeById(gbiRoot, id)
+      if (node) collectAllIds(node).forEach(i => allIds.add(i))
+    }
+    for (const eid of excludedGbiIds) {
+      const node = findNodeById(gbiRoot, eid)
+      if (node) collectAllIds(node).forEach(i => allIds.delete(i))
+    }
+    return allIds
+  }, [gbiRoot, selectedGbiIds, excludedGbiIds])
+
+  const hasGbiFilter = selectedGbiIds.size > 0
+
   const rows = useMemo<RowItem[]>(() => {
     const result: RowItem[] = []
     let projectCounter = 0
@@ -1305,10 +1350,11 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], onUpd
       const visibleWaveProjects = waveProjectsRaw.filter(p =>
         (!hasSearch || matchingProjectIds.has(p.id)) &&
         (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
-        (!hasCmFilter || matchingCmIds.has(p.id))
+        (!hasCmFilter || matchingCmIds.has(p.id)) &&
+        (!hasGbiFilter || (p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id)))
       )
 
-      if ((hasSearch || hasDurationFilter || hasCmFilter) && visibleWaveProjects.length === 0) continue
+      if ((hasSearch || hasDurationFilter || hasCmFilter || hasGbiFilter) && visibleWaveProjects.length === 0) continue
 
       result.push({ type: 'wave', wave })
       if (!collapsedWaves.has(wave.id)) {
@@ -1340,7 +1386,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], onUpd
     const visibleUnassigned = unassignedProjects.filter(p =>
       (!hasSearch || matchingProjectIds.has(p.id)) &&
       (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
-      (!hasCmFilter || matchingCmIds.has(p.id))
+      (!hasCmFilter || matchingCmIds.has(p.id)) &&
+      (!hasGbiFilter || (p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id)))
     )
 
     if (visibleUnassigned.length > 0) {
@@ -1360,7 +1407,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], onUpd
     }
     return result
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, categoryMilestones])
+  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasGbiFilter, selectedGbiDescendantIds, categoryMilestones])
 
   // ─── Row height helpers ──────────────────────────────────────────────────────
 
@@ -1478,6 +1525,113 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], onUpd
           </Label>
         </div>
         <div className="flex-1" />
+        {gbiRoot && (
+          <>
+            <Popover open={gbiFilterOpen} onOpenChange={setGbiFilterOpen}>
+              <PopoverTrigger asChild>
+                <button className="relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-[12px] text-[var(--g-text-muted)] mr-2">
+                  <Network size={13} className={selectedGbiIds.size > 0 ? 'text-[oklch(0.48_0.20_260)]' : ''} />
+                  <span>GBI</span>
+                  {selectedGbiIds.size > 0 && (
+                    <span className="absolute -top-1 -right-4 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
+                      {selectedGbiIds.size}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-96 p-0" align="start">
+                <div className="p-3 border-b border-border">
+                  <p className="text-sm font-semibold">GBI Hierarchy</p>
+                  <p className="text-xs text-muted-foreground">Select tiers to filter projects</p>
+                </div>
+                <div className="p-2 border-b border-border">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Search GBI..."
+                      value={gbiFilterSearch}
+                      onChange={(e) => setGbiFilterSearch(e.target.value)}
+                      className="pl-8 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-80 overflow-y-auto p-2">
+                  {filteredGbiRoot ? (
+                    <GbiTree
+                      nodes={[filteredGbiRoot]}
+                      selectedIds={selectedGbiIds}
+                      excludedIds={excludedGbiIds}
+                      scopeId={gbiScopeId}
+                      onSelect={(node, action: SelectAction) => {
+                        if (action === 'select') {
+                          let nextSelected = new Set([...selectedGbiIds, node.id])
+                          let nextExcluded = new Set(excludedGbiIds)
+                          if (gbiRoot) {
+                            const selectedNode = findNodeById(gbiRoot, node.id)
+                            if (selectedNode) {
+                              collectAllIds(selectedNode).forEach((id) => {
+                                if (id !== node.id) nextSelected.delete(id)
+                              })
+                            }
+                            for (const ex of excludedGbiIds) {
+                              if (isDescendantOf(gbiRoot, ex, node.id)) {
+                                nextExcluded.delete(ex)
+                              }
+                            }
+                            const promoted = promoteFullSelections(gbiRoot, nextSelected, nextExcluded, node.id)
+                            nextSelected = promoted.selected
+                            nextExcluded = promoted.excluded
+                          }
+                          setSelectedGbiIds(nextSelected)
+                          setExcludedGbiIds(nextExcluded)
+                        } else if (action === 'unselect') {
+                          const nextSelected = new Set(selectedGbiIds)
+                          nextSelected.delete(node.id)
+                          const nextExcluded = new Set(excludedGbiIds)
+                          if (gbiRoot) {
+                            for (const ex of excludedGbiIds) {
+                              if (isDescendantOf(gbiRoot, ex, node.id)) {
+                                nextExcluded.delete(ex)
+                              }
+                            }
+                            const pruned = pruneEmptySelections(gbiRoot, nextSelected, nextExcluded)
+                            setSelectedGbiIds(pruned)
+                          } else {
+                            setSelectedGbiIds(nextSelected)
+                          }
+                          setExcludedGbiIds(nextExcluded)
+                        } else if (action === 'exclude') {
+                          const nextExcluded = new Set(excludedGbiIds)
+                          nextExcluded.add(node.id)
+                          if (gbiRoot) {
+                            const pruned = pruneEmptySelections(gbiRoot, selectedGbiIds, nextExcluded)
+                            setSelectedGbiIds(pruned)
+                          }
+                          setExcludedGbiIds(nextExcluded)
+                        } else if (action === 'unexclude') {
+                          let nextExcluded = new Set(excludedGbiIds)
+                          nextExcluded.delete(node.id)
+                          if (gbiRoot) {
+                            const promoted = promoteFullSelections(gbiRoot, selectedGbiIds, nextExcluded, node.id)
+                            setSelectedGbiIds(promoted.selected)
+                            setExcludedGbiIds(promoted.excluded)
+                          } else {
+                            setExcludedGbiIds(nextExcluded)
+                          }
+                        }
+                      }}
+                      readOnly
+                      maxDepth={gbiMaxDepth}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No GBI hierarchy available.</p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <div className="w-px h-3 bg-[var(--g-border)]" />
+          </>
+        )}
         {categoryMilestones.length > 0 && (
           <>
             <DropdownMenu>
