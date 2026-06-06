@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import Boolean, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,5 +19,6 @@ class Wave(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String, nullable=False, default="planned")
     color: Mapped[str | None] = mapped_column(String, nullable=True)
     project_order: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     projects: Mapped[list["Project"]] = relationship("Project", back_populates="wave")

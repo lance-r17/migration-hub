@@ -26,6 +26,7 @@ def _wave_out(wave) -> WaveOut:
         status=wave.status,
         color=wave.color,
         project_order=wave.project_order,
+        deleted=wave.deleted,
         created_at=wave.created_at.isoformat() if wave.created_at else None,
     )
 
@@ -116,6 +117,16 @@ async def update_project_order(wave_id: str, body: ProjectOrderBody, db: AsyncSe
     wave.project_order = body.project_order
     await db.commit()
     return _wave_out(wave)
+
+
+@router.delete("/{wave_id}", status_code=204)
+async def delete_wave(wave_id: str, db: AsyncSession = Depends(get_db)):
+    wave = await wave_service.get_by_id(db, wave_id)
+    if not wave:
+        raise HTTPException(status_code=404, detail="Wave not found")
+    await wave_service.soft_delete(db, wave)
+    await db.commit()
+    return None
 
 
 @router.post("/{wave_id}/sync", response_model=WaveOut)

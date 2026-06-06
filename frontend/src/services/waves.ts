@@ -22,6 +22,7 @@ interface WaveApiRecord {
   status: string
   color?: string
   project_order?: string[]
+  deleted?: boolean
   created_at: string
 }
 
@@ -39,6 +40,7 @@ function fromApi(r: WaveApiRecord): Wave {
     status: r.status as Wave['status'],
     color: r.color,
     projectOrder: r.project_order,
+    deleted: r.deleted,
     createdAt: r.created_at,
   }
 }
@@ -56,7 +58,7 @@ function toApi(data: Omit<Wave, 'id' | 'createdAt' | 'jiraEpicKey' | 'jiraProjec
 }
 
 export async function getWaves(): Promise<Wave[]> {
-  if (USE_MOCK) { await delay(); return store.getWaves() }
+  if (USE_MOCK) { await delay(); return store.getAllWaves() }
   const records = await apiClient.get<WaveApiRecord[]>(ENDPOINTS.waves)
   return records.map(fromApi)
 }
@@ -88,7 +90,7 @@ export async function createWave(
   return fromApi(record)
 }
 
-export async function updateWave(id: string, patch: { color?: string }): Promise<Wave> {
+export async function updateWave(id: string, patch: { color?: string; deleted?: boolean }): Promise<Wave> {
   if (USE_MOCK) {
     await delay()
     return store.updateWave(id, patch)
@@ -104,6 +106,15 @@ export async function syncWaveFromJira(id: string): Promise<Wave> {
   }
   const record = await apiClient.post<WaveApiRecord>(ENDPOINTS.sync(id), {})
   return fromApi(record)
+}
+
+export async function deleteWave(id: string): Promise<void> {
+  if (USE_MOCK) {
+    await delay()
+    store.deleteWave(id)
+    return
+  }
+  await apiClient.delete<void>(ENDPOINTS.wave(id))
 }
 
 export async function updateProjectOrder(waveId: string, projectIds: string[]): Promise<Wave> {

@@ -86,7 +86,9 @@ async def scan_and_enqueue(session: AsyncSession) -> list[str]:
 
     # Find waves with cutover_date matching any target date
     wave_result = await session.execute(
-        select(Wave).where(Wave.cutover_date.in_([d.isoformat() for d in target_dates]))
+        select(Wave)
+        .where(Wave.cutover_date.in_([d.isoformat() for d in target_dates]))
+        .where(Wave.deleted == False)  # noqa: E712
     )
     waves = list(wave_result.scalars().all())
     if not waves:

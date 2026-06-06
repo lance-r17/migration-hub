@@ -26,6 +26,7 @@ export interface Wave {
   status: WaveStatus
   color?: string          // hex color from WAVE_COLORS
   projectOrder?: string[] // manual project ordering within the wave
+  deleted?: boolean
   createdAt: string       // ISO 8601
 }
 

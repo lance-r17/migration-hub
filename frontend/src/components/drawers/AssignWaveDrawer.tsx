@@ -32,7 +32,7 @@ export function AssignWaveDrawer({ open, onOpenChange, waves, currentWaveId, onS
   }, [open, currentWaveId])
 
   const sortedWaves = useMemo(() => {
-    return [...waves].sort((a, b) => {
+    return [...waves].filter(w => !w.deleted).sort((a, b) => {
       const startCompare = a.startDate.localeCompare(b.startDate)
       if (startCompare !== 0) return startCompare
       return a.cutoverDate.localeCompare(b.cutoverDate)

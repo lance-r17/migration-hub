@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getWaves, createWave, importWave } from '@/services/waves'
+import { getWaves, createWave, importWave, deleteWave, updateWave } from '@/services/waves'
 import type { Wave } from '@/types/wave'
 
 interface WavesState {
@@ -11,6 +11,8 @@ interface WavesState {
 export function useWaves(options?: { enabled?: boolean }): WavesState & {
   createWave: (data: Omit<Wave, 'id' | 'createdAt' | 'jiraEpicKey'>) => Promise<Wave>
   importWave: (epicKey: string, color?: string) => Promise<Wave>
+  deleteWave: (id: string) => Promise<void>
+  restoreWave: (id: string) => Promise<Wave>
 } {
   const enabled = options?.enabled !== false
   const [state, setState] = useState<WavesState>({
@@ -48,9 +50,28 @@ export function useWaves(options?: { enabled?: boolean }): WavesState & {
     return wave
   }, [])
 
+  const handleDelete = useCallback(async (id: string) => {
+    await deleteWave(id)
+    setState(prev => ({
+      ...prev,
+      waves: prev.waves.map(w => w.id === id ? { ...w, deleted: true } : w)
+    }))
+  }, [])
+
+  const handleRestore = useCallback(async (id: string) => {
+    const updated = await updateWave(id, { deleted: false })
+    setState(prev => ({
+      ...prev,
+      waves: prev.waves.map(w => w.id === id ? updated : w)
+    }))
+    return updated
+  }, [])
+
   return {
     ...state,
     createWave: handleCreate,
     importWave: handleImport,
+    deleteWave: handleDelete,
+    restoreWave: handleRestore,
   }
 }

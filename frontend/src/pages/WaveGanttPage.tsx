@@ -22,7 +22,7 @@ export function WaveGanttPage() {
   const { user } = useCurrentUser()
   const { waves: initialWaves, loading: wavesLoading } = useWaves()
   const { projects: initialProjects, loading: projectsLoading } = useProjects({
-    fields: ['basic', 'progress', 'planning'],
+    fields: ['basic', 'progress', 'planning', 'availability', 'target_architecture'],
   })
   const { categoryMilestones, loading: cmLoading } = useCategoryMilestones()
 

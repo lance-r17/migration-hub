@@ -1,12 +1,10 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Waves, Download, Plus, Lock, GanttChart, AlertTriangle, Tag, Users, Link, Pencil, Trash2,
+  Waves, Download, Plus, Lock, GanttChart, Tag, Users, Link, Pencil, Trash2, RotateCcw,
 } from 'lucide-react'
-import { isBefore, isAfter } from 'date-fns'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -16,12 +14,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { CreateWaveDrawer } from '@/components/drawers/CreateWaveDrawer'
 import { ImportWaveDrawer } from '@/components/drawers/ImportWaveDrawer'
 import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
-import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { useCurrentUser } from '@/context/UserContext'
 import { EditWaveDrawer } from '@/components/drawers/EditWaveDrawer'
 import { CategoryMilestoneDrawer } from '@/components/drawers/CategoryMilestoneDrawer'
@@ -30,19 +36,9 @@ import { useCategoryMilestones } from '@/hooks/use-category-milestones'
 import { updateProject } from '@/services/projects'
 import { appendAuditEntryMock } from '@/services/auditLog'
 import { USE_MOCK } from '@/services/client'
-import type { Wave, WaveStatus } from '@/types/wave'
+import type { Wave } from '@/types/wave'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
 import { CATEGORY_MILESTONE_ICON_MAP } from '@/lib/categoryMilestoneIcons'
-
-function WaveStatusBadge({ status }: { status: WaveStatus }) {
-  const config: Record<WaveStatus, { label: string; className: string }> = {
-    planned: { label: 'Planned', className: 'bg-muted text-muted-foreground border-border' },
-    active:  { label: 'Active',  className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
-    completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
-  }
-  const { label, className } = config[status]
-  return <Badge variant="outline" className={className}>{label}</Badge>
-}
 
 function formatDate(iso: string) {
   if (!iso) return '—'
@@ -51,22 +47,22 @@ function formatDate(iso: string) {
   return `${day} ${months[parseInt(month, 10) - 1]} ${year}`
 }
 
-function isWaveOutOfPeriod(wave: Wave, platformPeriod?: { startDate?: string; endDate?: string }): boolean {
-  if (!platformPeriod?.startDate || !platformPeriod?.endDate) return false
-  return isBefore(new Date(wave.startDate), new Date(platformPeriod.startDate)) ||
-    isAfter(new Date(wave.cutoverDate), new Date(platformPeriod.endDate))
-}
-
 export function WavesPage() {
   const { user } = useCurrentUser()
-  const { settings } = useMigrationSettings()
-  const { waves, loading, createWave, importWave } = useWaves()
+  const { waves, loading, createWave, importWave, deleteWave, restoreWave } = useWaves()
   const { projects: initialProjects } = useProjects({ fields: ['basic'] })
   const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [selectedWave, setSelectedWave] = useState<Wave | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingWave, setDeletingWave] = useState<Wave | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false)
+  const [restoringWave, setRestoringWave] = useState<Wave | null>(null)
+  const [restoreLoading, setRestoreLoading] = useState(false)
 
   const [liveWaves, setLiveWaves] = useState(waves)
   const [liveProjects, setLiveProjects] = useState(initialProjects)
@@ -88,6 +84,10 @@ export function WavesPage() {
   const [assignDrawerOpen, setAssignDrawerOpen] = useState(false)
   const [assigningCM, setAssigningCM] = useState<CategoryMilestone | null>(null)
   const [assignLoading, setAssignLoading] = useState(false)
+
+  const [cmDeleteDialogOpen, setCmDeleteDialogOpen] = useState(false)
+  const [deletingCM, setDeletingCM] = useState<CategoryMilestone | null>(null)
+  const [cmDeleteLoading, setCmDeleteLoading] = useState(false)
   
   useEffect(() => {
     setLiveProjects(initialProjects)
@@ -100,12 +100,13 @@ export function WavesPage() {
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
   
   const sortedWaves = useMemo(() => {
-    return [...liveWaves].sort((a, b) => {
+    const source = showDeleted ? liveWaves : liveWaves.filter(w => !w.deleted)
+    return [...source].sort((a, b) => {
       const startCompare = a.startDate.localeCompare(b.startDate)
       if (startCompare !== 0) return startCompare
       return a.cutoverDate.localeCompare(b.cutoverDate)
     })
-  }, [liveWaves])
+  }, [liveWaves, showDeleted])
 
   const handleWaveUpdated = useCallback((updated: Wave) => {
     setLiveWaves(prev => prev.map(w => w.id === updated.id ? updated : w))
@@ -190,12 +191,18 @@ export function WavesPage() {
     }
   }
 
-  const handleDeleteCM = async (cm: CategoryMilestone) => {
+  const handleDeleteCM = async () => {
+    if (!deletingCM) return
+    setCmDeleteLoading(true)
     try {
-      await deleteCategoryMilestone(cm.id)
+      await deleteCategoryMilestone(deletingCM.id)
       toast.success('Category milestone deleted')
     } catch {
       toast.error('Failed to delete category milestone')
+    } finally {
+      setCmDeleteLoading(false)
+      setCmDeleteDialogOpen(false)
+      setDeletingCM(null)
     }
   }
 
@@ -236,6 +243,49 @@ export function WavesPage() {
     })
   }
 
+  const handleDeleteWave = useCallback(async () => {
+    if (!deletingWave) return
+    setDeleteLoading(true)
+    const wave = deletingWave
+    const projectIds = liveProjects.filter(p => p.waveId === wave.id).map(p => p.id)
+
+    try {
+      await deleteWave(wave.id)
+      if (projectIds.length > 0) {
+        setLiveProjects(prev => prev.map(p =>
+          projectIds.includes(p.id) ? { ...p, waveId: undefined } : p
+        ))
+        await Promise.all(projectIds.map(id => updateProject(id, 'waveId', undefined)))
+        toast.success(projectIds.length === 1 ? '1 project unassigned' : `${projectIds.length} projects unassigned`)
+      }
+      setLiveWaves(prev => prev.map(w => w.id === wave.id ? { ...w, deleted: true } : w))
+      toast.success(`Wave "${wave.name}" deleted`)
+    } catch {
+      toast.error('Failed to delete wave. Reverting...')
+      setLiveProjects(initialProjects)
+    } finally {
+      setDeleteLoading(false)
+      setDeleteDialogOpen(false)
+      setDeletingWave(null)
+    }
+  }, [deletingWave, liveProjects, initialProjects, deleteWave])
+
+  const handleRestoreWave = useCallback(async () => {
+    if (!restoringWave) return
+    setRestoreLoading(true)
+    try {
+      const updated = await restoreWave(restoringWave.id)
+      setLiveWaves(prev => prev.map(w => w.id === updated.id ? updated : w))
+      toast.success(`Wave "${updated.name}" restored`)
+    } catch {
+      toast.error('Failed to restore wave')
+    } finally {
+      setRestoreLoading(false)
+      setRestoreDialogOpen(false)
+      setRestoringWave(null)
+    }
+  }, [restoringWave, restoreWave])
+
   return (
     <AppShell title="Wave Planning">
       <div className="max-w-screen-xl mx-auto w-full flex flex-col flex-1 min-h-0 space-y-8">
@@ -269,6 +319,10 @@ export function WavesPage() {
         </div>
 
         {/* Waves Table */}
+        <div className="flex items-center justify-end gap-2 mb-2">
+          <span className="text-sm text-muted-foreground">Show deleted</span>
+          <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
+        </div>
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>
             <TableHeader>
@@ -278,7 +332,7 @@ export function WavesPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Cutover Date</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Jira Epic</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Projects</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -297,11 +351,12 @@ export function WavesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedWaves.map((wave: Wave) => (
+                sortedWaves.map((wave: Wave) => {
+                  const isDeleted = wave.deleted
+                  return (
                   <TableRow
                     key={wave.id}
-                    className="cursor-pointer hover:bg-muted/40"
-                    onClick={() => { setSelectedWave(wave); setEditOpen(true) }}
+                    className={isDeleted ? 'opacity-60 bg-muted/20' : 'hover:bg-muted/40'}
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -310,7 +365,9 @@ export function WavesPage() {
                           style={{ background: wave.color ?? '#3B82F6' }}
                         />
                         <div>
-                          <p className="font-medium text-foreground">{wave.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className={isDeleted ? 'font-medium text-muted-foreground line-through' : 'font-medium text-foreground'}>{wave.name}</p>
+                          </div>
                           {wave.description && (
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{wave.description}</p>
                           )}
@@ -326,7 +383,7 @@ export function WavesPage() {
                     <TableCell>
                       {wave.jiraEpicKey ? (
                         wave.jiraBaseUrl ? (
-                          <a 
+                          <a
                             href={`${wave.jiraBaseUrl}/browse/${wave.jiraEpicKey}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -347,17 +404,42 @@ export function WavesPage() {
                       {projectCountByWave(wave.id)}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <WaveStatusBadge status={wave.status} />
-                        {isWaveOutOfPeriod(wave, settings?.platformPeriod) && (
-                          <span title="Wave dates fall outside the platform migration period" className="inline-flex items-center text-amber-600">
-                            <AlertTriangle size={14} />
-                          </span>
-                        )}
-                      </div>
+                      {isDeleted ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-primary hover:text-primary"
+                          onClick={() => { setRestoringWave(wave); setRestoreDialogOpen(true) }}
+                          title="Restore"
+                        >
+                          <RotateCcw className="size-4" />
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => { setSelectedWave(wave); setEditOpen(true) }}
+                            title="Edit"
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-destructive hover:text-destructive"
+                            onClick={() => { setDeletingWave(wave); setDeleteDialogOpen(true) }}
+                            title="Delete"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               )}
             </TableBody>
           </Table>
@@ -459,7 +541,7 @@ export function WavesPage() {
                             variant="ghost"
                             size="icon"
                             className="size-8 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteCM(cm)}
+                            onClick={() => { setDeletingCM(cm); setCmDeleteDialogOpen(true) }}
                             title="Delete"
                             data-testid="delete-category-milestone-btn"
                           >
@@ -513,6 +595,68 @@ export function WavesPage() {
         onAssign={handleBatchAssign}
         loading={assignLoading}
       />
+
+      <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore Wave</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to restore <strong>{restoringWave?.name}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRestoreDialogOpen(false)} disabled={restoreLoading}>
+              Cancel
+            </Button>
+            <Button variant="default" onClick={handleRestoreWave} disabled={restoreLoading}>
+              {restoreLoading ? 'Restoring...' : 'Restore'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Wave</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deletingWave?.name}</strong>?
+              {liveProjects.filter(p => p.waveId === deletingWave?.id).length > 0 && (
+                <> All {liveProjects.filter(p => p.waveId === deletingWave?.id).length} project(s) assigned to this wave will be unassigned.</>
+              )}
+              {' '}This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteWave} disabled={deleteLoading}>
+              {deleteLoading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cmDeleteDialogOpen} onOpenChange={setCmDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Category Milestone</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deletingCM?.name}</strong>?
+              {' '}This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCmDeleteDialogOpen(false)} disabled={cmDeleteLoading}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteCM} disabled={cmDeleteLoading}>
+              {cmDeleteLoading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   )
 }

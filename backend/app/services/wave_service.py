@@ -3,12 +3,15 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.project import Project
 from app.models.wave import Wave
 from app.schemas.wave import WaveCreate, WavePatch
 
 
 async def get_all(session: AsyncSession) -> list[Wave]:
-    result = await session.execute(select(Wave).order_by(Wave.created_at.desc()))
+    result = await session.execute(
+        select(Wave).order_by(Wave.created_at.desc())
+    )
     return list(result.scalars().all())
 
 
@@ -98,9 +101,20 @@ async def sync_from_jira(session: AsyncSession, wave_id: str) -> Wave:
     return wave
 
 
+async def soft_delete(session: AsyncSession, wave: Wave) -> None:
+    wave.deleted = True
+    result = await session.execute(select(Project).where(Project.wave_id == wave.id))
+    for project in result.scalars().all():
+        project.wave_id = None
+    await session.flush()
+    await session.refresh(wave)
+
+
 async def import_from_jira(session: AsyncSession, epic_key: str, color: str | None = None) -> Wave:
     """Import a wave from Jira by epic key."""
-    result = await session.execute(select(Wave).filter(Wave.jira_epic_key == epic_key))
+    result = await session.execute(
+        select(Wave).filter(Wave.jira_epic_key == epic_key, Wave.deleted == False)  # noqa: E712
+    )
     existing_wave = result.scalar_one_or_none()
     if existing_wave:
         raise ValueError(f"Wave with epic key {epic_key} already exists")

@@ -23,6 +23,7 @@ class WaveOut(BaseModel):
     status: str
     color: str | None = None
     project_order: list[str] | None = None
+    deleted: bool | None = None
     created_at: str | None = None
 
     @classmethod
@@ -54,6 +55,7 @@ class WavePatch(BaseModel):
     jira_epic_key: str | None = None
     status: str | None = None
     color: str | None = None
+    deleted: bool | None = None
 
 
 class WaveImportRequest(BaseModel):

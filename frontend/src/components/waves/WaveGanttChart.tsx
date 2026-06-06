@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
-import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, MilestoneStatus } from '@/types'
+import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, MilestoneStatus, MigrationStrategy, ApplicationTier } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { EmbargoRecord } from '@/types/embargo'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
@@ -53,6 +53,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
+import { MultiAutocomplete } from '@/components/ui/multi-autocomplete'
 import { GbiTree } from '@/components/gbi/GbiTree'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -445,6 +446,14 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
   const [gbiFilterSearch, setGbiFilterSearch]   = useState('')
   const [selectedGbiIds, setSelectedGbiIds]     = useState<Set<string>>(new Set())
   const [excludedGbiIds, setExcludedGbiIds]     = useState<Set<string>>(new Set())
+  const [advFilterOpen, setAdvFilterOpen]       = useState(false)
+  const [selectedMigrationStrategies, setSelectedMigrationStrategies] = useState<Set<MigrationStrategy>>(new Set())
+  const [selectedApplicationTiers, setSelectedApplicationTiers]       = useState<Set<ApplicationTier>>(new Set())
+  const [selectedReArch, setSelectedReArch]     = useState<Set<'yes' | 'no' | 'unset'>>(new Set())
+  const [selectedRtos, setSelectedRtos]         = useState<Set<string>>(new Set())
+  const [selectedRpos, setSelectedRpos]         = useState<Set<string>>(new Set())
+  const [rtoSearch, setRtoSearch]               = useState('')
+  const [rpoSearch, setRpoSearch]               = useState('')
 
   const colPx      = ZOOM_COL_PX[zoom]
   const daysPerCol = ZOOM_DAYS_PER_COL[zoom]
@@ -1008,8 +1017,9 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
   const waveMap = useMemo(() => new Map(waves.map(w => [w.id, w])), [waves])
 
   const sortedWaves = useMemo(() => {
-    const filtered = showCompleted ? waves : waves.filter(w => w.status !== 'completed')
-    return [...filtered].sort((a, b) => {
+    const filtered = waves.filter(w => !w.deleted)
+    const shown = showCompleted ? filtered : filtered.filter(w => w.status !== 'completed')
+    return [...shown].sort((a, b) => {
       const sc = a.startDate.localeCompare(b.startDate)
       return sc !== 0 ? sc : a.cutoverDate.localeCompare(b.cutoverDate)
     })
@@ -1327,6 +1337,36 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
 
   const hasGbiFilter = selectedGbiIds.size > 0
 
+  const hasAdvFilter = selectedMigrationStrategies.size > 0 || selectedApplicationTiers.size > 0 || selectedReArch.size > 0 || selectedRtos.size > 0 || selectedRpos.size > 0
+  const advFilterCount = selectedMigrationStrategies.size + selectedApplicationTiers.size + selectedReArch.size + selectedRtos.size + selectedRpos.size
+
+  const availableRtos = useMemo(() => [...new Set(projects.map(p => p.availability?.rto).filter((v): v is string => Boolean(v)))].sort((a, b) => a.localeCompare(b)), [projects])
+  const availableRpos = useMemo(() => [...new Set(projects.map(p => p.availability?.rpo).filter((v): v is string => Boolean(v)))].sort((a, b) => a.localeCompare(b)), [projects])
+
+  const matchingAdvIds = useMemo(() => {
+    if (!hasAdvFilter) return new Set<string>()
+    const set = new Set<string>()
+    for (const p of projects) {
+      const strategy = p.applicationOverview?.migrationStrategy
+      const tier = p.applicationOverview?.applicationTier
+      const reArch = p.targetArchitecture?.reArchitectureNeeded
+      const rto = p.availability?.rto
+      const rpo = p.availability?.rpo
+      let ok = true
+      if (selectedMigrationStrategies.size > 0 && (!strategy || !selectedMigrationStrategies.has(strategy))) ok = false
+      if (selectedApplicationTiers.size > 0 && (!tier || !selectedApplicationTiers.has(tier))) ok = false
+      if (selectedReArch.size > 0) {
+        if (reArch === true && !selectedReArch.has('yes')) ok = false
+        else if (reArch === false && !selectedReArch.has('no')) ok = false
+        else if (reArch === undefined && !selectedReArch.has('unset')) ok = false
+      }
+      if (selectedRtos.size > 0 && (!rto || !selectedRtos.has(rto))) ok = false
+      if (selectedRpos.size > 0 && (!rpo || !selectedRpos.has(rpo))) ok = false
+      if (ok) set.add(p.id)
+    }
+    return set
+  }, [hasAdvFilter, selectedMigrationStrategies, selectedApplicationTiers, selectedReArch, selectedRtos, selectedRpos, projects])
+
   const rows = useMemo<RowItem[]>(() => {
     const result: RowItem[] = []
     let projectCounter = 0
@@ -1351,10 +1391,11 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
         (!hasSearch || matchingProjectIds.has(p.id)) &&
         (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
         (!hasCmFilter || matchingCmIds.has(p.id)) &&
-        (!hasGbiFilter || (p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id)))
+        (!hasGbiFilter || (p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id))) &&
+        (!hasAdvFilter || matchingAdvIds.has(p.id))
       )
 
-      if ((hasSearch || hasDurationFilter || hasCmFilter || hasGbiFilter) && visibleWaveProjects.length === 0) continue
+      if ((hasSearch || hasDurationFilter || hasCmFilter || hasGbiFilter || hasAdvFilter) && visibleWaveProjects.length === 0) continue
 
       result.push({ type: 'wave', wave })
       if (!collapsedWaves.has(wave.id)) {
@@ -1387,7 +1428,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
       (!hasSearch || matchingProjectIds.has(p.id)) &&
       (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
       (!hasCmFilter || matchingCmIds.has(p.id)) &&
-      (!hasGbiFilter || (p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id)))
+      (!hasGbiFilter || (p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id))) &&
+      (!hasAdvFilter || matchingAdvIds.has(p.id))
     )
 
     if (visibleUnassigned.length > 0) {
@@ -1407,13 +1449,43 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
     }
     return result
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasGbiFilter, selectedGbiDescendantIds, categoryMilestones])
+  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasGbiFilter, selectedGbiDescendantIds, hasAdvFilter, matchingAdvIds, categoryMilestones])
 
   // ─── Row height helpers ──────────────────────────────────────────────────────
 
   function rowHeight(row: RowItem): number {
     return (row.type === 'wave' || row.type === 'embargo-header') ? GROUP_H : ROW_H
   }
+
+  // ─── Filtered project counts (for display in wave rows) ─────────────────────
+
+  const filteredWaveProjectCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const wave of sortedWaves) {
+      const waveProjectsRaw = projectsByWave.get(wave.id) ?? []
+      const visibleWaveProjects = waveProjectsRaw.filter(p =>
+        (!hasSearch || matchingProjectIds.has(p.id)) &&
+        (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
+        (!hasCmFilter || matchingCmIds.has(p.id)) &&
+        (!hasGbiFilter || (p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id))) &&
+        (!hasAdvFilter || matchingAdvIds.has(p.id))
+      )
+      map.set(wave.id, visibleWaveProjects.length)
+    }
+    return map
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedWaves, projectsByWave, hasSearch, matchingProjectIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasGbiFilter, selectedGbiDescendantIds, hasAdvFilter, matchingAdvIds])
+
+  const filteredUnassignedCount = useMemo(() => {
+    return unassignedProjects.filter(p =>
+      (!hasSearch || matchingProjectIds.has(p.id)) &&
+      (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
+      (!hasCmFilter || matchingCmIds.has(p.id)) &&
+      (!hasGbiFilter || (p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id))) &&
+      (!hasAdvFilter || matchingAdvIds.has(p.id))
+    ).length
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unassignedProjects, hasSearch, matchingProjectIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasGbiFilter, selectedGbiDescendantIds, hasAdvFilter, matchingAdvIds])
 
   // Cumulative row tops for SVG overlay
   const rowTops = useMemo(() => {
@@ -1525,8 +1597,151 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
           </Label>
         </div>
         <div className="flex-1" />
+        <Popover open={advFilterOpen} onOpenChange={setAdvFilterOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className={cn(
+                "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-[12px] text-[var(--g-text-muted)] mr-2",
+                hasAdvFilter && "text-[var(--g-accent)]"
+              )}
+              data-testid="advanced-filter-btn"
+            >
+              <SlidersHorizontal size={13} className={hasAdvFilter ? 'text-[oklch(0.48_0.20_260)]' : ''} />
+              <span>Advanced</span>
+              {advFilterCount > 0 && (
+                <span className="absolute -top-1 -right-4 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
+                  {advFilterCount}
+                </span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[28rem] p-0" align="end">
+            <div className="p-3 border-b border-border">
+              <p className="text-sm font-semibold">Advanced Filters</p>
+              <p className="text-xs text-muted-foreground">Filter projects by application details</p>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-4 space-y-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Migration Strategy</p>
+                <div className="flex flex-wrap gap-2">
+                  {(['Lift & Shift', 'Refactor', 'Deboard'] as MigrationStrategy[]).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setSelectedMigrationStrategies(prev => {
+                        const next = new Set(prev)
+                        if (next.has(s)) next.delete(s)
+                        else next.add(s)
+                        return next
+                      })}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[12px] transition-colors",
+                        selectedMigrationStrategies.has(s)
+                          ? "bg-[var(--g-accent-soft)] border-[var(--g-accent)] text-[var(--g-accent)]"
+                          : "bg-background border-border text-foreground hover:bg-muted"
+                      )}
+                    >
+                      {selectedMigrationStrategies.has(s) && <Check size={12} />}
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Application Tier</p>
+                <div className="flex flex-wrap gap-2">
+                  {(['T0', 'T1', 'T2', 'T3'] as ApplicationTier[]).map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setSelectedApplicationTiers(prev => {
+                        const next = new Set(prev)
+                        if (next.has(t)) next.delete(t)
+                        else next.add(t)
+                        return next
+                      })}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[12px] transition-colors",
+                        selectedApplicationTiers.has(t)
+                          ? "bg-[var(--g-accent-soft)] border-[var(--g-accent)] text-[var(--g-accent)]"
+                          : "bg-background border-border text-foreground hover:bg-muted"
+                      )}
+                    >
+                      {selectedApplicationTiers.has(t) && <Check size={12} />}
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Re-Architecture Needed</p>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { key: 'yes', label: 'Yes' },
+                    { key: 'no', label: 'No' },
+                    { key: 'unset', label: 'Not Set' },
+                  ] as { key: 'yes' | 'no' | 'unset'; label: string }[]).map(o => (
+                    <button
+                      key={o.key}
+                      onClick={() => setSelectedReArch(prev => {
+                        const next = new Set(prev)
+                        if (next.has(o.key)) next.delete(o.key)
+                        else next.add(o.key)
+                        return next
+                      })}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[12px] transition-colors",
+                        selectedReArch.has(o.key)
+                          ? "bg-[var(--g-accent-soft)] border-[var(--g-accent)] text-[var(--g-accent)]"
+                          : "bg-background border-border text-foreground hover:bg-muted"
+                      )}
+                    >
+                      {selectedReArch.has(o.key) && <Check size={12} />}
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <MultiAutocomplete
+                label="RTO"
+                available={availableRtos}
+                selected={selectedRtos}
+                onChange={setSelectedRtos}
+                search={rtoSearch}
+                onSearchChange={setRtoSearch}
+              />
+              <MultiAutocomplete
+                label="RPO"
+                available={availableRpos}
+                selected={selectedRpos}
+                onChange={setSelectedRpos}
+                search={rpoSearch}
+                onSearchChange={setRpoSearch}
+              />
+            </div>
+            {hasAdvFilter && (
+              <div className="p-3 border-t border-border flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-8"
+                  onClick={() => {
+                    setSelectedMigrationStrategies(new Set())
+                    setSelectedApplicationTiers(new Set())
+                    setSelectedReArch(new Set())
+                    setSelectedRtos(new Set())
+                    setSelectedRpos(new Set())
+                    setRtoSearch('')
+                    setRpoSearch('')
+                  }}
+                >
+                  Clear all
+                </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
         {gbiRoot && (
           <>
+            <div className="w-px h-3 bg-[var(--g-border)]" />
             <Popover open={gbiFilterOpen} onOpenChange={setGbiFilterOpen}>
               <PopoverTrigger asChild>
                 <button className="relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-[12px] text-[var(--g-text-muted)] mr-2">
@@ -1539,7 +1754,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-96 p-0" align="start">
+              <PopoverContent className="w-96 p-0" align="end">
                 <div className="p-3 border-b border-border">
                   <p className="text-sm font-semibold">GBI Hierarchy</p>
                   <p className="text-xs text-muted-foreground">Select tiers to filter projects</p>
@@ -1646,7 +1861,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[200px]">
+              <DropdownMenuContent align="end" className="min-w-[240px]">
                 {[...categoryMilestones].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map(cm => (
                   <DropdownMenuItem
                     key={cm.id}
@@ -1874,7 +2089,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
               const softColor  = hexToRgba(waveColor, 0.25)
               const isExpanded = !collapsedWaves.has(w.id)
               const progress   = dateRangeProgress(w.startDate, w.cutoverDate)
-              const projCount  = projectsByWave.get(w.id)?.length ?? 0
+              const projCount  = filteredWaveProjectCounts.get(w.id) ?? 0
 
               return (
                 <div key={rowKey} className="flex border-b" style={{ height: rh }}>
@@ -1990,7 +2205,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
                         <span className="overflow-hidden text-ellipsis whitespace-nowrap">Unassigned</span>
                       </div>
                       <span className="text-xs">
-                        {unassignedProjects.length}
+                        {filteredUnassignedCount}
                       </span>
                     </div>
                     {/* Status col (wave: empty) */}

@@ -98,6 +98,10 @@ export const store = {
   // ─── Waves ─────────────────────────────────────────────────────────────────
 
   getWaves(): Wave[] {
+    return _waves.filter(w => !w.deleted)
+  },
+
+  getAllWaves(): Wave[] {
     return _waves
   },
 
@@ -114,6 +118,13 @@ export const store = {
     const idx = _waves.findIndex(w => w.id === id)
     if (idx === -1) throw new Error(`Wave not found: ${id}`)
     _waves[idx] = { ..._waves[idx], ...patch }
+    return _waves[idx]
+  },
+
+  deleteWave(id: string): Wave {
+    const idx = _waves.findIndex(w => w.id === id)
+    if (idx === -1) throw new Error(`Wave not found: ${id}`)
+    _waves[idx] = { ..._waves[idx], deleted: true }
     return _waves[idx]
   },
 
