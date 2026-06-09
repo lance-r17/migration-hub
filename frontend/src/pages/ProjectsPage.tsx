@@ -47,7 +47,8 @@ import {
   getMigrationEffortSummary,
 } from '@/lib/export-report'
 import type { Project } from '@/types'
-import type { GbiNode, SelectAction } from '@/types/gbi'
+import type { GbiNode } from '@/types/gbi'
+import type { SelectAction } from '@/components/gbi/GbiTree'
 import {
   filterGbiTree,
   collectAllIds,
@@ -111,11 +112,11 @@ export function ProjectsPage() {
   }, [])
 
   useEffect(() => {
-    if (!isPlatformLead && user?.gbi_id) {
-      setSelectedGbiIds(new Set([user.gbi_id]))
+    if (!isPlatformLead && user?.gbi_ids?.length) {
+      setSelectedGbiIds(new Set(user.gbi_ids))
       setExcludedGbiIds(new Set())
     }
-  }, [isPlatformLead, user?.gbi_id])
+  }, [isPlatformLead, user?.gbi_ids])
 
   const filteredGbiRoot = useMemo(() => {
     if (!gbiRoot) return null
@@ -302,7 +303,7 @@ export function ProjectsPage() {
                     nodes={[filteredGbiRoot]}
                     selectedIds={selectedGbiIds}
                     excludedIds={excludedGbiIds}
-                    scopeId={isPlatformLead ? null : (user?.gbi_id ?? null)}
+                    scopeIds={isPlatformLead ? null : (user?.gbi_ids ?? null)}
                     onSelect={(node, action: SelectAction) => {
                       if (action === 'select') {
                         let nextSelected = new Set([...selectedGbiIds, node.id])

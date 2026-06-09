@@ -10,7 +10,8 @@ import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, Milest
 import type { Wave } from '@/types/wave'
 import type { EmbargoRecord } from '@/types/embargo'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
-import type { GbiNode, SelectAction } from '@/types/gbi'
+import type { GbiNode } from '@/types/gbi'
+import type { SelectAction } from '@/components/gbi/GbiTree'
 import { CATEGORY_MILESTONE_ICON_MAP } from '@/lib/categoryMilestoneIcons'
 import { useEmbargos } from '@/hooks/use-embargos'
 import {
@@ -406,7 +407,7 @@ interface Props {
   projects: Project[]
   categoryMilestones?: CategoryMilestone[]
   gbiRoot?: GbiNode | null
-  gbiScopeId?: string | null
+  gbiScopeIds?: string[] | null
   gbiMaxDepth?: number | null
   onUpdatePlanning: (projectId: string, planning: ProjectPlanning) => Promise<void>
   onUpdateProjectOrder?: (waveId: string, projectIds: string[]) => Promise<void>
@@ -414,7 +415,7 @@ interface Props {
   readOnly?: boolean
 }
 
-export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRoot = null, gbiScopeId = null, gbiMaxDepth = null, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly }: Props) {
+export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRoot = null, gbiScopeIds = null, gbiMaxDepth = null, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly }: Props) {
   const [showCompleted, setShowCompleted] = useState(true)
   const scrollRef    = useRef<HTMLDivElement>(null)
   const milestoneGhostRef     = useRef<HTMLDivElement>(null)
@@ -1776,7 +1777,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
                       nodes={[filteredGbiRoot]}
                       selectedIds={selectedGbiIds}
                       excludedIds={excludedGbiIds}
-                      scopeId={gbiScopeId}
+                      scopeIds={gbiScopeIds}
                       onSelect={(node, action: SelectAction) => {
                         if (action === 'select') {
                           let nextSelected = new Set([...selectedGbiIds, node.id])

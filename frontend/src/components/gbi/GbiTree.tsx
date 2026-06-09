@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Plus, Trash2, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { GbiNode } from '@/types/gbi'
@@ -15,7 +15,8 @@ interface GbiTreeProps {
   onRename?: (nodeId: string, newName: string) => void
   level?: number
   readOnly?: boolean
-  scopeId?: string | null
+  checkable?: boolean
+  scopeIds?: string[] | null
   maxDepth?: number
 }
 
@@ -72,7 +73,8 @@ function GbiTreeNode({
   onRename,
   level = 0,
   readOnly = false,
-  scopeId = null,
+  checkable = false,
+  scopeIds = null,
   inScope = false,
   maxDepth,
 }: {
@@ -86,7 +88,8 @@ function GbiTreeNode({
   onRename?: (nodeId: string, newName: string) => void
   level?: number
   readOnly?: boolean
-  scopeId?: string | null
+  checkable?: boolean
+  scopeIds?: string[] | null
   inScope?: boolean
   maxDepth?: number
 }) {
@@ -98,8 +101,13 @@ function GbiTreeNode({
   const canExpand = hasChildren && (!maxDepth || level + 1 < maxDepth)
   const isSelfSelected = selectedIds.has(node.id)
   const isExcluded = excludedIds.has(node.id)
-  const isInScope = !scopeId || inScope || node.id === scopeId
-  const nodeState = stateMap.get(node.id) ?? { checked: false, indeterminate: false }
+  const isInScope = !scopeIds || inScope || scopeIds.includes(node.id)
+  const nodeState = useMemo(() => {
+    if (checkable) {
+      return { checked: selectedIds.has(node.id), indeterminate: false }
+    }
+    return stateMap.get(node.id) ?? { checked: false, indeterminate: false }
+  }, [checkable, selectedIds, node.id, stateMap])
 
   useEffect(() => {
     if (checkboxRef.current) {
@@ -116,6 +124,14 @@ function GbiTreeNode({
 
   const handleSelect = () => {
     if (!isInScope) return
+    if (checkable) {
+      if (selectedIds.has(node.id)) {
+        onSelect?.(node, 'unselect')
+      } else {
+        onSelect?.(node, 'select')
+      }
+      return
+    }
     if (isSelfSelected) {
       onSelect?.(node, 'unselect')
     } else if (isExcluded) {
@@ -147,7 +163,7 @@ function GbiTreeNode({
           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
         </button>
 
-        {readOnly && (
+        {(readOnly || checkable) && (
           <input
             ref={checkboxRef}
             type="checkbox"
@@ -168,7 +184,7 @@ function GbiTreeNode({
             !isInScope && 'cursor-not-allowed',
           )}
         >
-          {readOnly ? (
+          {(readOnly || checkable) ? (
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
               L{level + 1}
             </span>
@@ -250,7 +266,8 @@ function GbiTreeNode({
               onRename={onRename}
               level={level + 1}
               readOnly={readOnly}
-              scopeId={scopeId}
+              checkable={checkable}
+              scopeIds={scopeIds}
               inScope={isInScope}
               maxDepth={maxDepth}
             />
@@ -261,7 +278,7 @@ function GbiTreeNode({
   )
 }
 
-export function GbiTree({ nodes, selectedIds, excludedIds, onSelect, onAddChild, onDelete, onRename, readOnly, scopeId, maxDepth }: GbiTreeProps) {
+export function GbiTree({ nodes, selectedIds, excludedIds, onSelect, onAddChild, onDelete, onRename, readOnly, checkable, scopeIds, maxDepth }: GbiTreeProps) {
   const stateMap = buildStateMap(nodes, selectedIds, excludedIds)
   return (
     <div className="space-y-0.5">
@@ -277,7 +294,8 @@ export function GbiTree({ nodes, selectedIds, excludedIds, onSelect, onAddChild,
           onDelete={onDelete}
           onRename={onRename}
           readOnly={readOnly}
-          scopeId={scopeId}
+          checkable={checkable}
+          scopeIds={scopeIds}
           maxDepth={maxDepth}
         />
       ))}

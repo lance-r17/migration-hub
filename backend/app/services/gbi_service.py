@@ -65,6 +65,29 @@ async def get_descendant_ids(session: AsyncSession, node_id: str) -> list[str]:
     return _collect_ids(node)
 
 
+async def get_descendant_ids_for_multiple(session: AsyncSession, node_ids: list[str]) -> list[str]:
+    """Return the union of node_ids and all their descendant ids, deduplicated."""
+    hierarchy = await get_hierarchy(session)
+    if not hierarchy:
+        return list(dict.fromkeys(node_ids))
+    result: list[str] = []
+    seen = set()
+    for node_id in node_ids:
+        if node_id in seen:
+            continue
+        node = _find_node(hierarchy, node_id)
+        if node:
+            for nid in _collect_ids(node):
+                if nid not in seen:
+                    seen.add(nid)
+                    result.append(nid)
+        else:
+            if node_id not in seen:
+                seen.add(node_id)
+                result.append(node_id)
+    return result
+
+
 async def assign_projects_to_gbi(
     session: AsyncSession, gbi_id: str, project_ids: list[str]
 ) -> None:

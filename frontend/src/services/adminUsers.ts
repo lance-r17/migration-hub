@@ -11,7 +11,7 @@ export interface UserAdminUpdate {
   department?: string
   team?: string
   role?: string
-  gbi_id?: string | null
+  gbi_ids?: string[]
 }
 
 export interface UserProjectRole {
@@ -46,7 +46,7 @@ export interface GbiCloudLeadCreate {
   email: string
   department: string
   team?: string
-  gbi_id?: string | null
+  gbi_ids?: string[]
 }
 
 export async function getGbiCloudLeads(): Promise<User[]> {

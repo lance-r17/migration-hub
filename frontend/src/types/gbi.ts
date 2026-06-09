@@ -16,5 +16,5 @@ export interface GbiCloudLeadUser {
   team?: string
   initials: string
   role: string[]
-  gbi_id: string | null
+  gbi_ids: string[]
 }

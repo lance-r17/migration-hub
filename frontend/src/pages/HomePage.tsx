@@ -212,7 +212,7 @@ export function HomePage() {
   const [gbiOpen, setGbiOpen] = useState(false)
   const [gbiSearchQuery, setGbiSearchQuery] = useState('')
   const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
-  const [selectedGbiIds, setSelectedGbiIds] = useState<Set<string>>(new Set(user?.gbi_id ? [user.gbi_id] : []))
+  const [selectedGbiIds, setSelectedGbiIds] = useState<Set<string>>(new Set(user?.gbi_ids ?? []))
   const [excludedGbiIds, setExcludedGbiIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -246,11 +246,11 @@ export function HomePage() {
   }, [isGbiCloudLead])
 
   useEffect(() => {
-    if (user?.gbi_id) {
-      setSelectedGbiIds(new Set([user.gbi_id]))
+    if (user?.gbi_ids?.length) {
+      setSelectedGbiIds(new Set(user.gbi_ids))
       setExcludedGbiIds(new Set())
     }
-  }, [user?.gbi_id])
+  }, [user?.gbi_ids])
 
   const filteredGbiRoot = useMemo(() => {
     if (!gbiRoot) return null
@@ -468,7 +468,7 @@ export function HomePage() {
                           }
                         }}
                         readOnly
-                        scopeId={user?.gbi_id ?? null}
+                        scopeIds={user?.gbi_ids ?? null}
                         maxDepth={migrationSettings?.gbiTierDepth}
                       />
                     ) : (

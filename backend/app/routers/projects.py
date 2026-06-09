@@ -45,8 +45,8 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 async def _require_gbi_access(
     db: AsyncSession, current_user: User, project: Project
 ) -> None:
-    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_id:
-        allowed_ids = await gbi_service.get_descendant_ids(db, current_user.gbi_id)
+    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_ids:
+        allowed_ids = await gbi_service.get_descendant_ids_for_multiple(db, current_user.gbi_ids)
         if project.gbi_id not in allowed_ids:
             raise HTTPException(status_code=403, detail="Project not accessible")
 
@@ -402,8 +402,8 @@ async def list_projects(
 ):
     field_set = set(fields) if fields else None
     gbi_ids: list[str] | None = None
-    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_id:
-        gbi_ids = await gbi_service.get_descendant_ids(db, current_user.gbi_id)
+    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_ids:
+        gbi_ids = await gbi_service.get_descendant_ids_for_multiple(db, current_user.gbi_ids)
     projects = await project_service.get_all(db, user_id=userId, fields=field_set, gbi_ids=gbi_ids)
     return [_project_list_item(p, fields=field_set) for p in projects]
 
@@ -417,8 +417,8 @@ async def list_projects_home(
 ):
     field_set = set(fields) if fields else None
     gbi_ids: list[str] | None = None
-    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_id:
-        gbi_ids = await gbi_service.get_descendant_ids(db, current_user.gbi_id)
+    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_ids:
+        gbi_ids = await gbi_service.get_descendant_ids_for_multiple(db, current_user.gbi_ids)
     projects = await project_service.get_all_home(db, user_id=userId, fields=field_set, gbi_ids=gbi_ids)
     return [_project_home_item(p, fields=field_set) for p in projects]
 
@@ -430,8 +430,8 @@ async def get_project_asset_stats(
     current_user: User = Depends(get_current_user),
 ):
     gbi_ids: list[str] | None = None
-    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_id:
-        gbi_ids = await gbi_service.get_descendant_ids(db, current_user.gbi_id)
+    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_ids:
+        gbi_ids = await gbi_service.get_descendant_ids_for_multiple(db, current_user.gbi_ids)
     return await project_service.get_asset_stats(db, user_id=userId, gbi_ids=gbi_ids)
 
 

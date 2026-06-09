@@ -154,7 +154,7 @@ export function WaveGanttPage() {
             projects={liveProjects}
             categoryMilestones={categoryMilestones}
             gbiRoot={canUseGbiFilter ? gbiRoot : null}
-            gbiScopeId={isPlatformLead ? null : (user?.gbi_id ?? null)}
+            gbiScopeIds={isPlatformLead ? null : (user?.gbi_ids ?? null)}
             gbiMaxDepth={migrationSettings?.gbiTierDepth ?? null}
             onUpdatePlanning={handleUpdatePlanning}
             onUpdateProjectOrder={isPlatformLead ? handleUpdateProjectOrder : undefined}

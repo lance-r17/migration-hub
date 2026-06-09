@@ -375,7 +375,7 @@ async def create_gbi_cloud_lead(
         user.department = body.department
         user.team = body.team
         user.initials = initials
-        user.gbi_id = body.gbi_id
+        user.gbi_ids = body.gbi_ids or []
         existing_roles = {r.strip() for r in (user.role or "").split(",") if r.strip()}
         existing_roles.add("gbi_cloud_lead")
         user.role = ",".join(sorted(existing_roles))
@@ -390,7 +390,7 @@ async def create_gbi_cloud_lead(
         team=body.team,
         initials=initials,
         role="gbi_cloud_lead",
-        gbi_id=body.gbi_id,
+        gbi_ids=body.gbi_ids or [],
     )
     db.add(user)
     await db.flush()
@@ -429,8 +429,8 @@ async def update_gbi_cloud_lead(
     if body.role is not None:
         user.role = body.role
 
-    if body.gbi_id is not None:
-        user.gbi_id = body.gbi_id
+    if body.gbi_ids is not None:
+        user.gbi_ids = body.gbi_ids or []
 
     await db.flush()
     return user

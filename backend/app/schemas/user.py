@@ -11,7 +11,7 @@ class UserOut(BaseModel):
     team: str | None = None
     initials: str
     role: str | None = None
-    gbi_id: str | None = None
+    gbi_ids: list[str] = []
 
 
 class UserCreate(BaseModel):
@@ -30,7 +30,7 @@ class GbiCloudLeadCreate(BaseModel):
     email: str
     department: str
     team: str | None = None
-    gbi_id: str | None = None
+    gbi_ids: list[str] = []
 
 
 class BatchUserCreateRequest(BaseModel):
@@ -63,7 +63,7 @@ class UserAdminUpdate(BaseModel):
     department: str | None = None
     team: str | None = None
     role: str | None = None
-    gbi_id: str | None = None
+    gbi_ids: list[str] | None = None
 
 
 class UserProjectRoleOut(BaseModel):
