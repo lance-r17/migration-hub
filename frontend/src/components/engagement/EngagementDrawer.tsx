@@ -29,7 +29,7 @@ interface Props {
   readOnly?: boolean
 }
 
-const STATUS_OPTIONS: Engagement['status'][] = ['pending', 'scheduled', 'completed', 'cancelled', 'no_show']
+const STATUS_OPTIONS: Engagement['status'][] = ['pending', 'scheduled', 'completed', 'cancelled', 'no_show', 'no_demand']
 
 function generateSlotId() {
   return `slot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`

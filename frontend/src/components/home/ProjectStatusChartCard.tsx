@@ -13,6 +13,7 @@ const ENGAGEMENT_STATUS_META: { key: string; label: string; color: string }[] = 
   { key: 'completed', label: 'Completed',  color: '#10B981' },
   { key: 'cancelled', label: 'Cancelled',  color: '#EF4444' },
   { key: 'no_show',   label: 'No Show',    color: '#94A3B8' },
+  { key: 'no_demand', label: 'No Demand',  color: '#9CA3AF' },
   { key: 'none',      label: 'Not Started',color: '#CBD5E1' },
 ]
 

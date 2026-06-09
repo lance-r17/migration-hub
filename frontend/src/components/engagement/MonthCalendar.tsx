@@ -1,4 +1,5 @@
-import { useMemo, useRef, useEffect, useState } from 'react'
+import { useMemo, useRef, useEffect, useState, type ReactNode } from 'react'
+import { Input } from '@/components/ui/input'
 import {
   format,
   startOfMonth,
@@ -15,8 +16,16 @@ import {
   getISOWeek,
   addHours,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, ListFilter, Search, X, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import type { Engagement, Project } from '@/types'
 
@@ -33,16 +42,18 @@ const STATUS_COLORS: Record<Engagement['status'], string> = {
   completed:  'bg-emerald-100 text-emerald-700 border-emerald-200',
   cancelled:  'bg-slate-100 text-slate-500 border-slate-200 line-through',
   no_show:    'bg-rose-100 text-rose-700 border-rose-200',
+  no_demand:  'bg-gray-100 text-gray-500 border-gray-200',
 }
 
-const STATUS_OPTIONS: Engagement['status'][] = ['pending', 'scheduled', 'completed', 'cancelled', 'no_show']
+const STATUS_OPTIONS: Engagement['status'][] = ['pending', 'scheduled', 'completed', 'cancelled', 'no_show', 'no_demand']
 
-const STATUS_PILL_COLORS: Record<Engagement['status'], { bg: string; text: string; border: string; activeBg: string; activeText: string }> = {
-  pending:    { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200', activeBg: 'bg-amber-100', activeText: 'text-amber-700' },
-  scheduled:  { bg: 'bg-sky-100', text: 'text-sky-700', border: 'border-sky-200', activeBg: 'bg-sky-100', activeText: 'text-sky-700' },
-  completed:  { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200', activeBg: 'bg-emerald-100', activeText: 'text-emerald-700' },
-  cancelled:  { bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200', activeBg: 'bg-slate-100', activeText: 'text-slate-500' },
-  no_show:    { bg: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-200', activeBg: 'bg-rose-100', activeText: 'text-rose-700' },
+const STATUS_DOT_COLORS: Record<Engagement['status'], string> = {
+  pending:    'bg-amber-500',
+  scheduled:  'bg-sky-500',
+  completed:  'bg-emerald-500',
+  cancelled:  'bg-slate-400',
+  no_show:    'bg-rose-500',
+  no_demand:  'bg-gray-400',
 }
 
 interface MonthCalendarProps {
@@ -57,6 +68,8 @@ interface MonthCalendarProps {
   canCreate?: boolean
   statusFilters: Engagement['status'][]
   onToggleStatus: (status: Engagement['status']) => void
+  leftFilters?: ReactNode
+  extraFilters?: ReactNode
   onUpdateEngagement?: (project: Project, engagement: Engagement) => Promise<void>
 }
 
@@ -150,9 +163,38 @@ export function MonthCalendar({
   canCreate,
   statusFilters,
   onToggleStatus,
+  leftFilters,
+  extraFilters,
   onUpdateEngagement,
 }: MonthCalendarProps) {
   const [hoveredHour, setHoveredHour] = useState<{ dayIndex: number; hour: number } | null>(null)
+  const [projectSearchOpen, setProjectSearchOpen] = useState(false)
+  const [projectSearchQuery, setProjectSearchQuery] = useState('')
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const projectSearchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (projectSearchOpen) {
+      projectSearchRef.current?.focus()
+    }
+  }, [projectSearchOpen])
+
+  const filteredSearchProjects = useMemo(() => {
+    const q = projectSearchQuery.trim().toLowerCase()
+    if (!q) return []
+    return projects
+      .filter(p => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))
+      .slice(0, 10)
+  }, [projectSearchQuery, projects])
+
+  const filteredProjects = useMemo(() => {
+    if (!selectedProjectId) return projects
+    return projects.filter(p => p.id === selectedProjectId)
+  }, [selectedProjectId, projects])
+
+  const selectedProject = useMemo(() => {
+    return projects.find(p => p.id === selectedProjectId) ?? null
+  }, [selectedProjectId, projects])
   const headerTitle = useMemo(() => {
     if (viewMode === 'month') {
       return format(anchorDate, 'MMMM yyyy')
@@ -369,10 +411,8 @@ export function MonthCalendar({
           <Button variant="outline" size="icon" onClick={handleNext}>
             <ChevronRight className="size-4" />
           </Button>
-        </div>
-        <div className="flex items-center gap-3">
           {/* View toggle */}
-          <div className="flex items-center border rounded-md overflow-hidden">
+          <div className="flex items-center border rounded-md overflow-hidden ml-2">
             <button
               onClick={() => onViewModeChange('month')}
               className={cn(
@@ -398,27 +438,143 @@ export function MonthCalendar({
               Week
             </button>
           </div>
-          {/* Status filters */}
-          <div className="flex items-center gap-2 shrink-0">
-            {STATUS_OPTIONS.map(status => {
-              const active = statusFilters.includes(status)
-              const colors = STATUS_PILL_COLORS[status]
-              return (
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Project search */}
+          <div className="relative flex items-center">
+            {!projectSearchOpen ? (
+              <button
+                onClick={() => setProjectSearchOpen(true)}
+                className={cn(
+                  "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors",
+                  selectedProject && "text-primary"
+                )}
+                title="Search project"
+              >
+                <Search size={14} className={selectedProject ? 'text-primary' : ''} />
+                {selectedProject && (
+                  <span className="absolute -top-1.5 -right-3 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
+                    1
+                  </span>
+                )}
+              </button>
+            ) : (
+              <div className="relative animate-in fade-in zoom-in-95 duration-200">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground z-10" />
+                <Input
+                  ref={projectSearchRef}
+                  placeholder={selectedProject ? '' : 'Search project...'}
+                  value={projectSearchQuery}
+                  onChange={(e) => setProjectSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setProjectSearchOpen(false)
+                      setProjectSearchQuery('')
+                      setSelectedProjectId(null)
+                    }
+                  }}
+                  className="h-8 pl-8 pr-7 text-sm w-64"
+                />
+                {/* Selected project chip inside input */}
+                {selectedProject && (
+                  <div className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
+                    <span className="truncate max-w-[160px] text-xs font-medium text-foreground">{selectedProject.name}</span>
+                    <button
+                      onClick={() => {
+                        setSelectedProjectId(null)
+                        setProjectSearchQuery('')
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
                 <button
-                  key={status}
-                  onClick={() => onToggleStatus(status)}
-                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-medium transition-opacity ${
-                    active
-                      ? `${colors.activeBg} ${colors.activeText} ${colors.border}`
-                      : 'bg-muted text-muted-foreground/50 border-border opacity-50 hover:opacity-80'
-                  }`}
+                  onClick={() => { setProjectSearchOpen(false); setProjectSearchQuery(''); setSelectedProjectId(null) }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10"
                 >
-                  <span className={`size-1.5 rounded-full border ${active ? colors.bg : 'bg-muted-foreground/30'}`} />
-                  <span className="capitalize">{status.replace('_', ' ')}</span>
+                  <X size={14} />
                 </button>
-              )
-            })}
+                {filteredSearchProjects.length > 0 && !selectedProject && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-50 max-h-60 overflow-y-auto">
+                    {filteredSearchProjects.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setSelectedProjectId(p.id)
+                          setProjectSearchQuery('')
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between"
+                      >
+                        <span className="truncate">{p.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0 ml-2">{p.id}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {projectSearchQuery.trim() && filteredSearchProjects.length === 0 && !selectedProject && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-50 px-3 py-2 text-sm text-muted-foreground">
+                    No projects found
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
+          {projectSearchOpen && (
+            <>
+              <div className="w-px h-3 bg-border" />
+              <button
+                onClick={() => setProjectSearchOpen(false)}
+                className="flex items-center gap-1 bg-transparent border-none cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors"
+                title="Show filters"
+              >
+                <SlidersHorizontal size={14} />
+              </button>
+            </>
+          )}
+
+          {!projectSearchOpen && (
+            <>
+              {leftFilters && <div className="w-px h-3 bg-border" />}
+              {leftFilters}
+              {leftFilters && <div className="w-px h-3 bg-border" />}
+              {/* Status filters */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className={cn(
+                    "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-sm text-muted-foreground",
+                    statusFilters.length < STATUS_OPTIONS.length && "text-primary"
+                  )}>
+                    <ListFilter size={14} className={statusFilters.length < STATUS_OPTIONS.length ? 'text-primary' : ''} />
+                    <span>Status</span>
+                    {statusFilters.length < STATUS_OPTIONS.length && (
+                      <span className="absolute -top-1.5 -right-3 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
+                        {statusFilters.length}
+                      </span>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {STATUS_OPTIONS.map(status => (
+                    <DropdownMenuCheckboxItem
+                      key={status}
+                      checked={statusFilters.includes(status)}
+                      onCheckedChange={() => onToggleStatus(status)}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <span className={cn('size-2 rounded-full mr-2 shrink-0', STATUS_DOT_COLORS[status])} />
+                      <span className="capitalize">{status.replace('_', ' ')}</span>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {extraFilters}
+            </>
+          )}
         </div>
       </div>
 
@@ -455,7 +611,7 @@ export function MonthCalendar({
                     </span>
                   </td>
                   {week.map(day => {
-                    const items = getEngagementsForDay(projects, day, statusFilters)
+                    const items = getEngagementsForDay(filteredProjects, day, statusFilters)
                     const isCurrentMonth = isSameMonth(day, anchorDate)
                     const isToday = isSameDay(day, new Date())
                     return (
@@ -556,7 +712,7 @@ export function MonthCalendar({
               {/* Day columns */}
               {weekDays.map((day, dayIndex) => {
                 const isToday = isSameDay(day, new Date())
-                const events = getEventsForDay(projects, day, statusFilters)
+                const events = getEventsForDay(filteredProjects, day, statusFilters)
                 return (
                   <div
                     key={day.toISOString()}
