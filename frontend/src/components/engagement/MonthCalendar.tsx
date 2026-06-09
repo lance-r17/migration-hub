@@ -1,5 +1,4 @@
 import { useMemo, useRef, useEffect, useState, type ReactNode } from 'react'
-import { Input } from '@/components/ui/input'
 import {
   format,
   startOfMonth,
@@ -17,6 +16,16 @@ import {
   addHours,
 } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, ListFilter, Search, X, SlidersHorizontal } from 'lucide-react'
+import {
+  Combobox,
+  ComboboxPopover,
+  ComboboxTrigger,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxList,
+  ComboboxEmpty,
+  ComboboxItem,
+} from '@/components/ui/combobox'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -169,32 +178,23 @@ export function MonthCalendar({
 }: MonthCalendarProps) {
   const [hoveredHour, setHoveredHour] = useState<{ dayIndex: number; hour: number } | null>(null)
   const [projectSearchOpen, setProjectSearchOpen] = useState(false)
-  const [projectSearchQuery, setProjectSearchQuery] = useState('')
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
-  const projectSearchRef = useRef<HTMLInputElement>(null)
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set())
+  const [comboboxSearch, setComboboxSearch] = useState('')
 
-  useEffect(() => {
-    if (projectSearchOpen) {
-      projectSearchRef.current?.focus()
-    }
-  }, [projectSearchOpen])
-
-  const filteredSearchProjects = useMemo(() => {
-    const q = projectSearchQuery.trim().toLowerCase()
-    if (!q) return []
-    return projects
-      .filter(p => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))
-      .slice(0, 10)
-  }, [projectSearchQuery, projects])
+  const filteredComboboxProjects = useMemo(() => {
+    const q = comboboxSearch.trim().toLowerCase()
+    if (!q) return projects
+    return projects.filter(p => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))
+  }, [comboboxSearch, projects])
 
   const filteredProjects = useMemo(() => {
-    if (!selectedProjectId) return projects
-    return projects.filter(p => p.id === selectedProjectId)
-  }, [selectedProjectId, projects])
+    if (selectedProjectIds.size === 0) return projects
+    return projects.filter(p => selectedProjectIds.has(p.id))
+  }, [selectedProjectIds, projects])
 
-  const selectedProject = useMemo(() => {
-    return projects.find(p => p.id === selectedProjectId) ?? null
-  }, [selectedProjectId, projects])
+  const selectedProjects = useMemo(() => {
+    return projects.filter(p => selectedProjectIds.has(p.id))
+  }, [selectedProjectIds, projects])
   const headerTitle = useMemo(() => {
     if (viewMode === 'month') {
       return format(anchorDate, 'MMMM yyyy')
@@ -447,77 +447,72 @@ export function MonthCalendar({
                 onClick={() => setProjectSearchOpen(true)}
                 className={cn(
                   "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors",
-                  selectedProject && "text-primary"
+                  selectedProjectIds.size > 0 && "text-primary"
                 )}
                 title="Search project"
               >
-                <Search size={14} className={selectedProject ? 'text-primary' : ''} />
-                {selectedProject && (
+                <Search size={14} className={selectedProjectIds.size > 0 ? 'text-primary' : ''} />
+                {selectedProjectIds.size > 0 && (
                   <span className="absolute -top-1.5 -right-3 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
-                    1
+                    {selectedProjectIds.size}
                   </span>
                 )}
               </button>
             ) : (
-              <div className="relative animate-in fade-in zoom-in-95 duration-200">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground z-10" />
-                <Input
-                  ref={projectSearchRef}
-                  placeholder={selectedProject ? '' : 'Search project...'}
-                  value={projectSearchQuery}
-                  onChange={(e) => setProjectSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setProjectSearchOpen(false)
-                      setProjectSearchQuery('')
-                      setSelectedProjectId(null)
-                    }
-                  }}
-                  className="h-8 pl-8 pr-7 text-sm w-64"
-                />
-                {/* Selected project chip inside input */}
-                {selectedProject && (
-                  <div className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
-                    <span className="truncate max-w-[160px] text-xs font-medium text-foreground">{selectedProject.name}</span>
-                    <button
-                      onClick={() => {
-                        setSelectedProjectId(null)
-                        setProjectSearchQuery('')
-                      }}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                )}
+              <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                <Combobox defaultOpen>
+                  <ComboboxPopover>
+                    <ComboboxTrigger className="w-96 h-8 pl-8 pr-2 text-sm border-input bg-background hover:bg-background relative [&>svg:last-of-type]:hidden">
+                      <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      {selectedProjects.length > 0 ? (
+                        <span className="text-xs text-foreground">
+                          {selectedProjects.length} project{selectedProjects.length > 1 ? 's' : ''} selected
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Search project...</span>
+                      )}
+                    </ComboboxTrigger>
+                    <ComboboxContent align="end">
+                      <ComboboxInput
+                        placeholder="Search project..."
+                        value={comboboxSearch}
+                        onValueChange={setComboboxSearch}
+                      />
+                      <ComboboxList>
+                        {filteredComboboxProjects.length === 0 ? (
+                          <ComboboxEmpty>No projects found</ComboboxEmpty>
+                        ) : (
+                          filteredComboboxProjects.map(p => (
+                            <ComboboxItem
+                              key={p.id}
+                              value={p.id}
+                              selected={selectedProjectIds.has(p.id)}
+                              onSelect={(id) => {
+                                setSelectedProjectIds(prev => {
+                                  const next = new Set(prev)
+                                  if (next.has(id)) next.delete(id)
+                                  else next.add(id)
+                                  return next
+                                })
+                              }}
+                            >
+                              <span className="flex items-center justify-between w-full gap-2">
+                                <span className="truncate">{p.name}</span>
+                                <span className="text-xs text-muted-foreground shrink-0">{p.id}</span>
+                              </span>
+                            </ComboboxItem>
+                          ))
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </ComboboxPopover>
+                </Combobox>
                 <button
-                  onClick={() => { setProjectSearchOpen(false); setProjectSearchQuery(''); setSelectedProjectId(null) }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10"
+                  onClick={() => { setProjectSearchOpen(false); setComboboxSearch(''); setSelectedProjectIds(new Set()) }}
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X size={14} />
                 </button>
-                {filteredSearchProjects.length > 0 && !selectedProject && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-50 max-h-60 overflow-y-auto">
-                    {filteredSearchProjects.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          setSelectedProjectId(p.id)
-                          setProjectSearchQuery('')
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between"
-                      >
-                        <span className="truncate">{p.name}</span>
-                        <span className="text-xs text-muted-foreground shrink-0 ml-2">{p.id}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {projectSearchQuery.trim() && filteredSearchProjects.length === 0 && !selectedProject && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-50 px-3 py-2 text-sm text-muted-foreground">
-                    No projects found
-                  </div>
-                )}
               </div>
             )}
           </div>
