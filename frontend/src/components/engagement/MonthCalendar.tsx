@@ -31,6 +31,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -48,17 +49,19 @@ const WORKING_HOUR_START = 8
 const STATUS_COLORS: Record<Engagement['status'], string> = {
   pending:    'bg-amber-100 text-amber-700 border-amber-200',
   scheduled:  'bg-sky-100 text-sky-700 border-sky-200',
+  waiting_confirmation: 'bg-violet-100 text-violet-700 border-violet-200',
   completed:  'bg-emerald-100 text-emerald-700 border-emerald-200',
   cancelled:  'bg-slate-100 text-slate-500 border-slate-200 line-through',
   no_show:    'bg-rose-100 text-rose-700 border-rose-200',
   no_demand:  'bg-gray-100 text-gray-500 border-gray-200',
 }
 
-const STATUS_OPTIONS: Engagement['status'][] = ['pending', 'scheduled', 'completed', 'cancelled', 'no_show', 'no_demand']
+const STATUS_OPTIONS: Engagement['status'][] = ['pending', 'scheduled', 'waiting_confirmation', 'completed', 'cancelled', 'no_show', 'no_demand']
 
 const STATUS_DOT_COLORS: Record<Engagement['status'], string> = {
   pending:    'bg-amber-500',
   scheduled:  'bg-sky-500',
+  waiting_confirmation: 'bg-violet-500',
   completed:  'bg-emerald-500',
   cancelled:  'bg-slate-400',
   no_show:    'bg-rose-500',
@@ -77,6 +80,7 @@ interface MonthCalendarProps {
   canCreate?: boolean
   statusFilters: Engagement['status'][]
   onToggleStatus: (status: Engagement['status']) => void
+  onClearStatusFilters?: () => void
   leftFilters?: ReactNode
   extraFilters?: ReactNode
   onUpdateEngagement?: (project: Project, engagement: Engagement) => Promise<void>
@@ -104,7 +108,7 @@ function getEngagementsForDay(
 
     const hasSlot = engagement.plannedSlots?.some(inRange)
     if (!hasSlot) continue
-    if (!statusFilters.includes(engagement.status)) continue
+    if (statusFilters.length > 0 && !statusFilters.includes(engagement.status)) continue
 
     const actualSlot = engagement.plannedSlots?.find(s => s.isActual && inRange(s))
     const earliestPlanned = engagement.plannedSlots
@@ -137,7 +141,7 @@ function getEventsForDay(
   for (const project of projects) {
     const engagement = project.engagement
     if (!engagement) continue
-    if (!statusFilters.includes(engagement.status)) continue
+    if (statusFilters.length > 0 && !statusFilters.includes(engagement.status)) continue
 
     const slots = engagement.plannedSlots ?? []
 
@@ -160,6 +164,62 @@ function getEventsForDay(
   return result.sort((a, b) => a.top - b.top)
 }
 
+interface EventLayout {
+  project: Project
+  engagement: Engagement
+  slot: { id: string; start: string; end: string }
+  top: number
+  height: number
+  columnIndex: number
+  totalColumns: number
+}
+
+function layoutEvents(
+  events: { project: Project; engagement: Engagement; slot: { start: string; end: string }; top: number; height: number }[]
+): EventLayout[] {
+  if (events.length === 0) return []
+
+  const sorted = [...events].sort((a, b) => a.top - b.top || a.height - b.height)
+  const layouts: EventLayout[] = []
+  const columns: { top: number; bottom: number }[][] = []
+
+  for (const event of sorted) {
+    const eventBottom = event.top + event.height
+    let placed = false
+
+    for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+      const column = columns[colIdx]
+      const last = column[column.length - 1]
+      if (last.bottom <= event.top) {
+        column.push({ top: event.top, bottom: eventBottom })
+        layouts.push({ ...event, columnIndex: colIdx, totalColumns: columns.length })
+        placed = true
+        break
+      }
+    }
+
+    if (!placed) {
+      columns.push([{ top: event.top, bottom: eventBottom }])
+      layouts.push({ ...event, columnIndex: columns.length - 1, totalColumns: columns.length })
+    }
+  }
+
+  // Recalculate totalColumns for each event based on the overlapping group
+  for (const layout of layouts) {
+    const overlapping = layouts.filter(
+      other =>
+        other !== layout &&
+        other.top < layout.top + layout.height &&
+        other.top + other.height > layout.top
+    )
+    const group = [layout, ...overlapping]
+    const maxColumn = Math.max(...group.map(g => g.columnIndex))
+    layout.totalColumns = maxColumn + 1
+  }
+
+  return layouts.sort((a, b) => a.top - b.top)
+}
+
 export function MonthCalendar({
   anchorDate,
   onAnchorChange,
@@ -172,6 +232,7 @@ export function MonthCalendar({
   canCreate,
   statusFilters,
   onToggleStatus,
+  onClearStatusFilters,
   leftFilters,
   extraFilters,
   onUpdateEngagement,
@@ -540,18 +601,18 @@ export function MonthCalendar({
                 <DropdownMenuTrigger asChild>
                   <button className={cn(
                     "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-sm text-muted-foreground",
-                    statusFilters.length < STATUS_OPTIONS.length && "text-primary"
+                    statusFilters.length > 0 && "text-primary"
                   )}>
-                    <ListFilter size={14} className={statusFilters.length < STATUS_OPTIONS.length ? 'text-primary' : ''} />
+                    <ListFilter size={14} className={statusFilters.length > 0 ? 'text-primary' : ''} />
                     <span>Status</span>
-                    {statusFilters.length < STATUS_OPTIONS.length && (
+                    {statusFilters.length > 0 && (
                       <span className="absolute -top-1.5 -right-3 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
                         {statusFilters.length}
                       </span>
                     )}
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuContent align="end" className="w-60">
                   <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {STATUS_OPTIONS.map(status => (
@@ -565,6 +626,17 @@ export function MonthCalendar({
                       <span className="capitalize">{status.replace('_', ' ')}</span>
                     </DropdownMenuCheckboxItem>
                   ))}
+                  {statusFilters.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onClearStatusFilters?.()}
+                        className="text-xs text-muted-foreground"
+                      >
+                        Clear filter
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               {extraFilters}
@@ -707,7 +779,8 @@ export function MonthCalendar({
               {/* Day columns */}
               {weekDays.map((day, dayIndex) => {
                 const isToday = isSameDay(day, new Date())
-                const events = getEventsForDay(filteredProjects, day, statusFilters)
+                const rawEvents = getEventsForDay(filteredProjects, day, statusFilters)
+                const events = layoutEvents(rawEvents)
                 return (
                   <div
                     key={day.toISOString()}
@@ -737,8 +810,12 @@ export function MonthCalendar({
                     })}
 
                     {/* Events */}
-                    {events.map(({ project, engagement, slot, top, height }) => {
+                    {events.map(({ project, engagement, slot, top, height, columnIndex, totalColumns }) => {
                       const isDragging = eventDrag?.slotId === slot.id
+                      const gap = 2
+                      const colWidth = (100 / totalColumns)
+                      const left = columnIndex * colWidth
+                      const width = colWidth
                       return (
                         <button
                           key={`${project.id}-${slot.id}`}
@@ -747,11 +824,16 @@ export function MonthCalendar({
                             onEventPointerDown(e, project, engagement, slot, dayIndex, top, height)
                           }}
                           className={cn(
-                            'absolute left-0.5 right-0.5 rounded border text-[10px] px-1 py-0.5 text-left font-medium hover:opacity-80 transition-opacity overflow-hidden leading-tight cursor-grab active:cursor-grabbing select-none touch-none',
+                            'absolute rounded border text-[10px] px-1 py-0.5 text-left font-medium hover:opacity-80 transition-opacity overflow-hidden leading-tight cursor-grab active:cursor-grabbing select-none touch-none',
                             STATUS_COLORS[engagement.status],
                             isDragging && 'opacity-30'
                           )}
-                          style={{ top: `${top}px`, height: `${height}px` }}
+                          style={{
+                            top: `${top}px`,
+                            height: `${height}px`,
+                            left: `calc(${left}% + ${gap}px)`,
+                            width: `calc(${width}% - ${gap * 2}px)`,
+                          }}
                           title={`${project.name} — ${engagement.status}`}
                         >
                           <span className="truncate block">{project.name}</span>
@@ -764,37 +846,45 @@ export function MonthCalendar({
                       )
                     })}
 
-                    {/* Drag ghost */}
-                    {eventDrag?.newColumn === dayIndex && (
-                      <div
-                        className={cn(
-                          'absolute left-0.5 right-0.5 rounded border text-[10px] px-1 py-0.5 text-left font-medium overflow-hidden leading-tight z-20 shadow-lg opacity-90 pointer-events-none select-none',
-                          STATUS_COLORS[eventDrag.project.engagement!.status]
-                        )}
-                        style={{
-                          top: `${eventDrag.originalTop + eventDrag.currentDeltaY}px`,
-                          height: `${eventDrag.originalHeight}px`,
-                        }}
-                      >
-                        <span className="truncate block">{eventDrag.project.name}</span>
-                        {eventDrag.originalHeight >= 36 && (
-                          <span className="truncate block text-[9px] opacity-70">
-                            {eventDrag.project.engagement!.interviewSubject || eventDrag.project.engagement!.status}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Add button on hover — month view only */}
-                    {canCreate && viewMode === 'month' && (
-                      <button
-                        onClick={() => onSelectDate(day)}
-                        className="absolute top-1 right-1 size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-opacity opacity-0 hover:opacity-100 shrink-0 z-10"
-                        title="Add engagement"
-                      >
-                        <Plus className="size-3" />
-                      </button>
-                    )}
+                    {/* Drag ghost / drop zone preview */}
+                    {eventDrag?.newColumn === dayIndex && (() => {
+                      const ghostTop = eventDrag.originalTop + eventDrag.currentDeltaY
+                      const rawEventsForGhost = rawEvents.filter(e => e.slot.id !== eventDrag.slotId)
+                      const ghostEvent = {
+                        project: eventDrag.project,
+                        engagement: eventDrag.project.engagement!,
+                        slot: { id: '__ghost__', start: '', end: '' },
+                        top: ghostTop,
+                        height: eventDrag.originalHeight,
+                      }
+                      const ghostLayout = layoutEvents([...rawEventsForGhost, ghostEvent])
+                        .find(l => l.slot.id === '__ghost__')
+                      const gap = 2
+                      const colWidth = ghostLayout ? (100 / ghostLayout.totalColumns) : 100
+                      const left = ghostLayout ? ghostLayout.columnIndex * colWidth : 0
+                      const width = ghostLayout ? colWidth : 100
+                      return (
+                        <div
+                          className={cn(
+                            'absolute rounded border border-dashed text-[10px] px-1 py-0.5 text-left font-medium overflow-hidden leading-tight z-20 shadow-lg opacity-80 pointer-events-none select-none',
+                            STATUS_COLORS[eventDrag.project.engagement!.status]
+                          )}
+                          style={{
+                            top: `${ghostTop}px`,
+                            height: `${eventDrag.originalHeight}px`,
+                            left: `calc(${left}% + ${gap}px)`,
+                            width: `calc(${width}% - ${gap * 2}px)`,
+                          }}
+                        >
+                          <span className="truncate block">{eventDrag.project.name}</span>
+                          {eventDrag.originalHeight >= 36 && (
+                            <span className="truncate block text-[9px] opacity-70">
+                              {eventDrag.project.engagement!.interviewSubject || eventDrag.project.engagement!.status}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 )
               })}

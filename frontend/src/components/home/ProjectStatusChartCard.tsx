@@ -10,6 +10,7 @@ import type { Project } from '@/types'
 const ENGAGEMENT_STATUS_META: { key: string; label: string; color: string }[] = [
   { key: 'pending',   label: 'Pending',    color: '#F59E0B' },
   { key: 'scheduled', label: 'Scheduled',  color: '#3B82F6' },
+  { key: 'waiting_confirmation', label: 'Waiting Confirmation', color: '#8B5CF6' },
   { key: 'completed', label: 'Completed',  color: '#10B981' },
   { key: 'cancelled', label: 'Cancelled',  color: '#EF4444' },
   { key: 'no_show',   label: 'No Show',    color: '#94A3B8' },

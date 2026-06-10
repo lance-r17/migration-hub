@@ -194,7 +194,7 @@ export interface MigrationEffortEstimation {
 
 // ─── Section 8.6: Engagement ────────────────────────────────────────────────
 
-export type EngagementStatus = 'pending' | 'scheduled' | 'completed' | 'cancelled' | 'no_show' | 'no_demand'
+export type EngagementStatus = 'pending' | 'scheduled' | 'waiting_confirmation' | 'completed' | 'cancelled' | 'no_show' | 'no_demand'
 
 export interface EngagementSlot {
   id: string

@@ -82,7 +82,7 @@ export function EngagementCalendarPage() {
   const [createHour, setCreateHour] = useState<number | null>(null)
   const [createProjectId, setCreateProjectId] = useState<string>('')
   const [projectSearch, setProjectSearch] = useState('')
-  const [statusFilters, setStatusFilters] = useState<Engagement['status'][]>(['pending', 'scheduled', 'completed', 'cancelled', 'no_show', 'no_demand'])
+  const [statusFilters, setStatusFilters] = useState<Engagement['status'][]>([])
 
   // ─── Category Milestone filter ──────────────────────────────────────────────
   const [cmFilter, setCmFilter] = useState<Set<string>>(new Set())
@@ -357,6 +357,7 @@ export function EngagementCalendarPage() {
                   : [...prev, status]
               )
             }}
+            onClearStatusFilters={() => setStatusFilters([])}
             onUpdateEngagement={handleUpdateEngagement}
             leftFilters={
               <>
