@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select'
 import {
   createParentPage,
+  deleteEngagementConfluencePage,
   deleteParentPage,
   exportEngagementNotes,
   getPageParentId,
@@ -42,6 +43,7 @@ interface Props {
   existingUrl?: string
   existingPageId?: string
   onSuccess: (url: string, pageId: string) => void
+  onDelete?: () => void
 }
 
 export function ConfluenceExportDialog({
@@ -51,11 +53,13 @@ export function ConfluenceExportDialog({
   existingUrl,
   existingPageId,
   onSuccess,
+  onDelete,
 }: Props) {
   const [parentPages, setParentPages] = useState<ConfluenceParentPage[]>([])
   const NONE_VALUE = '__none__'
   const [selectedParentId, setSelectedParentId] = useState<string>(NONE_VALUE)
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [pagesLoading, setPagesLoading] = useState(false)
 
   const [showAdd, setShowAdd] = useState(false)
@@ -103,6 +107,21 @@ export function ConfluenceExportDialog({
       toast.error(msg)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteEngagementConfluencePage(projectId)
+      toast.success('Confluence page deleted')
+      onDelete?.()
+      onOpenChange(false)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Delete failed'
+      toast.error(msg)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -369,6 +388,18 @@ export function ConfluenceExportDialog({
         </div>
 
         <DialogFooter>
+          {hasExisting && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="mr-auto"
+              onClick={handleDelete}
+              disabled={deleting || loading}
+            >
+              {deleting && <Loader2 className="size-3 animate-spin mr-1" />}
+              Delete Page
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

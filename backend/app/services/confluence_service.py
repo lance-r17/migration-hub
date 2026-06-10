@@ -198,6 +198,12 @@ async def update_page(
     return data
 
 
+async def delete_page(page_id: str) -> None:
+    """Delete a Confluence page by ID."""
+    await _request("DELETE", f"/rest/api/content/{page_id}")
+    logger.info("Confluence page deleted: %s", page_id)
+
+
 async def upload_attachments(page_id: str, attachments: list[dict[str, Any]]) -> None:
     """Upload binary attachments to a Confluence page.
 

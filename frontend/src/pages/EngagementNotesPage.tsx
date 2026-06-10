@@ -194,6 +194,20 @@ export function EngagementNotesPage() {
               : prev
           )
         }}
+        onDelete={() => {
+          setProject((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  engagement: {
+                    ...prev.engagement,
+                    confluencePageUrl: undefined,
+                    confluencePageId: undefined,
+                  } as typeof prev.engagement,
+                }
+              : prev
+          )
+        }}
       />
     </AppShell>
   )

@@ -61,3 +61,7 @@ export async function exportEngagementNotes(
     { parentPageId }
   )
 }
+
+export async function deleteEngagementConfluencePage(projectId: string): Promise<void> {
+  return apiClient.delete<void>(`/api/v1/confluence/projects/${projectId}/engagement/page`)
+}

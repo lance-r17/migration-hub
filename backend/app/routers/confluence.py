@@ -2,6 +2,7 @@ import logging
 import uuid
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -180,3 +181,38 @@ async def export_engagement_notes(
         "confluencePageId": engagement.confluence_page_id,
         "confluencePageUrl": engagement.confluence_page_url,
     }
+
+
+@router.delete("/projects/{project_id}/engagement/page", status_code=204)
+async def delete_engagement_confluence_page(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Delete the linked Confluence page and clear engagement references."""
+    if not _can_manage(current_user):
+        raise HTTPException(status_code=403, detail="Not authorized to delete Confluence page")
+
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    engagement = project.engagement
+    if not engagement or not engagement.confluence_page_id:
+        raise HTTPException(status_code=404, detail="No Confluence page linked to this engagement")
+
+    try:
+        await confluence_service.delete_page(engagement.confluence_page_id)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code != 404:
+            logger.exception("Confluence page delete failed for project %s", project_id)
+            raise HTTPException(status_code=502, detail=f"Confluence API error: {exc}")
+        logger.warning("Confluence page %s already deleted", engagement.confluence_page_id)
+    except Exception as exc:
+        logger.exception("Confluence page delete failed for project %s", project_id)
+        raise HTTPException(status_code=502, detail=f"Confluence API error: {exc}")
+
+    engagement.confluence_page_id = None
+    engagement.confluence_page_url = None
+    await db.flush()
+    await db.commit()
