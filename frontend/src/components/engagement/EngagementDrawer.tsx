@@ -557,7 +557,7 @@ function ManagerSelect({ value, options, onChange, disabled }: ManagerSelectProp
             onChange={e => setQuery(e.target.value)}
           />
         </div>
-        <div className="max-h-60 overflow-y-auto py-1">
+        <div className="max-h-60 overflow-y-auto py-1" onWheel={(e) => e.stopPropagation()}>
           <button
             className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
               !value ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50'
