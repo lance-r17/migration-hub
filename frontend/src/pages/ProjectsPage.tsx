@@ -410,7 +410,7 @@ export function ProjectsPage() {
           </div>
           <button
             className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2"
-            onClick={() => exportProjectsToExcel(filteredProjects, draftProjectIds, gbiNameMap)}
+            onClick={() => exportProjectsToExcel(filteredProjects, draftProjectIds, gbiRoot)}
           >
             <Download size={14} /> Export
           </button>

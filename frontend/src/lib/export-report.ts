@@ -5,7 +5,9 @@ import { getGbiHierarchy } from '@/services/gbi'
 import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
+import { getGbiAncestry } from '@/lib/gbi-utils'
 import type { Project, Risk } from '@/types'
+import type { GbiNode } from '@/types/gbi'
 
 function calcTaskCost(effort?: number, effortTime?: number, rate?: number): number {
   return (effort ?? 0) * (effortTime ?? 0) * (rate ?? 0)
@@ -329,7 +331,9 @@ export async function exportProjectDetailsReport() {
     const baseHeaders = [
       'Project ID',
       'Project Name',
-      'GBI',
+      'GBI L2',
+      'GBI L3',
+      'GBI L4',
       'Status',
       'Blocked Reason',
       'Description',
@@ -395,14 +399,6 @@ export async function exportProjectDetailsReport() {
     const headers = [...baseHeaders, ...freezeHeaders]
 
     const gbiRoot = await getGbiHierarchy().catch(() => null)
-    const gbiNameMap = new Map<string, string>()
-    if (gbiRoot) {
-      function walk(node: { id: string; name: string; children?: { id: string; name: string; children?: unknown[] }[] }) {
-        gbiNameMap.set(node.id, node.name)
-        node.children?.forEach(walk)
-      }
-      walk(gbiRoot)
-    }
 
     const rows: Record<string, string | number>[] = []
 
@@ -415,10 +411,13 @@ export async function exportProjectDetailsReport() {
       const mc = project.migrationConstraints
       const ta = project.targetArchitecture
 
+      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
       const row: Record<string, string | number> = {
         'Project ID': project.id,
         'Project Name': project.name,
-        'GBI': project.gbi_id ? (gbiNameMap.get(project.gbi_id) ?? project.gbi_id) : '',
+        'GBI L2': gbiAncestry?.l2 ?? '',
+        'GBI L3': gbiAncestry?.l3 ?? '',
+        'GBI L4': gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? ''),
         'Status': project.status,
         'Blocked Reason': project.blockedReason ?? '',
         'Description': project.description ?? '',
@@ -690,7 +689,7 @@ export async function exportProjectRisksAndBlockersReport() {
   }
 }
 
-export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[], gbiNameMap?: Map<string, string>) {
+export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[], gbiRoot?: GbiNode | null) {
   const toastId = toast.loading('Generating projects report...')
 
   try {
@@ -699,10 +698,13 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
       const days = getMigrationPeriodDays(p)
       const period = !start && !end ? '—' : `${formatDate(start)} → ${formatDate(end)}${days !== null ? ` (${days} days)` : ''}`
       const { totalCost } = getMigrationEffortSummary(p)
+      const gbiAncestry = gbiRoot && p.gbi_id ? getGbiAncestry(gbiRoot, p.gbi_id) : null
       return {
         'Name': p.name,
         'ID': p.id,
-        'GBI': p.gbi_id ? (gbiNameMap?.get(p.gbi_id) ?? p.gbi_id) : '—',
+        'GBI L2': gbiAncestry?.l2 ?? '—',
+        'GBI L3': gbiAncestry?.l3 ?? '—',
+        'GBI L4': gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName) : (p.gbi_id ?? '—'),
         'Status': getStatusLabel(p.status, p.stageProgress, draftProjectIds.includes(p.id)),
         'Progress (%)': p.progress,
         'ITSO': p.itso ?? '—',
@@ -724,9 +726,10 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
 
     const worksheet = XLSX.utils.json_to_sheet(rows)
     worksheet['!cols'] = [
-      { wch: 32 }, { wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 12 },
-      { wch: 24 }, { wch: 24 }, { wch: 8 }, { wch: 8 },
-      { wch: 8 }, { wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 14 },
+      { wch: 32 }, { wch: 18 }, { wch: 28 }, { wch: 28 }, { wch: 28 },
+      { wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 8 },
+      { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 36 }, { wch: 18 },
+      { wch: 14 },
     ]
 
     const workbook = XLSX.utils.book_new()

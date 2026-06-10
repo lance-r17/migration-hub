@@ -55,6 +55,29 @@ export function getAncestorIds(root: GbiNode, targetId: string): string[] {
   return result
 }
 
+export function getGbiAncestry(
+  root: GbiNode,
+  targetId: string,
+): { l2?: string; l3?: string; l4?: string; leafName?: string } {
+  function walk(node: GbiNode, path: GbiNode[]): { l2?: string; l3?: string; l4?: string; leafName?: string } | null {
+    if (node.id === targetId) {
+      const fullPath = [...path, node]
+      return {
+        l2: fullPath[1]?.name,
+        l3: fullPath[2]?.name,
+        l4: fullPath[3]?.name,
+        leafName: node.name,
+      }
+    }
+    for (const child of node.children ?? []) {
+      const result = walk(child, [...path, node])
+      if (result) return result
+    }
+    return null
+  }
+  return walk(root, []) ?? {}
+}
+
 export function hasCoveredDescendants(
   root: GbiNode,
   nodeId: string,

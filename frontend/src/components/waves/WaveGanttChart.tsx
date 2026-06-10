@@ -1853,7 +1853,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], gbiRo
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-[12px] text-[var(--g-text-muted)] mr-2" data-testid="category-milestone-filter-btn">
-                  <ListFilter size={13} className={cmFilter.size > 0 ? 'text-[oklch(0.48_0.20_260)]' : ''} />
+                  <Tag size={13} className={cmFilter.size > 0 ? 'text-[oklch(0.48_0.20_260)]' : ''} />
                   <span>Category Milestones</span>
                   {cmFilter.size > 0 && (
                     <span className="absolute -top-1 -right-4 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
