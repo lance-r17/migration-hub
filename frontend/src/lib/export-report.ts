@@ -17,17 +17,24 @@ export async function exportEstimatedEffortReport() {
   const toastId = toast.loading('Generating estimated effort report...')
 
   try {
-    const projects = await getProjects(['basic', 'effort'])
+    const [projects, gbiRoot] = await Promise.all([
+      getProjects(['basic', 'effort']),
+      getGbiHierarchy().catch(() => null),
+    ])
 
     const rows: Record<string, string | number>[] = []
 
     for (const project of projects) {
+      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
       const tables = project.migrationEffortEstimation?.tables ?? []
       for (const table of tables) {
         for (const task of table.tasks) {
           rows.push({
             'Project ID': project.id,
             'Project Name': project.name,
+            'GBI L2': gbiAncestry?.l2 ?? '',
+            'GBI L3': gbiAncestry?.l3 ?? '',
+            'GBI L4': gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? ''),
             'BA ID': table.baId ?? '',
             'Effort Type': getEffortTypeLabel(task.effortType),
             'Effort Unit (FTE)': task.effort ?? 0,
@@ -49,6 +56,9 @@ export async function exportEstimatedEffortReport() {
     const headers = [
       'Project ID',
       'Project Name',
+      'GBI L2',
+      'GBI L3',
+      'GBI L4',
       'BA ID',
       'Effort Type',
       'Effort Unit (FTE)',
@@ -69,6 +79,9 @@ export async function exportEstimatedEffortReport() {
     // Column widths
     worksheet['!cols'] = [
       { wch: 18 },
+      { wch: 28 },
+      { wch: 28 },
+      { wch: 28 },
       { wch: 28 },
       { wch: 14 },
       { wch: 36 },
@@ -91,7 +104,7 @@ export async function exportEstimatedEffortReport() {
     workbook.Workbook.Names = [
       {
         Name: 'EffortData',
-        Ref: `'Estimated Effort'!$A$1:$J$${lastRow}`,
+        Ref: `'Estimated Effort'!$A$1:$M$${lastRow}`,
         Sheet: 0,
       },
     ]
@@ -107,9 +120,10 @@ export async function exportProjectResourcesReport() {
   const toastId = toast.loading('Generating project resources report...')
 
   try {
-    const [projects, categoryEntries] = await Promise.all([
+    const [projects, categoryEntries, gbiRoot] = await Promise.all([
       getProjects(['basic', 'resources']),
       fetchProductCategoryMap(),
+      getGbiHierarchy().catch(() => null),
     ])
 
     const categoryMap = new Map(categoryEntries.map(e => [e.product, e.category]))
@@ -128,6 +142,9 @@ export async function exportProjectResourcesReport() {
     const baseHeaders = [
       'Project ID',
       'Project Name',
+      'GBI L2',
+      'GBI L3',
+      'GBI L4',
       'Resource ID',
       'Resource Name',
       'Product',
@@ -146,10 +163,14 @@ export async function exportProjectResourcesReport() {
     const rows: Record<string, string | number>[] = []
 
     for (const project of projects) {
+      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
       for (const resource of project.currentInfrastructure?.resources ?? []) {
         const row: Record<string, string | number> = {
           'Project ID': project.id,
           'Project Name': project.name,
+          'GBI L2': gbiAncestry?.l2 ?? '',
+          'GBI L3': gbiAncestry?.l3 ?? '',
+          'GBI L4': gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? ''),
           'Resource ID': resource.resourceId,
           'Resource Name': resource.name,
           'Product': resource.product ?? '',
@@ -184,6 +205,7 @@ export async function exportProjectResourcesReport() {
     worksheet['!cols'] = headers.map(h => {
       if (h.startsWith('Spec:')) return { wch: 20 }
       if (h === 'Project Name') return { wch: 28 }
+      if (h.startsWith('GBI')) return { wch: 28 }
       if (h === 'Resource Name') return { wch: 28 }
       if (h === 'Product Category') return { wch: 18 }
       if (h === 'Resource Set') return { wch: 28 }
@@ -217,15 +239,25 @@ export async function exportProjectDependenciesReport() {
   const toastId = toast.loading('Generating project dependencies report...')
 
   try {
-    const projects = await getProjects(['basic', 'dependencies'])
+    const [projects, gbiRoot] = await Promise.all([
+      getProjects(['basic', 'dependencies']),
+      getGbiHierarchy().catch(() => null),
+    ])
 
     const rows: Record<string, string | number>[] = []
 
     for (const project of projects) {
+      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
+      const gbiL2 = gbiAncestry?.l2 ?? ''
+      const gbiL3 = gbiAncestry?.l3 ?? ''
+      const gbiL4 = gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? '')
       for (const dep of project.dependencies?.upstream ?? []) {
         rows.push({
           'Project ID': project.id,
           'Project Name': project.name,
+          'GBI L2': gbiL2,
+          'GBI L3': gbiL3,
+          'GBI L4': gbiL4,
           'Dependency Type': 'Upstream',
           'Dependency ID': dep.id,
           'Dependency Name': dep.name,
@@ -239,6 +271,9 @@ export async function exportProjectDependenciesReport() {
         rows.push({
           'Project ID': project.id,
           'Project Name': project.name,
+          'GBI L2': gbiL2,
+          'GBI L3': gbiL3,
+          'GBI L4': gbiL4,
           'Dependency Type': 'Downstream',
           'Dependency ID': dep.id,
           'Dependency Name': dep.name,
@@ -258,6 +293,9 @@ export async function exportProjectDependenciesReport() {
     const headers = [
       'Project ID',
       'Project Name',
+      'GBI L2',
+      'GBI L3',
+      'GBI L4',
       'Dependency Type',
       'Dependency ID',
       'Dependency Name',
@@ -275,6 +313,9 @@ export async function exportProjectDependenciesReport() {
 
     worksheet['!cols'] = [
       { wch: 18 },
+      { wch: 28 },
+      { wch: 28 },
+      { wch: 28 },
       { wch: 28 },
       { wch: 14 },
       { wch: 18 },
@@ -294,7 +335,7 @@ export async function exportProjectDependenciesReport() {
     workbook.Workbook.Names = [
       {
         Name: 'DependenciesData',
-        Ref: `'Project Dependencies'!$A$1:$I$${lastRow}`,
+        Ref: `'Project Dependencies'!$A$1:$L$${lastRow}`,
         Sheet: 0,
       },
     ]
@@ -612,15 +653,25 @@ export async function exportProjectRisksAndBlockersReport() {
   const toastId = toast.loading('Generating project risks & blockers report...')
 
   try {
-    const projects = await getProjects(['basic', 'risks'])
+    const [projects, gbiRoot] = await Promise.all([
+      getProjects(['basic', 'risks']),
+      getGbiHierarchy().catch(() => null),
+    ])
 
     const rows: Record<string, string | number>[] = []
     for (const project of projects) {
+      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
+      const gbiL2 = gbiAncestry?.l2 ?? ''
+      const gbiL3 = gbiAncestry?.l3 ?? ''
+      const gbiL4 = gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? '')
       const risks = project.risks ?? []
       if (risks.length === 0) {
         rows.push({
           'Project ID': project.id,
           'Project Name': project.name,
+          'GBI L2': gbiL2,
+          'GBI L3': gbiL3,
+          'GBI L4': gbiL4,
           'Risk Title': '—',
           'Risk Description': '—',
           'Severity': '—',
@@ -633,6 +684,9 @@ export async function exportProjectRisksAndBlockersReport() {
           rows.push({
             'Project ID': project.id,
             'Project Name': project.name,
+            'GBI L2': gbiL2,
+            'GBI L3': gbiL3,
+            'GBI L4': gbiL4,
             'Risk Title': risk.title,
             'Risk Description': risk.description,
             'Severity': risk.severity,
@@ -652,6 +706,9 @@ export async function exportProjectRisksAndBlockersReport() {
     const headers = [
       'Project ID',
       'Project Name',
+      'GBI L2',
+      'GBI L3',
+      'GBI L4',
       'Risk Title',
       'Risk Description',
       'Severity',
@@ -665,8 +722,8 @@ export async function exportProjectRisksAndBlockersReport() {
     const lastCol = XLSX.utils.encode_col(headers.length - 1)
     worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
     worksheet['!cols'] = [
-      { wch: 18 }, { wch: 28 }, { wch: 32 }, { wch: 40 },
-      { wch: 10 }, { wch: 32 }, { wch: 20 }, { wch: 12 },
+      { wch: 18 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 28 },
+      { wch: 32 }, { wch: 40 }, { wch: 10 }, { wch: 32 }, { wch: 20 }, { wch: 12 },
     ]
     worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
 
