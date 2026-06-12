@@ -1866,7 +1866,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                 {[...categoryMilestones].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map(cm => (
                   <DropdownMenuItem
                     key={cm.id}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault()
                       setCmFilter(prev => {
                         const next = new Set(prev)
                         if (next.has(cm.id)) next.delete(cm.id)
@@ -1893,7 +1894,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => setCmFilter(new Set())}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setCmFilter(new Set())
+                      }}
                       className="text-[12px] text-muted-foreground"
                     >
                       Clear filter

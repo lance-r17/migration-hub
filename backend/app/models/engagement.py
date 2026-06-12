@@ -23,6 +23,7 @@ class Engagement(Base, TimestampMixin):
     zoom_meeting_id: Mapped[str | None] = mapped_column(String, nullable=True)
     planned_slots: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
     participant_ids: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    engagement_reviewer_ids: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     notes: Mapped[list | str | None] = mapped_column(JSONB, nullable=True)
 
     project: Mapped["Project"] = relationship(
@@ -36,6 +37,7 @@ class Engagement(Base, TimestampMixin):
             "interviewSubject": self.interview_subject,
             "plannedSlots": self.planned_slots,
             "participantIds": self.participant_ids,
+            "engagementReviewerIds": self.engagement_reviewer_ids,
             "engagementManagerId": self.engagement_manager_id,
             "notes": self.notes,
             "confluencePageId": self.confluence_page_id,

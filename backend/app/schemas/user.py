@@ -33,6 +33,14 @@ class BgiCloudLeadCreate(BaseModel):
     bgi_ids: list[str] = []
 
 
+class EngagementReviewerCreate(BaseModel):
+    id: str | None = None
+    name: str
+    email: str
+    department: str
+    team: str | None = None
+
+
 class BatchUserCreateRequest(BaseModel):
     users: list[UserCreate] = Field(..., min_length=1)
 

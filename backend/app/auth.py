@@ -274,6 +274,13 @@ def _user_has_bgi_cloud_lead_role(role: str | None) -> bool:
     return "bgi_cloud_lead" in user_roles
 
 
+def _user_has_engagement_reviewer_role(role: str | None) -> bool:
+    if not role:
+        return False
+    user_roles = {r.strip() for r in role.split(",") if r.strip()}
+    return "engagement_reviewer" in user_roles
+
+
 async def require_bgi_cloud_lead(
     current_user: User = Depends(get_current_user),
 ) -> User:
@@ -281,6 +288,17 @@ async def require_bgi_cloud_lead(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="BGI Cloud Lead role required",
+        )
+    return current_user
+
+
+async def require_engagement_reviewer(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if not _user_has_engagement_reviewer_role(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Engagement Reviewer role required",
         )
     return current_user
 

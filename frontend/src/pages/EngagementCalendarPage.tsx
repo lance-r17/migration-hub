@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { CalendarDays, Pencil, Tag, Network, SlidersHorizontal, Check, Search, User as UserIcon } from 'lucide-react'
+import { CalendarDays, Pencil, Tag, Network, SlidersHorizontal, Check, Search, User as UserIcon, UserStar } from 'lucide-react'
 import { toast } from 'sonner'
 import { MonthCalendar } from '@/components/engagement/MonthCalendar'
 import { EngagementDrawer } from '@/components/engagement/EngagementDrawer'
@@ -65,12 +65,22 @@ function buildDefaultEngagement(date: Date, project: Project, startHour?: number
     interviewSubject: subject,
     plannedSlots: [{ id: generateSlotId(), start: start.toISOString(), end: end.toISOString(), isActual: true }],
     participantIds: [],
+    engagementReviewerIds: [],
   }
 }
 
 export function EngagementCalendarPage() {
   const { user } = useCurrentUser()
-  const { projects, loading, refresh } = useProjects({ fields: ['basic', 'engagement', 'team', 'availability', 'target_architecture'] })
+
+  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
+  const isEngagementReviewer = user?.role.includes('engagement_reviewer') ?? false
+  const canUseBgiFilter = isPlatformLead || isBgiCloudLead
+
+  const { projects, loading, refresh } = useProjects({
+    fields: ['basic', 'engagement', 'team', 'availability', 'target_architecture'],
+    forceAll: isEngagementReviewer,
+  })
   const { categoryMilestones } = useCategoryMilestones()
   const { settings: migrationSettings } = useMigrationSettings()
   const [anchorDate, setAnchorDate] = useState(new Date())
@@ -106,6 +116,9 @@ export function EngagementCalendarPage() {
   const [rtoSearch, setRtoSearch] = useState('')
   const [rpoSearch, setRpoSearch] = useState('')
 
+  // ─── Engagement Reviewer filter ─────────────────────────────────────────────
+  const [selectedEngagementReviewerIds, setSelectedEngagementReviewerIds] = useState<Set<string>>(new Set())
+
   // ─── Engagement Manager filter ──────────────────────────────────────────────
   const [selectedEngagementManagerIds, setSelectedEngagementManagerIds] = useState<Set<string>>(new Set())
 
@@ -122,10 +135,6 @@ export function EngagementCalendarPage() {
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
-
-  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
-  const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
-  const canUseBgiFilter = isPlatformLead || isBgiCloudLead
   const bgiScopeIds = isPlatformLead ? null : (user?.bgi_ids ?? null)
   const bgiMaxDepth = migrationSettings?.bgiTierDepth ?? null
 
@@ -164,6 +173,29 @@ export function EngagementCalendarPage() {
 
   const hasAdvFilter = selectedMigrationStrategies.size > 0 || selectedApplicationTiers.size > 0 || selectedReArch.size > 0 || selectedRtos.size > 0 || selectedRpos.size > 0
   const advFilterCount = selectedMigrationStrategies.size + selectedApplicationTiers.size + selectedReArch.size + selectedRtos.size + selectedRpos.size
+
+  const hasEngagementReviewerFilter = selectedEngagementReviewerIds.size > 0
+  const availableEngagementReviewers = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>()
+    for (const p of projects) {
+      for (const reviewerId of p.engagement?.engagementReviewerIds ?? []) {
+        const u = allUsers.find(user => user.id === reviewerId)
+        if (u) map.set(reviewerId, { id: reviewerId, name: u.name })
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [projects, allUsers])
+
+  const matchingEngagementReviewerIds = useMemo(() => {
+    if (!hasEngagementReviewerFilter) return null
+    const set = new Set<string>()
+    for (const p of projects) {
+      if (p.engagement?.engagementReviewerIds?.some(id => selectedEngagementReviewerIds.has(id))) {
+        set.add(p.id)
+      }
+    }
+    return set
+  }, [hasEngagementReviewerFilter, selectedEngagementReviewerIds, projects])
 
   const hasEngagementManagerFilter = selectedEngagementManagerIds.size > 0
   const availableEngagementManagers = useMemo(() => {
@@ -222,10 +254,11 @@ export function EngagementCalendarPage() {
       if (hasCmFilter && !matchingCmIds?.has(p.id)) return false
       if (hasBgiFilter && (!p.bgi_id || !selectedBgiDescendantIds!.has(p.bgi_id))) return false
       if (hasAdvFilter && !matchingAdvIds?.has(p.id)) return false
+      if (hasEngagementReviewerFilter && !matchingEngagementReviewerIds?.has(p.id)) return false
       if (hasEngagementManagerFilter && !matchingEngagementManagerIds?.has(p.id)) return false
       return true
     })
-  }, [projects, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds, hasEngagementManagerFilter, matchingEngagementManagerIds])
+  }, [projects, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds, hasEngagementReviewerFilter, matchingEngagementReviewerIds, hasEngagementManagerFilter, matchingEngagementManagerIds])
 
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project)
@@ -361,6 +394,67 @@ export function EngagementCalendarPage() {
             onUpdateEngagement={handleUpdateEngagement}
             leftFilters={
               <>
+                {/* Engagement Reviewer filter */}
+                {availableEngagementReviewers.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className={cn(
+                        "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-sm text-muted-foreground",
+                        selectedEngagementReviewerIds.size > 0 && "text-primary"
+                      )}>
+                        <UserStar size={14} className={selectedEngagementReviewerIds.size > 0 ? 'text-primary' : ''} />
+                        <span>Reviewer</span>
+                        {selectedEngagementReviewerIds.size > 0 && (
+                          <span className="absolute -top-1.5 -right-3 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
+                            {selectedEngagementReviewerIds.size}
+                          </span>
+                        )}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[200px]">
+                      {availableEngagementReviewers.map(reviewer => (
+                        <DropdownMenuItem
+                          key={reviewer.id}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setSelectedEngagementReviewerIds(prev => {
+                              const next = new Set(prev)
+                              if (next.has(reviewer.id)) next.delete(reviewer.id)
+                              else next.add(reviewer.id)
+                              return next
+                            })
+                          }}
+                          className={cn(
+                            'text-xs flex items-center gap-2',
+                            selectedEngagementReviewerIds.has(reviewer.id) && 'bg-primary/10 text-primary font-medium',
+                          )}
+                        >
+                          <span className="w-3.5 flex items-center justify-center">
+                            {selectedEngagementReviewerIds.has(reviewer.id) && <Check size={12} />}
+                          </span>
+                          {reviewer.name}
+                        </DropdownMenuItem>
+                      ))}
+                      {selectedEngagementReviewerIds.size > 0 && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setSelectedEngagementReviewerIds(new Set())
+                            }}
+                            className="text-xs text-muted-foreground"
+                          >
+                            Clear filter
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                <div className="w-px h-3 bg-border" />
+
                 {/* Engagement Manager filter */}
                 {availableEngagementManagers.length > 0 && (
                   <DropdownMenu>
@@ -370,7 +464,7 @@ export function EngagementCalendarPage() {
                         selectedEngagementManagerIds.size > 0 && "text-primary"
                       )}>
                         <UserIcon size={14} className={selectedEngagementManagerIds.size > 0 ? 'text-primary' : ''} />
-                        <span>Engagement Manager</span>
+                        <span>Manager</span>
                         {selectedEngagementManagerIds.size > 0 && (
                           <span className="absolute -top-1.5 -right-3 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
                             {selectedEngagementManagerIds.size}
@@ -382,7 +476,8 @@ export function EngagementCalendarPage() {
                       {availableEngagementManagers.map(mgr => (
                         <DropdownMenuItem
                           key={mgr.id}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault()
                             setSelectedEngagementManagerIds(prev => {
                               const next = new Set(prev)
                               if (next.has(mgr.id)) next.delete(mgr.id)
@@ -405,7 +500,10 @@ export function EngagementCalendarPage() {
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => setSelectedEngagementManagerIds(new Set())}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setSelectedEngagementManagerIds(new Set())
+                            }}
                             className="text-xs text-muted-foreground"
                           >
                             Clear filter

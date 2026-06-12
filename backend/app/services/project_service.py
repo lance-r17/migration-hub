@@ -722,6 +722,7 @@ async def _replace_engagement(
     engagement.interview_subject = engagement_data.get("interviewSubject")
     engagement.planned_slots = engagement_data.get("plannedSlots")
     engagement.participant_ids = engagement_data.get("participantIds")
+    engagement.engagement_reviewer_ids = engagement_data.get("engagementReviewerIds")
     engagement.engagement_manager_id = engagement_data.get("engagementManagerId")
     engagement.notes = engagement_data.get("notes")
     engagement.confluence_page_id = engagement_data.get("confluencePageId")

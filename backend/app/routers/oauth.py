@@ -220,9 +220,10 @@ async def sso_exchange(
         user.initials = initials or _derive_initials(name)
         if matched_roles:
             # Merge OAuth-matched roles, preserving locally-assigned bgi_cloud_lead
+            # and engagement_reviewer roles.
             existing_roles = {r.strip() for r in (user.role or "").split(",") if r.strip()}
             new_roles = {r.strip() for r in user_role.split(",") if r.strip()}
-            merged_roles = new_roles | (existing_roles & {"bgi_cloud_lead"})
+            merged_roles = new_roles | (existing_roles & {"bgi_cloud_lead", "engagement_reviewer"})
             user.role = ",".join(sorted(merged_roles)) if merged_roles else None
         await db.commit()
         await db.refresh(user)

@@ -84,6 +84,7 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
     interviewSubject: 'Interview Subject',
     plannedSlots: 'Planned Slots',
     participantIds: 'Participants',
+    engagementReviewerIds: 'Engagement Reviewers',
     engagementManagerId: 'Engagement Manager',
     notes: 'Notes',
     confluencePageUrl: 'Confluence Page',
@@ -257,7 +258,7 @@ interface ProjectsState {
   refresh: () => void
 }
 
-export function useProjects(options?: { home?: boolean; fields?: string[] }): ProjectsState {
+export function useProjects(options?: { home?: boolean; fields?: string[]; forceAll?: boolean }): ProjectsState {
   const [state, setState] = useState<ProjectsState>({
     projects: [],
     loading: true,
@@ -275,7 +276,7 @@ export function useProjects(options?: { home?: boolean; fields?: string[] }): Pr
     if (!user) return
     let cancelled = false
 
-    const fetch = isLead
+    const fetch = (options?.forceAll || isLead)
       ? (options?.home ? getProjectsHome(options?.fields) : getProjects(options?.fields))
       : (options?.home ? getProjectsHomeForUser(user.id, options?.fields) : getProjectsForUser(user.id, options?.fields))
 
@@ -293,7 +294,7 @@ export function useProjects(options?: { home?: boolean; fields?: string[] }): Pr
       })
 
     return () => { cancelled = true }
-  }, [user?.id, user?.role, options?.home, JSON.stringify(options?.fields), refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role, options?.home, options?.forceAll, JSON.stringify(options?.fields), refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), [])
 

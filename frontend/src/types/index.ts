@@ -208,6 +208,7 @@ export interface Engagement {
   interviewSubject?: string
   plannedSlots: EngagementSlot[]
   participantIds: string[]
+  engagementReviewerIds: string[]
   engagementManagerId?: string
   notes?: unknown[] | string
   confluencePageId?: string

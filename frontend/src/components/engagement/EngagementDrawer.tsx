@@ -69,6 +69,7 @@ function defaultEngagement(): Engagement {
     status: 'pending',
     plannedSlots: [],
     participantIds: [],
+    engagementReviewerIds: [],
   }
 }
 
@@ -100,6 +101,11 @@ export function EngagementDrawer({ open, onOpenChange, project, allUsers, onSave
   const teamMembers = useMemo(
     () => project?.team?.map(t => ({ id: t.id, name: t.name })) ?? [],
     [project]
+  )
+
+  const engagementReviewers = useMemo(
+    () => allUsers.filter(u => u.role?.includes('engagement_reviewer')),
+    [allUsers]
   )
 
   const updateField = <K extends keyof Engagement>(key: K, value: Engagement[K]) => {
@@ -137,6 +143,15 @@ export function EngagementDrawer({ open, onOpenChange, project, allUsers, onSave
       if (ids.has(userId)) ids.delete(userId)
       else ids.add(userId)
       return { ...prev, participantIds: Array.from(ids) }
+    })
+  }
+
+  const toggleReviewer = (userId: string) => {
+    setEngagement(prev => {
+      const ids = new Set(prev.engagementReviewerIds ?? [])
+      if (ids.has(userId)) ids.delete(userId)
+      else ids.add(userId)
+      return { ...prev, engagementReviewerIds: Array.from(ids) }
     })
   }
 
@@ -375,6 +390,34 @@ export function EngagementDrawer({ open, onOpenChange, project, allUsers, onSave
                         className="size-3 accent-primary"
                         checked={(engagement.participantIds ?? []).includes(u.id)}
                         onChange={() => toggleParticipant(u.id)}
+                        disabled={readOnly}
+                      />
+                      {u.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            {engagementReviewers.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Engagement Reviewers</p>
+                <div className="flex flex-wrap gap-2">
+                  {engagementReviewers.map(u => (
+                    <label
+                      key={u.id}
+                      className={cn(
+                        'flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs cursor-pointer transition-colors',
+                        (engagement.engagementReviewerIds ?? []).includes(u.id)
+                          ? 'bg-primary/10 border-primary/30 text-primary'
+                          : 'bg-background border-input hover:bg-muted/50',
+                        readOnly && 'pointer-events-none opacity-60'
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-3 accent-primary"
+                        checked={(engagement.engagementReviewerIds ?? []).includes(u.id)}
+                        onChange={() => toggleReviewer(u.id)}
                         disabled={readOnly}
                       />
                       {u.name}

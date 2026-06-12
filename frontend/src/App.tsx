@@ -34,6 +34,7 @@ import { AdminHome } from './pages/AdminHome'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { BgiSettingsPage } from './pages/BgiSettingsPage'
 import { BgiCloudLeadsPage } from './pages/BgiCloudLeadsPage'
+import { EngagementReviewersPage } from './pages/EngagementReviewersPage'
 import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -80,6 +81,7 @@ function App() {
           <Route path="service-accounts" element={<ServiceAccountsPage />} />
           <Route path="attachments" element={<AdminAttachmentsPage />} />
           <Route path="bgi-cloud-leads" element={<BgiCloudLeadsPage />} />
+          <Route path="engagement-reviewers" element={<EngagementReviewersPage />} />
         </Route>
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
           <Route index element={<SettingsHome />} />

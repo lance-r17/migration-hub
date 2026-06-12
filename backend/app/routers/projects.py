@@ -629,6 +629,13 @@ async def update_section(
     if section_key == "migrationConstraints":
         await _validate_migration_constraints(db, value)
 
+    if section_key == "engagement":
+        if "platform_migration_lead" not in (current_user.role or "") and not _user_has_admin_role(current_user.role):
+            raise HTTPException(
+                status_code=403,
+                detail="Only Platform Migration Leads or Admins can update engagements.",
+            )
+
     actor = _user_to_actor(current_user)
     try:
         project = await project_service.update_section(db, project, section_key, value, actor)

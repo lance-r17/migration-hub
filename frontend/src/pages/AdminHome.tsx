@@ -16,6 +16,12 @@ const ADMIN_SECTIONS = [
     href: '/admin/bgi-cloud-leads',
   },
   {
+    title: 'Engagement Reviewers',
+    description: 'Assign the engagement reviewer role to new or existing users.',
+    icon: <Users size={20} className="text-primary" />,
+    href: '/admin/engagement-reviewers',
+  },
+  {
     title: 'Job Monitor',
     description: 'View and manage background Jira integration jobs across all projects.',
     icon: <MonitorDot size={20} className="text-primary" />,

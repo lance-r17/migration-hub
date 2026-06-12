@@ -33,8 +33,8 @@ interface NavItem {
   title: string
   url: string
   icon: React.ReactNode
-  requiresRole?: string
-  excludesRole?: string
+  requiresRole?: string | string[]
+  excludesRole?: string | string[]
 }
 
 const data = {
@@ -54,7 +54,7 @@ const data = {
       title: "Engagements",
       url: "/engagements",
       icon: <CalendarDays />,
-      requiresRole: "platform_migration_lead",
+      requiresRole: ["platform_migration_lead", "engagement_reviewer"],
     },
     {
       title: "Waves",
@@ -96,7 +96,7 @@ const data = {
       title: "Wave Gantt",
       url: "/waves/gantt",
       icon: <GanttChart />,
-      excludesRole: "platform_migration_lead",
+      excludesRole: ["platform_migration_lead", "engagement_reviewer"],
     },
   ] satisfies NavItem[],
   navSecondary: [
@@ -114,13 +114,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
 
+  const hasAnyRole = (roles: string | string[]) => {
+    const list = Array.isArray(roles) ? roles : [roles]
+    return list.some(r => user?.role.includes(r))
+  }
+
   const visibleItems = data.navMain.filter(item => {
     if (isBgiCloudLead) {
       // BGI cloud leads only see Dashboard, Projects, and Wave Gantt
       return ['/', '/projects', '/waves/gantt'].includes(item.url)
     }
-    if (item.requiresRole && !(user?.role.includes(item.requiresRole) ?? false)) return false
-    if (item.excludesRole && (user?.role.includes(item.excludesRole) ?? false)) return false
+    if (item.requiresRole && !hasAnyRole(item.requiresRole)) return false
+    if (item.excludesRole && hasAnyRole(item.excludesRole)) return false
     return true
   })
 

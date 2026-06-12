@@ -27,12 +27,13 @@ from app.schemas.user import (
     BatchUserCreateRequest,
     BatchUserCreateResponse,
     BgiCloudLeadCreate,
+    EngagementReviewerCreate,
     UserAdminUpdate,
     UserOut,
     UserProjectRoleOut,
 )
 from app.services import attachment_service, user_service
-from app.auth import _user_has_bgi_cloud_lead_role
+from app.auth import _user_has_bgi_cloud_lead_role, _user_has_engagement_reviewer_role
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -449,5 +450,110 @@ async def delete_bgi_cloud_lead(
 
     await db.execute(delete(ProjectUser).where(ProjectUser.user_id == user_id))
     await db.delete(user)
+    await db.flush()
+
+
+# ─── Engagement Reviewers ────────────────────────────────────────────────────
+
+@router.get("/engagement-reviewers", response_model=list[UserOut])
+async def list_engagement_reviewers(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """List all human users with the engagement_reviewer role."""
+    result = await db.execute(
+        select(User)
+        .where(User.is_service_account == False)
+        .order_by(User.name)
+    )
+    users = result.scalars().all()
+    return [u for u in users if _user_has_engagement_reviewer_role(u.role)]
+
+
+@router.post("/engagement-reviewers", response_model=UserOut, status_code=201)
+async def create_engagement_reviewer(
+    body: EngagementReviewerCreate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Create or reuse a user and assign them the engagement_reviewer role."""
+    existing = await db.execute(select(User).where(User.email == body.email))
+    user = existing.scalar_one_or_none()
+
+    words = body.name.split()
+    initials = "".join(w[0].upper() for w in words[:2]) if words else "ER"
+
+    if user:
+        user.name = body.name
+        user.department = body.department
+        user.team = body.team
+        user.initials = initials
+        existing_roles = {r.strip() for r in (user.role or "").split(",") if r.strip()}
+        existing_roles.add("engagement_reviewer")
+        user.role = ",".join(sorted(existing_roles))
+        await db.flush()
+        return user
+
+    user = User(
+        id=body.id or f"usr-{uuid.uuid4().hex[:8]}",
+        name=body.name,
+        email=body.email,
+        department=body.department,
+        team=body.team,
+        initials=initials,
+        role="engagement_reviewer",
+    )
+    db.add(user)
+    await db.flush()
+    return user
+
+
+@router.patch("/engagement-reviewers/{user_id}", response_model=UserOut)
+async def update_engagement_reviewer(
+    user_id: str,
+    body: UserAdminUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Update an engagement reviewer user's details."""
+    user = await db.get(User, user_id)
+    if not user or user.is_service_account:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if body.email is not None and body.email != user.email:
+        existing = await db.execute(select(User).where(User.email == body.email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email already in use")
+        user.email = body.email
+
+    if body.name is not None:
+        user.name = body.name
+        words = user.name.split()
+        user.initials = "".join(w[0].upper() for w in words[:2]) if words else "ER"
+
+    if body.department is not None:
+        user.department = body.department
+
+    if body.team is not None:
+        user.team = body.team
+
+    await db.flush()
+    return user
+
+
+@router.delete("/engagement-reviewers/{user_id}", status_code=204)
+async def delete_engagement_reviewer(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Remove the engagement_reviewer role from a user."""
+    user = await db.get(User, user_id)
+    if not user or user.is_service_account:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    roles = {r.strip() for r in (user.role or "").split(",") if r.strip()}
+    roles.discard("engagement_reviewer")
+    user.role = ",".join(sorted(roles)) if roles else None
     await db.flush()
 

@@ -65,3 +65,30 @@ export async function updateBgiCloudLead(id: string, data: UserAdminUpdate): Pro
 export async function deleteBgiCloudLead(id: string): Promise<void> {
   return apiClient.delete<void>(`${BGI_CLOUD_LEADS_ENDPOINT}/${id}`)
 }
+
+const ENGAGEMENT_REVIEWERS_ENDPOINT = '/api/v1/admin/engagement-reviewers'
+
+export interface EngagementReviewerCreate {
+  id?: string
+  name: string
+  email: string
+  department: string
+  team?: string
+}
+
+export async function getEngagementReviewers(): Promise<User[]> {
+  const raw = await apiClient.get<Record<string, unknown>[]>(ENGAGEMENT_REVIEWERS_ENDPOINT)
+  return raw.map(userFromApi)
+}
+
+export async function createEngagementReviewer(data: EngagementReviewerCreate): Promise<User> {
+  return userFromApi(await apiClient.post<Record<string, unknown>>(ENGAGEMENT_REVIEWERS_ENDPOINT, data))
+}
+
+export async function updateEngagementReviewer(id: string, data: UserAdminUpdate): Promise<User> {
+  return userFromApi(await apiClient.patch<Record<string, unknown>>(`${ENGAGEMENT_REVIEWERS_ENDPOINT}/${id}`, data))
+}
+
+export async function deleteEngagementReviewer(id: string): Promise<void> {
+  return apiClient.delete<void>(`${ENGAGEMENT_REVIEWERS_ENDPOINT}/${id}`)
+}
