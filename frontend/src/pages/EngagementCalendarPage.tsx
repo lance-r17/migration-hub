@@ -176,15 +176,11 @@ export function EngagementCalendarPage() {
 
   const hasEngagementReviewerFilter = selectedEngagementReviewerIds.size > 0
   const availableEngagementReviewers = useMemo(() => {
-    const map = new Map<string, { id: string; name: string }>()
-    for (const p of projects) {
-      for (const reviewerId of p.engagement?.engagementReviewerIds ?? []) {
-        const u = allUsers.find(user => user.id === reviewerId)
-        if (u) map.set(reviewerId, { id: reviewerId, name: u.name })
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
-  }, [projects, allUsers])
+    return allUsers
+      .filter(u => (u.role ?? []).includes('engagement_reviewer'))
+      .map(u => ({ id: u.id, name: u.name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [allUsers])
 
   const matchingEngagementReviewerIds = useMemo(() => {
     if (!hasEngagementReviewerFilter) return null
