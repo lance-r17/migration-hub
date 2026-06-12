@@ -104,7 +104,7 @@ interface ProjectListItemApi {
   cloud_resources: CloudResourceApi[]
   resource_sets: string[] | null
   risks: RiskApi[]
-  gbi_id: string | null
+  bgi_id: string | null
   category_milestone_ids: string[] | null
 }
 
@@ -211,7 +211,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
       ? { resources: raw.cloud_resources.map(mapResource) }
       : undefined,
     resourceSets: raw.resource_sets ?? undefined,
-    gbi_id: raw.gbi_id ?? undefined,
+    bgi_id: raw.bgi_id ?? undefined,
     categoryMilestoneIds: raw.category_milestone_ids ?? undefined,
   }
 }

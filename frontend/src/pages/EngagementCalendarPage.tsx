@@ -8,7 +8,7 @@ import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
 import { useCategoryMilestones } from '@/hooks/use-category-milestones'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
-import { getGbiHierarchy } from '@/services/gbi'
+import { getBgiHierarchy } from '@/services/bgi'
 import { apiClient } from '@/services/client'
 import {
   Dialog,
@@ -33,19 +33,19 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MultiAutocomplete } from '@/components/ui/multi-autocomplete'
-import { GbiTree } from '@/components/gbi/GbiTree'
+import { BgiTree } from '@/components/bgi/BgiTree'
 import { cn } from '@/lib/utils'
 import {
-  filterGbiTree,
+  filterBgiTree,
   collectAllIds,
   findNodeById,
   isDescendantOf,
   pruneEmptySelections,
   promoteFullSelections,
-} from '@/lib/gbi-utils'
+} from '@/lib/bgi-utils'
 import type { Project, User, Engagement, MigrationStrategy, ApplicationTier } from '@/types'
-import type { GbiNode } from '@/types/gbi'
-import type { SelectAction } from '@/components/gbi/GbiTree'
+import type { BgiNode } from '@/types/bgi'
+import type { SelectAction } from '@/components/bgi/BgiTree'
 
 function generateSlotId() {
   return `slot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -87,13 +87,13 @@ export function EngagementCalendarPage() {
   // ─── Category Milestone filter ──────────────────────────────────────────────
   const [cmFilter, setCmFilter] = useState<Set<string>>(new Set())
 
-  // ─── GBI filter ─────────────────────────────────────────────────────────────
-  const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
-  const [gbiFilterOpen, setGbiFilterOpen] = useState(false)
-  const [dialogGbiFilterOpen, setDialogGbiFilterOpen] = useState(false)
-  const [gbiFilterSearch, setGbiFilterSearch] = useState('')
-  const [selectedGbiIds, setSelectedGbiIds] = useState<Set<string>>(new Set())
-  const [excludedGbiIds, setExcludedGbiIds] = useState<Set<string>>(new Set())
+  // ─── BGI filter ─────────────────────────────────────────────────────────────
+  const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
+  const [bgiFilterOpen, setBgiFilterOpen] = useState(false)
+  const [dialogBgiFilterOpen, setDialogBgiFilterOpen] = useState(false)
+  const [bgiFilterSearch, setBgiFilterSearch] = useState('')
+  const [selectedBgiIds, setSelectedBgiIds] = useState<Set<string>>(new Set())
+  const [excludedBgiIds, setExcludedBgiIds] = useState<Set<string>>(new Set())
 
   // ─── Advanced filter ────────────────────────────────────────────────────────
   const [advFilterOpen, setAdvFilterOpen] = useState(false)
@@ -114,20 +114,20 @@ export function EngagementCalendarPage() {
     apiClient.get<User[]>('/api/v1/users').then(setAllUsers).catch(() => {})
   }, [])
 
-  // Fetch GBI hierarchy
+  // Fetch BGI hierarchy
   useEffect(() => {
     let cancelled = false
-    getGbiHierarchy()
-      .then(data => { if (!cancelled) setGbiRoot(data) })
+    getBgiHierarchy()
+      .then(data => { if (!cancelled) setBgiRoot(data) })
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
-  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
-  const canUseGbiFilter = isPlatformLead || isGbiCloudLead
-  const gbiScopeIds = isPlatformLead ? null : (user?.gbi_ids ?? null)
-  const gbiMaxDepth = migrationSettings?.gbiTierDepth ?? null
+  const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
+  const canUseBgiFilter = isPlatformLead || isBgiCloudLead
+  const bgiScopeIds = isPlatformLead ? null : (user?.bgi_ids ?? null)
+  const bgiMaxDepth = migrationSettings?.bgiTierDepth ?? null
 
   // ─── Filter computations ────────────────────────────────────────────────────
   const hasCmFilter = cmFilter.size > 0
@@ -140,27 +140,27 @@ export function EngagementCalendarPage() {
     return set
   }, [hasCmFilter, cmFilter, projects])
 
-  const filteredGbiRoot = useMemo(() => {
-    if (!gbiRoot) return null
-    const filtered = filterGbiTree([gbiRoot], gbiFilterSearch)
+  const filteredBgiRoot = useMemo(() => {
+    if (!bgiRoot) return null
+    const filtered = filterBgiTree([bgiRoot], bgiFilterSearch)
     return filtered[0] ?? null
-  }, [gbiRoot, gbiFilterSearch])
+  }, [bgiRoot, bgiFilterSearch])
 
-  const selectedGbiDescendantIds = useMemo(() => {
-    if (!gbiRoot || selectedGbiIds.size === 0) return null
+  const selectedBgiDescendantIds = useMemo(() => {
+    if (!bgiRoot || selectedBgiIds.size === 0) return null
     const allIds = new Set<string>()
-    for (const id of selectedGbiIds) {
-      const node = findNodeById(gbiRoot, id)
+    for (const id of selectedBgiIds) {
+      const node = findNodeById(bgiRoot, id)
       if (node) collectAllIds(node).forEach(i => allIds.add(i))
     }
-    for (const eid of excludedGbiIds) {
-      const node = findNodeById(gbiRoot, eid)
+    for (const eid of excludedBgiIds) {
+      const node = findNodeById(bgiRoot, eid)
       if (node) collectAllIds(node).forEach(i => allIds.delete(i))
     }
     return allIds
-  }, [gbiRoot, selectedGbiIds, excludedGbiIds])
+  }, [bgiRoot, selectedBgiIds, excludedBgiIds])
 
-  const hasGbiFilter = selectedGbiIds.size > 0
+  const hasBgiFilter = selectedBgiIds.size > 0
 
   const hasAdvFilter = selectedMigrationStrategies.size > 0 || selectedApplicationTiers.size > 0 || selectedReArch.size > 0 || selectedRtos.size > 0 || selectedRpos.size > 0
   const advFilterCount = selectedMigrationStrategies.size + selectedApplicationTiers.size + selectedReArch.size + selectedRtos.size + selectedRpos.size
@@ -220,12 +220,12 @@ export function EngagementCalendarPage() {
     return projects.filter(p => {
       if (!p.engagement) return false
       if (hasCmFilter && !matchingCmIds?.has(p.id)) return false
-      if (hasGbiFilter && (!p.gbi_id || !selectedGbiDescendantIds!.has(p.gbi_id))) return false
+      if (hasBgiFilter && (!p.bgi_id || !selectedBgiDescendantIds!.has(p.bgi_id))) return false
       if (hasAdvFilter && !matchingAdvIds?.has(p.id)) return false
       if (hasEngagementManagerFilter && !matchingEngagementManagerIds?.has(p.id)) return false
       return true
     })
-  }, [projects, hasCmFilter, matchingCmIds, hasGbiFilter, selectedGbiDescendantIds, hasAdvFilter, matchingAdvIds, hasEngagementManagerFilter, matchingEngagementManagerIds])
+  }, [projects, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds, hasEngagementManagerFilter, matchingEngagementManagerIds])
 
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project)
@@ -285,14 +285,14 @@ export function EngagementCalendarPage() {
     if (cmFilter.size > 0) {
       result = result.filter(p => p.categoryMilestoneIds?.some(id => cmFilter.has(id)))
     }
-    if (hasGbiFilter) {
-      result = result.filter(p => p.gbi_id && selectedGbiDescendantIds!.has(p.gbi_id))
+    if (hasBgiFilter) {
+      result = result.filter(p => p.bgi_id && selectedBgiDescendantIds!.has(p.bgi_id))
     }
     if (hasAdvFilter) {
       result = result.filter(p => matchingAdvIds?.has(p.id))
     }
     return result
-  }, [projects, projectSearch, cmFilter, hasGbiFilter, selectedGbiDescendantIds, hasAdvFilter, matchingAdvIds])
+  }, [projects, projectSearch, cmFilter, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds])
 
   const selectedProjectHasEngagement = useMemo(() => {
     return projects.find(p => p.id === createProjectId)?.engagement != null
@@ -563,111 +563,111 @@ export function EngagementCalendarPage() {
                   </PopoverContent>
                 </Popover>
 
-                {/* GBI filter */}
-                {canUseGbiFilter && gbiRoot && (
+                {/* BGI filter */}
+                {canUseBgiFilter && bgiRoot && (
                   <>
                     <div className="w-px h-3 bg-border" />
-                    <Popover open={gbiFilterOpen} onOpenChange={setGbiFilterOpen}>
+                    <Popover open={bgiFilterOpen} onOpenChange={setBgiFilterOpen}>
                       <PopoverTrigger asChild>
                         <button className={cn(
                           "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-sm text-muted-foreground",
-                          selectedGbiIds.size > 0 && "text-primary"
+                          selectedBgiIds.size > 0 && "text-primary"
                         )}>
-                          <Network size={14} className={selectedGbiIds.size > 0 ? 'text-primary' : ''} />
-                          <span>GBI</span>
-                          {selectedGbiIds.size > 0 && (
+                          <Network size={14} className={selectedBgiIds.size > 0 ? 'text-primary' : ''} />
+                          <span>BGI</span>
+                          {selectedBgiIds.size > 0 && (
                             <span className="absolute -top-1.5 -right-3 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
-                              {selectedGbiIds.size}
+                              {selectedBgiIds.size}
                             </span>
                           )}
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-96 p-0" align="end">
                         <div className="p-3 border-b border-border">
-                          <p className="text-sm font-semibold">GBI Hierarchy</p>
+                          <p className="text-sm font-semibold">BGI Hierarchy</p>
                           <p className="text-xs text-muted-foreground">Select tiers to filter projects</p>
                         </div>
                         <div className="p-2 border-b border-border">
                           <div className="relative">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                             <Input
-                              placeholder="Search GBI..."
-                              value={gbiFilterSearch}
-                              onChange={(e) => setGbiFilterSearch(e.target.value)}
+                              placeholder="Search BGI..."
+                              value={bgiFilterSearch}
+                              onChange={(e) => setBgiFilterSearch(e.target.value)}
                               className="pl-8 h-8 text-sm"
                             />
                           </div>
                         </div>
                         <div className="max-h-80 overflow-y-auto p-2">
-                          {filteredGbiRoot ? (
-                            <GbiTree
-                              nodes={[filteredGbiRoot]}
-                              selectedIds={selectedGbiIds}
-                              excludedIds={excludedGbiIds}
-                              scopeIds={gbiScopeIds}
+                          {filteredBgiRoot ? (
+                            <BgiTree
+                              nodes={[filteredBgiRoot]}
+                              selectedIds={selectedBgiIds}
+                              excludedIds={excludedBgiIds}
+                              scopeIds={bgiScopeIds}
                               onSelect={(node, action: SelectAction) => {
                                 if (action === 'select') {
-                                  let nextSelected = new Set([...selectedGbiIds, node.id])
-                                  let nextExcluded = new Set(excludedGbiIds)
-                                  if (gbiRoot) {
-                                    const selectedNode = findNodeById(gbiRoot, node.id)
+                                  let nextSelected = new Set([...selectedBgiIds, node.id])
+                                  let nextExcluded = new Set(excludedBgiIds)
+                                  if (bgiRoot) {
+                                    const selectedNode = findNodeById(bgiRoot, node.id)
                                     if (selectedNode) {
                                       collectAllIds(selectedNode).forEach((id) => {
                                         if (id !== node.id) nextSelected.delete(id)
                                       })
                                     }
-                                    for (const ex of excludedGbiIds) {
-                                      if (isDescendantOf(gbiRoot, ex, node.id)) {
+                                    for (const ex of excludedBgiIds) {
+                                      if (isDescendantOf(bgiRoot, ex, node.id)) {
                                         nextExcluded.delete(ex)
                                       }
                                     }
-                                    const promoted = promoteFullSelections(gbiRoot, nextSelected, nextExcluded, node.id)
+                                    const promoted = promoteFullSelections(bgiRoot, nextSelected, nextExcluded, node.id)
                                     nextSelected = promoted.selected
                                     nextExcluded = promoted.excluded
                                   }
-                                  setSelectedGbiIds(nextSelected)
-                                  setExcludedGbiIds(nextExcluded)
+                                  setSelectedBgiIds(nextSelected)
+                                  setExcludedBgiIds(nextExcluded)
                                 } else if (action === 'unselect') {
-                                  const nextSelected = new Set(selectedGbiIds)
+                                  const nextSelected = new Set(selectedBgiIds)
                                   nextSelected.delete(node.id)
-                                  const nextExcluded = new Set(excludedGbiIds)
-                                  if (gbiRoot) {
-                                    for (const ex of excludedGbiIds) {
-                                      if (isDescendantOf(gbiRoot, ex, node.id)) {
+                                  const nextExcluded = new Set(excludedBgiIds)
+                                  if (bgiRoot) {
+                                    for (const ex of excludedBgiIds) {
+                                      if (isDescendantOf(bgiRoot, ex, node.id)) {
                                         nextExcluded.delete(ex)
                                       }
                                     }
-                                    const pruned = pruneEmptySelections(gbiRoot, nextSelected, nextExcluded)
-                                    setSelectedGbiIds(pruned)
+                                    const pruned = pruneEmptySelections(bgiRoot, nextSelected, nextExcluded)
+                                    setSelectedBgiIds(pruned)
                                   } else {
-                                    setSelectedGbiIds(nextSelected)
+                                    setSelectedBgiIds(nextSelected)
                                   }
-                                  setExcludedGbiIds(nextExcluded)
+                                  setExcludedBgiIds(nextExcluded)
                                 } else if (action === 'exclude') {
-                                  const nextExcluded = new Set(excludedGbiIds)
+                                  const nextExcluded = new Set(excludedBgiIds)
                                   nextExcluded.add(node.id)
-                                  if (gbiRoot) {
-                                    const pruned = pruneEmptySelections(gbiRoot, selectedGbiIds, nextExcluded)
-                                    setSelectedGbiIds(pruned)
+                                  if (bgiRoot) {
+                                    const pruned = pruneEmptySelections(bgiRoot, selectedBgiIds, nextExcluded)
+                                    setSelectedBgiIds(pruned)
                                   }
-                                  setExcludedGbiIds(nextExcluded)
+                                  setExcludedBgiIds(nextExcluded)
                                 } else if (action === 'unexclude') {
-                                  const nextExcluded = new Set(excludedGbiIds)
+                                  const nextExcluded = new Set(excludedBgiIds)
                                   nextExcluded.delete(node.id)
-                                  if (gbiRoot) {
-                                    const promoted = promoteFullSelections(gbiRoot, selectedGbiIds, nextExcluded, node.id)
-                                    setSelectedGbiIds(promoted.selected)
-                                    setExcludedGbiIds(promoted.excluded)
+                                  if (bgiRoot) {
+                                    const promoted = promoteFullSelections(bgiRoot, selectedBgiIds, nextExcluded, node.id)
+                                    setSelectedBgiIds(promoted.selected)
+                                    setExcludedBgiIds(promoted.excluded)
                                   } else {
-                                    setExcludedGbiIds(nextExcluded)
+                                    setExcludedBgiIds(nextExcluded)
                                   }
                                 }
                               }}
                               readOnly
-                              maxDepth={gbiMaxDepth}
+                              maxDepth={bgiMaxDepth}
                             />
                           ) : (
-                            <p className="text-sm text-muted-foreground py-4 text-center">No GBI hierarchy available.</p>
+                            <p className="text-sm text-muted-foreground py-4 text-center">No BGI hierarchy available.</p>
                           )}
                         </div>
                       </PopoverContent>
@@ -895,109 +895,109 @@ export function EngagementCalendarPage() {
               </PopoverContent>
             </Popover>
 
-            {/* GBI filter */}
-            {canUseGbiFilter && gbiRoot && (
+            {/* BGI filter */}
+            {canUseBgiFilter && bgiRoot && (
               <>
                 <div className="w-px h-3 bg-border" />
-                <Popover open={dialogGbiFilterOpen} onOpenChange={setDialogGbiFilterOpen} modal>
+                <Popover open={dialogBgiFilterOpen} onOpenChange={setDialogBgiFilterOpen} modal>
                   <PopoverTrigger asChild>
                     <button className={cn(
                       "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-xs text-muted-foreground",
-                      selectedGbiIds.size > 0 && "text-primary"
+                      selectedBgiIds.size > 0 && "text-primary"
                     )}>
-                      <Network size={12} className={selectedGbiIds.size > 0 ? 'text-primary' : ''} />
-                      <span>GBI</span>
-                      {selectedGbiIds.size > 0 && (
-                        <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0 font-medium">{selectedGbiIds.size}</span>
+                      <Network size={12} className={selectedBgiIds.size > 0 ? 'text-primary' : ''} />
+                      <span>BGI</span>
+                      {selectedBgiIds.size > 0 && (
+                        <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0 font-medium">{selectedBgiIds.size}</span>
                       )}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="start">
                     <div className="p-3 border-b border-border">
-                      <p className="text-sm font-semibold">GBI Hierarchy</p>
+                      <p className="text-sm font-semibold">BGI Hierarchy</p>
                       <p className="text-xs text-muted-foreground">Select tiers to filter projects</p>
                     </div>
                     <div className="p-2 border-b border-border">
                       <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                         <Input
-                          placeholder="Search GBI..."
-                          value={gbiFilterSearch}
-                          onChange={(e) => setGbiFilterSearch(e.target.value)}
+                          placeholder="Search BGI..."
+                          value={bgiFilterSearch}
+                          onChange={(e) => setBgiFilterSearch(e.target.value)}
                           className="pl-8 h-8 text-sm"
                         />
                       </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto p-2" onWheel={(e) => e.stopPropagation()}>
-                      {filteredGbiRoot ? (
-                        <GbiTree
-                          nodes={[filteredGbiRoot]}
-                          selectedIds={selectedGbiIds}
-                          excludedIds={excludedGbiIds}
-                          scopeIds={gbiScopeIds}
+                      {filteredBgiRoot ? (
+                        <BgiTree
+                          nodes={[filteredBgiRoot]}
+                          selectedIds={selectedBgiIds}
+                          excludedIds={excludedBgiIds}
+                          scopeIds={bgiScopeIds}
                           onSelect={(node, action: SelectAction) => {
                             if (action === 'select') {
-                              let nextSelected = new Set([...selectedGbiIds, node.id])
-                              let nextExcluded = new Set(excludedGbiIds)
-                              if (gbiRoot) {
-                                const selectedNode = findNodeById(gbiRoot, node.id)
+                              let nextSelected = new Set([...selectedBgiIds, node.id])
+                              let nextExcluded = new Set(excludedBgiIds)
+                              if (bgiRoot) {
+                                const selectedNode = findNodeById(bgiRoot, node.id)
                                 if (selectedNode) {
                                   collectAllIds(selectedNode).forEach((id) => {
                                     if (id !== node.id) nextSelected.delete(id)
                                   })
                                 }
-                                for (const ex of excludedGbiIds) {
-                                  if (isDescendantOf(gbiRoot, ex, node.id)) {
+                                for (const ex of excludedBgiIds) {
+                                  if (isDescendantOf(bgiRoot, ex, node.id)) {
                                     nextExcluded.delete(ex)
                                   }
                                 }
-                                const promoted = promoteFullSelections(gbiRoot, nextSelected, nextExcluded, node.id)
+                                const promoted = promoteFullSelections(bgiRoot, nextSelected, nextExcluded, node.id)
                                 nextSelected = promoted.selected
                                 nextExcluded = promoted.excluded
                               }
-                              setSelectedGbiIds(nextSelected)
-                              setExcludedGbiIds(nextExcluded)
+                              setSelectedBgiIds(nextSelected)
+                              setExcludedBgiIds(nextExcluded)
                             } else if (action === 'unselect') {
-                              const nextSelected = new Set(selectedGbiIds)
+                              const nextSelected = new Set(selectedBgiIds)
                               nextSelected.delete(node.id)
-                              const nextExcluded = new Set(excludedGbiIds)
-                              if (gbiRoot) {
-                                for (const ex of excludedGbiIds) {
-                                  if (isDescendantOf(gbiRoot, ex, node.id)) {
+                              const nextExcluded = new Set(excludedBgiIds)
+                              if (bgiRoot) {
+                                for (const ex of excludedBgiIds) {
+                                  if (isDescendantOf(bgiRoot, ex, node.id)) {
                                     nextExcluded.delete(ex)
                                   }
                                 }
-                                const pruned = pruneEmptySelections(gbiRoot, nextSelected, nextExcluded)
-                                setSelectedGbiIds(pruned)
+                                const pruned = pruneEmptySelections(bgiRoot, nextSelected, nextExcluded)
+                                setSelectedBgiIds(pruned)
                               } else {
-                                setSelectedGbiIds(nextSelected)
+                                setSelectedBgiIds(nextSelected)
                               }
-                              setExcludedGbiIds(nextExcluded)
+                              setExcludedBgiIds(nextExcluded)
                             } else if (action === 'exclude') {
-                              const nextExcluded = new Set(excludedGbiIds)
+                              const nextExcluded = new Set(excludedBgiIds)
                               nextExcluded.add(node.id)
-                              if (gbiRoot) {
-                                const pruned = pruneEmptySelections(gbiRoot, selectedGbiIds, nextExcluded)
-                                setSelectedGbiIds(pruned)
+                              if (bgiRoot) {
+                                const pruned = pruneEmptySelections(bgiRoot, selectedBgiIds, nextExcluded)
+                                setSelectedBgiIds(pruned)
                               }
-                              setExcludedGbiIds(nextExcluded)
+                              setExcludedBgiIds(nextExcluded)
                             } else if (action === 'unexclude') {
-                              const nextExcluded = new Set(excludedGbiIds)
+                              const nextExcluded = new Set(excludedBgiIds)
                               nextExcluded.delete(node.id)
-                              if (gbiRoot) {
-                                const promoted = promoteFullSelections(gbiRoot, selectedGbiIds, nextExcluded, node.id)
-                                setSelectedGbiIds(promoted.selected)
-                                setExcludedGbiIds(promoted.excluded)
+                              if (bgiRoot) {
+                                const promoted = promoteFullSelections(bgiRoot, selectedBgiIds, nextExcluded, node.id)
+                                setSelectedBgiIds(promoted.selected)
+                                setExcludedBgiIds(promoted.excluded)
                               } else {
-                                setExcludedGbiIds(nextExcluded)
+                                setExcludedBgiIds(nextExcluded)
                               }
                             }
                           }}
                           readOnly
-                          maxDepth={gbiMaxDepth}
+                          maxDepth={bgiMaxDepth}
                         />
                       ) : (
-                        <p className="text-sm text-muted-foreground py-4 text-center">No GBI hierarchy available.</p>
+                        <p className="text-sm text-muted-foreground py-4 text-center">No BGI hierarchy available.</p>
                       )}
                     </div>
                   </PopoverContent>

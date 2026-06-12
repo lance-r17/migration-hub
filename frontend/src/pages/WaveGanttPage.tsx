@@ -11,11 +11,11 @@ import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { updatePlanning, updateProject } from '@/services/projects'
 import { updateProjectOrder } from '@/services/waves'
 import { appendAuditEntryMock } from '@/services/auditLog'
-import { getGbiHierarchy } from '@/services/gbi'
+import { getBgiHierarchy } from '@/services/bgi'
 import { USE_MOCK } from '@/services/client'
 import type { Project, ProjectPlanning } from '@/types'
 import type { Wave } from '@/types/wave'
-import type { GbiNode } from '@/types/gbi'
+import type { BgiNode } from '@/types/bgi'
 
 export function WaveGanttPage() {
   const navigate = useNavigate()
@@ -28,15 +28,15 @@ export function WaveGanttPage() {
 
   const [liveWaves, setLiveWaves] = useState<Wave[]>(initialWaves)
   const [liveProjects, setLiveProjects] = useState<Project[]>(initialProjects)
-  const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
+  const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
 
   useEffect(() => { setLiveWaves(initialWaves) }, [initialWaves])
   useEffect(() => { setLiveProjects(initialProjects) }, [initialProjects])
 
   useEffect(() => {
     let cancelled = false
-    getGbiHierarchy()
-      .then(data => { if (!cancelled) setGbiRoot(data) })
+    getBgiHierarchy()
+      .then(data => { if (!cancelled) setBgiRoot(data) })
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
@@ -102,8 +102,8 @@ export function WaveGanttPage() {
   }
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
-  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
-  const canUseGbiFilter = isPlatformLead || isGbiCloudLead
+  const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
+  const canUseBgiFilter = isPlatformLead || isBgiCloudLead
   const isLoading = wavesLoading || projectsLoading || cmLoading
   const { settings: migrationSettings } = useMigrationSettings()
 
@@ -153,9 +153,9 @@ export function WaveGanttPage() {
             waves={sortedWaves}
             projects={liveProjects}
             categoryMilestones={categoryMilestones}
-            gbiRoot={canUseGbiFilter ? gbiRoot : null}
-            gbiScopeIds={isPlatformLead ? null : (user?.gbi_ids ?? null)}
-            gbiMaxDepth={migrationSettings?.gbiTierDepth ?? null}
+            bgiRoot={canUseBgiFilter ? bgiRoot : null}
+            bgiScopeIds={isPlatformLead ? null : (user?.bgi_ids ?? null)}
+            bgiMaxDepth={migrationSettings?.bgiTierDepth ?? null}
             onUpdatePlanning={handleUpdatePlanning}
             onUpdateProjectOrder={isPlatformLead ? handleUpdateProjectOrder : undefined}
             onAssign={isPlatformLead ? handleAssign : undefined}

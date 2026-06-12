@@ -10,10 +10,10 @@ const ADMIN_SECTIONS = [
     href: '/admin/users',
   },
   {
-    title: 'GBI Cloud Leads',
-    description: 'Create and assign GBI cloud lead users to org tiers.',
+    title: 'BGI Cloud Leads',
+    description: 'Create and assign BGI cloud lead users to org tiers.',
     icon: <Building2 size={20} className="text-primary" />,
-    href: '/admin/gbi-cloud-leads',
+    href: '/admin/bgi-cloud-leads',
   },
   {
     title: 'Job Monitor',

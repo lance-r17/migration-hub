@@ -1,13 +1,13 @@
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { getProjects } from '@/services/projects'
-import { getGbiHierarchy } from '@/services/gbi'
+import { getBgiHierarchy } from '@/services/bgi'
 import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
-import { getGbiAncestry } from '@/lib/gbi-utils'
+import { getBgiAncestry } from '@/lib/bgi-utils'
 import type { Project, Risk } from '@/types'
-import type { GbiNode } from '@/types/gbi'
+import type { BgiNode } from '@/types/bgi'
 
 function calcTaskCost(effort?: number, effortTime?: number, rate?: number): number {
   return (effort ?? 0) * (effortTime ?? 0) * (rate ?? 0)
@@ -17,24 +17,24 @@ export async function exportEstimatedEffortReport() {
   const toastId = toast.loading('Generating estimated effort report...')
 
   try {
-    const [projects, gbiRoot] = await Promise.all([
+    const [projects, bgiRoot] = await Promise.all([
       getProjects(['basic', 'effort']),
-      getGbiHierarchy().catch(() => null),
+      getBgiHierarchy().catch(() => null),
     ])
 
     const rows: Record<string, string | number>[] = []
 
     for (const project of projects) {
-      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
+      const bgiAncestry = bgiRoot && project.bgi_id ? getBgiAncestry(bgiRoot, project.bgi_id) : null
       const tables = project.migrationEffortEstimation?.tables ?? []
       for (const table of tables) {
         for (const task of table.tasks) {
           rows.push({
             'Project ID': project.id,
             'Project Name': project.name,
-            'GBI L2': gbiAncestry?.l2 ?? '',
-            'GBI L3': gbiAncestry?.l3 ?? '',
-            'GBI L4': gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? ''),
+            'BGI L2': bgiAncestry?.l2 ?? '',
+            'BGI L3': bgiAncestry?.l3 ?? '',
+            'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? project.bgi_id ?? '') : (project.bgi_id ?? ''),
             'BA ID': table.baId ?? '',
             'Effort Type': getEffortTypeLabel(task.effortType),
             'Effort Unit (FTE)': task.effort ?? 0,
@@ -56,9 +56,9 @@ export async function exportEstimatedEffortReport() {
     const headers = [
       'Project ID',
       'Project Name',
-      'GBI L2',
-      'GBI L3',
-      'GBI L4',
+      'BGI L2',
+      'BGI L3',
+      'BGI L4',
       'BA ID',
       'Effort Type',
       'Effort Unit (FTE)',
@@ -120,10 +120,10 @@ export async function exportProjectResourcesReport() {
   const toastId = toast.loading('Generating project resources report...')
 
   try {
-    const [projects, categoryEntries, gbiRoot] = await Promise.all([
+    const [projects, categoryEntries, bgiRoot] = await Promise.all([
       getProjects(['basic', 'resources']),
       fetchProductCategoryMap(),
-      getGbiHierarchy().catch(() => null),
+      getBgiHierarchy().catch(() => null),
     ])
 
     const categoryMap = new Map(categoryEntries.map(e => [e.product, e.category]))
@@ -142,9 +142,9 @@ export async function exportProjectResourcesReport() {
     const baseHeaders = [
       'Project ID',
       'Project Name',
-      'GBI L2',
-      'GBI L3',
-      'GBI L4',
+      'BGI L2',
+      'BGI L3',
+      'BGI L4',
       'Resource ID',
       'Resource Name',
       'Product',
@@ -163,14 +163,14 @@ export async function exportProjectResourcesReport() {
     const rows: Record<string, string | number>[] = []
 
     for (const project of projects) {
-      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
+      const bgiAncestry = bgiRoot && project.bgi_id ? getBgiAncestry(bgiRoot, project.bgi_id) : null
       for (const resource of project.currentInfrastructure?.resources ?? []) {
         const row: Record<string, string | number> = {
           'Project ID': project.id,
           'Project Name': project.name,
-          'GBI L2': gbiAncestry?.l2 ?? '',
-          'GBI L3': gbiAncestry?.l3 ?? '',
-          'GBI L4': gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? ''),
+          'BGI L2': bgiAncestry?.l2 ?? '',
+          'BGI L3': bgiAncestry?.l3 ?? '',
+          'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? project.bgi_id ?? '') : (project.bgi_id ?? ''),
           'Resource ID': resource.resourceId,
           'Resource Name': resource.name,
           'Product': resource.product ?? '',
@@ -205,7 +205,7 @@ export async function exportProjectResourcesReport() {
     worksheet['!cols'] = headers.map(h => {
       if (h.startsWith('Spec:')) return { wch: 20 }
       if (h === 'Project Name') return { wch: 28 }
-      if (h.startsWith('GBI')) return { wch: 28 }
+      if (h.startsWith('BGI')) return { wch: 28 }
       if (h === 'Resource Name') return { wch: 28 }
       if (h === 'Product Category') return { wch: 18 }
       if (h === 'Resource Set') return { wch: 28 }
@@ -239,25 +239,25 @@ export async function exportProjectDependenciesReport() {
   const toastId = toast.loading('Generating project dependencies report...')
 
   try {
-    const [projects, gbiRoot] = await Promise.all([
+    const [projects, bgiRoot] = await Promise.all([
       getProjects(['basic', 'dependencies']),
-      getGbiHierarchy().catch(() => null),
+      getBgiHierarchy().catch(() => null),
     ])
 
     const rows: Record<string, string | number>[] = []
 
     for (const project of projects) {
-      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
-      const gbiL2 = gbiAncestry?.l2 ?? ''
-      const gbiL3 = gbiAncestry?.l3 ?? ''
-      const gbiL4 = gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? '')
+      const bgiAncestry = bgiRoot && project.bgi_id ? getBgiAncestry(bgiRoot, project.bgi_id) : null
+      const bgiL2 = bgiAncestry?.l2 ?? ''
+      const bgiL3 = bgiAncestry?.l3 ?? ''
+      const bgiL4 = bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? project.bgi_id ?? '') : (project.bgi_id ?? '')
       for (const dep of project.dependencies?.upstream ?? []) {
         rows.push({
           'Project ID': project.id,
           'Project Name': project.name,
-          'GBI L2': gbiL2,
-          'GBI L3': gbiL3,
-          'GBI L4': gbiL4,
+          'BGI L2': bgiL2,
+          'BGI L3': bgiL3,
+          'BGI L4': bgiL4,
           'Dependency Type': 'Upstream',
           'Dependency ID': dep.id,
           'Dependency Name': dep.name,
@@ -271,9 +271,9 @@ export async function exportProjectDependenciesReport() {
         rows.push({
           'Project ID': project.id,
           'Project Name': project.name,
-          'GBI L2': gbiL2,
-          'GBI L3': gbiL3,
-          'GBI L4': gbiL4,
+          'BGI L2': bgiL2,
+          'BGI L3': bgiL3,
+          'BGI L4': bgiL4,
           'Dependency Type': 'Downstream',
           'Dependency ID': dep.id,
           'Dependency Name': dep.name,
@@ -293,9 +293,9 @@ export async function exportProjectDependenciesReport() {
     const headers = [
       'Project ID',
       'Project Name',
-      'GBI L2',
-      'GBI L3',
-      'GBI L4',
+      'BGI L2',
+      'BGI L3',
+      'BGI L4',
       'Dependency Type',
       'Dependency ID',
       'Dependency Name',
@@ -372,9 +372,9 @@ export async function exportProjectDetailsReport() {
     const baseHeaders = [
       'Project ID',
       'Project Name',
-      'GBI L2',
-      'GBI L3',
-      'GBI L4',
+      'BGI L2',
+      'BGI L3',
+      'BGI L4',
       'Status',
       'Blocked Reason',
       'Description',
@@ -439,7 +439,7 @@ export async function exportProjectDetailsReport() {
 
     const headers = [...baseHeaders, ...freezeHeaders]
 
-    const gbiRoot = await getGbiHierarchy().catch(() => null)
+    const bgiRoot = await getBgiHierarchy().catch(() => null)
 
     const rows: Record<string, string | number>[] = []
 
@@ -452,13 +452,13 @@ export async function exportProjectDetailsReport() {
       const mc = project.migrationConstraints
       const ta = project.targetArchitecture
 
-      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
+      const bgiAncestry = bgiRoot && project.bgi_id ? getBgiAncestry(bgiRoot, project.bgi_id) : null
       const row: Record<string, string | number> = {
         'Project ID': project.id,
         'Project Name': project.name,
-        'GBI L2': gbiAncestry?.l2 ?? '',
-        'GBI L3': gbiAncestry?.l3 ?? '',
-        'GBI L4': gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? ''),
+        'BGI L2': bgiAncestry?.l2 ?? '',
+        'BGI L3': bgiAncestry?.l3 ?? '',
+        'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? project.bgi_id ?? '') : (project.bgi_id ?? ''),
         'Status': project.status,
         'Blocked Reason': project.blockedReason ?? '',
         'Description': project.description ?? '',
@@ -653,25 +653,25 @@ export async function exportProjectRisksAndBlockersReport() {
   const toastId = toast.loading('Generating project risks & blockers report...')
 
   try {
-    const [projects, gbiRoot] = await Promise.all([
+    const [projects, bgiRoot] = await Promise.all([
       getProjects(['basic', 'risks']),
-      getGbiHierarchy().catch(() => null),
+      getBgiHierarchy().catch(() => null),
     ])
 
     const rows: Record<string, string | number>[] = []
     for (const project of projects) {
-      const gbiAncestry = gbiRoot && project.gbi_id ? getGbiAncestry(gbiRoot, project.gbi_id) : null
-      const gbiL2 = gbiAncestry?.l2 ?? ''
-      const gbiL3 = gbiAncestry?.l3 ?? ''
-      const gbiL4 = gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName ?? project.gbi_id ?? '') : (project.gbi_id ?? '')
+      const bgiAncestry = bgiRoot && project.bgi_id ? getBgiAncestry(bgiRoot, project.bgi_id) : null
+      const bgiL2 = bgiAncestry?.l2 ?? ''
+      const bgiL3 = bgiAncestry?.l3 ?? ''
+      const bgiL4 = bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? project.bgi_id ?? '') : (project.bgi_id ?? '')
       const risks = project.risks ?? []
       if (risks.length === 0) {
         rows.push({
           'Project ID': project.id,
           'Project Name': project.name,
-          'GBI L2': gbiL2,
-          'GBI L3': gbiL3,
-          'GBI L4': gbiL4,
+          'BGI L2': bgiL2,
+          'BGI L3': bgiL3,
+          'BGI L4': bgiL4,
           'Risk Title': '—',
           'Risk Description': '—',
           'Severity': '—',
@@ -684,9 +684,9 @@ export async function exportProjectRisksAndBlockersReport() {
           rows.push({
             'Project ID': project.id,
             'Project Name': project.name,
-            'GBI L2': gbiL2,
-            'GBI L3': gbiL3,
-            'GBI L4': gbiL4,
+            'BGI L2': bgiL2,
+            'BGI L3': bgiL3,
+            'BGI L4': bgiL4,
             'Risk Title': risk.title,
             'Risk Description': risk.description,
             'Severity': risk.severity,
@@ -706,9 +706,9 @@ export async function exportProjectRisksAndBlockersReport() {
     const headers = [
       'Project ID',
       'Project Name',
-      'GBI L2',
-      'GBI L3',
-      'GBI L4',
+      'BGI L2',
+      'BGI L3',
+      'BGI L4',
       'Risk Title',
       'Risk Description',
       'Severity',
@@ -746,7 +746,7 @@ export async function exportProjectRisksAndBlockersReport() {
   }
 }
 
-export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[], gbiRoot?: GbiNode | null) {
+export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[], bgiRoot?: BgiNode | null) {
   const toastId = toast.loading('Generating projects report...')
 
   try {
@@ -755,13 +755,14 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
       const days = getMigrationPeriodDays(p)
       const period = !start && !end ? '—' : `${formatDate(start)} → ${formatDate(end)}${days !== null ? ` (${days} days)` : ''}`
       const { totalCost } = getMigrationEffortSummary(p)
-      const gbiAncestry = gbiRoot && p.gbi_id ? getGbiAncestry(gbiRoot, p.gbi_id) : null
+      const bgiAncestry = bgiRoot && p.bgi_id ? getBgiAncestry(bgiRoot, p.bgi_id) : null
       return {
         'Name': p.name,
         'ID': p.id,
-        'GBI L2': gbiAncestry?.l2 ?? '—',
-        'GBI L3': gbiAncestry?.l3 ?? '—',
-        'GBI L4': gbiAncestry ? (gbiAncestry.l4 ?? gbiAncestry.leafName) : (p.gbi_id ?? '—'),
+        'Application Name': p.applicationOverview?.applicationName ?? '—',
+        'BGI L2': bgiAncestry?.l2 ?? '—',
+        'BGI L3': bgiAncestry?.l3 ?? '—',
+        'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName) : (p.bgi_id ?? '—'),
         'Status': getStatusLabel(p.status, p.stageProgress, draftProjectIds.includes(p.id)),
         'Progress (%)': p.progress,
         'ITSO': p.itso ?? '—',
@@ -783,7 +784,7 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
 
     const worksheet = XLSX.utils.json_to_sheet(rows)
     worksheet['!cols'] = [
-      { wch: 32 }, { wch: 18 }, { wch: 28 }, { wch: 28 }, { wch: 28 },
+      { wch: 32 }, { wch: 18 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 28 },
       { wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 8 },
       { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 36 }, { wch: 18 },
       { wch: 14 },

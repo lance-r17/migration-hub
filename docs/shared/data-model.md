@@ -97,7 +97,7 @@ interface Project {
   jiraStoryKey?: string
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'
   categoryMilestoneIds?: string[]
-  gbi_id?: string | null    // GBI node assignment
+  bgi_id?: string | null    // BGI node assignment
 }
 ```
 
@@ -569,20 +569,20 @@ interface Activity {
 
 ---
 
-## GBI Hierarchy
+## BGI Hierarchy
 
 Organizational tree used to scope project visibility and filtering.
 
 ```ts
-interface GbiNode {
+interface BgiNode {
   id: string
   name: string
-  children?: GbiNode[]
+  children?: BgiNode[]
 }
 
-interface GbiHierarchy {
-  root: GbiNode | null
+interface BgiHierarchy {
+  root: BgiNode | null
 }
 ```
 
-`Project.gbi_id` links a project to a single GBI node. The tree supports hierarchical selection (selecting a parent implicitly includes all descendants) and exclusion (deselecting individual children under a selected parent).
+`Project.bgi_id` links a project to a single BGI node. The tree supports hierarchical selection (selecting a parent implicitly includes all descendants) and exclusion (deselecting individual children under a selected parent).

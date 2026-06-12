@@ -1,15 +1,15 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Plus, Trash2, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { GbiNode } from '@/types/gbi'
+import type { BgiNode } from '@/types/bgi'
 
 export type SelectAction = 'select' | 'exclude' | 'unselect' | 'unexclude'
 
-interface GbiTreeProps {
-  nodes: GbiNode[]
+interface BgiTreeProps {
+  nodes: BgiNode[]
   selectedIds: Set<string>
   excludedIds: Set<string>
-  onSelect?: (node: GbiNode, action: SelectAction) => void
+  onSelect?: (node: BgiNode, action: SelectAction) => void
   onAddChild?: (parentId: string) => void
   onDelete?: (nodeId: string) => void
   onRename?: (nodeId: string, newName: string) => void
@@ -21,7 +21,7 @@ interface GbiTreeProps {
 }
 
 function computeTreeState(
-  node: GbiNode,
+  node: BgiNode,
   selectedIds: Set<string>,
   excludedIds: Set<string>,
   ancestorSelected: boolean,
@@ -51,7 +51,7 @@ function computeTreeState(
 }
 
 function buildStateMap(
-  nodes: GbiNode[],
+  nodes: BgiNode[],
   selectedIds: Set<string>,
   excludedIds: Set<string>,
 ): Map<string, { checked: boolean; indeterminate: boolean }> {
@@ -62,7 +62,7 @@ function buildStateMap(
   return map
 }
 
-function GbiTreeNode({
+function BgiTreeNode({
   node,
   selectedIds,
   excludedIds,
@@ -78,11 +78,11 @@ function GbiTreeNode({
   inScope = false,
   maxDepth,
 }: {
-  node: GbiNode
+  node: BgiNode
   selectedIds: Set<string>
   excludedIds: Set<string>
   stateMap: Map<string, { checked: boolean; indeterminate: boolean }>
-  onSelect?: (node: GbiNode, action: SelectAction) => void
+  onSelect?: (node: BgiNode, action: SelectAction) => void
   onAddChild?: (parentId: string) => void
   onDelete?: (nodeId: string) => void
   onRename?: (nodeId: string, newName: string) => void
@@ -254,7 +254,7 @@ function GbiTreeNode({
       {expanded && canExpand && (
         <div>
           {node.children!.map((child) => (
-            <GbiTreeNode
+            <BgiTreeNode
               key={child.id}
               node={child}
               selectedIds={selectedIds}
@@ -278,12 +278,12 @@ function GbiTreeNode({
   )
 }
 
-export function GbiTree({ nodes, selectedIds, excludedIds, onSelect, onAddChild, onDelete, onRename, readOnly, checkable, scopeIds, maxDepth }: GbiTreeProps) {
+export function BgiTree({ nodes, selectedIds, excludedIds, onSelect, onAddChild, onDelete, onRename, readOnly, checkable, scopeIds, maxDepth }: BgiTreeProps) {
   const stateMap = buildStateMap(nodes, selectedIds, excludedIds)
   return (
     <div className="space-y-0.5">
       {nodes.map((node) => (
-        <GbiTreeNode
+        <BgiTreeNode
           key={node.id}
           node={node}
           selectedIds={selectedIds}

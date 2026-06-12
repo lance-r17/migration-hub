@@ -1,29 +1,29 @@
-import type { GbiNode } from '@/types/gbi'
+import type { BgiNode } from '@/types/bgi'
 
-export function filterGbiTree(nodes: GbiNode[], query: string): GbiNode[] {
+export function filterBgiTree(nodes: BgiNode[], query: string): BgiNode[] {
   const q = query.trim().toLowerCase()
   if (!q) return nodes
 
-  function walk(node: GbiNode): GbiNode | null {
+  function walk(node: BgiNode): BgiNode | null {
     const matches = node.name.toLowerCase().includes(q)
     if (matches) {
       return { ...node }
     }
-    const children = node.children?.map(walk).filter(Boolean) as GbiNode[] | undefined
+    const children = node.children?.map(walk).filter(Boolean) as BgiNode[] | undefined
     if (children && children.length > 0) {
       return { ...node, children }
     }
     return null
   }
 
-  return nodes.map(walk).filter(Boolean) as GbiNode[]
+  return nodes.map(walk).filter(Boolean) as BgiNode[]
 }
 
-export function collectAllIds(node: GbiNode): string[] {
+export function collectAllIds(node: BgiNode): string[] {
   return [node.id, ...(node.children?.flatMap(collectAllIds) ?? [])]
 }
 
-export function findNodeById(node: GbiNode, id: string): GbiNode | null {
+export function findNodeById(node: BgiNode, id: string): BgiNode | null {
   if (node.id === id) return node
   for (const child of node.children ?? []) {
     const found = findNodeById(child, id)
@@ -32,16 +32,16 @@ export function findNodeById(node: GbiNode, id: string): GbiNode | null {
   return null
 }
 
-export function isDescendantOf(root: GbiNode, targetId: string, ancestorId: string): boolean {
+export function isDescendantOf(root: BgiNode, targetId: string, ancestorId: string): boolean {
   if (targetId === ancestorId) return false
   const ancestor = findNodeById(root, ancestorId)
   if (!ancestor) return false
   return collectAllIds(ancestor).includes(targetId)
 }
 
-export function getAncestorIds(root: GbiNode, targetId: string): string[] {
+export function getAncestorIds(root: BgiNode, targetId: string): string[] {
   const result: string[] = []
-  function walk(node: GbiNode, path: string[]): boolean {
+  function walk(node: BgiNode, path: string[]): boolean {
     if (node.id === targetId) {
       result.push(...path)
       return true
@@ -55,11 +55,11 @@ export function getAncestorIds(root: GbiNode, targetId: string): string[] {
   return result
 }
 
-export function getGbiAncestry(
-  root: GbiNode,
+export function getBgiAncestry(
+  root: BgiNode,
   targetId: string,
 ): { l2?: string; l3?: string; l4?: string; leafName?: string } {
-  function walk(node: GbiNode, path: GbiNode[]): { l2?: string; l3?: string; l4?: string; leafName?: string } | null {
+  function walk(node: BgiNode, path: BgiNode[]): { l2?: string; l3?: string; l4?: string; leafName?: string } | null {
     if (node.id === targetId) {
       const fullPath = [...path, node]
       return {
@@ -79,7 +79,7 @@ export function getGbiAncestry(
 }
 
 export function hasCoveredDescendants(
-  root: GbiNode,
+  root: BgiNode,
   nodeId: string,
   selectedIds: Set<string>,
   excludedIds: Set<string>,
@@ -87,7 +87,7 @@ export function hasCoveredDescendants(
   const node = findNodeById(root, nodeId)
   if (!node?.children || node.children.length === 0) return false
 
-  function walk(n: GbiNode, ancestorSelected: boolean): boolean {
+  function walk(n: BgiNode, ancestorSelected: boolean): boolean {
     const covered = selectedIds.has(n.id) || (ancestorSelected && !excludedIds.has(n.id))
     if (covered) return true
     const nowSelected = selectedIds.has(n.id)
@@ -104,7 +104,7 @@ export function hasCoveredDescendants(
 }
 
 export function pruneEmptySelections(
-  root: GbiNode,
+  root: BgiNode,
   selectedIds: Set<string>,
   excludedIds: Set<string>,
 ): Set<string> {
@@ -125,7 +125,7 @@ export function pruneEmptySelections(
 }
 
 export function isFullySelected(
-  node: GbiNode,
+  node: BgiNode,
   selectedIds: Set<string>,
   excludedIds: Set<string>,
   ancestorSelected: boolean,
@@ -140,7 +140,7 @@ export function isFullySelected(
 }
 
 export function promoteFullSelections(
-  root: GbiNode,
+  root: BgiNode,
   selectedIds: Set<string>,
   excludedIds: Set<string>,
   changedId: string,

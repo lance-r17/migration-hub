@@ -17,11 +17,11 @@ class MigrationSettingsOut(BaseModel):
     platform_period: PlatformPeriod | None = None
     new_cloud_setup_period: CloudSetupPeriod | None = None
     duration_options: list[int] = [15, 30, 45]
-    gbi_tier_depth: int | None = None
+    bgi_tier_depth: int | None = None
 
 
 class MigrationSettingsUpdate(BaseModel):
     platform_period: PlatformPeriod | None = None
     new_cloud_setup_period: CloudSetupPeriod | None = None
     duration_options: list[int] | None = None
-    gbi_tier_depth: int | None = None
+    bgi_tier_depth: int | None = None

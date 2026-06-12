@@ -49,16 +49,16 @@ import { useCurrentUser } from '@/context/UserContext'
 import { createJiraJob } from '@/services/jiraJobs'
 import { markResourceSyncComplete, blockProject, updateGovernanceRoles } from '@/services/projects'
 import { getSignoffConfig } from '@/services/signoffConfig'
-import { getGbiHierarchy } from '@/services/gbi'
+import { getBgiHierarchy } from '@/services/bgi'
 import { apiClient } from '@/services/client'
 import { ensureAllRoles } from '@/lib/approvals'
 import type { Project, ProjectStatus } from '@/types'
 import type { JiraSubtaskConfig } from '@/types/wave'
-import type { GbiNode } from '@/types/gbi'
+import type { BgiNode } from '@/types/bgi'
 
-function buildGbiMap(root: GbiNode): Map<string, string> {
+function buildBgiMap(root: BgiNode): Map<string, string> {
   const map = new Map<string, string>()
-  function walk(node: GbiNode) {
+  function walk(node: BgiNode) {
     map.set(String(node.id), node.name)
     for (const child of node.children ?? []) {
       walk(child)
@@ -87,25 +87,25 @@ export function ProjectDetailsPage() {
   const [assignWaveOpen, setAssignWaveOpen] = useState(false)
   const [surveyOpen, setSurveyOpen] = useState(false)
   const [operationsOpen, setOperationsOpen] = useState(false)
-  const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
+  const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    getGbiHierarchy()
-      .then(data => { if (!cancelled) setGbiRoot(data) })
+    getBgiHierarchy()
+      .then(data => { if (!cancelled) setBgiRoot(data) })
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
 
-  const gbiMap = useMemo(() => {
-    if (!gbiRoot) return new Map<string, string>()
-    return buildGbiMap(gbiRoot)
-  }, [gbiRoot])
+  const bgiMap = useMemo(() => {
+    if (!bgiRoot) return new Map<string, string>()
+    return buildBgiMap(bgiRoot)
+  }, [bgiRoot])
 
-  const gbiName = useMemo(() => {
-    if (!project?.gbi_id) return null
-    return gbiMap.get(String(project.gbi_id)) ?? null
-  }, [gbiMap, project?.gbi_id])
+  const bgiName = useMemo(() => {
+    if (!project?.bgi_id) return null
+    return bgiMap.get(String(project.bgi_id)) ?? null
+  }, [bgiMap, project?.bgi_id])
 
   // Fire completion toast when jiraJobStatus transitions to 'completed'
   const prevJiraStatus = useRef(project?.jiraJobStatus)
@@ -398,8 +398,8 @@ export function ProjectDetailsPage() {
                   )}
                 </span>
               )}
-              {gbiName && (
-                <span>GBI: <strong className="text-foreground">{gbiName}</strong></span>
+              {bgiName && (
+                <span>BGI: <strong className="text-foreground">{bgiName}</strong></span>
               )}
               {project.itso && (
                 <span>ITSO: <strong className="text-foreground">{project.itso}</strong></span>
@@ -454,8 +454,8 @@ export function ProjectDetailsPage() {
           <ApplicationOverviewSection
             data={project.applicationOverview}
             governanceRoles={project.governanceRoles}
-            gbiId={project.gbi_id}
-            gbiName={gbiName}
+            bgiId={project.bgi_id}
+            bgiName={bgiName}
             canEditGovernanceRoles={isPlatformLead}
             projectId={project.id}
             onSave={!isLocked ? (d) => handleSave('applicationOverview', d) : undefined}

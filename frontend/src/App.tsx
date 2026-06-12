@@ -32,8 +32,8 @@ import { EmailJobsPage } from './pages/EmailJobsPage'
 import { AdminPage } from './pages/AdminPage'
 import { AdminHome } from './pages/AdminHome'
 import { ProjectsPage } from './pages/ProjectsPage'
-import { GbiSettingsPage } from './pages/GbiSettingsPage'
-import { GbiCloudLeadsPage } from './pages/GbiCloudLeadsPage'
+import { BgiSettingsPage } from './pages/BgiSettingsPage'
+import { BgiCloudLeadsPage } from './pages/BgiCloudLeadsPage'
 import { useCurrentUser } from '@/context/UserContext'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -79,7 +79,7 @@ function App() {
           <Route path="notifications" element={<NotificationSettingsPage />} />
           <Route path="service-accounts" element={<ServiceAccountsPage />} />
           <Route path="attachments" element={<AdminAttachmentsPage />} />
-          <Route path="gbi-cloud-leads" element={<GbiCloudLeadsPage />} />
+          <Route path="bgi-cloud-leads" element={<BgiCloudLeadsPage />} />
         </Route>
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
           <Route index element={<SettingsHome />} />
@@ -88,7 +88,7 @@ function App() {
           <Route path="billing" element={<BillingSettingsPage />} />
           <Route path="signoff" element={<SignoffSettingsPage />} />
           <Route path="migration" element={<MigrationSettingsPage />} />
-          <Route path="gbi" element={<GbiSettingsPage />} />
+          <Route path="bgi" element={<BgiSettingsPage />} />
         </Route>
       </Routes>
       <Toaster />

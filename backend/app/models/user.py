@@ -15,7 +15,7 @@ class User(Base):
     team: Mapped[str | None] = mapped_column(String, nullable=True)
     initials: Mapped[str] = mapped_column(String(10), nullable=False)
     role: Mapped[str | None] = mapped_column(String, nullable=True)
-    gbi_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    bgi_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     is_service_account: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     api_key_hash: Mapped[str | None] = mapped_column(String, nullable=True)
 

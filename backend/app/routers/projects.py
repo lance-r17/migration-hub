@@ -30,9 +30,9 @@ from app.schemas.project import (
 from app.schemas.user import ProjectUserRoleAssignment, UserOut
 from app.schemas.risk import RiskOut
 from app.schemas.jira_job import JiraJobCreate
-from app.services import audit_service, attachment_service, gbi_service, jira_client, jira_service, migration_settings_service, project_service, user_service
+from app.services import audit_service, attachment_service, bgi_service, jira_client, jira_service, migration_settings_service, project_service, user_service
 from app.config import settings
-from app.auth import _user_has_admin_role, _user_has_gbi_cloud_lead_role, get_current_user, require_admin
+from app.auth import _user_has_admin_role, _user_has_bgi_cloud_lead_role, get_current_user, require_admin
 from app.models.project import Project
 from app.models.user import User
 from app.models.cloud_resource import CloudResource
@@ -42,12 +42,12 @@ from app.schemas.project_attachment import AttachmentOut
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-async def _require_gbi_access(
+async def _require_bgi_access(
     db: AsyncSession, current_user: User, project: Project
 ) -> None:
-    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_ids:
-        allowed_ids = await gbi_service.get_descendant_ids_for_multiple(db, current_user.gbi_ids)
-        if project.gbi_id not in allowed_ids:
+    if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
+        allowed_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
+        if project.bgi_id not in allowed_ids:
             raise HTTPException(status_code=403, detail="Project not accessible")
 
 
@@ -166,7 +166,7 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
             engagement=project_service._engagement_to_dict(p),
             approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
             cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
-            gbi_id=p.gbi_id,
+            bgi_id=p.bgi_id,
             category_milestone_ids=_category_milestone_ids(p),
         )
 
@@ -257,7 +257,7 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
     if "risks" in fields:
         data["risks"] = [RiskOut.model_validate(r) for r in (p.risks or [])]
 
-    data["gbi_id"] = p.gbi_id
+    data["bgi_id"] = p.bgi_id
     data["category_milestone_ids"] = _category_milestone_ids(p)
 
     return ProjectListItem(**data)
@@ -290,7 +290,7 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
             approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
             cloud_resources=[CloudResourceHomeOut.model_validate(r) for r in (p.cloud_resources or [])],
             risks=[RiskHomeOut.model_validate(r) for r in (p.risks or [])],
-            gbi_id=p.gbi_id,
+            bgi_id=p.bgi_id,
             category_milestone_ids=_category_milestone_ids(p),
         )
 
@@ -347,7 +347,7 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
             ApprovalOut.model_validate(a) for a in (p.approvals or [])
         ]
 
-    data["gbi_id"] = p.gbi_id
+    data["bgi_id"] = p.bgi_id
     data["category_milestone_ids"] = _category_milestone_ids(p)
 
     return ProjectHomeItem(**data)
@@ -388,7 +388,7 @@ def _project_detail(p) -> ProjectDetail:
         cloud_resources=[CloudResourceOut.model_validate(r) for r in (p.cloud_resources or [])],
         risks=[RiskOut.model_validate(r) for r in (p.risks or [])],
         approvals=[ApprovalOut.model_validate(a) for a in (p.approvals or [])],
-        gbi_id=p.gbi_id,
+        bgi_id=p.bgi_id,
         category_milestone_ids=_category_milestone_ids(p),
     )
 
@@ -401,10 +401,10 @@ async def list_projects(
     current_user: User = Depends(get_current_user),
 ):
     field_set = set(fields) if fields else None
-    gbi_ids: list[str] | None = None
-    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_ids:
-        gbi_ids = await gbi_service.get_descendant_ids_for_multiple(db, current_user.gbi_ids)
-    projects = await project_service.get_all(db, user_id=userId, fields=field_set, gbi_ids=gbi_ids)
+    bgi_ids: list[str] | None = None
+    if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
+        bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
+    projects = await project_service.get_all(db, user_id=userId, fields=field_set, bgi_ids=bgi_ids)
     return [_project_list_item(p, fields=field_set) for p in projects]
 
 
@@ -416,10 +416,10 @@ async def list_projects_home(
     current_user: User = Depends(get_current_user),
 ):
     field_set = set(fields) if fields else None
-    gbi_ids: list[str] | None = None
-    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_ids:
-        gbi_ids = await gbi_service.get_descendant_ids_for_multiple(db, current_user.gbi_ids)
-    projects = await project_service.get_all_home(db, user_id=userId, fields=field_set, gbi_ids=gbi_ids)
+    bgi_ids: list[str] | None = None
+    if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
+        bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
+    projects = await project_service.get_all_home(db, user_id=userId, fields=field_set, bgi_ids=bgi_ids)
     return [_project_home_item(p, fields=field_set) for p in projects]
 
 
@@ -429,10 +429,10 @@ async def get_project_asset_stats(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    gbi_ids: list[str] | None = None
-    if _user_has_gbi_cloud_lead_role(current_user.role) and current_user.gbi_ids:
-        gbi_ids = await gbi_service.get_descendant_ids_for_multiple(db, current_user.gbi_ids)
-    return await project_service.get_asset_stats(db, user_id=userId, gbi_ids=gbi_ids)
+    bgi_ids: list[str] | None = None
+    if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
+        bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
+    return await project_service.get_asset_stats(db, user_id=userId, bgi_ids=bgi_ids)
 
 
 @router.post("", response_model=ProjectDetail, status_code=201)
@@ -464,7 +464,7 @@ async def get_project(
     project = await project_service.get_by_id(db, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    await _require_gbi_access(db, current_user, project)
+    await _require_bgi_access(db, current_user, project)
     return _project_detail(project)
 
 

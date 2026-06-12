@@ -26,13 +26,13 @@ from app.schemas.service_account import (
 from app.schemas.user import (
     BatchUserCreateRequest,
     BatchUserCreateResponse,
-    GbiCloudLeadCreate,
+    BgiCloudLeadCreate,
     UserAdminUpdate,
     UserOut,
     UserProjectRoleOut,
 )
 from app.services import attachment_service, user_service
-from app.auth import _user_has_gbi_cloud_lead_role
+from app.auth import _user_has_bgi_cloud_lead_role
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -339,30 +339,30 @@ async def batch_create_users(
     )
 
 
-# ─── GBI Cloud Leads ─────────────────────────────────────────────────────────
+# ─── BGI Cloud Leads ─────────────────────────────────────────────────────────
 
-@router.get("/gbi-cloud-leads", response_model=list[UserOut])
-async def list_gbi_cloud_leads(
+@router.get("/bgi-cloud-leads", response_model=list[UserOut])
+async def list_bgi_cloud_leads(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    """List all human users with the gbi_cloud_lead role."""
+    """List all human users with the bgi_cloud_lead role."""
     result = await db.execute(
         select(User)
         .where(User.is_service_account == False)
         .order_by(User.name)
     )
     users = result.scalars().all()
-    return [u for u in users if _user_has_gbi_cloud_lead_role(u.role)]
+    return [u for u in users if _user_has_bgi_cloud_lead_role(u.role)]
 
 
-@router.post("/gbi-cloud-leads", response_model=UserOut, status_code=201)
-async def create_gbi_cloud_lead(
-    body: GbiCloudLeadCreate,
+@router.post("/bgi-cloud-leads", response_model=UserOut, status_code=201)
+async def create_bgi_cloud_lead(
+    body: BgiCloudLeadCreate,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    """Create or reuse a user and assign them the gbi_cloud_lead role."""
+    """Create or reuse a user and assign them the bgi_cloud_lead role."""
     existing = await db.execute(select(User).where(User.email == body.email))
     user = existing.scalar_one_or_none()
 
@@ -375,9 +375,9 @@ async def create_gbi_cloud_lead(
         user.department = body.department
         user.team = body.team
         user.initials = initials
-        user.gbi_ids = body.gbi_ids or []
+        user.bgi_ids = body.bgi_ids or []
         existing_roles = {r.strip() for r in (user.role or "").split(",") if r.strip()}
-        existing_roles.add("gbi_cloud_lead")
+        existing_roles.add("bgi_cloud_lead")
         user.role = ",".join(sorted(existing_roles))
         await db.flush()
         return user
@@ -389,22 +389,22 @@ async def create_gbi_cloud_lead(
         department=body.department,
         team=body.team,
         initials=initials,
-        role="gbi_cloud_lead",
-        gbi_ids=body.gbi_ids or [],
+        role="bgi_cloud_lead",
+        bgi_ids=body.bgi_ids or [],
     )
     db.add(user)
     await db.flush()
     return user
 
 
-@router.patch("/gbi-cloud-leads/{user_id}", response_model=UserOut)
-async def update_gbi_cloud_lead(
+@router.patch("/bgi-cloud-leads/{user_id}", response_model=UserOut)
+async def update_bgi_cloud_lead(
     user_id: str,
     body: UserAdminUpdate,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    """Update a GBI cloud lead user."""
+    """Update a BGI cloud lead user."""
     user = await db.get(User, user_id)
     if not user or user.is_service_account:
         raise HTTPException(status_code=404, detail="User not found")
@@ -429,20 +429,20 @@ async def update_gbi_cloud_lead(
     if body.role is not None:
         user.role = body.role
 
-    if body.gbi_ids is not None:
-        user.gbi_ids = body.gbi_ids or []
+    if body.bgi_ids is not None:
+        user.bgi_ids = body.bgi_ids or []
 
     await db.flush()
     return user
 
 
-@router.delete("/gbi-cloud-leads/{user_id}", status_code=204)
-async def delete_gbi_cloud_lead(
+@router.delete("/bgi-cloud-leads/{user_id}", status_code=204)
+async def delete_bgi_cloud_lead(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    """Delete a GBI cloud lead user."""
+    """Delete a BGI cloud lead user."""
     user = await db.get(User, user_id)
     if not user or user.is_service_account:
         raise HTTPException(status_code=404, detail="User not found")

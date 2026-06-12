@@ -49,21 +49,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  getGbiCloudLeads,
-  createGbiCloudLead,
-  updateGbiCloudLead,
-  deleteGbiCloudLead,
+  getBgiCloudLeads,
+  createBgiCloudLead,
+  updateBgiCloudLead,
+  deleteBgiCloudLead,
   getAdminUsers,
 } from '@/services/adminUsers'
-import { getGbiHierarchy } from '@/services/gbi'
+import { getBgiHierarchy } from '@/services/bgi'
 import type { User } from '@/types'
-import type { GbiNode } from '@/types/gbi'
-import type { GbiCloudLeadCreate } from '@/services/adminUsers'
-import { GbiTree } from '@/components/gbi/GbiTree'
-import { filterGbiTree } from '@/lib/gbi-utils'
+import type { BgiNode } from '@/types/bgi'
+import type { BgiCloudLeadCreate } from '@/services/adminUsers'
+import { BgiTree } from '@/components/bgi/BgiTree'
+import { filterBgiTree } from '@/lib/bgi-utils'
 import { cn } from '@/lib/utils'
 
-function findNodeById(node: GbiNode, id: string): GbiNode | null {
+function findNodeById(node: BgiNode, id: string): BgiNode | null {
   if (node.id === id) return node
   for (const child of node.children ?? []) {
     const found = findNodeById(child, id)
@@ -72,20 +72,20 @@ function findNodeById(node: GbiNode, id: string): GbiNode | null {
   return null
 }
 
-function getNodeLabel(node: GbiNode): string {
+function getNodeLabel(node: BgiNode): string {
   return `${node.id} — ${node.name}`
 }
 
-export function GbiCloudLeadsPage() {
+export function BgiCloudLeadsPage() {
   const navigate = useNavigate()
   const [users, setUsers] = useState<User[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [gbiRoot, setGbiRoot] = useState<GbiNode | null>(null)
+  const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
 
   const [formOpen, setFormOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [formData, setFormData] = useState<Partial<GbiCloudLeadCreate>>({ gbi_ids: [] })
+  const [formData, setFormData] = useState<Partial<BgiCloudLeadCreate>>({ bgi_ids: [] })
   const [formSaving, setFormSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -96,8 +96,8 @@ export function GbiCloudLeadsPage() {
   const [page, setPage] = useState(1)
   const pageSize = 10
 
-  const [gbiPopoverOpen, setGbiPopoverOpen] = useState(false)
-  const [gbiSearch, setGbiSearch] = useState('')
+  const [bgiPopoverOpen, setBgiPopoverOpen] = useState(false)
+  const [bgiSearch, setBgiSearch] = useState('')
 
   // Create mode: 'new' | 'existing'
   const [createMode, setCreateMode] = useState<'new' | 'existing'>('existing')
@@ -109,12 +109,12 @@ export function GbiCloudLeadsPage() {
     setLoading(true)
     try {
       const [leads, hierarchy, all] = await Promise.all([
-        getGbiCloudLeads(),
-        getGbiHierarchy(),
+        getBgiCloudLeads(),
+        getBgiHierarchy(),
         getAdminUsers(),
       ])
       setUsers(leads)
-      setGbiRoot(hierarchy)
+      setBgiRoot(hierarchy)
       setAllUsers(all)
     } catch {
       toast.error('Failed to load data')
@@ -147,10 +147,10 @@ export function GbiCloudLeadsPage() {
     setPage(1)
   }, [filterText])
 
-  // Users who are NOT already gbi_cloud_leads
+  // Users who are NOT already bgi_cloud_leads
   const eligibleUsers = useMemo(() => {
-    const gbiLeadIds = new Set(users.map((u) => u.id))
-    return allUsers.filter((u) => !gbiLeadIds.has(u.id))
+    const bgiLeadIds = new Set(users.map((u) => u.id))
+    return allUsers.filter((u) => !bgiLeadIds.has(u.id))
   }, [allUsers, users])
 
   const filteredEligibleUsers = useMemo(() => {
@@ -167,7 +167,7 @@ export function GbiCloudLeadsPage() {
     setEditingUser(null)
     setCreateMode('existing')
     setSelectedExistingUser(null)
-    setFormData({ id: '', name: '', email: '', department: '', team: '', gbi_ids: [] })
+    setFormData({ id: '', name: '', email: '', department: '', team: '', bgi_ids: [] })
     setFormError(null)
     setFormOpen(true)
   }
@@ -179,7 +179,7 @@ export function GbiCloudLeadsPage() {
       email: user.email,
       department: user.department,
       team: user.team,
-      gbi_ids: user.gbi_ids ?? [],
+      bgi_ids: user.bgi_ids ?? [],
     })
     setFormError(null)
     setFormOpen(true)
@@ -196,12 +196,12 @@ export function GbiCloudLeadsPage() {
 
       setFormSaving(true)
       try {
-        await updateGbiCloudLead(editingUser.id, {
+        await updateBgiCloudLead(editingUser.id, {
           name: formData.name,
           email: formData.email,
           department: formData.department,
           team: formData.team,
-          gbi_ids: formData.gbi_ids ?? [],
+          bgi_ids: formData.bgi_ids ?? [],
         })
         toast.success('User updated')
         setFormOpen(false)
@@ -223,14 +223,14 @@ export function GbiCloudLeadsPage() {
       }
       setFormSaving(true)
       try {
-        await createGbiCloudLead({
+        await createBgiCloudLead({
           name: selectedExistingUser.name,
           email: selectedExistingUser.email,
           department: selectedExistingUser.department,
           team: selectedExistingUser.team,
-          gbi_ids: formData.gbi_ids ?? [],
+          bgi_ids: formData.bgi_ids ?? [],
         })
-        toast.success('Existing user assigned as GBI Cloud Lead')
+        toast.success('Existing user assigned as BGI Cloud Lead')
         setFormOpen(false)
         await loadData()
       } catch (err: unknown) {
@@ -250,13 +250,13 @@ export function GbiCloudLeadsPage() {
 
     setFormSaving(true)
     try {
-      await createGbiCloudLead({
+      await createBgiCloudLead({
         id: formData.id,
         name: formData.name,
         email: formData.email,
         department: formData.department,
         team: formData.team,
-        gbi_ids: formData.gbi_ids ?? [],
+        bgi_ids: formData.bgi_ids ?? [],
       })
       toast.success('User created')
       setFormOpen(false)
@@ -273,7 +273,7 @@ export function GbiCloudLeadsPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      await deleteGbiCloudLead(deleteTarget.id)
+      await deleteBgiCloudLead(deleteTarget.id)
       toast.success('User deleted')
       setDeleteTarget(null)
       await loadData()
@@ -285,21 +285,21 @@ export function GbiCloudLeadsPage() {
     }
   }
 
-  const selectedGbiIds = useMemo(() => new Set(formData.gbi_ids ?? []), [formData.gbi_ids])
+  const selectedBgiIds = useMemo(() => new Set(formData.bgi_ids ?? []), [formData.bgi_ids])
 
-  const filteredGbiRoot = useMemo(() => {
-    if (!gbiRoot) return null
-    const filtered = filterGbiTree([gbiRoot], gbiSearch)
+  const filteredBgiRoot = useMemo(() => {
+    if (!bgiRoot) return null
+    const filtered = filterBgiTree([bgiRoot], bgiSearch)
     return filtered[0] ?? null
-  }, [gbiRoot, gbiSearch])
+  }, [bgiRoot, bgiSearch])
 
-  const toggleGbiId = (nodeId: string) => {
+  const toggleBgiId = (nodeId: string) => {
     setFormData((d) => {
-      const current = d.gbi_ids ?? []
+      const current = d.bgi_ids ?? []
       if (current.includes(nodeId)) {
-        return { ...d, gbi_ids: current.filter((id) => id !== nodeId) }
+        return { ...d, bgi_ids: current.filter((id) => id !== nodeId) }
       }
-      return { ...d, gbi_ids: [...current, nodeId] }
+      return { ...d, bgi_ids: [...current, nodeId] }
     })
   }
 
@@ -314,7 +314,7 @@ export function GbiCloudLeadsPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>GBI Cloud Leads</BreadcrumbPage>
+            <BreadcrumbPage>BGI Cloud Leads</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -324,10 +324,10 @@ export function GbiCloudLeadsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Building2 className="size-5 text-muted-foreground" />
-              <h1 className="text-2xl font-semibold tracking-tight">GBI Cloud Leads</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">BGI Cloud Leads</h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              Manage users who can view projects within a GBI subtree.
+              Manage users who can view projects within a BGI subtree.
             </p>
           </div>
           <Button onClick={openCreate} className="gap-1">
@@ -358,7 +358,7 @@ export function GbiCloudLeadsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Name</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Email</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Department</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-wider">Assigned GBI</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Assigned BGI</TableHead>
                 <TableHead className="w-[100px]" />
               </TableRow>
             </TableHeader>
@@ -381,9 +381,9 @@ export function GbiCloudLeadsPage() {
                 </TableRow>
               ) : (
                 paginatedUsers.map((user) => {
-                  const assignedNodes = (user.gbi_ids ?? [])
-                    .map((id) => (gbiRoot ? findNodeById(gbiRoot, id) : null))
-                    .filter(Boolean) as GbiNode[]
+                  const assignedNodes = (user.bgi_ids ?? [])
+                    .map((id) => (bgiRoot ? findNodeById(bgiRoot, id) : null))
+                    .filter(Boolean) as BgiNode[]
                   return (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
@@ -468,12 +468,12 @@ export function GbiCloudLeadsPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingUser ? 'Edit GBI Cloud Lead' : 'Assign GBI Cloud Lead'}
+              {editingUser ? 'Edit BGI Cloud Lead' : 'Assign BGI Cloud Lead'}
             </DialogTitle>
             <DialogDescription>
               {editingUser
-                ? 'Update the user details and GBI assignments.'
-                : 'Select an existing user or create a new one and assign GBI nodes.'}
+                ? 'Update the user details and BGI assignments.'
+                : 'Select an existing user or create a new one and assign BGI nodes.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -655,15 +655,15 @@ export function GbiCloudLeadsPage() {
               </>
             )}
 
-            {/* GBI assignment */}
+            {/* BGI assignment */}
             <div className="space-y-1.5">
-              <Label>Assigned GBI</Label>
-              <Popover open={gbiPopoverOpen} onOpenChange={setGbiPopoverOpen}>
+              <Label>Assigned BGI</Label>
+              <Popover open={bgiPopoverOpen} onOpenChange={setBgiPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-between font-normal">
-                    {selectedGbiIds.size === 0
-                      ? 'Select GBI nodes'
-                      : `${selectedGbiIds.size} node${selectedGbiIds.size !== 1 ? 's' : ''} selected`}
+                    {selectedBgiIds.size === 0
+                      ? 'Select BGI nodes'
+                      : `${selectedBgiIds.size} node${selectedBgiIds.size !== 1 ? 's' : ''} selected`}
                     <ChevronDown className="size-4 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -676,22 +676,22 @@ export function GbiCloudLeadsPage() {
                     <div className="relative">
                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                       <Input
-                        placeholder="Search GBI nodes…"
-                        value={gbiSearch}
-                        onChange={(e) => setGbiSearch(e.target.value)}
+                        placeholder="Search BGI nodes…"
+                        value={bgiSearch}
+                        onChange={(e) => setBgiSearch(e.target.value)}
                         className="pl-8"
                       />
                     </div>
                   </div>
                   <div className="max-h-56 overflow-y-auto p-1" onWheel={(e) => e.stopPropagation()}>
-                    {filteredGbiRoot ? (
-                      <GbiTree
-                        nodes={[filteredGbiRoot]}
-                        selectedIds={selectedGbiIds}
+                    {filteredBgiRoot ? (
+                      <BgiTree
+                        nodes={[filteredBgiRoot]}
+                        selectedIds={selectedBgiIds}
                         excludedIds={new Set()}
                         onSelect={(node, action) => {
                           if (action === 'select' || action === 'unselect') {
-                            toggleGbiId(node.id)
+                            toggleBgiId(node.id)
                           }
                         }}
                         readOnly
@@ -705,17 +705,17 @@ export function GbiCloudLeadsPage() {
                   </div>
                 </PopoverContent>
               </Popover>
-              {selectedGbiIds.size > 0 && gbiRoot && (
+              {selectedBgiIds.size > 0 && bgiRoot && (
                 <div className="flex flex-wrap gap-1 pt-1">
-                  {Array.from(selectedGbiIds).map((id) => {
-                    const node = findNodeById(gbiRoot, id)
+                  {Array.from(selectedBgiIds).map((id) => {
+                    const node = findNodeById(bgiRoot, id)
                     if (!node) return null
                     return (
                       <Badge key={id} variant="secondary" className="gap-1 pr-1">
                         {getNodeLabel(node)}
                         <button
                           type="button"
-                          onClick={() => toggleGbiId(id)}
+                          onClick={() => toggleBgiId(id)}
                           className="rounded-full hover:bg-muted-foreground/20 p-0.5"
                         >
                           <X className="size-3" />

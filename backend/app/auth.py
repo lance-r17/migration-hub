@@ -267,20 +267,20 @@ def _user_has_admin_role(role: str | None) -> bool:
     return not user_roles.isdisjoint(_ADMIN_ROLES)
 
 
-def _user_has_gbi_cloud_lead_role(role: str | None) -> bool:
+def _user_has_bgi_cloud_lead_role(role: str | None) -> bool:
     if not role:
         return False
     user_roles = {r.strip() for r in role.split(",") if r.strip()}
-    return "gbi_cloud_lead" in user_roles
+    return "bgi_cloud_lead" in user_roles
 
 
-async def require_gbi_cloud_lead(
+async def require_bgi_cloud_lead(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    if not _user_has_gbi_cloud_lead_role(current_user.role):
+    if not _user_has_bgi_cloud_lead_role(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="GBI Cloud Lead role required",
+            detail="BGI Cloud Lead role required",
         )
     return current_user
 

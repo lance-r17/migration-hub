@@ -464,21 +464,21 @@ Batch create human users. Existing users matched by `email` are skipped, but the
 
 ---
 
-## GBI Hierarchy
+## BGI Hierarchy
 
-GBI (Global Business Identifier) provides an organizational tree used to scope project visibility. The hierarchy is stored as a single JSON blob and is managed by Platform Migration Leads or Admins.
+BGI (Global Business Identifier) provides an organizational tree used to scope project visibility. The hierarchy is stored as a single JSON blob and is managed by Platform Migration Leads or Admins.
 
-### `GET /api/v1/gbi`
+### `GET /api/v1/bgi`
 
-Returns the GBI hierarchy.
+Returns the BGI hierarchy.
 
 **Response:** `{ "id": "ROOT", "name": "CTO Office", "children": [...] } | null`
 
 ---
 
-### `PUT /api/v1/gbi`
+### `PUT /api/v1/bgi`
 
-Replaces the entire GBI hierarchy.
+Replaces the entire BGI hierarchy.
 
 **Authorization:** Requires `platform_migration_lead` or `admin` role.
 
@@ -500,16 +500,16 @@ Replaces the entire GBI hierarchy.
 
 ---
 
-### `POST /api/v1/gbi/assign-projects`
+### `POST /api/v1/bgi/assign-projects`
 
-Assigns one or more projects to a GBI node.
+Assigns one or more projects to a BGI node.
 
 **Authorization:** Requires `platform_migration_lead` or `admin` role.
 
 **Request body:**
 ```json
 {
-  "gbi_id": "CTO-INFRA",
+  "bgi_id": "CTO-INFRA",
   "project_ids": ["acme-123456-appone-prod", "acme-123456-appone-dev"]
 }
 ```
@@ -517,14 +517,14 @@ Assigns one or more projects to a GBI node.
 **Response:** `204 No Content`
 
 **Key points**
-- Each project can belong to exactly one GBI node; re-assigning overwrites the previous value.
-- Projects list responses include `gbi_id` after assignment.
+- Each project can belong to exactly one BGI node; re-assigning overwrites the previous value.
+- Projects list responses include `bgi_id` after assignment.
 
 ---
 
-### `POST /api/v1/gbi/unassign-projects`
+### `POST /api/v1/bgi/unassign-projects`
 
-Clears the GBI assignment for one or more projects (sets `gbi_id` to `null`).
+Clears the BGI assignment for one or more projects (sets `bgi_id` to `null`).
 
 **Authorization:** Requires `platform_migration_lead` or `admin` role.
 

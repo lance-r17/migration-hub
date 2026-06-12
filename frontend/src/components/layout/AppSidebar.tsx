@@ -112,11 +112,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation()
   const { user } = useCurrentUser()
 
-  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
+  const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
 
   const visibleItems = data.navMain.filter(item => {
-    if (isGbiCloudLead) {
-      // GBI cloud leads only see Dashboard, Projects, and Wave Gantt
+    if (isBgiCloudLead) {
+      // BGI cloud leads only see Dashboard, Projects, and Wave Gantt
       return ['/', '/projects', '/waves/gantt'].includes(item.url)
     }
     if (item.requiresRole && !(user?.role.includes(item.requiresRole) ?? false)) return false

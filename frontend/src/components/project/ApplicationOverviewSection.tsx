@@ -9,8 +9,8 @@ import type { ApplicationOverview, ApplicationTier, GovernanceRoles, MigrationSt
 interface ApplicationOverviewSectionProps {
   data?: ApplicationOverview
   governanceRoles?: GovernanceRoles
-  gbiId?: string | null
-  gbiName?: string | null
+  bgiId?: string | null
+  bgiName?: string | null
   canEditGovernanceRoles?: boolean
   projectId?: string
   onSave?: (data: ApplicationOverview) => void
@@ -65,8 +65,8 @@ function Label({ children }: { children: React.ReactNode }) {
 export function ApplicationOverviewSection({
   data,
   governanceRoles,
-  gbiId,
-  gbiName,
+  bgiId,
+  bgiName,
   canEditGovernanceRoles,
   projectId,
   onSave,
@@ -111,13 +111,13 @@ export function ApplicationOverviewSection({
                 </div>
               )}
 
-              {(gbiId || gbiName) && (
+              {(bgiId || bgiName) && (
                 <div>
-                  <Label>GBI</Label>
-                  {gbiName ? (
-                    <span className="text-sm font-medium text-foreground">{gbiName}</span>
+                  <Label>BGI</Label>
+                  {bgiName ? (
+                    <span className="text-sm font-medium text-foreground">{bgiName}</span>
                   ) : (
-                    <code className="font-mono text-xs bg-muted px-2 py-1 rounded">{gbiId}</code>
+                    <code className="font-mono text-xs bg-muted px-2 py-1 rounded">{bgiId}</code>
                   )}
                 </div>
               )}

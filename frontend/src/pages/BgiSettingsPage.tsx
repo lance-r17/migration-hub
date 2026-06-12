@@ -29,14 +29,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { GbiTree } from '@/components/gbi/GbiTree'
-import { getGbiHierarchy, setGbiHierarchy, assignProjectsToGbi, unassignProjectsFromGbi } from '@/services/gbi'
+import { BgiTree } from '@/components/bgi/BgiTree'
+import { getBgiHierarchy, setBgiHierarchy, assignProjectsToBgi, unassignProjectsFromBgi } from '@/services/bgi'
 import { getProjects } from '@/services/projects'
 import { getMigrationSettings, saveMigrationSettings } from '@/services/migrationSettings'
-import type { GbiNode } from '@/types/gbi'
+import type { BgiNode } from '@/types/bgi'
 import type { Project } from '@/types'
 
-function findNodeById(node: GbiNode, id: string): GbiNode | null {
+function findNodeById(node: BgiNode, id: string): BgiNode | null {
   if (node.id === id) return node
   for (const child of node.children ?? []) {
     const found = findNodeById(child, id)
@@ -45,15 +45,15 @@ function findNodeById(node: GbiNode, id: string): GbiNode | null {
   return null
 }
 
-function removeNodeById(node: GbiNode, id: string): GbiNode | null {
+function removeNodeById(node: BgiNode, id: string): BgiNode | null {
   if (!node.children) return node
   const filtered = node.children
     .map((c) => removeNodeById(c, id))
-    .filter(Boolean) as GbiNode[]
+    .filter(Boolean) as BgiNode[]
   return { ...node, children: filtered.length ? filtered : undefined }
 }
 
-function addChildToNode(node: GbiNode, parentId: string, child: GbiNode): GbiNode {
+function addChildToNode(node: BgiNode, parentId: string, child: BgiNode): BgiNode {
   if (node.id === parentId) {
     return { ...node, children: [...(node.children ?? []), child] }
   }
@@ -63,7 +63,7 @@ function addChildToNode(node: GbiNode, parentId: string, child: GbiNode): GbiNod
   }
 }
 
-function renameNode(node: GbiNode, nodeId: string, newName: string): GbiNode {
+function renameNode(node: BgiNode, nodeId: string, newName: string): BgiNode {
   if (node.id === nodeId) return { ...node, name: newName }
   return {
     ...node,
@@ -71,18 +71,18 @@ function renameNode(node: GbiNode, nodeId: string, newName: string): GbiNode {
   }
 }
 
-function collectAllIds(node: GbiNode): string[] {
+function collectAllIds(node: BgiNode): string[] {
   return [node.id, ...(node.children?.flatMap(collectAllIds) ?? [])]
 }
 
-function getTreeDepth(node: GbiNode): number {
+function getTreeDepth(node: BgiNode): number {
   if (!node.children || node.children.length === 0) return 1
   return 1 + Math.max(...node.children.map(getTreeDepth))
 }
 
-export function GbiSettingsPage() {
+export function BgiSettingsPage() {
   const navigate = useNavigate()
-  const [root, setRoot] = useState<GbiNode | null>(null)
+  const [root, setRoot] = useState<BgiNode | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -103,7 +103,7 @@ export function GbiSettingsPage() {
   useEffect(() => {
     getMigrationSettings()
       .then((settings) => {
-        setTierDepth(settings.gbiTierDepth != null ? String(settings.gbiTierDepth) : 'all')
+        setTierDepth(settings.bgiTierDepth != null ? String(settings.bgiTierDepth) : 'all')
       })
       .catch(() => {})
   }, [])
@@ -133,9 +133,9 @@ export function GbiSettingsPage() {
   }, [root])
 
   useEffect(() => {
-    getGbiHierarchy()
+    getBgiHierarchy()
       .then((data) => setRoot(data))
-      .catch(() => toast.error('Failed to load GBI hierarchy'))
+      .catch(() => toast.error('Failed to load BGI hierarchy'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -170,10 +170,10 @@ export function GbiSettingsPage() {
       if (!file) return
       try {
         const text = await file.text()
-        const data = JSON.parse(text) as GbiNode
+        const data = JSON.parse(text) as BgiNode
         setRoot(data)
-        await setGbiHierarchy(data)
-        toast.success('GBI hierarchy imported')
+        await setBgiHierarchy(data)
+        toast.success('BGI hierarchy imported')
       } catch {
         toast.error('Invalid JSON file')
       }
@@ -185,10 +185,10 @@ export function GbiSettingsPage() {
     if (!root) return
     setSaving(true)
     try {
-      await setGbiHierarchy(root)
-      toast.success('GBI hierarchy saved')
+      await setBgiHierarchy(root)
+      toast.success('BGI hierarchy saved')
     } catch {
-      toast.error('Failed to save GBI hierarchy')
+      toast.error('Failed to save BGI hierarchy')
     } finally {
       setSaving(false)
     }
@@ -201,9 +201,9 @@ export function GbiSettingsPage() {
       const settings = await getMigrationSettings()
       const updated = await saveMigrationSettings({
         ...settings,
-        gbiTierDepth: value === 'all' ? undefined : Number(value),
+        bgiTierDepth: value === 'all' ? undefined : Number(value),
       })
-      setTierDepth(updated.gbiTierDepth != null ? String(updated.gbiTierDepth) : 'all')
+      setTierDepth(updated.bgiTierDepth != null ? String(updated.bgiTierDepth) : 'all')
       toast.success('Tier depth setting saved')
     } catch {
       toast.error('Failed to save tier depth setting')
@@ -237,7 +237,7 @@ export function GbiSettingsPage() {
       return
     }
 
-    const newNode: GbiNode = { id, name }
+    const newNode: BgiNode = { id, name }
 
     if (!createParentId) {
       // Add root
@@ -291,11 +291,11 @@ export function GbiSettingsPage() {
 
       // Unassign any projects linked to this node or its descendants
       const projectIdsToClear = projects
-        .filter((p) => p.gbi_id && idsToClear.includes(p.gbi_id))
+        .filter((p) => p.bgi_id && idsToClear.includes(p.bgi_id))
         .map((p) => p.id)
 
       if (projectIdsToClear.length > 0) {
-        await unassignProjectsFromGbi(projectIdsToClear)
+        await unassignProjectsFromBgi(projectIdsToClear)
       }
 
       // Remove node from tree
@@ -339,12 +339,12 @@ export function GbiSettingsPage() {
       setAssigning(true)
       try {
         if (checked) {
-          await assignProjectsToGbi(selectedId, [projectId])
+          await assignProjectsToBgi(selectedId, [projectId])
         } else {
-          await unassignProjectsFromGbi([projectId])
+          await unassignProjectsFromBgi([projectId])
         }
         setProjects((prev) =>
-          prev.map((p) => (p.id === projectId ? { ...p, gbi_id: checked ? selectedId : undefined } : p))
+          prev.map((p) => (p.id === projectId ? { ...p, bgi_id: checked ? selectedId : undefined } : p))
         )
         toast.success(checked ? 'Project assigned' : 'Project unassigned')
       } catch {
@@ -357,7 +357,7 @@ export function GbiSettingsPage() {
   )
 
   const assignedCount = useMemo(
-    () => projects.filter((p) => selectedDescendantIds.has(p.gbi_id ?? '')).length,
+    () => projects.filter((p) => selectedDescendantIds.has(p.bgi_id ?? '')).length,
     [projects, selectedDescendantIds]
   )
 
@@ -372,7 +372,7 @@ export function GbiSettingsPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>GBI Hierarchy</BreadcrumbPage>
+            <BreadcrumbPage>BGI Hierarchy</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -380,7 +380,7 @@ export function GbiSettingsPage() {
       <div className="shrink-0">
         <div className="flex items-center gap-2 mb-1">
           <Building2 className="size-5 text-muted-foreground" />
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">GBI Hierarchy</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">BGI Hierarchy</h1>
         </div>
         <p className="text-muted-foreground text-sm">
           Manage the organizational structure and link projects to tiers.
@@ -429,7 +429,7 @@ export function GbiSettingsPage() {
             <h3 className="text-sm font-semibold shrink-0">Organization Structure</h3>
             <div className="flex-1 overflow-y-auto min-h-0 mt-2">
               {root ? (
-                <GbiTree
+                <BgiTree
                   nodes={[root]}
                   selectedIds={selectedId ? new Set([selectedId]) : new Set()}
                   excludedIds={new Set()}
@@ -441,7 +441,7 @@ export function GbiSettingsPage() {
                 />
               ) : (
                 <p className="text-sm text-muted-foreground py-4 text-center">
-                  No GBI data. Import JSON or add a root node.
+                  No BGI data. Import JSON or add a root node.
                 </p>
               )}
             </div>
@@ -488,11 +488,11 @@ export function GbiSettingsPage() {
                       </p>
                     ) : (
                       filteredProjects.map((project) => {
-                        const isAssigned = selectedDescendantIds.has(project.gbi_id ?? '')
-                        const isDirect = project.gbi_id === selectedId
-                        // Find the GBI node this project is actually assigned to (if any)
-                        const assignedNode = project.gbi_id && root
-                          ? findNodeById(root, project.gbi_id)
+                        const isAssigned = selectedDescendantIds.has(project.bgi_id ?? '')
+                        const isDirect = project.bgi_id === selectedId
+                        // Find the BGI node this project is actually assigned to (if any)
+                        const assignedNode = project.bgi_id && root
+                          ? findNodeById(root, project.bgi_id)
                           : null
                         return (
                           <label
@@ -536,14 +536,14 @@ export function GbiSettingsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!open) { setDeleteDialogOpen(false); setDeleteTargetId(null) } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete GBI Node</DialogTitle>
+            <DialogTitle>Delete BGI Node</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete <span className="font-semibold">{deleteTargetName}</span>?
               {(() => {
                 if (!deleteTargetId || !root) return null
                 const targetNode = findNodeById(root, deleteTargetId)
                 const count = targetNode
-                  ? projects.filter((p) => p.gbi_id && collectAllIds(targetNode).includes(p.gbi_id)).length
+                  ? projects.filter((p) => p.bgi_id && collectAllIds(targetNode).includes(p.bgi_id)).length
                   : 0
                 return count > 0
                   ? ` This will unassign ${count} project${count > 1 ? 's' : ''} linked to this node.`
@@ -568,7 +568,7 @@ export function GbiSettingsPage() {
           <DialogHeader>
             <DialogTitle>{createParentId ? 'Add Child Node' : 'Add Root Node'}</DialogTitle>
             <DialogDescription>
-              Enter a unique ID and name for the new GBI node.
+              Enter a unique ID and name for the new BGI node.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -576,11 +576,11 @@ export function GbiSettingsPage() {
               <p className="text-sm text-destructive">{createError}</p>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="gbi-node-id">
+              <Label htmlFor="bgi-node-id">
                 ID <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="gbi-node-id"
+                id="bgi-node-id"
                 value={newNodeId}
                 onChange={(e) => {
                   setNewNodeId(e.target.value)
@@ -599,11 +599,11 @@ export function GbiSettingsPage() {
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="gbi-node-name">
+              <Label htmlFor="bgi-node-name">
                 Name <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="gbi-node-name"
+                id="bgi-node-name"
                 value={newNodeName}
                 onChange={(e) => {
                   setNewNodeName(e.target.value)

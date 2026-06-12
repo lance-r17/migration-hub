@@ -66,7 +66,7 @@ frontend/
 │   └── lib/
 │       ├── utils.ts                   # cn() helper
 │       ├── noteTemplateUtils.ts       # Block sanitisation, variable resolution, smart replacement
-│       ├── gbi-utils.ts               # GBI tree helpers (filter, collectAllIds, findNodeById, prune, promote)
+│       ├── bgi-utils.ts               # BGI tree helpers (filter, collectAllIds, findNodeById, prune, promote)
 │       └── categoryMilestoneIcons.ts  # Icon map for category milestone Gantt overlay
 │
 └── packages/

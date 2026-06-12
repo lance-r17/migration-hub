@@ -23,7 +23,7 @@ export interface User {
   team?: string
   initials: string
   role: string[]
-  gbi_ids?: string[]
+  bgi_ids?: string[]
 }
 
 export interface ProjectUsers {
@@ -315,7 +315,7 @@ export interface Project {
   surveySubmittedAt?: string
   team: TeamMember[]
   description?: string
-  gbi_id?: string
+  bgi_id?: string
   // Header metadata
   migrationWave?: string
   itso?: string

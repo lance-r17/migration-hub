@@ -5,9 +5,9 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.config_store import ConfigStore
 from app.models.project import Project
-from app.schemas.gbi import GbiNode
+from app.schemas.bgi import BgiNode
 
-_KEY = "gbi_hierarchy"
+_KEY = "bgi_hierarchy"
 
 
 def _collect_ids(node: dict[str, Any]) -> list[str]:
@@ -27,7 +27,7 @@ def _find_node(node: dict[str, Any], node_id: str) -> dict[str, Any] | None:
     return None
 
 
-def _node_to_dict(node: GbiNode) -> dict[str, Any]:
+def _node_to_dict(node: BgiNode) -> dict[str, Any]:
     data: dict[str, Any] = {"id": node.id, "name": node.name}
     if node.children:
         data["children"] = [_node_to_dict(c) for c in node.children]
@@ -41,7 +41,7 @@ async def get_hierarchy(session: AsyncSession) -> dict[str, Any] | None:
     return row.value
 
 
-async def set_hierarchy(session: AsyncSession, root: GbiNode) -> dict[str, Any]:
+async def set_hierarchy(session: AsyncSession, root: BgiNode) -> dict[str, Any]:
     row = await session.get(ConfigStore, _KEY)
     data = _node_to_dict(root)
     if row:
@@ -88,21 +88,21 @@ async def get_descendant_ids_for_multiple(session: AsyncSession, node_ids: list[
     return result
 
 
-async def assign_projects_to_gbi(
-    session: AsyncSession, gbi_id: str, project_ids: list[str]
+async def assign_projects_to_bgi(
+    session: AsyncSession, bgi_id: str, project_ids: list[str]
 ) -> None:
     for pid in project_ids:
         project = await session.get(Project, pid)
         if project:
-            project.gbi_id = gbi_id
+            project.bgi_id = bgi_id
     await session.flush()
 
 
-async def unassign_projects_from_gbi(
+async def unassign_projects_from_bgi(
     session: AsyncSession, project_ids: list[str]
 ) -> None:
     for pid in project_ids:
         project = await session.get(Project, pid)
         if project:
-            project.gbi_id = None
+            project.bgi_id = None
     await session.flush()

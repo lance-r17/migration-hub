@@ -268,8 +268,8 @@ export function useProjects(options?: { home?: boolean; fields?: string[] }): Pr
 
   const { user } = useCurrentUser()
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
-  const isGbiCloudLead = user?.role.includes('gbi_cloud_lead') ?? false
-  const isLead = isPlatformLead || isGbiCloudLead
+  const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
+  const isLead = isPlatformLead || isBgiCloudLead
 
   useEffect(() => {
     if (!user) return

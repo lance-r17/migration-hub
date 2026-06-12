@@ -201,9 +201,9 @@ The interactive Gantt chart used by `WaveGanttPage`. Renders waves as collapsibl
 | `waves` | `Wave[]` | Migration waves |
 | `projects` | `Project[]` | Projects to render inside waves |
 | `categoryMilestones` | `CategoryMilestone[]` | Category milestones injected into project rows |
-| `gbiRoot` | `GbiNode \| null` | GBI hierarchy root node; enables the GBI filter popover |
-| `gbiScopeId` | `string \| null` | Optional scope ID that restricts selectable tree nodes |
-| `gbiMaxDepth` | `number \| null` | Optional max depth for the GBI tree display |
+| `bgiRoot` | `BgiNode \| null` | BGI hierarchy root node; enables the BGI filter popover |
+| `bgiScopeId` | `string \| null` | Optional scope ID that restricts selectable tree nodes |
+| `bgiMaxDepth` | `number \| null` | Optional max depth for the BGI tree display |
 | `onUpdatePlanning` | `(projectId, planning) => Promise<void>` | Saves updated planning dates/milestones |
 | `onUpdateProjectOrder` | `(waveId, projectIds) => Promise<void>` | Optional — allows drag-reordering projects within a wave |
 | `onAssign` | `(projectId, waveId) => void` | Optional — assigns a project to a wave |
@@ -216,11 +216,11 @@ The interactive Gantt chart used by `WaveGanttPage`. Renders waves as collapsibl
 | Zoom toggle | `days` / `weeks` / `months` |
 | Today button | Scrolls timeline to today's date |
 | Show completed waves | Toggle to hide `completed` waves |
-| GBI filter | Popover with searchable `GbiTree` — select/unselect/exclude nodes to filter visible projects. Only shown when `gbiRoot` is provided. Uses the same tree-selection logic as `ProjectsPage`. |
+| BGI filter | Popover with searchable `BgiTree` — select/unselect/exclude nodes to filter visible projects. Only shown when `bgiRoot` is provided. Uses the same tree-selection logic as `ProjectsPage`. |
 | Category Milestones filter | Dropdown multi-select to show only projects with specific category milestones |
 | Expand / Collapse all | Bulk toggle for wave and project row visibility |
 
-**Filtering logic:** All filters (search, duration, category milestones, GBI) are combined with AND. A wave is hidden when none of its projects match the active filters.
+**Filtering logic:** All filters (search, duration, category milestones, BGI) are combined with AND. A wave is hidden when none of its projects match the active filters.
 
 ---
 

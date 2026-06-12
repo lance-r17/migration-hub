@@ -241,7 +241,7 @@ def _project_options():
 
 
 async def get_all(
-    session: AsyncSession, user_id: str | None = None, fields: set[str] | None = None, gbi_ids: list[str] | None = None
+    session: AsyncSession, user_id: str | None = None, fields: set[str] | None = None, bgi_ids: list[str] | None = None
 ) -> list[Project]:
     from app.models.project_user import ProjectUser
 
@@ -267,14 +267,14 @@ async def get_all(
         q = q.join(ProjectUser, ProjectUser.project_id == Project.id).where(
             ProjectUser.user_id == user_id
         )
-    if gbi_ids:
-        q = q.where(Project.gbi_id.in_(gbi_ids))
+    if bgi_ids:
+        q = q.where(Project.bgi_id.in_(bgi_ids))
     result = await session.execute(q.order_by(Project.name))
     return list(result.scalars().all())
 
 
 async def get_all_home(
-    session: AsyncSession, user_id: str | None = None, fields: set[str] | None = None, gbi_ids: list[str] | None = None
+    session: AsyncSession, user_id: str | None = None, fields: set[str] | None = None, bgi_ids: list[str] | None = None
 ) -> list[Project]:
     from app.models.project_user import ProjectUser
 
@@ -298,8 +298,8 @@ async def get_all_home(
         q = q.join(ProjectUser, ProjectUser.project_id == Project.id).where(
             ProjectUser.user_id == user_id
         )
-    if gbi_ids:
-        q = q.where(Project.gbi_id.in_(gbi_ids))
+    if bgi_ids:
+        q = q.where(Project.bgi_id.in_(bgi_ids))
     result = await session.execute(q.order_by(Project.name))
     return list(result.scalars().all())
 
@@ -317,22 +317,22 @@ async def get_all_for_stats(
 
 
 async def get_asset_stats(
-    session: AsyncSession, user_id: str | None = None, gbi_ids: list[str] | None = None
+    session: AsyncSession, user_id: str | None = None, bgi_ids: list[str] | None = None
 ) -> dict[str, int]:
     """Return aggregated cloud-resource counts grouped by product category."""
     from app.models.project_user import ProjectUser
     from app.services.product_category_service import get_category_for_product
 
     q = select(CloudResource.product, func.count(CloudResource.resource_id))
-    if user_id or gbi_ids:
+    if user_id or bgi_ids:
         q = q.join(Project, Project.id == CloudResource.project_id)
     if user_id:
         q = (
             q.join(ProjectUser, ProjectUser.project_id == Project.id)
             .where(ProjectUser.user_id == user_id)
         )
-    if gbi_ids:
-        q = q.where(Project.gbi_id.in_(gbi_ids))
+    if bgi_ids:
+        q = q.where(Project.bgi_id.in_(bgi_ids))
     q = q.group_by(CloudResource.product)
 
     result = await session.execute(q)

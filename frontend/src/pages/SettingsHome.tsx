@@ -16,10 +16,10 @@ const SETTINGS_SECTIONS = [
     href: '/settings/migration',
   },
   {
-    title: 'GBI Hierarchy',
-    description: 'Manage the organizational structure and link projects to GBI tiers.',
+    title: 'BGI Hierarchy',
+    description: 'Manage the organizational structure and link projects to BGI tiers.',
     icon: <Building2 size={20} className="text-primary" />,
-    href: '/settings/gbi',
+    href: '/settings/bgi',
   },
   {
     title: 'Embargo Periods',
