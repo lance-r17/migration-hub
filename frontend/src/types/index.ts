@@ -50,7 +50,7 @@ export interface GovernanceRoles {
 }
 
 export interface ApplicationOverview {
-  applicationName: string
+  applicationName?: string
   shortName?: string
   businessFunction?: string
   userBase?: {
@@ -64,7 +64,10 @@ export interface ApplicationOverview {
   softwareOrigin?: 'in-house' | '3rd party'
   migrationStrategy?: MigrationStrategy
   serviceLine?: string
+  newProjectId?: string | null
 }
+
+export interface PartialApplicationOverview extends Partial<ApplicationOverview> {}
 
 // ─── Section 2: Current Infrastructure ──────────────────────────────────────
 

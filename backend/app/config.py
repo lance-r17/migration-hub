@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     zoom_client_id: str = ""
     zoom_client_secret: str = ""
 
+    # New project ID mapping validation regex (applied to applicationOverview.newProjectId)
+    new_project_id_regex: str = ""
+
     @property
     def confluence_api_base(self) -> str:
         return self.confluence_base_url.rstrip("/")
@@ -93,6 +96,10 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Optional startup diagnostics
+if settings.new_project_id_regex:
+    print(f"NEW_PROJECT_ID_REGEX configured: {settings.new_project_id_regex}")
 
 # Validate required secrets at startup
 if not settings.database_url:

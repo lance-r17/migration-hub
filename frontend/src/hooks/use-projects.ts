@@ -36,6 +36,7 @@ const FIELD_LABEL_MAPS: Partial<Record<keyof Project, Record<string, string>>> =
     baId:             'BA ID',
     userBase:         'User Base',
     serviceLine:      'Service Line',
+    newProjectId:     'New Project ID',
   },
   availability: {
     rto:                     'RTO',

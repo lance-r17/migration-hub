@@ -759,6 +759,7 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
       return {
         'Name': p.name,
         'ID': p.id,
+        'New Project ID': p.applicationOverview?.newProjectId ?? '—',
         'Application Name': p.applicationOverview?.applicationName ?? '—',
         'BGI L2': bgiAncestry?.l2 ?? '—',
         'BGI L3': bgiAncestry?.l3 ?? '—',
@@ -784,7 +785,7 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
 
     const worksheet = XLSX.utils.json_to_sheet(rows)
     worksheet['!cols'] = [
-      { wch: 32 }, { wch: 18 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 28 },
+      { wch: 32 }, { wch: 18 }, { wch: 18 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 28 },
       { wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 8 },
       { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 36 }, { wch: 18 },
       { wch: 14 },

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download, Network, X } from 'lucide-react'
+import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download, Network, X, MoreVertical } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   Table,
@@ -20,6 +20,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   Tooltip,
   TooltipContent,
@@ -30,11 +31,25 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
-import { getSurveyDraftProjectIds } from '@/services/projects'
+import { getSurveyDraftProjectIds, updateApplicationOverview } from '@/services/projects'
 import { getBgiHierarchy } from '@/services/bgi'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { BgiTree } from '@/components/bgi/BgiTree'
@@ -68,7 +83,7 @@ function getProgressVariant(project: Project) {
 export function ProjectsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
-  const { projects, loading } = useProjects({
+  const { projects, loading, refresh } = useProjects({
     fields: ['basic', 'itso', 'itso_delegate', 'progress', 'planning', 'overview', 'effort'],
   })
 
@@ -83,8 +98,31 @@ export function ProjectsPage() {
   const [bgiSearchQuery, setBgiSearchQuery] = useState('')
   const [selectedBgiIds, setSelectedBgiIds] = useState<Set<string>>(new Set())
   const [excludedBgiIds, setExcludedBgiIds] = useState<Set<string>>(new Set())
+  const [mappingDialogProject, setMappingDialogProject] = useState<Project | null>(null)
+  const [mappingDialogValue, setMappingDialogValue] = useState('')
+  const [mappingDialogSaving, setMappingDialogSaving] = useState(false)
+  const [mappingDialogError, setMappingDialogError] = useState<string | null>(null)
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+
+  async function handleSaveMapping() {
+    if (!mappingDialogProject) return
+    const trimmed = mappingDialogValue.trim()
+    setMappingDialogSaving(true)
+    setMappingDialogError(null)
+    try {
+      await updateApplicationOverview(mappingDialogProject.id, { newProjectId: trimmed || null })
+      setMappingDialogProject(null)
+      setMappingDialogValue('')
+      refresh()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update project ID mapping.'
+      setMappingDialogError(message)
+    } finally {
+      setMappingDialogSaving(false)
+    }
+  }
+
   const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
   const canViewProjects = isPlatformLead || isBgiCloudLead
   const { settings: migrationSettings } = useMigrationSettings()
@@ -466,6 +504,7 @@ export function ProjectsPage() {
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Name</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ID</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">New Project ID</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">BGI</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Progress</TableHead>
@@ -478,21 +517,21 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Period</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Effort</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Story</TableHead>
-                <TableHead className="w-[100px]"></TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 14 }).map((_, j) => (
+                    {Array.from({ length: 15 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filteredProjects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={14} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={15} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -508,6 +547,9 @@ export function ProjectsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground font-mono">
                       {project.id}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground font-mono">
+                      {project.applicationOverview?.newProjectId ?? '—'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {project.bgi_id ? (bgiNameMap.get(project.bgi_id) ?? project.bgi_id) : '—'}
@@ -639,16 +681,33 @@ export function ProjectsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <button
-                        className="text-sm font-semibold text-primary flex items-center gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/projects/${project.id}`)
-                        }}
-                      >
-                        View
-                        <ChevronRight size={14} />
-                      </button>
+                      {isPlatformLead && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="More actions"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem
+                              className="whitespace-nowrap"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setMappingDialogProject(project)
+                                setMappingDialogValue(project.applicationOverview?.newProjectId ?? '')
+                              }}
+                            >
+                              Update project ID mapping
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -703,6 +762,63 @@ export function ProjectsPage() {
             </div>
           </div>
         )}
+
+        {/* Update Project ID Mapping Dialog */}
+        <Dialog open={!!mappingDialogProject} onOpenChange={(open) => {
+          if (!open) {
+            setMappingDialogProject(null)
+            setMappingDialogValue('')
+            setMappingDialogError(null)
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Update Project ID Mapping</DialogTitle>
+              <DialogDescription>
+                Set the new project ID for {mappingDialogProject?.name}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-project-id">New Project ID</Label>
+                <Input
+                  id="new-project-id"
+                  value={mappingDialogValue}
+                  onChange={(e) => {
+                    setMappingDialogValue(e.target.value)
+                    setMappingDialogError(null)
+                  }}
+                  placeholder="e.g. new-resource-set-name"
+                  aria-invalid={mappingDialogError ? 'true' : 'false'}
+                />
+                {mappingDialogError && (
+                  <p className="text-xs text-destructive">{mappingDialogError}</p>
+                )}
+              </div>
+              {mappingDialogProject?.applicationOverview?.newProjectId && (
+                <p className="text-xs text-muted-foreground">
+                  Current mapping: {mappingDialogProject.applicationOverview.newProjectId}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setMappingDialogProject(null)
+                  setMappingDialogValue('')
+                  setMappingDialogError(null)
+                }}
+                disabled={mappingDialogSaving}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveMapping} disabled={mappingDialogSaving}>
+                {mappingDialogSaving ? 'Saving...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   )

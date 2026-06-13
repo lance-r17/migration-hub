@@ -313,6 +313,21 @@ export async function updateProject<K extends keyof Project>(
   return fromApi(raw)
 }
 
+export async function updateApplicationOverview(
+  id: string,
+  partial: Partial<ApplicationOverview>,
+): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const p = store.getProject(id)
+    if (!p) throw new Error('Project not found')
+    const updated: ApplicationOverview = { ...p.applicationOverview, ...partial }
+    return store.updateProject(id, 'applicationOverview', updated)
+  }
+  const raw = await apiClient.patch<ProjectApiResponse>(ENDPOINTS.section(id, 'applicationOverview'), { value: partial })
+  return fromApi(raw)
+}
+
 export async function updatePlanning(
   id: string,
   planning: ProjectPlanning,

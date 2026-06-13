@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import re
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
@@ -619,6 +620,9 @@ async def update_section(
         raise HTTPException(status_code=400, detail=f"Unknown section key: {section_key}")
 
     value = body.value
+    # The section update endpoint merges nested dicts on JSONB columns, which lets
+    # callers PATCH only the keys they want to change. Some callers still send the
+    # whole section; that is supported, but it is not required.
     if section_key == "status":
         old_status = project.status
         new_status = value
@@ -635,6 +639,23 @@ async def update_section(
                 status_code=403,
                 detail="Only Platform Migration Leads or Admins can update engagements.",
             )
+
+    if section_key == "applicationOverview":
+        if isinstance(value, dict) and "newProjectId" in value:
+            current_new_project_id = (project.application_overview or {}).get("newProjectId")
+            new_new_project_id = value["newProjectId"]
+            if new_new_project_id != current_new_project_id:
+                if "platform_migration_lead" not in (current_user.role or "") and not _user_has_admin_role(current_user.role):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Only Platform Migration Leads or Admins can update the new project ID mapping.",
+                    )
+                if new_new_project_id and settings.new_project_id_regex:
+                    if not re.fullmatch(settings.new_project_id_regex, str(new_new_project_id)):
+                        raise HTTPException(
+                            status_code=400,
+                            detail="New Project ID must match the configured naming convention.",
+                        )
 
     actor = _user_to_actor(current_user)
     try:
