@@ -10,7 +10,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "hub"]
+      test: ["CMD", "pg_isready", "-U", "hub", "-d", "migration_hub"]
       interval: 5s
       timeout: 3s
       retries: 10
