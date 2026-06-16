@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { BadgeCheck, Ban, ClipboardList, History, Lock } from 'lucide-react'
+import { BadgeCheck, Ban, ClipboardList, History, Lock, ChevronDown, FileText, Database } from 'lucide-react'
 import { restoreAuditEntry } from '@/services/auditLog'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
@@ -21,6 +21,7 @@ import { AuditLogDrawer } from '@/components/drawers/AuditLogDrawer'
 import { AssignWaveDrawer } from '@/components/drawers/AssignWaveDrawer'
 import { OperationsDrawer } from '@/components/drawers/OperationsDrawer'
 import { SurveyModal } from '@/components/survey/SurveyModal'
+import { DataMigrationSurveyModal } from '@/components/survey/DataMigrationSurveyModal'
 import { EmbargoBanner } from '@/components/project/EmbargoBanner'
 import { useSurveyConfig, useResourceSurveyConfig } from '@/hooks/use-survey'
 import { useProductCategoryMap } from '@/hooks/use-product-category'
@@ -35,6 +36,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -86,6 +93,7 @@ export function ProjectDetailsPage() {
   const [auditLogOpen, setAuditLogOpen] = useState(false)
   const [assignWaveOpen, setAssignWaveOpen] = useState(false)
   const [surveyOpen, setSurveyOpen] = useState(false)
+  const [dataMigrationSurveyOpen, setDataMigrationSurveyOpen] = useState(false)
   const [operationsOpen, setOperationsOpen] = useState(false)
   const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
 
@@ -336,13 +344,25 @@ export function ProjectDetailsPage() {
             <StatusBadge status={project.status} stageProgress={project.stageProgress} />
             <div className="ml-auto flex items-center gap-3">
               {isSurveyActive && !isLocked && (isProjectMember || isPlatformLead) && (
-                <button
-                  onClick={() => setSurveyOpen(true)}
-                  className="flex items-center gap-1.5 text-sm text-primary hover:opacity-80 transition-opacity font-medium"
-                >
-                  <ClipboardList className="size-4" />
-                  Fill Survey
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1.5 text-sm text-primary hover:opacity-80 transition-opacity font-medium">
+                      <ClipboardList className="size-4" />
+                      Fill Survey
+                      <ChevronDown className="size-3" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setSurveyOpen(true)}>
+                      <FileText className="mr-2 size-4" />
+                      Application Survey
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDataMigrationSurveyOpen(true)}>
+                      <Database className="mr-2 size-4" />
+                      Data Migration Survey
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               <button
                 onClick={() => setAuditLogOpen(true)}
@@ -500,6 +520,7 @@ export function ProjectDetailsPage() {
           />
           <MigrationConstraintsSection
             data={project.migrationConstraints}
+            dataMigrationSchedule={project.dataMigrationSchedule}
             onSave={!isLocked ? (d) => handleSave('migrationConstraints', d) : undefined}
           />
           <TargetArchitectureSection
@@ -573,6 +594,15 @@ export function ProjectDetailsPage() {
           getCategoryForProduct={getCategoryForProduct}
         />
       )}
+
+      <DataMigrationSurveyModal
+        key={dataMigrationSurveyOpen ? `dm-survey-open-${project.id}` : `dm-survey-closed-${project.id}`}
+        open={dataMigrationSurveyOpen}
+        onClose={() => setDataMigrationSurveyOpen(false)}
+        project={project}
+        onSave={handleSave}
+        onSubmitted={refreshProject}
+      />
 
       <Dialog
         open={blockDialogOpen}

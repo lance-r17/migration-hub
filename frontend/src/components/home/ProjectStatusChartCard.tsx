@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { PieChart as PieChartIcon, ClipboardCheck, Database, Users } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { cn } from '@/lib/utils'
 import { getAssetStats } from '@/services/projects'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -71,7 +73,7 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
 
   const draftIdSet = useMemo(() => new Set(draftProjectIds), [draftProjectIds])
 
-  const surveyData = useMemo(() => {
+  const applicationSurveyData = useMemo(() => {
     const submitted = projects.filter(
       (p) => (p.stageProgress?.survey ?? 0) === 100 || !!p.surveySubmittedAt,
     ).length
@@ -97,6 +99,100 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
       },
     ].filter((d) => d.value > 0)
   }, [projects, draftIdSet])
+
+  const dataMigrationSurveyData = useMemo(() => {
+    const submitted = projects.filter(
+      (p) => !!p.dataMigrationSurveySubmittedAt,
+    ).length
+    const notSubmitted = projects.length - submitted
+    return [
+      {
+        label: 'Submitted',
+        value: submitted,
+        color: 'var(--chart-2)',
+      },
+      {
+        label: 'Not Submitted',
+        value: notSubmitted,
+        color: 'var(--chart-4)',
+      },
+    ].filter((d) => d.value > 0)
+  }, [projects])
+
+  const SURVEY_PAGES = [
+    { key: 'application', label: 'Application Survey', data: applicationSurveyData, caption: 'Projects that have submitted their application surveys' },
+    { key: 'data_migration', label: 'Data Migration Survey', data: dataMigrationSurveyData, caption: 'Projects that have submitted their data migration surveys' },
+  ]
+
+  const [surveyPage, setSurveyPage] = useState(0)
+  const [direction, setDirection] = useState(0)
+  const surveyAreaRef = useRef<HTMLDivElement>(null)
+  const isThrottled = useRef(false)
+  const pendingDirection = useRef<number | null>(null)
+
+  const goToPage = useCallback((idx: number) => {
+    if (idx === surveyPage) return
+    setDirection(idx > surveyPage ? 1 : -1)
+    setSurveyPage(idx)
+  }, [surveyPage])
+
+  const runPageChange = useCallback((delta: number) => {
+    const next = (surveyPage + delta + SURVEY_PAGES.length) % SURVEY_PAGES.length
+    goToPage(next)
+  }, [goToPage, surveyPage, SURVEY_PAGES.length])
+
+  const schedulePageChange = useCallback((delta: number) => {
+    if (isThrottled.current) {
+      pendingDirection.current = delta
+      return
+    }
+
+    runPageChange(delta)
+
+    isThrottled.current = true
+    window.setTimeout(() => {
+      isThrottled.current = false
+      const queued = pendingDirection.current
+      pendingDirection.current = null
+      if (queued !== null) {
+        runPageChange(queued)
+      }
+    }, 400)
+  }, [runPageChange])
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const delta = e.deltaY > 0 ? 1 : e.deltaY < 0 ? -1 : 0
+    if (delta === 0) return
+
+    schedulePageChange(delta)
+  }, [schedulePageChange])
+
+  const handleSurveyPageChange = (idx: number) => {
+    pendingDirection.current = null
+    isThrottled.current = false
+    goToPage(idx)
+  }
+
+  const slideVariants = {
+    enter: (dir: number) => ({
+      y: dir > 0 ? 28 : -28,
+      opacity: 0,
+      scale: 0.96,
+    }),
+    center: {
+      y: 0,
+      opacity: 1,
+      scale: 1,
+    },
+    exit: (dir: number) => ({
+      y: dir > 0 ? -28 : 28,
+      opacity: 0,
+      scale: 0.96,
+    }),
+  }
 
   return (
     <Card className="md:col-span-2">
@@ -139,19 +235,53 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
               Distribution of projects across migration stages
             </p>
           </TabsContent>
-          <TabsContent value="surveys" className="flex flex-col gap-2">
-            <div className="w-full flex justify-center">
-              {surveyData.length > 0 ? (
-                <PieChart data={surveyData} size={180} />
-              ) : (
-                <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
-                  No project data available
-                </div>
-              )}
+          <TabsContent value="surveys" className="flex flex-row items-center gap-4 overflow-hidden">
+            <div
+              ref={surveyAreaRef}
+              onWheel={handleWheel}
+              className="flex-1 flex flex-col gap-2 relative min-h-[244px] cursor-ns-resize"
+            >
+              <AnimatePresence mode="wait" custom={direction} initial={false}>
+                <motion.div
+                  key={SURVEY_PAGES[surveyPage].key}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="flex flex-col gap-2"
+                >
+                  <div className="w-full flex justify-center">
+                    {SURVEY_PAGES[surveyPage].data.length > 0 ? (
+                      <PieChart data={SURVEY_PAGES[surveyPage].data} size={180} title={SURVEY_PAGES[surveyPage].label} />
+                    ) : (
+                      <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
+                        No project data available
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {SURVEY_PAGES[surveyPage].caption}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Projects that have submitted their migration surveys
-            </p>
+            <div className="flex flex-col items-center justify-center gap-1.5 self-stretch py-8">
+              {SURVEY_PAGES.map((page, idx) => (
+                <button
+                  key={page.key}
+                  type="button"
+                  onClick={() => handleSurveyPageChange(idx)}
+                  className={cn(
+                    'size-2 rounded-full transition-colors',
+                    idx === surveyPage ? 'bg-primary' : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                  )}
+                  aria-label={`Show ${page.label}`}
+                  aria-current={idx === surveyPage ? 'true' : undefined}
+                />
+              ))}
+            </div>
           </TabsContent>
           <TabsContent value="engagement" className="flex flex-col gap-2">
             <div className="w-full flex justify-center">

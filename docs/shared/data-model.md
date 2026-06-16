@@ -71,7 +71,8 @@ interface Project {
   blockedReason?: string
   progress: number               // 0–100; computed from stage_progress, not stored
   stageProgress?: StageProgress   // computed from section completion, not stored
-  surveySubmittedAt?: string
+  surveySubmittedAt?: string      // application survey submission timestamp
+  dataMigrationSurveySubmittedAt?: string  // data migration survey submission timestamp
   team: TeamMember[]
   description?: string
   // Header metadata
@@ -88,6 +89,7 @@ interface Project {
   migrationConstraints?: MigrationConstraints
   targetArchitecture?: TargetArchitecture
   migrationEffortEstimation?: MigrationEffortEstimation
+  dataMigrationSchedule?: DataMigrationSchedule
   risks: Risk[]
   approvals: Approval[]
   // Wave planning
@@ -223,6 +225,21 @@ interface DateRangeEntry {
 }
 ```
 
+### Section 7.5 — DataMigrationSchedule
+
+```ts
+interface DataMigrationSchedule {
+  startDate?: string
+  endDate?: string
+  cycleCount?: number
+  cycleJustification?: string
+  dtsInstanceCount?: number
+  dtsJustification?: string
+}
+```
+
+Captured by the data migration survey and stored as a project section.
+
 ### Section 8 — TargetArchitecture
 
 ```ts
@@ -343,7 +360,7 @@ Computed per-stage completion percentages returned by the API:
 ```ts
 interface StageProgress {
   setup: number      // 0 or 100
-  survey: number     // 0 or 100
+  survey: number     // 0 or 100; driven by both application and data-migration survey submissions
   signoff: number    // 0, 33, 67, or 100
   migration: number  // 0–100
 }
@@ -422,6 +439,7 @@ type AuditEventType =
   | 'wave_assigned' | 'wave_created' | 'wave_imported'
   | 'jira_story_created'
   | 'survey_submitted'
+  | 'data_migration_survey_submitted'
   | 'project_created'
 
 type AuditEntityType = 'project' | 'section' | 'approval' | 'risk' | 'cloud_resource' | 'wave'

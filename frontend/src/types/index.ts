@@ -161,6 +161,17 @@ export interface MigrationConstraints {
   changeFreezePeriods?: DateRangeEntry[]
 }
 
+// ─── Section 7.5: Data Migration Schedule ────────────────────────────────────
+
+export interface DataMigrationSchedule {
+  startDate?: string
+  endDate?: string
+  cycleCount?: number
+  cycleJustification?: string
+  dtsInstanceCount?: number
+  dtsJustification?: string
+}
+
 // ─── Section 8: Target Architecture ─────────────────────────────────────────
 
 export interface TargetArchitecture {
@@ -337,6 +348,8 @@ export interface Project {
   dependencies?: Dependencies
   nfrs?: NonFunctionalRequirements
   migrationConstraints?: MigrationConstraints
+  dataMigrationSchedule?: DataMigrationSchedule
+  dataMigrationSurveySubmittedAt?: string
   targetArchitecture?: TargetArchitecture
   migrationEffortEstimation?: MigrationEffortEstimation
   engagement?: Engagement

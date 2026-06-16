@@ -11,6 +11,7 @@ interface PieChartProps {
   size?: number
   strokeWidth?: number
   className?: string
+  title?: string
 }
 
 function polarToCartesian(cx: number, cy: number, r: number, angleRad: number) {
@@ -20,7 +21,8 @@ function polarToCartesian(cx: number, cy: number, r: number, angleRad: number) {
   }
 }
 
-export function PieChart({ data, size = 160, strokeWidth = 0, className }: PieChartProps) {
+export function PieChart({ data, size = 160, strokeWidth = 0, className, title }: PieChartProps) {
+  const showLegendTitle = Boolean(title)
   const total = data.reduce((sum, d) => sum + d.value, 0)
 
   if (total === 0) {
@@ -70,7 +72,7 @@ export function PieChart({ data, size = 160, strokeWidth = 0, className }: PieCh
 
   return (
     <div className={cn('flex items-center gap-6', className)}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Pie chart">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={title ? `${title} pie chart` : 'Pie chart'}>
         {slices.map((slice, i) =>
           slice.path === 'FULL_CIRCLE' ? (
             <circle
@@ -117,21 +119,28 @@ export function PieChart({ data, size = 160, strokeWidth = 0, className }: PieCh
         </text>
       </svg>
 
-      <ul className="flex flex-col gap-2 min-w-[120px]">
-        {slices.map((slice, i) => (
-          <li key={i} className="flex items-center gap-2 text-xs">
-            <span
-              className="inline-block size-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: slice.color }}
-            />
-            <span className="flex-1 text-muted-foreground">{slice.label}</span>
-            <span className="font-semibold text-foreground tabular-nums">
-              {slice.value}
-              <span className="text-muted-foreground font-normal ml-0.5">({slice.percentage}%)</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      <div className="flex flex-col gap-2 min-w-[120px] h-full">
+        {showLegendTitle && (
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground">
+            {title}
+          </p>
+        )}
+        <ul className="flex flex-col gap-2 justify-center flex-1">
+          {slices.map((slice, i) => (
+            <li key={i} className="flex items-center gap-2 text-xs">
+              <span
+                className="inline-block size-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: slice.color }}
+              />
+              <span className="flex-1 text-muted-foreground">{slice.label}</span>
+              <span className="font-semibold text-foreground tabular-nums">
+                {slice.value}
+                <span className="text-muted-foreground font-normal ml-0.5">({slice.percentage}%)</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

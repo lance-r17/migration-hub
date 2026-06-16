@@ -9,7 +9,7 @@ from app.schemas.billing import (
     BillingThresholdConfigUpdate,
     BillingUpload,
 )
-from app.schemas.migration_settings import MigrationSettingsOut, MigrationSettingsUpdate
+from app.schemas.migration_settings import DataMigrationCycleBlock, MigrationSettingsOut, MigrationSettingsUpdate
 from app.schemas.signoff import SignoffConfigOut, SignoffConfigUpdate
 from app.services import billing_service, migration_settings_service, signoff_service
 

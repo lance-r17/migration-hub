@@ -34,6 +34,9 @@ import { getProjects, getProject, updateProject } from '@/services/projects'
 | `getProjects` | `() => Promise<Project[]>` | `GET /api/v1/projects` | Returns all projects |
 | `getProject` | `(id: string) => Promise<Project \| undefined>` | `GET /api/v1/projects/:id` | Returns a single project |
 | `updateProject` | `<K extends keyof Project>(id, key, value) => Promise<Project>` | `PATCH /api/v1/projects/:id/sections/:key` | Updates one section key on a project; returns the full updated project |
+| `submitSurvey` | `(id: string) => Promise<Project>` | `POST /api/v1/projects/:id/survey-submitted` | Marks the application survey as submitted |
+| `markDataMigrationSurveySubmitted` | `(id: string) => Promise<Project>` | `POST /api/v1/projects/:id/data-migration-survey-submitted` | Marks the data migration survey as submitted |
+| `getDataMigrationCycleBlocks` | `(start, end, duration) => Promise<DataMigrationCycleBlock[]>` | `GET /api/v1/projects/data-migration-cycle-blocks` | Returns booked cycle blocks for the data migration calendar |
 
 `updateProject` is generic — the key and value are type-safe against `keyof Project`.
 

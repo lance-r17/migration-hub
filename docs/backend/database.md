@@ -71,7 +71,9 @@
 | `target_architecture` | `JSONB` | nullable; `TargetArchitecture` |
 | `migration_effort_estimation` | `JSONB` | nullable; `MigrationEffortEstimation` |
 | `planning` | `JSONB` | nullable; `ProjectPlanning` |
-| `survey_submitted_at` | `TIMESTAMPTZ` | nullable |
+| `survey_submitted_at` | `TIMESTAMPTZ` | nullable; application survey submission timestamp |
+| `data_migration_survey_submitted_at` | `TIMESTAMPTZ` | nullable; data migration survey submission timestamp |
+| `data_migration_schedule` | `JSONB` | nullable; `DataMigrationSchedule` |
 | `created_at` | `TIMESTAMPTZ NOT NULL` | |
 | `updated_at` | `TIMESTAMPTZ NOT NULL` | |
 

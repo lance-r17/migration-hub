@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ClipboardList, FileText, ShieldCheck, Server, Clock, Hourglass, Wrench, CreditCard, Cloud } from 'lucide-react'
+import { Check, ClipboardList, FileText, ShieldCheck, Server, Clock, Hourglass, Wrench, CreditCard, Cloud, Database } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { ensureAllRoles } from '@/lib/approvals'
@@ -49,19 +49,63 @@ function ApprovalNode({ approval }: { approval: Approval }) {
   )
 }
 
+interface SurveyType {
+  key: 'application' | 'data_migration'
+  label: string
+  icon: React.ElementType
+  submittedAt?: string
+}
+
+function SurveyNode({ type }: { type: SurveyType }) {
+  const submitted = !!type.submittedAt
+  const Icon = type.icon
+
+  return (
+    <div className="relative z-10 flex flex-col items-center gap-2">
+      <div
+        className={cn(
+          'w-7 h-7 rounded-full flex items-center justify-center shrink-0',
+          submitted && 'bg-emerald-500 text-white',
+          !submitted && 'bg-muted text-muted-foreground ring-1 ring-border'
+        )}
+      >
+        {submitted ? <Check size={14} strokeWidth={3} /> : <Icon size={14} />}
+      </div>
+      <div className="text-center">
+        <p className={cn('text-[11px] font-bold', submitted ? 'text-foreground' : 'text-muted-foreground')}>
+          {type.label}
+        </p>
+        {submitted && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase">Submitted</p>}
+        {!submitted && <p className="text-[10px] text-muted-foreground font-bold uppercase">Pending</p>}
+      </div>
+    </div>
+  )
+}
+
 interface StageProgressStepperProps {
   project: Project
 }
 
 export function StageProgressStepper({ project }: StageProgressStepperProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [surveyExpanded, setSurveyExpanded] = useState(false)
+  const [signoffExpanded, setSignoffExpanded] = useState(false)
 
   const sp: StageProgress = project.stageProgress ?? { setup: 0, survey: 0, signoff: 0, migration: 0 }
   const approvedCount = project.approvals.filter(a => a.status === 'approved').length
   const inScopeResources = project.currentInfrastructure?.resources.filter(r => r.needMigration !== false) ?? []
   const completedResources = inScopeResources.filter(r => r.migrationCompleted).length
 
-  const isSignOffClickable = sp.survey === 100 && sp.signoff < 100
+  const surveyTypes: SurveyType[] = [
+    { key: 'application', label: 'Application Survey', icon: FileText, submittedAt: project.surveySubmittedAt },
+    { key: 'data_migration', label: 'Data Migration Survey', icon: Database, submittedAt: project.dataMigrationSurveySubmittedAt },
+  ]
+  const submittedSurveyCount = surveyTypes.filter(s => s.submittedAt).length
+  const totalSurveyCount = surveyTypes.length
+  const surveyComplete = submittedSurveyCount === totalSurveyCount
+  const surveyPartial = submittedSurveyCount > 0 && !surveyComplete
+
+  const isSurveyClickable = sp.setup === 100 && !surveyComplete
+  const isSignOffClickable = surveyComplete && sp.signoff < 100
 
   const stages = [
     {
@@ -74,7 +118,7 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
       key: 'survey' as const,
       label: 'Survey',
       icon: FileText,
-      detail: sp.survey === 100 ? 'Submitted' : 'Not submitted',
+      detail: surveyComplete ? 'Submitted' : `${submittedSurveyCount}/${totalSurveyCount} submitted`,
     },
     {
       key: 'signoff' as const,
@@ -101,20 +145,21 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
     <div className="bg-muted/40 rounded-lg px-4 py-3 border border-border/50 overflow-x-auto">
       <div className="flex items-center min-w-max">
         {stages.map((stage, i) => {
-          const complete = sp[stage.key] === 100
-          const partial = sp[stage.key] > 0 && sp[stage.key] < 100
-          const Icon = stage.icon
+          const isSurveyStage = stage.key === 'survey'
           const isSignOffStage = stage.key === 'signoff'
+          const complete = isSurveyStage ? surveyComplete : sp[stage.key] === 100
+          const partial = isSurveyStage ? surveyPartial : sp[stage.key] > 0 && sp[stage.key] < 100
+          const Icon = stage.icon
 
           return (
             <div key={stage.key} className="flex items-center flex-1 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0 shrink-0">
-                {isSignOffStage && isSignOffClickable ? (
+                {(isSurveyStage && isSurveyClickable) || (isSignOffStage && isSignOffClickable) ? (
                   <button
                     type="button"
-                    onClick={() => setIsExpanded(prev => !prev)}
-                    aria-expanded={isExpanded}
-                    aria-label="Toggle sign-off workflow details"
+                    onClick={() => isSurveyStage ? setSurveyExpanded(prev => !prev) : setSignoffExpanded(prev => !prev)}
+                    aria-expanded={isSurveyStage ? surveyExpanded : signoffExpanded}
+                    aria-label={isSurveyStage ? 'Toggle survey submission details' : 'Toggle sign-off workflow details'}
                     className={cn(
                       'w-7 h-7 rounded-full flex items-center justify-center shrink-0',
                       complete && 'bg-emerald-500 text-white',
@@ -163,7 +208,43 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
       </div>
 
       <AnimatePresence initial={false}>
-        {isExpanded && (
+        {surveyExpanded && (
+          <motion.div
+            key="survey-timeline"
+            initial={{ height: 0, opacity: 0, y: -8 }}
+            animate={{ height: 'auto', opacity: 1, y: 0 }}
+            exit={{ height: 0, opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <div
+              role="region"
+              aria-label="Survey submission timeline"
+              className="relative mt-4 bg-muted rounded-lg border border-border/50 p-4"
+            >
+              {/* Arrow pointing to survey stage icon */}
+              <div className="absolute -top-1.5 left-[calc(25%+14px)] -translate-x-1/2 w-3 h-3 bg-muted border-l border-t border-border/50 rotate-45" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div className="space-y-1 shrink-0">
+                  <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
+                    Survey Submission Status
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {totalSurveyCount - submittedSurveyCount} of {totalSurveyCount} surveys pending submission.
+                  </p>
+                </div>
+                <div className="flex flex-1 max-w-2xl items-center justify-between relative px-4">
+                  <div className="absolute h-0.25 top-3.5 left-12 right-10 bg-muted-foreground/20 z-0" />
+                  {surveyTypes.map((type) => (
+                    <SurveyNode key={type.key} type={type} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {signoffExpanded && (
           <motion.div
             key="signoff-timeline"
             initial={{ height: 0, opacity: 0, y: -8 }}

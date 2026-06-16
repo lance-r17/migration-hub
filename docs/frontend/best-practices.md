@@ -178,6 +178,20 @@ if (user?.role !== 'Platform Migration Lead') {
 
 ---
 
+## Reports and exports
+
+Export helpers live in `src/lib/export-report.ts`. They call service functions (e.g. `getProjects`, `getBgiHierarchy`) to build XLSX workbooks.
+
+When adding fields that should appear in exports:
+
+1. Add the column to the row object built inside the export function.
+2. Add the matching header to the `headers` array (or rely on `json_to_sheet` object key order).
+3. Update `worksheet['!cols']` so the new column is readable.
+
+For project-level reports, include survey timestamps consistently:
+- `Survey Submitted At` — application survey submission date.
+- `Data Migration Survey Submitted At` — data migration survey submission date.
+
 ## Mock store is session-scoped
 
 `src/data/store.ts` is an in-memory object initialized from `mock.ts` when the module first loads. It persists for the lifetime of the browser tab but resets on page reload. This is intentional for development. Do not rely on it for any persistence guarantees.

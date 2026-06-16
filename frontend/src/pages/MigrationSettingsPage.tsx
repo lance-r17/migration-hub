@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { DateRange } from 'react-day-picker'
-import { CalendarRange, Timer } from 'lucide-react'
+import { CalendarRange, Database, CloudCog } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Breadcrumb,
@@ -26,6 +26,14 @@ import type { MigrationSettings } from '@/types/settings'
 const DEFAULTS: MigrationSettings = {
   durationOptions: [15, 30, 45],
   cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' },
+  dataMigration: {
+    cycleDurationDays: 7,
+    minCycle: 1,
+    maxCycle: 3,
+    minDtsInstanceCount: 1,
+    maxDtsInstanceCount: 5,
+    cycleCapacity: 20,
+  },
 }
 
 function rangeLabel(range?: { startDate?: string; endDate?: string }): string {
@@ -114,6 +122,35 @@ export function MigrationSettingsPage() {
     }))
   }
 
+  const selectedDataMigrationRange: DateRange = {
+    from: config.dataMigration?.cyclePeriod?.startDate ? new Date(config.dataMigration.cyclePeriod.startDate) : undefined,
+    to: config.dataMigration?.cyclePeriod?.endDate ? new Date(config.dataMigration.cyclePeriod.endDate) : undefined,
+  }
+
+  const handleDataMigrationRangeSelect = (range: DateRange | undefined) => {
+    setConfig(prev => ({
+      ...prev,
+      dataMigration: {
+        ...prev.dataMigration,
+        cyclePeriod: {
+          startDate: range?.from ? format(range.from, 'yyyy-MM-dd') : undefined,
+          endDate: range?.to ? format(range.to, 'yyyy-MM-dd') : undefined,
+        },
+      },
+    }))
+  }
+
+  const updateDataMigrationNumber = (key: keyof NonNullable<MigrationSettings['dataMigration']>, value: string) => {
+    const parsed = value === '' ? undefined : parseInt(value, 10)
+    setConfig(prev => ({
+      ...prev,
+      dataMigration: {
+        ...prev.dataMigration,
+        [key]: Number.isFinite(parsed) ? parsed : prev.dataMigration?.[key],
+      },
+    }))
+  }
+
   return (
     <div className="space-y-8">
       <Breadcrumb>
@@ -141,14 +178,22 @@ export function MigrationSettingsPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-4 max-w-sm">
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-24" />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-7xl">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
         </div>
       ) : (
-        <div className="space-y-6 max-w-lg">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start max-w-7xl">
           <div className="rounded-lg border border-border bg-card p-5 space-y-5">
+            <div className="flex items-center gap-2">
+              <CloudCog className="size-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Platform Migration</h2>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Configure the platform migration period, new cloud setup period, and allowed migration durations.
+            </p>
+
             {/* New Cloud Setup Period */}
             <div className="space-y-1.5">
               <Label>New Cloud Setup Period</Label>
@@ -223,10 +268,7 @@ export function MigrationSettingsPage() {
 
             {/* Duration Options */}
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5">
-                <Timer size={13} className="text-muted-foreground" />
-                Migration Duration Options (days)
-              </Label>
+              <Label>Migration Duration Options (days)</Label>
               <p className="text-xs text-muted-foreground">
                 These durations will be available when selecting a migration window.
               </p>
@@ -262,6 +304,127 @@ export function MigrationSettingsPage() {
                 </Button>
               </div>
             </div>
+          </div>
+
+          {/* Data Migration Parameters */}
+          <div className="rounded-lg border border-border bg-card p-5 space-y-5">
+            <div className="flex items-center gap-2">
+              <Database className="size-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Data Migration</h2>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Configure defaults and constraints for the data migration schedule survey.
+            </p>
+
+            {/* Cycle Period */}
+            <div className="space-y-1.5">
+              <Label>Cycle Period</Label>
+              <p className="text-xs text-muted-foreground">
+                The window within which data migration start and end dates can be selected.
+              </p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'h-9 w-full justify-start text-left text-sm font-normal',
+                      !config.dataMigration?.cyclePeriod?.startDate && !config.dataMigration?.cyclePeriod?.endDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon size={14} className="mr-2 shrink-0" />
+                    {rangeLabel(config.dataMigration?.cyclePeriod)}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    numberOfMonths={2}
+                    defaultMonth={selectedDataMigrationRange.from}
+                    selected={selectedDataMigrationRange}
+                    onSelect={handleDataMigrationRangeSelect}
+                  />
+                </PopoverContent>
+              </Popover>
+              {config.dataMigration?.cyclePeriod?.startDate && config.dataMigration?.cyclePeriod?.endDate &&
+                new Date(config.dataMigration.cyclePeriod.startDate) > new Date(config.dataMigration.cyclePeriod.endDate) && (
+                <p className="text-xs text-destructive">End date must be after start date.</p>
+              )}
+            </div>
+
+            {/* Cycle Duration */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cycle-duration">Cycle Duration (days)</Label>
+              <Input
+                id="cycle-duration"
+                type="number"
+                min={1}
+                value={config.dataMigration?.cycleDurationDays ?? ''}
+                onChange={(e) => updateDataMigrationNumber('cycleDurationDays', e.target.value)}
+              />
+            </div>
+
+            {/* Min / Max Cycle */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="min-cycle">Min Cycle</Label>
+                <Input
+                  id="min-cycle"
+                  type="number"
+                  min={1}
+                  value={config.dataMigration?.minCycle ?? ''}
+                  onChange={(e) => updateDataMigrationNumber('minCycle', e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="max-cycle">Max Cycle</Label>
+                <Input
+                  id="max-cycle"
+                  type="number"
+                  min={1}
+                  value={config.dataMigration?.maxCycle ?? ''}
+                  onChange={(e) => updateDataMigrationNumber('maxCycle', e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Min / Max DTS Instance Count */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="min-dts">Min DTS Instances</Label>
+                <Input
+                  id="min-dts"
+                  type="number"
+                  min={1}
+                  value={config.dataMigration?.minDtsInstanceCount ?? ''}
+                  onChange={(e) => updateDataMigrationNumber('minDtsInstanceCount', e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="max-dts">Max DTS Instances</Label>
+                <Input
+                  id="max-dts"
+                  type="number"
+                  min={1}
+                  value={config.dataMigration?.maxDtsInstanceCount ?? ''}
+                  onChange={(e) => updateDataMigrationNumber('maxDtsInstanceCount', e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Cycle Capacity */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cycle-capacity">Cycle Capacity</Label>
+              <Input
+                id="cycle-capacity"
+                type="number"
+                min={1}
+                value={config.dataMigration?.cycleCapacity ?? ''}
+                onChange={(e) => updateDataMigrationNumber('cycleCapacity', e.target.value)}
+              />
+            </div>
+          </div>
+
           </div>
 
           <div className="flex items-center gap-3">

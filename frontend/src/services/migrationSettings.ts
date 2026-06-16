@@ -1,6 +1,6 @@
 import { store } from '@/data/store'
 import { USE_MOCK, delay, apiClient } from './client'
-import type { MigrationSettings } from '@/types/settings'
+import type { DataMigrationPeriod, DataMigrationSettings, MigrationSettings } from '@/types/settings'
 
 const ENDPOINT = '/api/v1/settings/migration'
 
@@ -9,11 +9,22 @@ interface PeriodApi {
   end_date?: string
 }
 
+interface DataMigrationSettingsApi {
+  cycle_duration_days: number
+  min_cycle: number
+  max_cycle: number
+  min_dts_instance_count: number
+  max_dts_instance_count: number
+  cycle_period: PeriodApi | null
+  cycle_capacity: number
+}
+
 interface MigrationSettingsApi {
   platform_period: PeriodApi | null
   new_cloud_setup_period: PeriodApi | null
   duration_options: number[]
   bgi_tier_depth: number | null
+  data_migration: DataMigrationSettingsApi
 }
 
 function periodFromApi(raw: PeriodApi | null): { startDate?: string; endDate?: string } | undefined {
@@ -32,12 +43,54 @@ function periodToApi(period: { startDate?: string; endDate?: string } | undefine
   }
 }
 
+function dataMigrationPeriodToApi(period?: DataMigrationPeriod): PeriodApi | null {
+  if (!period) return null
+  return {
+    start_date: period.startDate ?? undefined,
+    end_date: period.endDate ?? undefined,
+  }
+}
+
+function dataMigrationFromApi(raw: DataMigrationSettingsApi): DataMigrationSettings {
+  return {
+    cycleDurationDays: raw.cycle_duration_days,
+    minCycle: raw.min_cycle,
+    maxCycle: raw.max_cycle,
+    minDtsInstanceCount: raw.min_dts_instance_count,
+    maxDtsInstanceCount: raw.max_dts_instance_count,
+    cyclePeriod: periodFromApi(raw.cycle_period),
+    cycleCapacity: raw.cycle_capacity,
+  }
+}
+
+function dataMigrationToApi(settings: DataMigrationSettings): DataMigrationSettingsApi {
+  return {
+    cycle_duration_days: settings.cycleDurationDays,
+    min_cycle: settings.minCycle,
+    max_cycle: settings.maxCycle,
+    min_dts_instance_count: settings.minDtsInstanceCount,
+    max_dts_instance_count: settings.maxDtsInstanceCount,
+    cycle_period: dataMigrationPeriodToApi(settings.cyclePeriod),
+    cycle_capacity: settings.cycleCapacity,
+  }
+}
+
 function fromApi(raw: MigrationSettingsApi): MigrationSettings {
   return {
     platformPeriod: periodFromApi(raw.platform_period),
     cloudSetupPeriod: periodFromApi(raw.new_cloud_setup_period),
     durationOptions: raw.duration_options,
     bgiTierDepth: raw.bgi_tier_depth ?? undefined,
+    dataMigration: raw.data_migration
+      ? dataMigrationFromApi(raw.data_migration)
+      : {
+          cycleDurationDays: 7,
+          minCycle: 1,
+          maxCycle: 3,
+          minDtsInstanceCount: 1,
+          maxDtsInstanceCount: 5,
+          cycleCapacity: 20,
+        },
   }
 }
 
@@ -47,6 +100,14 @@ function toApi(config: MigrationSettings): MigrationSettingsApi {
     new_cloud_setup_period: periodToApi(config.cloudSetupPeriod),
     duration_options: config.durationOptions,
     bgi_tier_depth: config.bgiTierDepth ?? null,
+    data_migration: config.dataMigration ? dataMigrationToApi(config.dataMigration) : dataMigrationToApi({
+      cycleDurationDays: 7,
+      minCycle: 1,
+      maxCycle: 3,
+      minDtsInstanceCount: 1,
+      maxDtsInstanceCount: 5,
+      cycleCapacity: 20,
+    }),
   }
 }
 

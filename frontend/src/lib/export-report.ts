@@ -6,7 +6,7 @@ import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
 import { getBgiAncestry } from '@/lib/bgi-utils'
-import type { Project, Risk } from '@/types'
+import type { Project } from '@/types'
 import type { BgiNode } from '@/types/bgi'
 
 function calcTaskCost(effort?: number, effortTime?: number, rate?: number): number {
@@ -381,6 +381,7 @@ export async function exportProjectDetailsReport() {
       'Migration Wave',
       'Jira Story Key',
       'Survey Submitted At',
+      'Data Migration Survey Submitted At',
       'ITSO',
       'ITSO Email',
       'ITSO Delegate',
@@ -465,6 +466,7 @@ export async function exportProjectDetailsReport() {
         'Migration Wave': project.migrationWave ?? '',
         'Jira Story Key': project.jiraStoryKey ?? '',
         'Survey Submitted At': project.surveySubmittedAt ? formatDate(project.surveySubmittedAt) : '',
+        'Data Migration Survey Submitted At': project.dataMigrationSurveySubmittedAt ? formatDate(project.dataMigrationSurveySubmittedAt) : '',
         'ITSO': project.itso ?? '',
         'ITSO Email': project.itsoEmail ?? '',
         'ITSO Delegate': project.itsoDelegate ?? '',
@@ -774,6 +776,8 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
         'Migration Strategy': p.applicationOverview?.migrationStrategy ?? '—',
         'Migration Period': period,
         'Migration Effort': totalCost > 0 ? `$${Math.round(totalCost).toLocaleString()}` : '—',
+        'Survey Submitted At': p.surveySubmittedAt ? formatDate(p.surveySubmittedAt) : '—',
+        'Data Migration Survey Submitted At': p.dataMigrationSurveySubmittedAt ? formatDate(p.dataMigrationSurveySubmittedAt) : '—',
         'Migration Story': p.jiraStoryKey ?? '—',
       }
     })
@@ -788,7 +792,7 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
       { wch: 32 }, { wch: 18 }, { wch: 18 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 28 },
       { wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 8 },
       { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 36 }, { wch: 18 },
-      { wch: 14 },
+      { wch: 24 }, { wch: 32 }, { wch: 14 },
     ]
 
     const workbook = XLSX.utils.book_new()

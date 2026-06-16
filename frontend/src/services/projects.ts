@@ -17,6 +17,7 @@ import type {
   CloudResource,
   Risk,
   Approval,
+  DataMigrationSchedule,
 } from '@/types'
 import type { JiraSubtaskConfig } from '@/types/wave'
 
@@ -27,6 +28,8 @@ const ENDPOINTS = {
   planning: (id: string) => `/api/v1/projects/${id}/planning`,
   surveySubmitted: (id: string) => `/api/v1/projects/${id}/survey-submitted`,
   surveyDraft: (id: string) => `/api/v1/projects/${id}/survey-draft`,
+  dataMigrationSurveySubmitted: (id: string) => `/api/v1/projects/${id}/data-migration-survey-submitted`,
+  dataMigrationCycleBlocks: '/api/v1/projects/data-migration-cycle-blocks',
   resourceSyncComplete: (projectId: string, resourceId: string) => `/api/v1/projects/${projectId}/resources/${resourceId}/sync-complete`,
 }
 
@@ -92,6 +95,8 @@ interface ProjectListItemApi {
   planning: ProjectPlanning | null
   migration_constraints: MigrationConstraints | null
   migration_effort_estimation: MigrationEffortEstimation | null
+  data_migration_schedule: DataMigrationSchedule | null
+  data_migration_survey_submitted_at: string | null
   application_overview: ApplicationOverview | null
   dependencies: Dependencies | null
   governance_roles: GovernanceRolesApi | null
@@ -126,6 +131,8 @@ interface ProjectApiResponse extends ProjectListItemApi {
   migration_constraints: MigrationConstraints | null
   target_architecture: TargetArchitecture | null
   migration_effort_estimation: MigrationEffortEstimation | null
+  data_migration_schedule: DataMigrationSchedule | null
+  data_migration_survey_submitted_at: string | null
   engagement: Engagement | null
   cloud_resources: CloudResourceApi[]
   risks: RiskApi[]
@@ -197,6 +204,8 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     stageProgress: raw.stage_progress ?? undefined,
     migrationConstraints: raw.migration_constraints ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
+    dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
+    dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
     applicationOverview: raw.application_overview ?? undefined,
     dependencies: raw.dependencies ?? undefined,
     governanceRoles: mapGovernanceRoles(raw.governance_roles),
@@ -238,6 +247,8 @@ function fromApi(raw: ProjectApiResponse): Project {
     migrationConstraints: raw.migration_constraints ?? undefined,
     targetArchitecture: raw.target_architecture ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
+    dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
+    dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
     engagement: raw.engagement ?? undefined,
     currentInfrastructure: raw.cloud_resources?.length
       ? { resources: raw.cloud_resources.map(mapResource) }
@@ -354,6 +365,65 @@ export async function submitSurvey(id: string): Promise<Project> {
   }
   const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.surveySubmitted(id), {})
   return fromApi(raw)
+}
+
+export async function markDataMigrationSurveySubmitted(id: string): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const now = new Date().toISOString()
+    store.updateProject(id, 'dataMigrationSurveySubmittedAt', now)
+    return store.getProject(id)!
+  }
+  const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.dataMigrationSurveySubmitted(id), {})
+  return fromApi(raw)
+}
+
+interface DataMigrationCycleBlockApi {
+  start_date: string
+  end_date: string
+  booked_count: number
+}
+
+export interface DataMigrationCycleBlock {
+  startDate: string
+  endDate: string
+  bookedCount: number
+}
+
+export async function getDataMigrationCycleBlocks(
+  cycleStartDate: string,
+  cycleEndDate: string,
+  cycleDurationDays: number,
+): Promise<DataMigrationCycleBlock[]> {
+  if (USE_MOCK) {
+    await delay()
+    // Generate deterministic mock blocks
+    const blocks: DataMigrationCycleBlock[] = []
+    const start = new Date(cycleStartDate)
+    const end = new Date(cycleEndDate)
+    let current = new Date(start)
+    while (current <= end) {
+      const blockEnd = new Date(current)
+      blockEnd.setDate(blockEnd.getDate() + cycleDurationDays - 1)
+      if (blockEnd > end) blockEnd.setTime(end.getTime())
+      blocks.push({
+        startDate: current.toISOString().split('T')[0],
+        endDate: blockEnd.toISOString().split('T')[0],
+        bookedCount: Math.floor(Math.random() * 5),
+      })
+      current = new Date(blockEnd)
+      current.setDate(current.getDate() + 1)
+    }
+    return blocks
+  }
+  const items = await apiClient.get<DataMigrationCycleBlockApi[]>(
+    `${ENDPOINTS.dataMigrationCycleBlocks}?cycle_start_date=${encodeURIComponent(cycleStartDate)}&cycle_end_date=${encodeURIComponent(cycleEndDate)}&cycle_duration_days=${cycleDurationDays}`,
+  )
+  return items.map(b => ({
+    startDate: b.start_date,
+    endDate: b.end_date,
+    bookedCount: b.booked_count,
+  }))
 }
 
 export interface SurveyDraftPayload {

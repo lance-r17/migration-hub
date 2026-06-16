@@ -88,6 +88,14 @@ Renders a scrollable list of `Activity` entries. Each entry has a type icon (suc
 ### `SecurityHealthWidget`
 Shows a summary security health indicator on the home page.
 
+### `ProjectStatusChartCard`
+A tabbed overview card on the home page with four tabs: **Stages**, **Surveys**, **Engagement**, and **Assets**.
+
+- **Surveys tab** displays a two-page carousel:
+  1. **Application Survey** — Submitted / Draft / Not Submitted.
+  2. **Data Migration Survey** — Submitted / Not Submitted.
+- A vertical dot navigation on the right switches between the two survey statistics without changing the tab content height.
+
 ---
 
 ## Project sections
@@ -113,7 +121,24 @@ interface SectionProps {
 | `MigrationCutoverSection` | Migration Constraints | Migration windows, blackout dates, rollback plan |
 | `TargetArchitectureSection` | Target Architecture | Summary, topology, new services |
 | `RisksBlockersSection` | Risks & Blockers | Risk list with create/edit/delete |
+| `StageProgressStepper` | Stage progress | Horizontal stepper for `setup → survey → signoff → migration` |
 | `SignOffWorkflowBar` | Sign-off | Approval status timeline visualization |
+
+### `StageProgressStepper`
+
+Renders the four project stages as a horizontal stepper on `ProjectDetailsPage`.
+
+**Behavior:**
+- Each stage shows an icon, label, and a short detail line.
+- Completed stages are green; partial stages are amber.
+- The `survey` stage behaves like the `signoff` stage:
+  - Detail shows `0/2 submitted`, `1/2 submitted`, or `Submitted`.
+  - Becomes clickable once `setup` is complete and at least one survey is pending.
+  - Clicking expands a panel listing:
+    - **Application Survey** — submitted or pending.
+    - **Data Migration Survey** — submitted or pending.
+- The `signoff` stage expands the multi-role approval timeline when clicked.
+- The sign-off stage only becomes clickable after both surveys are submitted.
 
 ---
 

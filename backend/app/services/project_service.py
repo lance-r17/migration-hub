@@ -13,6 +13,7 @@ from app.models.project import Project
 from app.models.risk import Risk
 from app.models.survey_draft import SurveyDraft
 from app.models.user import User
+from app.schemas.migration_settings import DataMigrationCycleBlock
 from app.schemas.project import ProjectCreate, ProjectPatch
 from app.services import audit_service, attachment_service
 
@@ -53,6 +54,7 @@ SECTION_COLUMN_MAP: dict[str, str | None] = {
     "migrationConstraints": "migration_constraints",
     "targetArchitecture": "target_architecture",
     "migrationEffortEstimation": "migration_effort_estimation",
+    "dataMigrationSchedule": "data_migration_schedule",
     "jiraSubtaskConfig": "jira_subtask_config",
     "status": "status",
     "waveId": "wave_id",
@@ -72,6 +74,7 @@ SECTION_LABELS: dict[str, str] = {
     "migrationConstraints": "Migration Constraints",
     "targetArchitecture": "Target Architecture",
     "migrationEffortEstimation": "Migration Effort Estimation",
+    "dataMigrationSchedule": "Data Migration Schedule",
     "engagement": "Engagement",
     "status": "Project Status",
     "waveId": "Migration Wave",
@@ -237,6 +240,64 @@ def _project_options():
         selectinload(Project.project_users).selectinload(ProjectUser.user),
         selectinload(Project.engagement),
         selectinload(Project.category_milestones),
+    ]
+
+
+def _generate_cycle_blocks(
+    cycle_start_date: str,
+    cycle_end_date: str,
+    cycle_duration_days: int,
+) -> list[dict[str, str]]:
+    """Generate consecutive cycle blocks covering the cycle period."""
+    from datetime import datetime, timedelta
+
+    start = datetime.strptime(cycle_start_date, "%Y-%m-%d").date()
+    end = datetime.strptime(cycle_end_date, "%Y-%m-%d").date()
+    duration = timedelta(days=cycle_duration_days)
+    blocks: list[dict[str, str]] = []
+    current = start
+    while current <= end:
+        block_end = min(current + duration - timedelta(days=1), end)
+        blocks.append({
+            "start_date": current.isoformat(),
+            "end_date": block_end.isoformat(),
+        })
+        current = block_end + timedelta(days=1)
+    return blocks
+
+
+async def get_data_migration_cycle_blocks(
+    session: AsyncSession,
+    cycle_start_date: str,
+    cycle_end_date: str,
+    cycle_duration_days: int,
+) -> list[DataMigrationCycleBlock]:
+    """Return cycle blocks with the number of projects booked in each block."""
+    blocks = _generate_cycle_blocks(cycle_start_date, cycle_end_date, cycle_duration_days)
+    if not blocks:
+        return []
+
+    result = await session.execute(
+        select(Project.data_migration_schedule).where(
+            Project.data_migration_schedule.is_not(None),
+        )
+    )
+    schedules = [row for row in result.scalars().all() if row]
+
+    def _overlaps(schedule: dict, block: dict[str, str]) -> bool:
+        start = schedule.get("startDate")
+        end = schedule.get("endDate")
+        if not start or not end:
+            return False
+        return start < block["end_date"] and end > block["start_date"]
+
+    return [
+        DataMigrationCycleBlock(
+            start_date=block["start_date"],
+            end_date=block["end_date"],
+            booked_count=sum(1 for s in schedules if _overlaps(s, block)),
+        )
+        for block in blocks
     ]
 
 
@@ -1000,6 +1061,14 @@ async def reset_project(
     if project.survey_submitted_at is not None:
         changes.append({"field": "survey_submitted_at", "label": "Survey Submitted At", "old_value": project.survey_submitted_at.isoformat() if project.survey_submitted_at else None, "new_value": None})
         project.survey_submitted_at = None
+
+    if project.data_migration_schedule is not None:
+        changes.append({"field": "data_migration_schedule", "label": "Data Migration Schedule", "old_value": project.data_migration_schedule, "new_value": None})
+        project.data_migration_schedule = None
+
+    if project.data_migration_survey_submitted_at is not None:
+        changes.append({"field": "data_migration_survey_submitted_at", "label": "Data Migration Survey Submitted At", "old_value": project.data_migration_survey_submitted_at.isoformat() if project.data_migration_survey_submitted_at else None, "new_value": None})
+        project.data_migration_survey_submitted_at = None
 
     if project.planning is not None:
         changes.append({"field": "planning", "label": "Planning", "old_value": project.planning, "new_value": None})

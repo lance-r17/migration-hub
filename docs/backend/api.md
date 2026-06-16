@@ -202,11 +202,19 @@ Upsert project user roles for a single project. Each item in the payload replace
 
 ### `POST /api/v1/projects/:id/survey-submitted`
 
-Marks the project's survey as submitted (sets `surveySubmittedAt` timestamp). Advances stage progress from `survey: 0` to `survey: 100`.
+Marks the project's application survey as submitted (sets `surveySubmittedAt` timestamp). The `survey` stage reaches `100` only when both this and the data-migration survey are submitted.
 
 **Response:** `Project`
 
 **Audit:** emits `survey_submitted` event.
+
+---
+
+### `POST /api/v1/projects/:id/data-migration-survey-submitted`
+
+Marks the project's data migration survey as submitted (sets `dataMigrationSurveySubmittedAt` timestamp). The `survey` stage reaches `100` only when both this and the application survey are submitted.
+
+**Response:** `Project`
 
 ---
 
@@ -220,6 +228,7 @@ Resets a project's record to its initial state while preserving application over
 - `status` → `"planning"`
 - `blocked_reason` → `null`
 - `survey_submitted_at` → `null`
+- `data_migration_survey_submitted_at` → `null`
 - `planning` → `null`
 - `availability`, `data_persistence`, `dependencies`, `nfrs`, `migration_constraints`, `target_architecture`, `migration_effort_estimation`, `jira_subtask_config` → `null`
 - `jira_story_key` → `null`
@@ -281,6 +290,7 @@ Returns audit log entries for a project, sorted newest-first.
 | `risks_updated` | `PATCH /sections/risks` |
 | `approval_submitted` | `PATCH /sections/approvals` |
 | `survey_submitted` | `POST /survey-submitted` |
+| `data_migration_survey_submitted` | `POST /data-migration-survey-submitted` |
 | `resource_added` | `PATCH /sections/currentInfrastructure` — new resource |
 | `resource_removed` | `PATCH /sections/currentInfrastructure` — resource deleted |
 | `resource_updated` | `PATCH /sections/currentInfrastructure` — field change |

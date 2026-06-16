@@ -50,6 +50,8 @@ class ProjectListItem(BaseModel):
     jira_job_status: str | None = None
     planning: dict[str, Any] | None = None
     survey_submitted_at: datetime | None = None
+    data_migration_schedule: dict[str, Any] | None = None
+    data_migration_survey_submitted_at: datetime | None = None
     stage_progress: dict[str, int] | None = None
     team: list[dict[str, Any]] | None = None
     migration_constraints: dict[str, Any] | None = None
@@ -89,6 +91,8 @@ class ProjectDetail(BaseModel):
     jira_job_status: str | None = None
     planning: dict[str, Any] | None = None
     survey_submitted_at: datetime | None = None
+    data_migration_schedule: dict[str, Any] | None = None
+    data_migration_survey_submitted_at: datetime | None = None
     stage_progress: dict[str, int] | None = None
     jira_subtask_config: dict[str, Any] | None = None
     migration_effort_estimation: dict[str, Any] | None = None
@@ -128,6 +132,8 @@ class ProjectHomeItem(BaseModel):
     jira_job_status: str | None = None
     planning: dict[str, Any] | None = None
     survey_submitted_at: datetime | None = None
+    data_migration_schedule: dict[str, Any] | None = None
+    data_migration_survey_submitted_at: datetime | None = None
     stage_progress: dict[str, int] | None = None
     team: list[dict[str, Any]] | None = None
     migration_constraints: dict[str, Any] | None = None

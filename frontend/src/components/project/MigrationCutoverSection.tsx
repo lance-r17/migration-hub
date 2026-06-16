@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarCheck, Clock, CalendarX, Timer, CalendarRange, Users } from 'lucide-react'
+import { CalendarCheck, Clock, CalendarX, Timer, CalendarRange, Users, Database } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { MigrationWindowDisplay } from '@/components/shared/MigrationWindowDisplay'
 import { ScheduleWindowsDrawer } from '@/components/drawers/ScheduleWindowsDrawer'
-import type { MigrationConstraints } from '@/types'
+import type { DataMigrationSchedule, MigrationConstraints } from '@/types'
 
 interface MigrationConstraintsSectionProps {
   data?: MigrationConstraints
+  dataMigrationSchedule?: DataMigrationSchedule
   onSave?: (data: MigrationConstraints) => void
 }
 
@@ -23,13 +24,13 @@ function Field({ label, icon: Icon, children }: { label: string; icon?: React.El
   )
 }
 
-export function MigrationConstraintsSection({ data, onSave }: MigrationConstraintsSectionProps) {
+export function MigrationConstraintsSection({ data, dataMigrationSchedule, onSave }: MigrationConstraintsSectionProps) {
   const [editingCard, setEditingCard] = useState<'schedule' | null>(null)
 
   return (
     <div>
       <h2 className="mt-8 mb-4 text-2xl font-bold">Migration Constraints</h2>
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
         {/* Card A: Schedule & Windows */}
         <SectionCard
           icon={CalendarCheck}
@@ -104,6 +105,53 @@ export function MigrationConstraintsSection({ data, onSave }: MigrationConstrain
                       </li>
                     ))}
                   </ul>
+                </Field>
+              )}
+            </div>
+          )}
+        </SectionCard>
+
+        {/* Card B: Data Migration Schedule (read-only) */}
+        <SectionCard
+          icon={Database}
+          title="Data Migration Schedule"
+          iconBg="bg-secondary"
+          iconColor="text-secondary-foreground"
+        >
+          {!dataMigrationSchedule ? (
+            <p className="text-sm text-muted-foreground">No data migration schedule submitted yet.</p>
+          ) : (
+            <div className="space-y-5">
+              {(dataMigrationSchedule.startDate || dataMigrationSchedule.endDate) && (
+                <Field label="Migration Date Range" icon={CalendarRange}>
+                  <div className="space-y-0.5">
+                    {dataMigrationSchedule.startDate && (
+                      <div>Start: <span className="font-medium">{format(new Date(dataMigrationSchedule.startDate), 'MMM d, y')}</span></div>
+                    )}
+                    {dataMigrationSchedule.endDate && (
+                      <div>End: <span className="font-medium">{format(new Date(dataMigrationSchedule.endDate), 'MMM d, y')}</span></div>
+                    )}
+                  </div>
+                </Field>
+              )}
+              {dataMigrationSchedule.cycleCount !== undefined && (
+                <Field label="Cycle Count" icon={Timer}>
+                  <span>{dataMigrationSchedule.cycleCount}</span>
+                </Field>
+              )}
+              {dataMigrationSchedule.cycleJustification && (
+                <Field label="Cycle Justification" icon={Timer}>
+                  <span>{dataMigrationSchedule.cycleJustification}</span>
+                </Field>
+              )}
+              {dataMigrationSchedule.dtsInstanceCount !== undefined && (
+                <Field label="DTS Instance Count" icon={Database}>
+                  <span>{dataMigrationSchedule.dtsInstanceCount}</span>
+                </Field>
+              )}
+              {dataMigrationSchedule.dtsJustification && (
+                <Field label="DTS Justification" icon={Database}>
+                  <span>{dataMigrationSchedule.dtsJustification}</span>
                 </Field>
               )}
             </div>

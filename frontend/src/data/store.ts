@@ -43,7 +43,20 @@ let _embargos: EmbargoRecord[] = structuredClone(mockEmbargos)
 let _categoryMilestones: CategoryMilestone[] = structuredClone(mockCategoryMilestones)
 let _billingThresholdConfig: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120, currency: 'CNY', baselineMonth: undefined, ytdStartMonth: undefined }
 let _signoffConfig: SignoffConfig = { enabled: true }
-let _migrationSettings: MigrationSettings = { platformPeriod: undefined, cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' }, durationOptions: [15, 30, 45], bgiTierDepth: undefined }
+let _migrationSettings: MigrationSettings = {
+  platformPeriod: undefined,
+  cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' },
+  durationOptions: [15, 30, 45],
+  bgiTierDepth: undefined,
+  dataMigration: {
+    cycleDurationDays: 7,
+    minCycle: 1,
+    maxCycle: 3,
+    minDtsInstanceCount: 1,
+    maxDtsInstanceCount: 5,
+    cycleCapacity: 20,
+  },
+}
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
 const _currentUser: User = structuredClone(mockCurrentUser)
@@ -77,6 +90,8 @@ export const store = {
       status: 'planning',
       blockedReason: undefined,
       surveySubmittedAt: undefined,
+      dataMigrationSchedule: undefined,
+      dataMigrationSurveySubmittedAt: undefined,
       planning: undefined,
       availability: undefined,
       dataPersistence: undefined,

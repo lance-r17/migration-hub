@@ -15,6 +15,7 @@ from app.schemas.cloud_resource import (
     ResourcesBatchDelete,
     ResourcesBatchUpsert,
 )
+from app.schemas.migration_settings import DataMigrationCycleBlock
 from app.schemas.risk import RiskHomeOut, RiskOut
 from app.schemas.survey import SurveyDraftOut, SurveyDraftSave
 from app.schemas.project import (
@@ -153,6 +154,8 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
             jira_job_status=p.jira_job_status,
             planning=p.planning,
             survey_submitted_at=p.survey_submitted_at,
+            data_migration_schedule=p.data_migration_schedule,
+            data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
             stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
             team=_team_from_project_users(p),
             migration_constraints=p.migration_constraints,
@@ -187,6 +190,8 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
                 "jira_job_status": p.jira_job_status,
                 "planning": p.planning,
                 "survey_submitted_at": p.survey_submitted_at,
+                "data_migration_schedule": p.data_migration_schedule,
+                "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "migration_constraints": p.migration_constraints,
                 "migration_effort_estimation": p.migration_effort_estimation,
                 "application_overview": p.application_overview,
@@ -284,6 +289,8 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
             jira_job_status=p.jira_job_status,
             planning=p.planning,
             survey_submitted_at=p.survey_submitted_at,
+            data_migration_schedule=p.data_migration_schedule,
+            data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
             stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
             team=_team_from_project_users(p),
             migration_constraints=p.migration_constraints,
@@ -311,6 +318,8 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
                 "jira_job_status": p.jira_job_status,
                 "planning": p.planning,
                 "survey_submitted_at": p.survey_submitted_at,
+                "data_migration_schedule": p.data_migration_schedule,
+                "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "migration_constraints": p.migration_constraints,
                 "jira_base_url": settings.jira_base_url,
                 "updated_at": p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
@@ -373,6 +382,8 @@ def _project_detail(p) -> ProjectDetail:
         jira_job_status=p.jira_job_status,
         planning=p.planning,
         survey_submitted_at=p.survey_submitted_at,
+        data_migration_schedule=p.data_migration_schedule,
+        data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
         stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
         jira_subtask_config=p.jira_subtask_config,
         team=_team_from_project_users(p),
@@ -434,6 +445,20 @@ async def get_project_asset_stats(
     if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
         bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
     return await project_service.get_asset_stats(db, user_id=userId, bgi_ids=bgi_ids)
+
+
+@router.get("/data-migration-cycle-blocks", response_model=list[DataMigrationCycleBlock])
+async def get_data_migration_cycle_blocks(
+    cycle_start_date: str = Query(..., description="Cycle period start date (YYYY-MM-DD)"),
+    cycle_end_date: str = Query(..., description="Cycle period end date (YYYY-MM-DD)"),
+    cycle_duration_days: int = Query(..., ge=1, description="Duration of each cycle block in days"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return data-migration cycle blocks with current booking counts."""
+    return await project_service.get_data_migration_cycle_blocks(
+        db, cycle_start_date, cycle_end_date, cycle_duration_days
+    )
 
 
 @router.post("", response_model=ProjectDetail, status_code=201)
@@ -556,6 +581,23 @@ async def _validate_migration_constraints(session: AsyncSession, value: dict[str
         )
 
 
+async def _validate_data_migration_schedule(session: AsyncSession, value: dict[str, Any]) -> None:
+    schedule = value or {}
+    start = schedule.get("startDate")
+    end = schedule.get("endDate")
+    if not start or not end:
+        return
+    mig = await migration_settings_service.get_migration_settings(session)
+    cp = mig.data_migration.cycle_period if mig.data_migration else None
+    if not cp or not cp.start_date or not cp.end_date:
+        return
+    if start < cp.start_date or end > cp.end_date:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Data migration schedule must fall within the cycle period ({cp.start_date} to {cp.end_date}).",
+        )
+
+
 def _require_platform_lead_for_block(user: User) -> None:
     if "platform_migration_lead" not in (user.role or ""):
         raise HTTPException(
@@ -632,6 +674,9 @@ async def update_section(
 
     if section_key == "migrationConstraints":
         await _validate_migration_constraints(db, value)
+
+    if section_key == "dataMigrationSchedule":
+        await _validate_data_migration_schedule(db, value)
 
     if section_key == "engagement":
         if "platform_migration_lead" not in (current_user.role or "") and not _user_has_admin_role(current_user.role):
@@ -883,6 +928,28 @@ async def mark_survey_submitted(
         actor=_user_to_actor(current_user),
     )
     await project_service._derive_and_store_status(db, project)
+    await db.flush()
+    await db.refresh(project)
+    return _project_detail(project)
+
+
+@router.post("/{project_id}/data-migration-survey-submitted", response_model=ProjectDetail)
+async def mark_data_migration_survey_submitted(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.data_migration_survey_submitted_at = datetime.now(timezone.utc)
+    await audit_service.append_entry(
+        db,
+        project_id=project_id,
+        event_type="data_migration_survey_submitted",
+        entity_type="project",
+        actor=_user_to_actor(current_user),
+    )
     await db.flush()
     await db.refresh(project)
     return _project_detail(project)
