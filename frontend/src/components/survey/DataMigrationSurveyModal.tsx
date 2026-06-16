@@ -332,7 +332,7 @@ export function DataMigrationSurveyModal({
                     <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 pl-1">
                       <li>No quota assigned by default</li>
                       <li>Max 1 protection group per project</li>
-                      <li>Only 2 groups available in total</li>
+                      <li>Only {asrDrLicenseCapacity} groups available in total</li>
                       <li>Comments can explain usage scenario</li>
                     </ul>
                   </div>
@@ -346,7 +346,7 @@ export function DataMigrationSurveyModal({
                     </div>
                     <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 pl-1">
                       <li>Applies to OSS / SLS / ACR migration</li>
-                      <li>Total available quota: 20</li>
+                      <li>Total available quota: {capacity}</li>
                       <li>No flexible quota option available</li>
                     </ul>
                   </div>
