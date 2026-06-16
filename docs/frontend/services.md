@@ -36,9 +36,20 @@ import { getProjects, getProject, updateProject } from '@/services/projects'
 | `updateProject` | `<K extends keyof Project>(id, key, value) => Promise<Project>` | `PATCH /api/v1/projects/:id/sections/:key` | Updates one section key on a project; returns the full updated project |
 | `submitSurvey` | `(id: string) => Promise<Project>` | `POST /api/v1/projects/:id/survey-submitted` | Marks the application survey as submitted |
 | `markDataMigrationSurveySubmitted` | `(id: string) => Promise<Project>` | `POST /api/v1/projects/:id/data-migration-survey-submitted` | Marks the data migration survey as submitted |
-| `getDataMigrationCycleBlocks` | `(start, end, duration) => Promise<DataMigrationCycleBlock[]>` | `GET /api/v1/projects/data-migration-cycle-blocks` | Returns booked cycle blocks for the data migration calendar |
+| `getDataMigrationCycleBlocks` | `(start, end, duration) => Promise<DataMigrationCycleBlock[]>` | `GET /api/v1/projects/data-migration-cycle-blocks` | Returns booked cycle blocks for the data migration calendar, including ASR-DR license bookings |
 
 `updateProject` is generic — the key and value are type-safe against `keyof Project`.
+
+`DataMigrationCycleBlock`:
+
+```ts
+interface DataMigrationCycleBlock {
+  startDate: string
+  endDate: string
+  bookedCount: number
+  asrDrBookedCount: number
+}
+```
 
 ---
 
@@ -194,6 +205,36 @@ interface SendEmailPayload {
   toEmails: string[]
   subject?: string
   htmlContent: string   // pre-rendered email HTML
+}
+```
+
+---
+
+## Migration Settings (`services/migrationSettings.ts`)
+
+```ts
+import { getMigrationSettings, saveMigrationSettings } from '@/services/migrationSettings'
+```
+
+| Function | Signature | Endpoint | Description |
+|---|---|---|---|
+| `getMigrationSettings` | `() => Promise<MigrationSettings>` | `GET /api/v1/settings/migration` | Returns migration settings including data migration cycle config |
+| `saveMigrationSettings` | `(config: MigrationSettings) => Promise<MigrationSettings>` | `PUT /api/v1/settings/migration` | Replaces migration settings |
+
+All snake_case ↔ camelCase mapping for `platform_period`, `new_cloud_setup_period`, `duration_options`, `bgi_tier_depth`, and the nested `data_migration` object happens inside the service.
+
+`DataMigrationSettings` shape:
+
+```ts
+interface DataMigrationSettings {
+  cycleDurationDays: number
+  minCycle: number
+  maxCycle: number
+  minDtsInstanceCount: number
+  maxDtsInstanceCount: number
+  cyclePeriod?: { startDate?: string; endDate?: string }
+  cycleCapacity: number
+  asrDrLicenseCapacity: number
 }
 ```
 

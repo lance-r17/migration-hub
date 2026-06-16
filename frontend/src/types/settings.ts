@@ -25,6 +25,7 @@ export interface DataMigrationSettings {
   maxDtsInstanceCount: number
   cyclePeriod?: DataMigrationPeriod
   cycleCapacity: number
+  asrDrLicenseCapacity: number
 }
 
 export interface DataMigrationCycleBlock {

@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { useDataMigrationCycleBlocks } from '@/hooks/use-data-migration-cycle-blocks'
@@ -47,6 +48,8 @@ interface FormState {
   cycleJustification: string
   dtsInstanceCount: number
   dtsJustification: string
+  needAsrDr: boolean
+  asrDrJustification: string
 }
 
 export function DataMigrationSurveyModal({
@@ -79,6 +82,8 @@ export function DataMigrationSurveyModal({
     cycleJustification: existing?.cycleJustification ?? '',
     dtsInstanceCount: existing?.dtsInstanceCount ?? defaults.dtsInstanceCount,
     dtsJustification: existing?.dtsJustification ?? '',
+    needAsrDr: existing?.needAsrDr ?? false,
+    asrDrJustification: existing?.asrDrJustification ?? '',
   })
 
   const initializedRef = useRef(false)
@@ -105,6 +110,8 @@ export function DataMigrationSurveyModal({
       cycleJustification: existing?.cycleJustification ?? '',
       dtsInstanceCount: existing?.dtsInstanceCount ?? dm.minDtsInstanceCount,
       dtsJustification: existing?.dtsJustification ?? '',
+      needAsrDr: existing?.needAsrDr ?? false,
+      asrDrJustification: existing?.asrDrJustification ?? '',
     })
   }, [loading, dm, existing])
 
@@ -134,11 +141,17 @@ export function DataMigrationSurveyModal({
   }, [blocks, form.startDate, form.endDate])
 
   const capacity = dm?.cycleCapacity ?? 20
+  const asrDrLicenseCapacity = dm?.asrDrLicenseCapacity ?? 2
 
   const isCurrentProjectBookedForSelectedBlock = useMemo(() => {
     if (!form.startDate || !form.endDate || !existing?.startDate || !existing?.endDate) return false
     return form.startDate === existing.startDate && form.endDate === existing.endDate
   }, [form.startDate, form.endDate, existing?.startDate, existing?.endDate])
+
+  const isCurrentProjectAsrDrBookedForSelectedBlock = useMemo(() => {
+    if (!isCurrentProjectBookedForSelectedBlock) return false
+    return Boolean(existing?.needAsrDr)
+  }, [isCurrentProjectBookedForSelectedBlock, existing?.needAsrDr])
 
   const dateError = useMemo(() => {
     if (!form.startDate || !form.endDate) return 'Please select a migration cycle block.'
@@ -147,6 +160,14 @@ export function DataMigrationSurveyModal({
     }
     return null
   }, [form.startDate, form.endDate, selectedBlock, capacity, isCurrentProjectBookedForSelectedBlock])
+
+  const isAsrDrFullyBooked = useMemo(() => {
+    if (!selectedBlock) return false
+    return (
+      selectedBlock.asrDrBookedCount >= asrDrLicenseCapacity &&
+      !isCurrentProjectAsrDrBookedForSelectedBlock
+    )
+  }, [selectedBlock, asrDrLicenseCapacity, isCurrentProjectAsrDrBookedForSelectedBlock])
 
   const showCycleJustification = form.cycleCount > (dm?.minCycle ?? 1)
   const showDtsJustification = form.dtsInstanceCount > (dm?.minDtsInstanceCount ?? 1)
@@ -164,10 +185,24 @@ export function DataMigrationSurveyModal({
   const isLast = currentIndex === totalSteps - 1
 
   const selectBlock = useCallback((block: DataMigrationCycleBlock) => {
+    setForm((prev) => {
+      const matchesExisting =
+        existing?.startDate === block.startDate && existing?.endDate === block.endDate
+      return {
+        ...prev,
+        startDate: block.startDate,
+        endDate: block.endDate,
+        needAsrDr: matchesExisting ? (existing?.needAsrDr ?? false) : false,
+        asrDrJustification: matchesExisting ? (existing?.asrDrJustification ?? '') : '',
+      }
+    })
+  }, [existing?.startDate, existing?.endDate, existing?.needAsrDr, existing?.asrDrJustification])
+
+  const toggleAsrDr = useCallback((checked: boolean | 'indeterminate') => {
     setForm((prev) => ({
       ...prev,
-      startDate: block.startDate,
-      endDate: block.endDate,
+      needAsrDr: checked === true,
+      asrDrJustification: checked === true ? prev.asrDrJustification : '',
     }))
   }, [])
 
@@ -186,6 +221,8 @@ export function DataMigrationSurveyModal({
         ...(showCycleJustification && { cycleJustification: form.cycleJustification.trim() }),
         dtsInstanceCount: form.dtsInstanceCount,
         ...(showDtsJustification && { dtsJustification: form.dtsJustification.trim() }),
+        needAsrDr: form.needAsrDr,
+        ...(form.asrDrJustification.trim() && { asrDrJustification: form.asrDrJustification.trim() }),
       }
       await onSave('dataMigrationSchedule', payload)
       await markDataMigrationSurveySubmitted(project.id)
@@ -362,6 +399,7 @@ export function DataMigrationSurveyModal({
                           {blocks.map((block) => {
                             const isSelected = selectedBlock?.startDate === block.startDate && selectedBlock?.endDate === block.endDate
                             const isFull = block.bookedCount >= capacity
+                            const isAsrDrFull = block.asrDrBookedCount >= asrDrLicenseCapacity
                             return (
                               <button
                                 key={`${block.startDate}-${block.endDate}`}
@@ -383,14 +421,23 @@ export function DataMigrationSurveyModal({
                                       {format(new Date(block.startDate), 'MMM d, y')} – {format(new Date(block.endDate), 'MMM d, y')}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                                     <Users size={12} />
                                     <span>
                                       {block.bookedCount} / {capacity} booked
                                     </span>
                                     {isFull && (
-                                      <span className="ml-1 inline-flex items-center rounded-full bg-destructive/10 px-1.5 py-0.5 text-destructive">
+                                      <span className="inline-flex items-center rounded-full bg-destructive/10 px-1.5 py-0.5 text-destructive">
                                         Full
+                                      </span>
+                                    )}
+                                    <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5">
+                                      <Shield size={10} className="mr-1" />
+                                      ASR-DR {block.asrDrBookedCount} / {asrDrLicenseCapacity}
+                                    </span>
+                                    {isAsrDrFull && (
+                                      <span className="inline-flex items-center rounded-full bg-destructive/10 px-1.5 py-0.5 text-destructive">
+                                        ASR-DR Full
                                       </span>
                                     )}
                                   </div>
@@ -475,6 +522,59 @@ export function DataMigrationSurveyModal({
                           rows={3}
                           className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
                         />
+                      </div>
+                    )}
+
+                    {/* ASR-DR Request */}
+                    {selectedBlock && !isAsrDrFullyBooked && (
+                      <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            id="need-asr-dr"
+                            checked={form.needAsrDr}
+                            onCheckedChange={(checked) => toggleAsrDr(checked)}
+                          />
+                          <div className="space-y-1">
+                            <Label htmlFor="need-asr-dr" className="font-medium">
+                              Need ASR-DR
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Request an ASR-DR license for this cycle block ({selectedBlock.asrDrBookedCount} / {asrDrLicenseCapacity} booked).
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedBlock && isAsrDrFullyBooked && (
+                      <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                            <Shield size={14} />
+                            <span>ASR-DR license fully booked</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            This cycle block has no remaining ASR-DR licenses ({selectedBlock.asrDrBookedCount} / {asrDrLicenseCapacity} booked). Please choose another cycle block to request ASR-DR. If you still require ASR-DR in this block, provide a justification below.
+                          </p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="asr-dr-justification">
+                            ASR-DR Justification (optional)
+                          </Label>
+                          <textarea
+                            id="asr-dr-justification"
+                            value={form.asrDrJustification}
+                            onChange={(e) => updateForm({ asrDrJustification: e.target.value })}
+                            placeholder="Why is ASR-DR still required in this fully booked cycle block?"
+                            rows={3}
+                            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                          />
+                          {form.needAsrDr && !form.asrDrJustification.trim() && (
+                            <p className="text-xs text-amber-600">
+                              You requested ASR-DR in a fully booked block. Consider adding a justification.
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
 

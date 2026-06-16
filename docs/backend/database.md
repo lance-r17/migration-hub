@@ -13,7 +13,7 @@
 - The `audit_log_entries` table uses append-only inserts — never update or delete rows.
 - Wave–project association is a FK on the `projects` table (`wave_id`).
 - Project IDs are `TEXT` (not UUID) to preserve frontend IDs like `PRJ-2024-ALPHA` and `M-11029`.
-- The `config_store` table is a singleton key→JSONB store for survey config, resource survey config, and billing thresholds.
+- The `config_store` table is a singleton key→JSONB store for survey config, resource survey config, billing thresholds, and migration settings.
 - VARCHAR/TEXT strings for enum columns (avoids Alembic migration pain when adding new enum values).
 
 ## Schema
@@ -73,7 +73,7 @@
 | `planning` | `JSONB` | nullable; `ProjectPlanning` |
 | `survey_submitted_at` | `TIMESTAMPTZ` | nullable; application survey submission timestamp |
 | `data_migration_survey_submitted_at` | `TIMESTAMPTZ` | nullable; data migration survey submission timestamp |
-| `data_migration_schedule` | `JSONB` | nullable; `DataMigrationSchedule` |
+| `data_migration_schedule` | `JSONB` | nullable; `DataMigrationSchedule` (includes optional `needAsrDr` and `asrDrJustification`) |
 | `created_at` | `TIMESTAMPTZ NOT NULL` | |
 | `updated_at` | `TIMESTAMPTZ NOT NULL` | |
 
@@ -184,7 +184,7 @@
 
 | Column | Type | Notes |
 |---|---|---|
-| `key` | `TEXT PK` | `'survey_config'` \| `'resource_survey_config'` \| `'billing_threshold_config'` |
+| `key` | `TEXT PK` | `'survey_config'` \| `'resource_survey_config'` \| `'billing_threshold_config'` \| `'migration_settings'` |
 | `value` | `JSONB NOT NULL` | full config object |
 | `updated_at` | `TIMESTAMPTZ NOT NULL` | |
 

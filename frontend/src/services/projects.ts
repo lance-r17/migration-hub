@@ -382,12 +382,14 @@ interface DataMigrationCycleBlockApi {
   start_date: string
   end_date: string
   booked_count: number
+  asr_dr_booked_count: number
 }
 
 export interface DataMigrationCycleBlock {
   startDate: string
   endDate: string
   bookedCount: number
+  asrDrBookedCount: number
 }
 
 export async function getDataMigrationCycleBlocks(
@@ -410,6 +412,7 @@ export async function getDataMigrationCycleBlocks(
         startDate: current.toISOString().split('T')[0],
         endDate: blockEnd.toISOString().split('T')[0],
         bookedCount: Math.floor(Math.random() * 5),
+        asrDrBookedCount: Math.floor(Math.random() * 3),
       })
       current = new Date(blockEnd)
       current.setDate(current.getDate() + 1)
@@ -423,6 +426,7 @@ export async function getDataMigrationCycleBlocks(
     startDate: b.start_date,
     endDate: b.end_date,
     bookedCount: b.booked_count,
+    asrDrBookedCount: b.asr_dr_booked_count,
   }))
 }
 

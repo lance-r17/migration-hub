@@ -170,6 +170,8 @@ export interface DataMigrationSchedule {
   cycleJustification?: string
   dtsInstanceCount?: number
   dtsJustification?: string
+  needAsrDr?: boolean
+  asrDrJustification?: string
 }
 
 // ─── Section 8: Target Architecture ─────────────────────────────────────────

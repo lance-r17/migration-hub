@@ -272,7 +272,7 @@ async def get_data_migration_cycle_blocks(
     cycle_end_date: str,
     cycle_duration_days: int,
 ) -> list[DataMigrationCycleBlock]:
-    """Return cycle blocks with the number of projects booked in each block."""
+    """Return cycle blocks with the number of projects and ASR-DR licenses booked."""
     blocks = _generate_cycle_blocks(cycle_start_date, cycle_end_date, cycle_duration_days)
     if not blocks:
         return []
@@ -291,11 +291,17 @@ async def get_data_migration_cycle_blocks(
             return False
         return start < block["end_date"] and end > block["start_date"]
 
+    def _needs_asr_dr(schedule: dict) -> bool:
+        return bool(schedule.get("needAsrDr"))
+
     return [
         DataMigrationCycleBlock(
             start_date=block["start_date"],
             end_date=block["end_date"],
             booked_count=sum(1 for s in schedules if _overlaps(s, block)),
+            asr_dr_booked_count=sum(
+                1 for s in schedules if _overlaps(s, block) and _needs_asr_dr(s)
+            ),
         )
         for block in blocks
     ]
@@ -513,8 +519,10 @@ async def update_section(
         if section_key == "waveId" and value:
             await _check_wave_completed(session, value)
         old = getattr(project, column, None)
-        # Merge dict values for JSONB columns so PATCH only updates provided keys
-        if isinstance(old, dict) and isinstance(value, dict):
+        # Merge dict values for JSONB columns so PATCH only updates provided keys.
+        # Data migration schedule is replaced wholesale because fields such as
+        # asrDrJustification can be intentionally cleared by the client.
+        if isinstance(old, dict) and isinstance(value, dict) and section_key != "dataMigrationSchedule":
             merged = {**old, **value}
             setattr(project, column, merged)
             changes = _diff_section(old, merged)

@@ -24,6 +24,7 @@ class DataMigrationSettings(BaseModel):
     max_dts_instance_count: int = 5
     cycle_period: DataMigrationPeriod | None = None
     cycle_capacity: int = 20
+    asr_dr_license_capacity: int = 2
 
 
 class MigrationSettingsOut(BaseModel):
@@ -48,3 +49,4 @@ class DataMigrationCycleBlock(BaseModel):
     start_date: str
     end_date: str
     booked_count: int
+    asr_dr_booked_count: int

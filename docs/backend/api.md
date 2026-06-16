@@ -163,6 +163,7 @@ Replaces one section on a project. `:key` is a camelCase section name (e.g. `app
 | `dependencies` | JSONB column on `projects` |
 | `nfrs` | JSONB column on `projects` |
 | `migrationConstraints` | JSONB column on `projects` |
+| `dataMigrationSchedule` | JSONB column on `projects` (replaced wholesale) |
 | `targetArchitecture` | JSONB column on `projects` |
 | `jiraSubtaskConfig` | JSONB column on `projects` |
 | `status` | Scalar column on `projects` |
@@ -171,6 +172,8 @@ Replaces one section on a project. `:key` is a camelCase section name (e.g. `app
 | `risks` | Delegates to `risks` table (replace-all) |
 | `approvals` | Delegates to `approvals` table (replace-all) |
 | `engagement` | Delegates to `engagements` table (upsert 1:1 record) |
+
+> **Note:** Most JSONB sections are merged with the existing value so the request only needs to include changed keys. `dataMigrationSchedule` is replaced wholesale because fields such as `asrDrJustification` can be intentionally cleared by the client.
 
 ---
 
@@ -215,6 +218,30 @@ Marks the project's application survey as submitted (sets `surveySubmittedAt` ti
 Marks the project's data migration survey as submitted (sets `dataMigrationSurveySubmittedAt` timestamp). The `survey` stage reaches `100` only when both this and the application survey are submitted.
 
 **Response:** `Project`
+
+---
+
+### `GET /api/v1/projects/data-migration-cycle-blocks`
+
+Returns the list of data migration cycle blocks that overlap the requested date range, including current project bookings and ASR-DR license bookings.
+
+**Query params:**
+- `cycle_start_date` — ISO date (`YYYY-MM-DD`)
+- `cycle_end_date` — ISO date (`YYYY-MM-DD`)
+- `cycle_duration_days` — integer ≥ 1
+
+**Response:** `DataMigrationCycleBlock[]`
+
+```json
+[
+  {
+    "start_date": "2026-07-01",
+    "end_date": "2026-07-07",
+    "booked_count": 12,
+    "asr_dr_booked_count": 1
+  }
+]
+```
 
 ---
 
@@ -744,6 +771,45 @@ Replaces the resource survey configuration.
 **Request body:** `ResourceSurveyConfig`
 
 **Response:** `ResourceSurveyConfig`
+
+---
+
+## Migration Settings
+
+### `GET /api/v1/settings/migration`
+
+Returns the current migration settings, including data migration cycle constraints and ASR-DR license capacity.
+
+**Response:** `MigrationSettingsOut`
+
+```json
+{
+  "platform_period": { "start_date": "2026-01-01", "end_date": "2026-12-31" },
+  "new_cloud_setup_period": { "start_date": "2026-01-01", "end_date": "2026-06-30" },
+  "duration_options": [15, 30, 45],
+  "bgi_tier_depth": 3,
+  "data_migration": {
+    "cycle_duration_days": 7,
+    "min_cycle": 1,
+    "max_cycle": 3,
+    "min_dts_instance_count": 1,
+    "max_dts_instance_count": 5,
+    "cycle_period": { "start_date": "2026-07-01", "end_date": "2026-09-30" },
+    "cycle_capacity": 20,
+    "asr_dr_license_capacity": 2
+  }
+}
+```
+
+---
+
+### `PUT /api/v1/settings/migration`
+
+Replaces the migration settings.
+
+**Request body:** `MigrationSettingsUpdate`
+
+**Response:** `MigrationSettingsOut`
 
 ---
 

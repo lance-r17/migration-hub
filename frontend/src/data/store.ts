@@ -55,6 +55,7 @@ let _migrationSettings: MigrationSettings = {
     minDtsInstanceCount: 1,
     maxDtsInstanceCount: 5,
     cycleCapacity: 20,
+    asrDrLicenseCapacity: 2,
   },
 }
 const _users: User[] = structuredClone(mockUsers)

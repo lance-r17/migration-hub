@@ -33,6 +33,7 @@ const DEFAULTS: MigrationSettings = {
     minDtsInstanceCount: 1,
     maxDtsInstanceCount: 5,
     cycleCapacity: 20,
+    asrDrLicenseCapacity: 2,
   },
 }
 
@@ -422,6 +423,21 @@ export function MigrationSettingsPage() {
                 value={config.dataMigration?.cycleCapacity ?? ''}
                 onChange={(e) => updateDataMigrationNumber('cycleCapacity', e.target.value)}
               />
+            </div>
+
+            {/* ASR-DR License Capacity */}
+            <div className="space-y-1.5">
+              <Label htmlFor="asr-dr-license-capacity">ASR-DR License Capacity</Label>
+              <Input
+                id="asr-dr-license-capacity"
+                type="number"
+                min={0}
+                value={config.dataMigration?.asrDrLicenseCapacity ?? ''}
+                onChange={(e) => updateDataMigrationNumber('asrDrLicenseCapacity', e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Maximum ASR-DR licenses available per data migration cycle block.
+              </p>
             </div>
           </div>
 

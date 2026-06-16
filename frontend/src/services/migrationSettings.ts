@@ -17,6 +17,7 @@ interface DataMigrationSettingsApi {
   max_dts_instance_count: number
   cycle_period: PeriodApi | null
   cycle_capacity: number
+  asr_dr_license_capacity: number
 }
 
 interface MigrationSettingsApi {
@@ -60,6 +61,7 @@ function dataMigrationFromApi(raw: DataMigrationSettingsApi): DataMigrationSetti
     maxDtsInstanceCount: raw.max_dts_instance_count,
     cyclePeriod: periodFromApi(raw.cycle_period),
     cycleCapacity: raw.cycle_capacity,
+    asrDrLicenseCapacity: raw.asr_dr_license_capacity,
   }
 }
 
@@ -72,6 +74,7 @@ function dataMigrationToApi(settings: DataMigrationSettings): DataMigrationSetti
     max_dts_instance_count: settings.maxDtsInstanceCount,
     cycle_period: dataMigrationPeriodToApi(settings.cyclePeriod),
     cycle_capacity: settings.cycleCapacity,
+    asr_dr_license_capacity: settings.asrDrLicenseCapacity,
   }
 }
 
@@ -90,6 +93,7 @@ function fromApi(raw: MigrationSettingsApi): MigrationSettings {
           minDtsInstanceCount: 1,
           maxDtsInstanceCount: 5,
           cycleCapacity: 20,
+          asrDrLicenseCapacity: 2,
         },
   }
 }
@@ -107,6 +111,7 @@ function toApi(config: MigrationSettings): MigrationSettingsApi {
       minDtsInstanceCount: 1,
       maxDtsInstanceCount: 5,
       cycleCapacity: 20,
+      asrDrLicenseCapacity: 2,
     }),
   }
 }

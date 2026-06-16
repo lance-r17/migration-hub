@@ -210,6 +210,60 @@ Fetches all category milestones on mount and provides CRUD + batch-assign mutati
 
 ---
 
+## `useMigrationSettings`
+
+```ts
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
+
+const { settings, loading, saving, save } = useMigrationSettings()
+```
+
+Fetches migration settings on mount. Used by `MigrationSettingsPage`.
+
+**Returns:**
+
+| Property | Type | Description |
+|---|---|---|
+| `settings` | `MigrationSettings \| null` | The loaded migration settings |
+| `loading` | `boolean` | `true` during initial fetch |
+| `saving` | `boolean` | `true` while saving settings |
+| `save` | `(config: MigrationSettings) => Promise<MigrationSettings>` | Replaces settings on the server and updates local state |
+
+---
+
+## `useDataMigrationCycleBlocks`
+
+```ts
+import { useDataMigrationCycleBlocks } from '@/hooks/use-data-migration-cycle-blocks'
+
+const { blocks, loading, error } = useDataMigrationCycleBlocks({
+  startDate: '2026-07-01',
+  endDate: '2026-09-30',
+  durationDays: 7,
+})
+```
+
+Fetches data migration cycle blocks for a date range and duration. Used by `DataMigrationSurveyModal` to render selectable cycle blocks with booking counts.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `startDate` | `string` | Range start date (`YYYY-MM-DD`) |
+| `endDate` | `string` | Range end date (`YYYY-MM-DD`) |
+| `durationDays` | `number` | Length of each cycle block in days |
+| `enabled` | `boolean` | Whether to fetch (default `true`) |
+
+**Returns:**
+
+| Property | Type | Description |
+|---|---|---|
+| `blocks` | `DataMigrationCycleBlock[]` | Cycle blocks with `bookedCount` and `asrDrBookedCount` |
+| `loading` | `boolean` | `true` while fetching |
+| `error` | `Error \| null` | Error if the fetch failed |
+
+---
+
 ## `useCurrentUser`
 
 ```ts

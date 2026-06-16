@@ -235,10 +235,59 @@ interface DataMigrationSchedule {
   cycleJustification?: string
   dtsInstanceCount?: number
   dtsJustification?: string
+  needAsrDr?: boolean
+  asrDrJustification?: string
 }
 ```
 
 Captured by the data migration survey and stored as a project section.
+
+---
+
+## DataMigrationSettings
+
+Platform-configured constraints for the data migration survey. Stored in `config_store` under the key `migration_settings`.
+
+```ts
+interface DataMigrationSettings {
+  cycleDurationDays: number
+  minCycle: number
+  maxCycle: number
+  minDtsInstanceCount: number
+  maxDtsInstanceCount: number
+  cyclePeriod?: DataMigrationPeriod
+  cycleCapacity: number
+  asrDrLicenseCapacity: number
+}
+
+interface DataMigrationPeriod {
+  startDate?: string
+  endDate?: string
+}
+```
+
+| Field | Description |
+|---|---|
+| `cycleDurationDays` | Length of each selectable cycle block in days |
+| `minCycle` / `maxCycle` | Minimum and maximum migration cycles a project may request |
+| `minDtsInstanceCount` / `maxDtsInstanceCount` | Bounds for DTS instance requests |
+| `cycleCapacity` | Maximum projects that can book each cycle block |
+| `asrDrLicenseCapacity` | Maximum ASR-DR licenses that can book each cycle block |
+
+---
+
+## DataMigrationCycleBlock
+
+A selectable window in the data migration calendar, returned with current booking counts.
+
+```ts
+interface DataMigrationCycleBlock {
+  startDate: string
+  endDate: string
+  bookedCount: number
+  asrDrBookedCount: number
+}
+```
 
 ### Section 8 — TargetArchitecture
 

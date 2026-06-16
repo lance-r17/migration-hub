@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarCheck, Clock, CalendarX, Timer, CalendarRange, Users, Database } from 'lucide-react'
+import { CalendarCheck, Clock, CalendarX, Timer, CalendarRange, Users, Database, Shield } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { MigrationWindowDisplay } from '@/components/shared/MigrationWindowDisplay'
 import { ScheduleWindowsDrawer } from '@/components/drawers/ScheduleWindowsDrawer'
@@ -152,6 +152,16 @@ export function MigrationConstraintsSection({ data, dataMigrationSchedule, onSav
               {dataMigrationSchedule.dtsJustification && (
                 <Field label="DTS Justification" icon={Database}>
                   <span>{dataMigrationSchedule.dtsJustification}</span>
+                </Field>
+              )}
+              {dataMigrationSchedule.needAsrDr !== undefined && (
+                <Field label="ASR-DR Requested" icon={Shield}>
+                  <span>{dataMigrationSchedule.needAsrDr ? 'Yes' : 'No'}</span>
+                </Field>
+              )}
+              {dataMigrationSchedule.asrDrJustification && (
+                <Field label="ASR-DR Justification" icon={Shield}>
+                  <span>{dataMigrationSchedule.asrDrJustification}</span>
                 </Field>
               )}
             </div>

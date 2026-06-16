@@ -118,7 +118,7 @@ interface SectionProps {
 | `DataSecuritySection` | Data & Persistence | DB types, encryption, PII, compliance |
 | `DependenciesSection` | Dependencies | Upstream/downstream services, TLS certs, API keys |
 | `NonFunctionalRequirementsSection` | Non-Functional Requirements | Peak load, autoscaling, monitoring |
-| `MigrationCutoverSection` | Migration Constraints | Migration windows, blackout dates, rollback plan |
+| `MigrationCutoverSection` | Migration Constraints | Migration windows, blackout dates, rollback plan, data migration schedule (including ASR-DR request) |
 | `TargetArchitectureSection` | Target Architecture | Summary, topology, new services |
 | `RisksBlockersSection` | Risks & Blockers | Risk list with create/edit/delete |
 | `StageProgressStepper` | Stage progress | Horizontal stepper for `setup → survey → signoff → migration` |
@@ -250,6 +250,24 @@ The interactive Gantt chart used by `WaveGanttPage`. Renders waves as collapsibl
 ---
 
 ## Modals
+
+### `DataMigrationSurveyModal`
+
+Multi-step modal for collecting a project's data migration schedule.
+
+**Steps:**
+1. **Cycle block selection** — Pick a migration cycle block from a calendar list. Each block shows general capacity (`bookedCount / cycleCapacity`) and ASR-DR license capacity (`asrDrBookedCount / asrDrLicenseCapacity`). Fully-booked blocks are marked and disabled unless the current project is already booked there.
+2. **Migration cycles** — Select the number of migration cycles and provide a justification if above the configured minimum.
+3. **DTS instances** — Select the number of DTS instances and provide a justification if above the configured minimum.
+
+**ASR-DR handling:**
+- If the selected block has remaining ASR-DR licenses, a checkbox lets the user request one.
+- If the block is fully booked for ASR-DR, the UI explains the constraint and allows an optional justification.
+- Selecting a different block resets the ASR-DR selection unless it matches the existing saved block.
+
+On submit, the modal calls `onSave('dataMigrationSchedule', payload)` and then marks the data migration survey as submitted.
+
+---
 
 ### `SignOffModal`
 
