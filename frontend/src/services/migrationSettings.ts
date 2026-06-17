@@ -18,6 +18,7 @@ interface DataMigrationSettingsApi {
   cycle_period: PeriodApi | null
   cycle_capacity: number
   asr_dr_license_capacity: number
+  support_email: string | null
 }
 
 interface MigrationSettingsApi {
@@ -62,6 +63,7 @@ function dataMigrationFromApi(raw: DataMigrationSettingsApi): DataMigrationSetti
     cyclePeriod: periodFromApi(raw.cycle_period),
     cycleCapacity: raw.cycle_capacity,
     asrDrLicenseCapacity: raw.asr_dr_license_capacity,
+    supportEmail: raw.support_email ?? undefined,
   }
 }
 
@@ -75,6 +77,7 @@ function dataMigrationToApi(settings: DataMigrationSettings): DataMigrationSetti
     cycle_period: dataMigrationPeriodToApi(settings.cyclePeriod),
     cycle_capacity: settings.cycleCapacity,
     asr_dr_license_capacity: settings.asrDrLicenseCapacity,
+    support_email: settings.supportEmail ?? null,
   }
 }
 

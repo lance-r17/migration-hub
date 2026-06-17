@@ -97,6 +97,7 @@ interface ProjectListItemApi {
   migration_effort_estimation: MigrationEffortEstimation | null
   data_migration_schedule: DataMigrationSchedule | null
   data_migration_survey_submitted_at: string | null
+  data_migration_survey_submitted_by: string | null
   application_overview: ApplicationOverview | null
   dependencies: Dependencies | null
   governance_roles: GovernanceRolesApi | null
@@ -133,6 +134,7 @@ interface ProjectApiResponse extends ProjectListItemApi {
   migration_effort_estimation: MigrationEffortEstimation | null
   data_migration_schedule: DataMigrationSchedule | null
   data_migration_survey_submitted_at: string | null
+  data_migration_survey_submitted_by: string | null
   engagement: Engagement | null
   cloud_resources: CloudResourceApi[]
   risks: RiskApi[]
@@ -206,6 +208,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
     dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
     dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
+    dataMigrationSurveySubmittedBy: raw.data_migration_survey_submitted_by ?? undefined,
     applicationOverview: raw.application_overview ?? undefined,
     dependencies: raw.dependencies ?? undefined,
     governanceRoles: mapGovernanceRoles(raw.governance_roles),
@@ -249,6 +252,7 @@ function fromApi(raw: ProjectApiResponse): Project {
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
     dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
     dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
+    dataMigrationSurveySubmittedBy: raw.data_migration_survey_submitted_by ?? undefined,
     engagement: raw.engagement ?? undefined,
     currentInfrastructure: raw.cloud_resources?.length
       ? { resources: raw.cloud_resources.map(mapResource) }

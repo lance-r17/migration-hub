@@ -25,6 +25,7 @@ class Project(Base, TimestampMixin):
     survey_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     data_migration_schedule: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     data_migration_survey_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    data_migration_survey_submitted_by: Mapped[str | None] = mapped_column(String, nullable=True)
     bgi_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # JSONB section columns

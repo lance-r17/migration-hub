@@ -34,6 +34,7 @@ const DEFAULTS: MigrationSettings = {
     maxDtsInstanceCount: 5,
     cycleCapacity: 20,
     asrDrLicenseCapacity: 2,
+    supportEmail: '',
   },
 }
 
@@ -437,6 +438,27 @@ export function MigrationSettingsPage() {
               />
               <p className="text-xs text-muted-foreground">
                 Maximum ASR-DR licenses available per data migration cycle block.
+              </p>
+            </div>
+
+            {/* Migration Support Email */}
+            <div className="space-y-1.5">
+              <Label htmlFor="migration-support-email">Migration Support Email</Label>
+              <Input
+                id="migration-support-email"
+                type="email"
+                placeholder="migration-support@example.com"
+                value={config.dataMigration?.supportEmail ?? ''}
+                onChange={(e) => setConfig(prev => ({
+                  ...prev,
+                  dataMigration: {
+                    ...prev.dataMigration,
+                    supportEmail: e.target.value,
+                  },
+                }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown in the data migration survey for teams requesting more than the minimum cycle count.
               </p>
             </div>
           </div>

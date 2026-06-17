@@ -6,8 +6,24 @@ import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
 import { getBgiAncestry } from '@/lib/bgi-utils'
-import type { Project } from '@/types'
+import type { Project, EngagementStatus } from '@/types'
 import type { BgiNode } from '@/types/bgi'
+
+const ENGAGEMENT_STATUS_META: { key: EngagementStatus | 'none'; label: string }[] = [
+  { key: 'pending', label: 'Pending' },
+  { key: 'scheduled', label: 'Scheduled' },
+  { key: 'waiting_confirmation', label: 'Waiting Confirmation' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'no_show', label: 'No Show' },
+  { key: 'no_demand', label: 'No Demand' },
+  { key: 'none', label: 'Not Started' },
+]
+
+function getEngagementStatusLabel(status?: EngagementStatus): string {
+  const key = status ?? 'none'
+  return ENGAGEMENT_STATUS_META.find(m => m.key === key)?.label ?? key
+}
 
 function calcTaskCost(effort?: number, effortTime?: number, rate?: number): number {
   return (effort ?? 0) * (effortTime ?? 0) * (rate ?? 0)
@@ -742,6 +758,52 @@ export async function exportProjectRisksAndBlockersReport() {
     ]
 
     XLSX.writeFile(workbook, `project-risks-blockers-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Report downloaded', { id: toastId })
+  } catch {
+    toast.error('Failed to generate report', { id: toastId })
+  }
+}
+
+export async function exportProjectEngagementReport() {
+  const toastId = toast.loading('Generating project engagement report...')
+
+  try {
+    const projects = await getProjects(['basic', 'engagement'])
+
+    const rows: Record<string, string>[] = projects.map(project => ({
+      'Project ID': project.id,
+      'Project Name': project.name,
+      'Engagement Status': getEngagementStatusLabel(project.engagement?.status),
+    }))
+
+    if (rows.length === 0) {
+      toast.info('No project engagement data found.', { id: toastId })
+      return
+    }
+
+    const headers = ['Project ID', 'Project Name', 'Engagement Status']
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+
+    const lastRow = rows.length + 1
+    const lastCol = XLSX.utils.encode_col(headers.length - 1)
+    worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
+    worksheet['!cols'] = [{ wch: 18 }, { wch: 28 }, { wch: 22 }]
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Project Engagement')
+
+    workbook.Workbook = workbook.Workbook || {}
+    workbook.Workbook.Names = [
+      {
+        Name: 'ProjectEngagementData',
+        Ref: `'Project Engagement'!$A$1:$${lastCol}$${lastRow}`,
+        Sheet: 0,
+      },
+    ]
+
+    XLSX.writeFile(workbook, `project-engagement-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
     toast.success('Report downloaded', { id: toastId })
   } catch {
     toast.error('Failed to generate report', { id: toastId })

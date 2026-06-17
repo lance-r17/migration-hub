@@ -521,6 +521,8 @@ export function ProjectDetailsPage() {
           <MigrationConstraintsSection
             data={project.migrationConstraints}
             dataMigrationSchedule={project.dataMigrationSchedule}
+            submittedAt={project.dataMigrationSurveySubmittedAt}
+            submittedBy={project.dataMigrationSurveySubmittedBy}
             onSave={!isLocked ? (d) => handleSave('migrationConstraints', d) : undefined}
           />
           <TargetArchitectureSection

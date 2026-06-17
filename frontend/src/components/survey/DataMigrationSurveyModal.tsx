@@ -13,6 +13,7 @@ import {
   Check,
   Shield,
   Cloud,
+  Wrench,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -24,14 +25,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Combobox,
+  ComboboxPopover,
+  ComboboxTrigger,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxList,
+  ComboboxEmpty,
+  ComboboxItem,
+} from '@/components/ui/combobox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { useDataMigrationCycleBlocks } from '@/hooks/use-data-migration-cycle-blocks'
+import { useCurrentUser } from '@/context/UserContext'
 import { markDataMigrationSurveySubmitted } from '@/services/projects'
+import { getBgiCloudLeads } from '@/services/adminUsers'
+import { getBgiHierarchy } from '@/services/bgi'
 import type { Project, DataMigrationSchedule } from '@/types'
 import type { DataMigrationCycleBlock } from '@/services/projects'
+import type { User, BgiNode } from '@/types'
 
 interface DataMigrationSurveyModalProps {
   open: boolean
@@ -41,15 +57,26 @@ interface DataMigrationSurveyModalProps {
   onSubmitted?: () => void | Promise<void>
 }
 
+const ENDPOINTS = {
+  projects: '/api/v1/projects',
+  dataMigrationSurveySubmitted: (id: string) => `/api/v1/projects/${id}/data-migration-survey-submitted`,
+}
+
 interface FormState {
   startDate?: string
   endDate?: string
   cycleCount: number
+  cycleCountOption: 'min' | 'more'
   cycleJustification: string
   dtsInstanceCount: number
   dtsJustification: string
   needAsrDr: boolean
   asrDrJustification: string
+  bgiCloudLeadId?: string
+  approvalAcknowledged: boolean
+  forwardAcknowledged: boolean
+  confirmAcknowledged: boolean
+  acceptsTimeAdjustment: boolean
 }
 
 export function DataMigrationSurveyModal({
@@ -60,11 +87,32 @@ export function DataMigrationSurveyModal({
   onSubmitted,
 }: DataMigrationSurveyModalProps) {
   const { settings, loading } = useMigrationSettings()
+  const { user } = useCurrentUser()
   const dm = settings?.dataMigration
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [completed, setCompleted] = useState(false)
+  const [bgiCloudLeads, setBgiCloudLeads] = useState<User[]>([])
+  const [bgiLeadsLoading, setBgiLeadsLoading] = useState(false)
+  const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
+  const [bgiSearch, setBgiSearch] = useState('')
+  const [bgiDropdownOpen, setBgiDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setBgiLeadsLoading(true)
+    Promise.all([
+      getBgiCloudLeads(),
+      getBgiHierarchy(),
+    ])
+      .then(([leads, root]) => {
+        setBgiCloudLeads(leads)
+        setBgiRoot(root)
+      })
+      .catch(() => { toast.error('Failed to load BGI cloud leads') })
+      .finally(() => setBgiLeadsLoading(false))
+  }, [open])
 
   const defaults = useMemo(() => {
     return {
@@ -74,16 +122,26 @@ export function DataMigrationSurveyModal({
   }, [dm])
 
   const existing = project.dataMigrationSchedule
+  const minCycle = dm?.minCycle ?? 1
+  const maxCycle = dm?.maxCycle ?? 3
+  const initialCycleCount = existing?.cycleCount ?? minCycle
+  const initialCycleOption = existing?.cycleCountOption ?? (initialCycleCount > minCycle ? 'more' : 'min')
 
   const [form, setForm] = useState<FormState>({
     startDate: existing?.startDate,
     endDate: existing?.endDate,
-    cycleCount: existing?.cycleCount ?? defaults.cycleCount,
+    cycleCount: initialCycleCount,
+    cycleCountOption: initialCycleOption,
     cycleJustification: existing?.cycleJustification ?? '',
     dtsInstanceCount: existing?.dtsInstanceCount ?? defaults.dtsInstanceCount,
     dtsJustification: existing?.dtsJustification ?? '',
     needAsrDr: existing?.needAsrDr ?? false,
     asrDrJustification: existing?.asrDrJustification ?? '',
+    bgiCloudLeadId: existing?.bgiCloudLeadId,
+    approvalAcknowledged: existing?.approvalAcknowledged ?? false,
+    forwardAcknowledged: existing?.forwardAcknowledged ?? false,
+    confirmAcknowledged: existing?.confirmAcknowledged ?? false,
+    acceptsTimeAdjustment: existing?.acceptsTimeAdjustment ?? false,
   })
 
   const initializedRef = useRef(false)
@@ -103,15 +161,23 @@ export function DataMigrationSurveyModal({
     // Derive initial form state once from async-loaded settings and existing schedule.
     if (initializedRef.current || loading || !dm) return
     initializedRef.current = true
+    const existingCycleCount = existing?.cycleCount ?? dm.minCycle
+    const existingCycleOption = existing?.cycleCountOption ?? (existingCycleCount > dm.minCycle ? 'more' : 'min')
     setForm({
       startDate: existing?.startDate,
       endDate: existing?.endDate,
-      cycleCount: existing?.cycleCount ?? dm.minCycle,
+      cycleCount: existingCycleCount,
+      cycleCountOption: existingCycleOption,
       cycleJustification: existing?.cycleJustification ?? '',
       dtsInstanceCount: existing?.dtsInstanceCount ?? dm.minDtsInstanceCount,
       dtsJustification: existing?.dtsJustification ?? '',
       needAsrDr: existing?.needAsrDr ?? false,
       asrDrJustification: existing?.asrDrJustification ?? '',
+      bgiCloudLeadId: existing?.bgiCloudLeadId,
+      approvalAcknowledged: existing?.approvalAcknowledged ?? false,
+      forwardAcknowledged: existing?.forwardAcknowledged ?? false,
+      confirmAcknowledged: existing?.confirmAcknowledged ?? false,
+      acceptsTimeAdjustment: existing?.acceptsTimeAdjustment ?? false,
     })
   }, [loading, dm, existing])
 
@@ -120,12 +186,6 @@ export function DataMigrationSurveyModal({
       toast.error('Failed to load migration cycle blocks')
     }
   }, [blocksError])
-
-  const cycleOptions = useMemo(() => {
-    const min = dm?.minCycle ?? 1
-    const max = dm?.maxCycle ?? 3
-    return Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i)
-  }, [dm])
 
   const dtsOptions = useMemo(() => {
     const min = dm?.minDtsInstanceCount ?? 1
@@ -169,16 +229,39 @@ export function DataMigrationSurveyModal({
     )
   }, [selectedBlock, asrDrLicenseCapacity, isCurrentProjectAsrDrBookedForSelectedBlock])
 
-  const showCycleJustification = form.cycleCount > (dm?.minCycle ?? 1)
   const showDtsJustification = form.dtsInstanceCount > (dm?.minDtsInstanceCount ?? 1)
+  const dbResources = useMemo(() => {
+    const resources = project.currentInfrastructure?.resources ?? []
+    const dbProducts = new Set([
+      'polardb',
+      'rds',
+      'r-kvstore',
+      'dds',
+      'mongodb',
+      'redis',
+      'mysql',
+      'postgres',
+      'postgresql',
+      'sqlserver',
+      'oracle',
+    ])
+    return resources.filter(r =>
+      r.product && dbProducts.has(r.product.toLowerCase()) && r.needMigration !== false
+    )
+  }, [project.currentInfrastructure])
+  const dbResourceCount = dbResources.length
+  const requiresCycleApproval = form.cycleCountOption === 'more'
 
   const isValidForm = useMemo(() => {
     if (!form.startDate || !form.endDate) return false
     if (dateError) return false
-    if (showCycleJustification && !form.cycleJustification.trim()) return false
     if (showDtsJustification && !form.dtsJustification.trim()) return false
+    if (requiresCycleApproval) {
+      if (!form.bgiCloudLeadId) return false
+      if (!form.approvalAcknowledged || !form.forwardAcknowledged || !form.confirmAcknowledged) return false
+    }
     return true
-  }, [form, dateError, showCycleJustification, showDtsJustification])
+  }, [form, dateError, showDtsJustification, requiresCycleApproval])
 
   const totalSteps = 2
   const isWelcomeSlide = currentIndex === 0
@@ -210,6 +293,46 @@ export function DataMigrationSurveyModal({
     setForm(prev => ({ ...prev, ...patch }))
   }, [])
 
+  const selectCycleOption = useCallback((option: 'min' | 'more') => {
+    setForm(prev => ({
+      ...prev,
+      cycleCountOption: option,
+      cycleCount: option === 'min' ? (dm?.minCycle ?? 1) : (dm?.maxCycle ?? 3),
+      approvalAcknowledged: option === 'min' ? false : prev.approvalAcknowledged,
+      forwardAcknowledged: option === 'min' ? false : prev.forwardAcknowledged,
+      confirmAcknowledged: option === 'min' ? false : prev.confirmAcknowledged,
+      bgiCloudLeadId: option === 'min' ? undefined : prev.bgiCloudLeadId,
+      cycleJustification: option === 'min' ? '' : prev.cycleJustification,
+    }))
+  }, [dm])
+
+  const getBgiTierLabel = useCallback((bgiId: string): string => {
+    if (!bgiRoot) return bgiId
+    function walk(node: BgiNode): string | null {
+      if (node.id === bgiId) return node.name
+      for (const child of node.children ?? []) {
+        const found = walk(child)
+        if (found) return found
+      }
+      return null
+    }
+    return walk(bgiRoot) ?? bgiId
+  }, [bgiRoot])
+
+  const filteredBgiCloudLeads = useMemo(() => {
+    let leads = bgiCloudLeads
+    if (project.bgi_id) {
+      leads = bgiCloudLeads.filter(lead => lead.bgi_ids?.includes(project.bgi_id!))
+    }
+    const q = bgiSearch.trim().toLowerCase()
+    if (!q) return leads
+    return leads.filter(lead =>
+      lead.name.toLowerCase().includes(q) ||
+      lead.email.toLowerCase().includes(q) ||
+      lead.bgi_ids?.some(id => getBgiTierLabel(id).toLowerCase().includes(q))
+    )
+  }, [bgiCloudLeads, project.bgi_id, bgiSearch, getBgiTierLabel])
+
   const handleSubmit = useCallback(async () => {
     if (!isValidForm) return
     setSubmitting(true)
@@ -218,11 +341,19 @@ export function DataMigrationSurveyModal({
         startDate: form.startDate,
         endDate: form.endDate,
         cycleCount: form.cycleCount,
-        ...(showCycleJustification && { cycleJustification: form.cycleJustification.trim() }),
+        cycleCountOption: form.cycleCountOption,
+        ...(form.cycleJustification.trim() && { cycleJustification: form.cycleJustification.trim() }),
         dtsInstanceCount: form.dtsInstanceCount,
         ...(showDtsJustification && { dtsJustification: form.dtsJustification.trim() }),
         needAsrDr: form.needAsrDr,
         ...(form.asrDrJustification.trim() && { asrDrJustification: form.asrDrJustification.trim() }),
+        ...(requiresCycleApproval && {
+          bgiCloudLeadId: form.bgiCloudLeadId,
+          approvalAcknowledged: form.approvalAcknowledged,
+          forwardAcknowledged: form.forwardAcknowledged,
+          confirmAcknowledged: form.confirmAcknowledged,
+        }),
+        acceptsTimeAdjustment: form.acceptsTimeAdjustment,
       }
       await onSave('dataMigrationSchedule', payload)
       await markDataMigrationSurveySubmitted(project.id)
@@ -233,7 +364,7 @@ export function DataMigrationSurveyModal({
     } finally {
       setSubmitting(false)
     }
-  }, [isValidForm, form, showCycleJustification, showDtsJustification, onSave, project.id, onSubmitted])
+  }, [isValidForm, form, requiresCycleApproval, showDtsJustification, onSave, project.id, onSubmitted])
 
   const goNext = useCallback(() => {
     if (isLast) {
@@ -292,62 +423,80 @@ export function DataMigrationSurveyModal({
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mx-auto">
                     <Database size={32} className="text-primary" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <h2 className="text-3xl font-bold tracking-tight">
                       Data Migration Schedule
                     </h2>
-                    <p className="text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-                      Help us plan your data migration by confirming the schedule, cycle count, and DTS capacity needed for {project.name}.
-                    </p>
+                    <div className="text-left space-y-4 max-w-3xl mx-auto">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold">Purpose</h3>
+                        <p className="text-base text-muted-foreground leading-relaxed">
+                          Help us build the overall migration plan for project: {project.id}. Please confirm your proposed data migration schedule, including the migration cycle block and migration tool resources you'll need.
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold">How to choose migration week / cycle block?</h3>
+                        <ul className="text-base text-muted-foreground leading-relaxed list-disc space-y-1 pl-4">
+                          <li>Selecting a migration week (cycle block) means your team plans to complete the full set of data migration activities, which means cutover completed, within that time window.</li>
+                          <li>If your application depends on other systems, please align the schedule with the upstream / downstream teams first, then submit this questionnaire.</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left max-w-6xl w-full mx-auto">
-                  <div className="rounded-2xl bg-muted/50 border border-border/50 p-5 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left w-full mx-auto">
+                  <div className="rounded-2xl bg-muted/50 border border-border/50 p-5 space-y-3 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-primary/20 flex items-center justify-center text-primary">
                         <Database size={16} />
                       </div>
-                      <h3 className="text-sm font-semibold">Migration Week</h3>
+                      <h3 className="text-sm font-semibold">DTS (Database Migration)</h3>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Selecting a week means the project is planned to complete the full set of migration activities within that week.
-                    </p>
-                    <div className="rounded-lg bg-background border border-border/50 p-3 space-y-1">
-                      <h4 className="text-xs font-semibold">DTS — Database Migration</h4>
-                      <p className="text-xs text-muted-foreground">Included by default for all projects.</p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl bg-muted/50 border border-border/50 p-5 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                        <Shield size={16} />
-                      </div>
-                      <h3 className="text-sm font-semibold">ASR-DR — Optional</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Only required for big data products.
-                    </p>
-                    <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 pl-1">
-                      <li>No quota assigned by default</li>
-                      <li>Max 1 protection group per project</li>
-                      <li>Only {asrDrLicenseCapacity} groups available in total</li>
-                      <li>Comments can explain usage scenario</li>
+                    <ul className="text-xs text-muted-foreground list-disc space-y-1 pl-4 leading-relaxed">
+                      <li>Please confirm the DB instances to be migrated (this may impact DTS license usage).</li>
+                      <li>Each project can use {dm?.minDtsInstanceCount ?? 1} license{dm?.minDtsInstanceCount !== 1 ? 's' : ''} by default. If you need more, please provide justification for approval.</li>
                     </ul>
                   </div>
 
-                  <div className="rounded-2xl bg-muted/50 border border-border/50 p-5 space-y-3">
+                  <div className="rounded-2xl bg-muted/50 border border-border/50 p-5 space-y-3 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                        <Shield size={16} />
+                      </div>
+                      <h3 className="text-sm font-semibold">ASR-DR (Big Data Migration)</h3>
+                    </div>
+                    <ul className="text-xs text-muted-foreground list-disc space-y-1 pl-4 leading-relaxed">
+                      <li>Default allocation per migration cycle block: 2 security groups</li>
+                      <li>Maximum per project: 1 protection group</li>
+                      <li>The final schedule may be adjusted with Alibaba Big Data Migration SMEs collaboration</li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl bg-muted/50 border border-border/50 p-5 space-y-3 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-primary/20 flex items-center justify-center text-primary">
                         <Cloud size={16} />
                       </div>
-                      <h3 className="text-sm font-semibold">AMC — Default Quota: 1</h3>
+                      <h3 className="text-sm font-semibold">AMC — ACR / SLS / OSS Migration</h3>
                     </div>
-                    <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 pl-1">
-                      <li>Applies to OSS / SLS / ACR migration</li>
-                      <li>Total available quota: {capacity}</li>
-                      <li>No flexible quota option available</li>
+                    <ul className="text-xs text-muted-foreground list-disc space-y-1 pl-4 leading-relaxed">
+                      <li>Default quota per migration cycle block: {capacity} total</li>
+                      <li>Default quota per project: 1</li>
+                      <li>No additional / flexible quota can be requested</li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl bg-muted/50 border border-border/50 p-5 space-y-3 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                        <Wrench size={16} />
+                      </div>
+                      <h3 className="text-sm font-semibold">Other Tools / Self-managed Migration</h3>
+                    </div>
+                    <ul className="text-xs text-muted-foreground list-disc space-y-1 pl-4 leading-relaxed">
+                      <li>Use this option for migration approaches not covered by DTS, ASR-DR or AMC.</li>
+                      <li>Examples include migrating EBS using OS utilities, or migrating other products using self-managed or third-party tools.</li>
                     </ul>
                   </div>
                 </div>
@@ -461,39 +610,182 @@ export function DataMigrationSurveyModal({
                     <div className="space-y-1.5">
                       <Label>Cycle Count *</Label>
                       <Select
-                        value={String(form.cycleCount)}
-                        onValueChange={(v) => updateForm({ cycleCount: parseInt(v, 10) })}
+                        value={form.cycleCountOption}
+                        onValueChange={(v) => selectCycleOption(v as 'min' | 'more')}
                         modal={false}
                       >
                         <SelectTrigger className="h-10 w-full justify-between">
                           <SelectValue placeholder="Select cycle count" />
                         </SelectTrigger>
                         <SelectContent position="popper" className="z-[400] w-[--radix-select-trigger-width]">
-                          {cycleOptions.map((n) => (
-                            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                          ))}
+                          <SelectItem value="min">{dm?.minCycle ?? 1}</SelectItem>
+                          <SelectItem value="more">&gt; {dm?.minCycle ?? 1}</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">Default: {dm?.minCycle ?? 1} cycle(s)</p>
                     </div>
 
-                    {/* Cycle Justification */}
-                    {showCycleJustification && (
-                      <div className="space-y-1.5">
-                        <Label>Cycle Count Justification *</Label>
-                        <textarea
-                          value={form.cycleJustification}
-                          onChange={(e) => updateForm({ cycleJustification: e.target.value })}
-                          placeholder="Why do you need more than the default cycle count?"
-                          rows={3}
-                          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                        />
+                    {/* Cycle Approval Acknowledgements */}
+                    {requiresCycleApproval && (
+                      <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          For applications requiring more than {dm?.minCycle ?? 1} cycle count, the following criteria must be met before submission:
+                        </p>
+
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-3">
+                            <Checkbox
+                              id="approval-ack"
+                              checked={form.approvalAcknowledged}
+                              onCheckedChange={(checked) => updateForm({ approvalAcknowledged: checked === true })}
+                            />
+                            <Label htmlFor="approval-ack" className="text-xs font-normal leading-relaxed">
+                              Obtain approval email from your BGI Cloud Lead
+                              {project.bgi_id && ' (select BGI Cloud Lead of your business line from below)'}
+                            </Label>
+                          </div>
+
+                          <div className="pl-7">
+                            <Combobox
+                              open={bgiDropdownOpen}
+                              onOpenChange={setBgiDropdownOpen}
+                              search={bgiSearch}
+                              onSearchChange={setBgiSearch}
+                            >
+                              <ComboboxPopover>
+                                <ComboboxTrigger
+                                  disabled={bgiLeadsLoading || filteredBgiCloudLeads.length === 0}
+                                  className="h-9 text-xs"
+                                  placeholder={
+                                    bgiLeadsLoading
+                                      ? 'Loading…'
+                                      : form.bgiCloudLeadId
+                                        ? (() => {
+                                            const lead = bgiCloudLeads.find((l) => l.id === form.bgiCloudLeadId)
+                                            return lead ? `${lead.name} (${lead.email})` : 'Select BGI Cloud Lead'
+                                          })()
+                                        : filteredBgiCloudLeads.length === 0
+                                          ? 'No BGI Cloud Lead available'
+                                          : 'Select BGI Cloud Lead'
+                                  }
+                                />
+                                <ComboboxContent className="z-[400]">
+                                  <ComboboxInput placeholder="Search by name, email or BGI tier…" />
+                                  <ComboboxList>
+                                    {filteredBgiCloudLeads.length === 0 ? (
+                                      <ComboboxEmpty>No BGI Cloud Lead found.</ComboboxEmpty>
+                                    ) : (
+                                      filteredBgiCloudLeads.map((lead) => (
+                                        <ComboboxItem
+                                          key={lead.id}
+                                          value={lead.id}
+                                          selected={form.bgiCloudLeadId === lead.id}
+                                          onSelect={(v) => {
+                                            updateForm({ bgiCloudLeadId: v || undefined })
+                                            setBgiDropdownOpen(false)
+                                          }}
+                                        >
+                                          <div className="flex flex-col items-start gap-0.5">
+                                            <span className="text-sm font-medium">{lead.name} ({lead.email})</span>
+                                            {lead.bgi_ids && lead.bgi_ids.length > 0 && (
+                                              <span className="text-xs text-muted-foreground">
+                                                {lead.bgi_ids.map(getBgiTierLabel).join(', ')}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </ComboboxItem>
+                                      ))
+                                    )}
+                                  </ComboboxList>
+                                </ComboboxContent>
+                              </ComboboxPopover>
+                            </Combobox>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            id="forward-ack"
+                            checked={form.forwardAcknowledged}
+                            onCheckedChange={(checked) => updateForm({ forwardAcknowledged: checked === true })}
+                          />
+                          <Label htmlFor="forward-ack" className="inline text-xs font-normal leading-relaxed">
+                            Forward the approval email to migration support mailbox{' '}
+                            {dm?.supportEmail ? (
+                              <span className="inline font-medium text-primary underline decoration-primary/40">{dm.supportEmail}</span>
+                            ) : (
+                              <span className="inline text-destructive">(not configured)</span>
+                            )}
+                          </Label>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            id="confirm-ack"
+                            checked={form.confirmAcknowledged}
+                            onCheckedChange={(checked) => updateForm({ confirmAcknowledged: checked === true })}
+                          />
+                          <Label htmlFor="confirm-ack" className="inline text-xs font-normal leading-relaxed">
+                            Communicate with migration support team{' '}
+                            {dm?.supportEmail ? (
+                              <span className="inline font-medium text-primary underline decoration-primary/40">({dm.supportEmail})</span>
+                            ) : (
+                              <span className="inline text-destructive">(not configured)</span>
+                            )}{' '}
+                            and obtain confirmation
+                          </Label>
+                        </div>
+
+                        <div className="space-y-1.5 pt-1">
+                          <Label htmlFor="cycle-notes" className="text-xs">
+                            Additional notes (optional)
+                          </Label>
+                          <textarea
+                            id="cycle-notes"
+                            value={form.cycleJustification}
+                            onChange={(e) => updateForm({ cycleJustification: e.target.value })}
+                            placeholder="Any additional context for the cycle count request…"
+                            rows={3}
+                            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                          />
+                        </div>
                       </div>
                     )}
 
                     {/* DTS Instance Count */}
                     <div className="space-y-1.5">
                       <Label>DTS Instance Count *</Label>
+                      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1 text-xs text-muted-foreground leading-relaxed">
+                        <p>
+                          This project currently has{' '}
+                          <TooltipProvider delayDuration={100}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="font-medium text-primary underline decoration-primary/40 cursor-help">
+                                  {dbResourceCount}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-1">
+                                  <p className="font-medium">Database resources</p>
+                                  <ul className="list-disc list-inside space-y-0.5 pl-1">
+                                    {dbResources.map(r => (
+                                      <li key={r.resourceId}>
+                                        {r.name} <span className="text-muted-foreground">({r.product})</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>{' '}
+                          database resource{dbResourceCount !== 1 ? 's' : ''}.
+                        </p>
+                        <ul className="list-disc space-y-1 pl-4">
+                          <li>For a full migration, {dm?.minDtsInstanceCount ?? 1} DTS license{dm?.minDtsInstanceCount !== 1 ? 's are' : ' is'} sufficient.</li>
+                          <li>For instances that require incremental migration, an equivalent number of licenses is required.</li>
+                        </ul>
+                      </div>
                       <Select
                         value={String(form.dtsInstanceCount)}
                         onValueChange={(v) => updateForm({ dtsInstanceCount: parseInt(v, 10) })}
@@ -508,7 +800,6 @@ export function DataMigrationSurveyModal({
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground">Default: {dm?.minDtsInstanceCount ?? 1} instance(s)</p>
                     </div>
 
                     {/* DTS Justification */}
@@ -577,6 +868,22 @@ export function DataMigrationSurveyModal({
                         </div>
                       </div>
                     )}
+
+                    <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4">
+                      <Checkbox
+                        id="time-adjustment"
+                        checked={form.acceptsTimeAdjustment}
+                        onCheckedChange={(checked) => updateForm({ acceptsTimeAdjustment: checked === true })}
+                      />
+                      <div className="space-y-1">
+                        <Label htmlFor="time-adjustment" className="font-medium">
+                          Accept time adjustments (optional)
+                        </Label>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          If accepted, the migration period may be extended and additional DTS licenses may be obtained.
+                        </p>
+                      </div>
+                    </div>
 
                     {dateError && (
                       <p className="text-sm text-destructive">{dateError}</p>

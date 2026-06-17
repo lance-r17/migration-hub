@@ -56,6 +56,7 @@ let _migrationSettings: MigrationSettings = {
     maxDtsInstanceCount: 5,
     cycleCapacity: 20,
     asrDrLicenseCapacity: 2,
+    supportEmail: '',
   },
 }
 const _users: User[] = structuredClone(mockUsers)
@@ -93,6 +94,7 @@ export const store = {
       surveySubmittedAt: undefined,
       dataMigrationSchedule: undefined,
       dataMigrationSurveySubmittedAt: undefined,
+      dataMigrationSurveySubmittedBy: undefined,
       planning: undefined,
       availability: undefined,
       dataPersistence: undefined,

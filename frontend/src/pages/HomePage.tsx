@@ -28,6 +28,7 @@ import {
   exportProjectDependenciesReport,
   exportProjectDetailsReport,
   exportProjectRisksAndBlockersReport,
+  exportProjectEngagementReport,
 } from '@/lib/export-report'
 import {
   DropdownMenu,
@@ -373,6 +374,9 @@ export function HomePage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => exportProjectRisksAndBlockersReport()}>
                       Project Risks & Blockers Report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportProjectEngagementReport()}>
+                      Project Engagement Report
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

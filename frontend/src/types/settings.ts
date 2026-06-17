@@ -26,6 +26,7 @@ export interface DataMigrationSettings {
   cyclePeriod?: DataMigrationPeriod
   cycleCapacity: number
   asrDrLicenseCapacity: number
+  supportEmail?: string
 }
 
 export interface DataMigrationCycleBlock {

@@ -30,14 +30,22 @@ interface ComboboxProps {
   onOpenChange?: (open: boolean) => void
   defaultOpen?: boolean
   children: React.ReactNode
+  search?: string
+  onSearchChange?: (v: string) => void
 }
 
-function Combobox({ open: controlledOpen, onOpenChange, defaultOpen = false, children }: ComboboxProps) {
+function Combobox({ open: controlledOpen, onOpenChange, defaultOpen = false, children, search: controlledSearch, onSearchChange }: ComboboxProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen)
-  const [search, setSearch] = React.useState("")
+  const [uncontrolledSearch, setUncontrolledSearch] = React.useState("")
+  const search = controlledSearch !== undefined ? controlledSearch : uncontrolledSearch
+  const setSearch = (v: string) => {
+    setUncontrolledSearch(v)
+    onSearchChange?.(v)
+  }
 
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : uncontrolledOpen
+
   const setOpen = (value: boolean) => {
     setUncontrolledOpen(value)
     onOpenChange?.(value)
@@ -200,7 +208,7 @@ function ComboboxItem({
           selected ? "opacity-100" : "opacity-0"
         )}
       />
-      <span className="truncate">{children}</span>
+      {children}
     </button>
   )
 }

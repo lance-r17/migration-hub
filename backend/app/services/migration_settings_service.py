@@ -23,6 +23,7 @@ _DEFAULT = {
         "cycle_period": None,
         "cycle_capacity": 20,
         "asr_dr_license_capacity": 2,
+        "support_email": None,
     },
 }
 

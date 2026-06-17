@@ -25,6 +25,7 @@ class DataMigrationSettings(BaseModel):
     cycle_period: DataMigrationPeriod | None = None
     cycle_capacity: int = 20
     asr_dr_license_capacity: int = 2
+    support_email: str | None = None
 
 
 class MigrationSettingsOut(BaseModel):

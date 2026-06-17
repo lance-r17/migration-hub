@@ -163,15 +163,23 @@ export interface MigrationConstraints {
 
 // ─── Section 7.5: Data Migration Schedule ────────────────────────────────────
 
+export type DataMigrationCycleCountOption = 'min' | 'more'
+
 export interface DataMigrationSchedule {
   startDate?: string
   endDate?: string
   cycleCount?: number
+  cycleCountOption?: DataMigrationCycleCountOption
   cycleJustification?: string
   dtsInstanceCount?: number
   dtsJustification?: string
   needAsrDr?: boolean
   asrDrJustification?: string
+  bgiCloudLeadId?: string
+  approvalAcknowledged?: boolean
+  forwardAcknowledged?: boolean
+  confirmAcknowledged?: boolean
+  acceptsTimeAdjustment?: boolean
 }
 
 // ─── Section 8: Target Architecture ─────────────────────────────────────────
@@ -352,6 +360,7 @@ export interface Project {
   migrationConstraints?: MigrationConstraints
   dataMigrationSchedule?: DataMigrationSchedule
   dataMigrationSurveySubmittedAt?: string
+  dataMigrationSurveySubmittedBy?: string
   targetArchitecture?: TargetArchitecture
   migrationEffortEstimation?: MigrationEffortEstimation
   engagement?: Engagement

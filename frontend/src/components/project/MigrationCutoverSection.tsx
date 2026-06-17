@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarCheck, Clock, CalendarX, Timer, CalendarRange, Users, Database, Shield } from 'lucide-react'
+import { CalendarCheck, Clock, CalendarX, Timer, CalendarRange, Users, Database, Shield, CheckCircle2, User } from 'lucide-react'
 import { SectionCard } from '@/components/shared/SectionCard'
 import { MigrationWindowDisplay } from '@/components/shared/MigrationWindowDisplay'
 import { ScheduleWindowsDrawer } from '@/components/drawers/ScheduleWindowsDrawer'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
+import { useUsers } from '@/hooks/use-users'
 import type { DataMigrationSchedule, MigrationConstraints } from '@/types'
 
 interface MigrationConstraintsSectionProps {
   data?: MigrationConstraints
   dataMigrationSchedule?: DataMigrationSchedule
+  submittedAt?: string
+  submittedBy?: string
   onSave?: (data: MigrationConstraints) => void
 }
 
@@ -24,8 +28,11 @@ function Field({ label, icon: Icon, children }: { label: string; icon?: React.El
   )
 }
 
-export function MigrationConstraintsSection({ data, dataMigrationSchedule, onSave }: MigrationConstraintsSectionProps) {
+export function MigrationConstraintsSection({ data, dataMigrationSchedule, submittedAt, submittedBy, onSave }: MigrationConstraintsSectionProps) {
   const [editingCard, setEditingCard] = useState<'schedule' | null>(null)
+  const { settings } = useMigrationSettings()
+  const { users } = useUsers()
+  const minCycle = settings?.dataMigration?.minCycle ?? 1
 
   return (
     <div>
@@ -136,7 +143,11 @@ export function MigrationConstraintsSection({ data, dataMigrationSchedule, onSav
               )}
               {dataMigrationSchedule.cycleCount !== undefined && (
                 <Field label="Cycle Count" icon={Timer}>
-                  <span>{dataMigrationSchedule.cycleCount}</span>
+                  <span>
+                    {dataMigrationSchedule.cycleCountOption === 'more' || dataMigrationSchedule.cycleCount > minCycle
+                      ? `> ${minCycle}`
+                      : String(dataMigrationSchedule.cycleCount)}
+                  </span>
                 </Field>
               )}
               {dataMigrationSchedule.cycleJustification && (
@@ -164,6 +175,33 @@ export function MigrationConstraintsSection({ data, dataMigrationSchedule, onSav
                   <span>{dataMigrationSchedule.asrDrJustification}</span>
                 </Field>
               )}
+              {dataMigrationSchedule.acceptsTimeAdjustment && (
+                <Field label="Accepts Time Adjustments" icon={CheckCircle2}>
+                  <span>Yes — migration period may be extended and additional DTS licenses may be obtained.</span>
+                </Field>
+              )}
+              {submittedAt || submittedBy ? (
+                <Field label="Survey Submitted" icon={User}>
+                  <div className="space-y-0.5">
+                    {submittedAt && (
+                      <div>
+                        At:{' '}
+                        <span className="font-medium">
+                          {format(new Date(submittedAt), 'MMM d, y HH:mm')}
+                        </span>
+                      </div>
+                    )}
+                    {submittedBy && (
+                      <div>
+                        By:{' '}
+                        <span className="font-medium">
+                          {users.find((u) => u.id === submittedBy)?.name ?? submittedBy}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </Field>
+              ) : null}
             </div>
           )}
         </SectionCard>

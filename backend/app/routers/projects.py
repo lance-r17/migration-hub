@@ -384,6 +384,7 @@ def _project_detail(p) -> ProjectDetail:
         survey_submitted_at=p.survey_submitted_at,
         data_migration_schedule=p.data_migration_schedule,
         data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
+        data_migration_survey_submitted_by=p.data_migration_survey_submitted_by,
         stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
         jira_subtask_config=p.jira_subtask_config,
         team=_team_from_project_users(p),
@@ -943,6 +944,7 @@ async def mark_data_migration_survey_submitted(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.data_migration_survey_submitted_at = datetime.now(timezone.utc)
+    project.data_migration_survey_submitted_by = current_user.id
     await audit_service.append_entry(
         db,
         project_id=project_id,
