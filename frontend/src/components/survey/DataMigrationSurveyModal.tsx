@@ -45,6 +45,7 @@ import { useCurrentUser } from '@/context/UserContext'
 import { markDataMigrationSurveySubmitted } from '@/services/projects'
 import { getBgiCloudLeads } from '@/services/adminUsers'
 import { getBgiHierarchy } from '@/services/bgi'
+import { isDescendantOf } from '@/lib/bgi-utils'
 import type { Project, DataMigrationSchedule } from '@/types'
 import type { DataMigrationCycleBlock } from '@/services/projects'
 import type { User, BgiNode } from '@/types'
@@ -321,8 +322,12 @@ export function DataMigrationSurveyModal({
 
   const filteredBgiCloudLeads = useMemo(() => {
     let leads = bgiCloudLeads
-    if (project.bgi_id) {
-      leads = bgiCloudLeads.filter(lead => lead.bgi_ids?.includes(project.bgi_id!))
+    if (project.bgi_id && bgiRoot) {
+      leads = bgiCloudLeads.filter(lead =>
+        lead.bgi_ids?.some(leadBgiId =>
+          leadBgiId === project.bgi_id || isDescendantOf(bgiRoot, project.bgi_id!, leadBgiId)
+        )
+      )
     }
     const q = bgiSearch.trim().toLowerCase()
     if (!q) return leads
@@ -331,7 +336,7 @@ export function DataMigrationSurveyModal({
       lead.email.toLowerCase().includes(q) ||
       lead.bgi_ids?.some(id => getBgiTierLabel(id).toLowerCase().includes(q))
     )
-  }, [bgiCloudLeads, project.bgi_id, bgiSearch, getBgiTierLabel])
+  }, [bgiCloudLeads, project.bgi_id, bgiSearch, getBgiTierLabel, bgiRoot])
 
   const handleSubmit = useCallback(async () => {
     if (!isValidForm) return
