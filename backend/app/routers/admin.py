@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import _user_has_admin_role, require_admin
+from app.auth import _user_has_admin_role, get_current_user, require_admin
 from app.database import get_db
 from app.models.project import Project
 from app.models.project_user import ProjectUser
@@ -345,9 +345,13 @@ async def batch_create_users(
 @router.get("/bgi-cloud-leads", response_model=list[UserOut])
 async def list_bgi_cloud_leads(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
-    """List all human users with the bgi_cloud_lead role."""
+    """List all human users with the bgi_cloud_lead role.
+
+    Readable by any authenticated user so it can be consumed by flows such as
+    the data migration survey; mutating endpoints remain admin-only.
+    """
     result = await db.execute(
         select(User)
         .where(User.is_service_account == False)
