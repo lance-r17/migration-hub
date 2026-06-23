@@ -2,6 +2,8 @@ import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { getProjects } from '@/services/projects'
 import { getBgiHierarchy } from '@/services/bgi'
+import { getUsers } from '@/services/users'
+import { getMigrationSettings } from '@/services/migrationSettings'
 import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
@@ -357,6 +359,125 @@ export async function exportProjectDependenciesReport() {
     ]
 
     XLSX.writeFile(workbook, `project-dependencies-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Report downloaded', { id: toastId })
+  } catch {
+    toast.error('Failed to generate report', { id: toastId })
+  }
+}
+
+export async function exportDataMigrationReport() {
+  const toastId = toast.loading('Generating data migration report...')
+
+  try {
+    const [projects, bgiRoot, users, settings] = await Promise.all([
+      getProjects(['basic']),
+      getBgiHierarchy().catch(() => null),
+      getUsers().catch(() => []),
+      getMigrationSettings().catch(() => null),
+    ])
+
+    const minCycle = settings?.dataMigration?.minCycle ?? 1
+    const userMap = new Map(users.map(u => [u.id, u]))
+    const rows: Record<string, string | number>[] = []
+
+    for (const project of projects) {
+      const schedule = project.dataMigrationSchedule
+      if (!schedule) continue
+
+      const bgiAncestry = bgiRoot && project.bgi_id ? getBgiAncestry(bgiRoot, project.bgi_id) : null
+      const lead = schedule.bgiCloudLeadId ? userMap.get(schedule.bgiCloudLeadId) : undefined
+
+      const cycleCountDisplay = schedule.cycleCountOption === 'more'
+        ? `> ${minCycle}`
+        : (schedule.cycleCount ?? '')
+
+      rows.push({
+        'Project ID': project.id,
+        'Project Name': project.name,
+        'BGI L2': bgiAncestry?.l2 ?? '',
+        'BGI L3': bgiAncestry?.l3 ?? '',
+        'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? project.bgi_id ?? '') : (project.bgi_id ?? ''),
+        'Migration Start Date': schedule.startDate ? formatDate(schedule.startDate) : '',
+        'Migration End Date': schedule.endDate ? formatDate(schedule.endDate) : '',
+        'Cycle Count': cycleCountDisplay,
+        'Cycle Justification': schedule.cycleJustification ?? '',
+        'DTS Instance Count': schedule.dtsInstanceCount ?? '',
+        'DTS Justification': schedule.dtsJustification ?? '',
+        'ASR-DR Requested': schedule.needAsrDr ? 'Yes' : schedule.needAsrDr === false ? 'No' : '',
+        'ASR-DR Justification': schedule.asrDrJustification ?? '',
+        'BGI Cloud Lead': lead ? `${lead.name} (${lead.email})` : '',
+        'Submitted At': project.dataMigrationSurveySubmittedAt ? formatDate(project.dataMigrationSurveySubmittedAt) : '',
+        'Submitted By': project.dataMigrationSurveySubmittedBy ? (userMap.get(project.dataMigrationSurveySubmittedBy)?.name ?? project.dataMigrationSurveySubmittedBy) : '',
+        'Accepts Time Adjustment': schedule.acceptsTimeAdjustment ? 'Yes' : schedule.acceptsTimeAdjustment === false ? 'No' : '',
+      })
+    }
+
+    if (rows.length === 0) {
+      toast.info('No data migration schedules found across projects.', { id: toastId })
+      return
+    }
+
+    const headers = [
+      'Project ID',
+      'Project Name',
+      'BGI L2',
+      'BGI L3',
+      'BGI L4',
+      'Migration Start Date',
+      'Migration End Date',
+      'Cycle Count',
+      'Cycle Justification',
+      'DTS Instance Count',
+      'DTS Justification',
+      'ASR-DR Requested',
+      'ASR-DR Justification',
+      'BGI Cloud Lead',
+      'Submitted At',
+      'Submitted By',
+      'Accepts Time Adjustment',
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+
+    const lastRow = rows.length + 1
+    const lastCol = XLSX.utils.encode_col(headers.length - 1)
+    worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
+
+    worksheet['!cols'] = [
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 28 },
+      { wch: 28 },
+      { wch: 28 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 36 },
+      { wch: 18 },
+      { wch: 36 },
+      { wch: 16 },
+      { wch: 36 },
+      { wch: 32 },
+      { wch: 16 },
+      { wch: 24 },
+      { wch: 20 },
+    ]
+
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Migration')
+
+    workbook.Workbook = workbook.Workbook || {}
+    workbook.Workbook.Names = [
+      {
+        Name: 'DataMigrationData',
+        Ref: `'Data Migration'!$A$1:$${lastCol}$${lastRow}`,
+        Sheet: 0,
+      },
+    ]
+
+    XLSX.writeFile(workbook, `data-migration-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
     toast.success('Report downloaded', { id: toastId })
   } catch {
     toast.error('Failed to generate report', { id: toastId })
