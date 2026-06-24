@@ -203,6 +203,19 @@ async def sso_exchange(
     initials = _derive_initials_from_names(given_name, family_name)
     user_role = ",".join(dict.fromkeys(matched_roles)) if matched_roles else None
     if not user:
+        # The user may have changed their email in the OAuth service while keeping
+        # the same staff_id. Fall back to a staff_id lookup before auto-onboarding
+        # so we can update the existing record instead of failing on duplicate id.
+        user = await user_service.get_by_id(db, user_id)
+        if user:
+            logger.info(
+                "User %s found by staff_id with changed email (%s -> %s); updating existing record",
+                user_id,
+                user.email,
+                email,
+            )
+
+    if not user:
         logger.info("User not found in database, auto-onboarding: %s (%s)", email, user_id)
         new_user = User(
             id=user_id,
@@ -215,8 +228,9 @@ async def sso_exchange(
         )
         user = await user_service.create_user(db, new_user)
     else:
-        # Refresh name, initials, and role from OAuth data
+        # Refresh name, email, initials, and role from OAuth data
         user.name = name
+        user.email = email
         user.initials = initials or _derive_initials(name)
         if matched_roles:
             # Merge OAuth-matched roles, preserving locally-assigned bgi_cloud_lead
