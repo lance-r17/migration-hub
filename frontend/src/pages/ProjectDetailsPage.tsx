@@ -343,7 +343,7 @@ export function ProjectDetailsPage() {
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">{project.name}</h1>
             <StatusBadge status={project.status} stageProgress={project.stageProgress} />
             <div className="ml-auto flex items-center gap-3">
-              {isSurveyActive && !isLocked && (isProjectMember || isPlatformLead) && (
+              {isSurveyActive && !isLocked && (isProjectMember || isPlatformLead) && project.isSurveyNeeded !== false && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-1.5 text-sm text-primary hover:opacity-80 transition-opacity font-medium">

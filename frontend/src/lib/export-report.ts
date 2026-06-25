@@ -8,7 +8,7 @@ import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
 import { getBgiAncestry } from '@/lib/bgi-utils'
-import type { Project, EngagementStatus } from '@/types'
+import type { Project, User, EngagementStatus } from '@/types'
 import type { BgiNode } from '@/types/bgi'
 
 const ENGAGEMENT_STATUS_META: { key: EngagementStatus | 'none'; label: string }[] = [
@@ -931,6 +931,85 @@ export async function exportProjectEngagementReport() {
   }
 }
 
+export function exportEngagementCalendarReport(projects: Project[], users: User[]) {
+  const toastId = toast.loading('Generating engagement report...')
+
+  try {
+    const userMap = new Map(users.map(u => [u.id, u.name]))
+    const rows = projects
+      .filter(p => p.engagement)
+      .map(p => {
+        const engagement = p.engagement!
+        const reviewers = engagement.engagementReviewerIds
+          ?.map(id => userMap.get(id) ?? id)
+          .join('; ') ?? ''
+        const manager = engagement.engagementManagerId
+          ? userMap.get(engagement.engagementManagerId) ?? engagement.engagementManagerId
+          : ''
+        return {
+          'Project ID': p.id,
+          'Project Name': p.name,
+          'Engagement Status': getEngagementStatusLabel(engagement.status),
+          'Interview Subject': engagement.interviewSubject ?? '',
+          'Engagement Reviewers': reviewers,
+          'Engagement Manager': manager,
+          'Project ITSO': p.itso ?? '',
+          'Project ITSO Delegate': p.itsoDelegate ?? '',
+        }
+      })
+
+    if (rows.length === 0) {
+      toast.info('No engagement data found.', { id: toastId })
+      return
+    }
+
+    const headers = [
+      'Project ID',
+      'Project Name',
+      'Engagement Status',
+      'Interview Subject',
+      'Engagement Reviewers',
+      'Engagement Manager',
+      'Project ITSO',
+      'Project ITSO Delegate',
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+
+    const lastRow = rows.length + 1
+    const lastCol = XLSX.utils.encode_col(headers.length - 1)
+    worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
+    worksheet['!cols'] = [
+      { wch: 18 },
+      { wch: 32 },
+      { wch: 22 },
+      { wch: 40 },
+      { wch: 32 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 24 },
+    ]
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Engagement Report')
+
+    workbook.Workbook = workbook.Workbook || {}
+    workbook.Workbook.Names = [
+      {
+        Name: 'EngagementReportData',
+        Ref: `'Engagement Report'!$A$1:$${lastCol}$${lastRow}`,
+        Sheet: 0,
+      },
+    ]
+
+    XLSX.writeFile(workbook, `engagement-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Report downloaded', { id: toastId })
+  } catch {
+    toast.error('Failed to generate report', { id: toastId })
+  }
+}
+
 export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[], bgiRoot?: BgiNode | null) {
   const toastId = toast.loading('Generating projects report...')
 
@@ -959,6 +1038,8 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
         'Migration Strategy': p.applicationOverview?.migrationStrategy ?? '—',
         'Migration Period': period,
         'Migration Effort': totalCost > 0 ? `$${Math.round(totalCost).toLocaleString()}` : '—',
+        'Survey Required': p.isSurveyNeeded === false ? 'No' : 'Yes',
+        'Justification Without Survey': p.justificationWithoutSurvey ?? '—',
         'Survey Submitted At': p.surveySubmittedAt ? formatDate(p.surveySubmittedAt) : '—',
         'Data Migration Survey Submitted At': p.dataMigrationSurveySubmittedAt ? formatDate(p.dataMigrationSurveySubmittedAt) : '—',
         'Migration Story': p.jiraStoryKey ?? '—',

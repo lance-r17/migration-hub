@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { CalendarDays, Pencil, Tag, Network, SlidersHorizontal, Check, Search, User as UserIcon, UserStar } from 'lucide-react'
+import { CalendarDays, Pencil, Tag, Network, SlidersHorizontal, Check, Search, User as UserIcon, UserStar, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { MonthCalendar } from '@/components/engagement/MonthCalendar'
 import { EngagementDrawer } from '@/components/engagement/EngagementDrawer'
@@ -8,6 +8,7 @@ import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
 import { useCategoryMilestones } from '@/hooks/use-category-milestones'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
+import { exportEngagementCalendarReport } from '@/lib/export-report'
 import { getBgiHierarchy } from '@/services/bgi'
 import { apiClient } from '@/services/client'
 import {
@@ -78,7 +79,7 @@ export function EngagementCalendarPage() {
   const canUseBgiFilter = isPlatformLead || isBgiCloudLead
 
   const { projects, loading, refresh } = useProjects({
-    fields: ['basic', 'engagement', 'team', 'availability', 'target_architecture'],
+    fields: ['basic', 'engagement', 'team', 'availability', 'target_architecture', 'itso', 'itso_delegate'],
     forceAll: isEngagementReviewer,
   })
   const { categoryMilestones } = useCategoryMilestones()
@@ -360,6 +361,14 @@ export function EngagementCalendarPage() {
               Schedule and manage migration interviews across all projects.
             </p>
           </div>
+          <button
+            className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => exportEngagementCalendarReport(projectsWithEngagement, allUsers)}
+            disabled={projectsWithEngagement.length === 0 || loading}
+          >
+            <Download size={14} />
+            Export
+          </button>
         </div>
 
         {/* Calendar */}

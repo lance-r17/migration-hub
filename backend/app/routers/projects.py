@@ -28,6 +28,7 @@ from app.schemas.project import (
     ProjectListItem,
     ProjectPatch,
     SectionPatch,
+    SurveyNeedPatch,
 )
 from app.schemas.user import ProjectUserRoleAssignment, UserOut
 from app.schemas.risk import RiskOut
@@ -58,6 +59,13 @@ def _user_to_actor(user: User) -> dict[str, Any]:
     if user.is_service_account:
         actor["type"] = "service_account"
     return actor
+
+
+def _user_has_platform_lead_role(role: str | None) -> bool:
+    if not role:
+        return False
+    user_roles = {r.strip() for r in role.split(",") if r.strip()}
+    return "platform_migration_lead" in user_roles
 
 
 def _itso_name(p) -> str | None:
@@ -154,6 +162,8 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
             jira_job_status=p.jira_job_status,
             planning=p.planning,
             survey_submitted_at=p.survey_submitted_at,
+            is_survey_needed=p.is_survey_needed,
+            justification_without_survey=p.justification_without_survey,
             data_migration_schedule=p.data_migration_schedule,
             data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
             stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
@@ -190,6 +200,8 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
                 "jira_job_status": p.jira_job_status,
                 "planning": p.planning,
                 "survey_submitted_at": p.survey_submitted_at,
+                "is_survey_needed": p.is_survey_needed,
+                "justification_without_survey": p.justification_without_survey,
                 "data_migration_schedule": p.data_migration_schedule,
                 "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "data_migration_survey_submitted_by": p.data_migration_survey_submitted_by,
@@ -290,6 +302,8 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
             jira_job_status=p.jira_job_status,
             planning=p.planning,
             survey_submitted_at=p.survey_submitted_at,
+            is_survey_needed=p.is_survey_needed,
+            justification_without_survey=p.justification_without_survey,
             data_migration_schedule=p.data_migration_schedule,
             data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
             stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
@@ -319,6 +333,8 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
                 "jira_job_status": p.jira_job_status,
                 "planning": p.planning,
                 "survey_submitted_at": p.survey_submitted_at,
+                "is_survey_needed": p.is_survey_needed,
+                "justification_without_survey": p.justification_without_survey,
                 "data_migration_schedule": p.data_migration_schedule,
                 "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "data_migration_survey_submitted_by": p.data_migration_survey_submitted_by,
@@ -384,6 +400,8 @@ def _project_detail(p) -> ProjectDetail:
         jira_job_status=p.jira_job_status,
         planning=p.planning,
         survey_submitted_at=p.survey_submitted_at,
+        is_survey_needed=p.is_survey_needed,
+        justification_without_survey=p.justification_without_survey,
         data_migration_schedule=p.data_migration_schedule,
         data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
         data_migration_survey_submitted_by=p.data_migration_survey_submitted_by,
@@ -607,6 +625,69 @@ def _require_platform_lead_for_block(user: User) -> None:
             status_code=403,
             detail="Only Platform Migration Leads can block or unblock projects.",
         )
+
+
+@router.put("/{project_id}/survey-need", response_model=ProjectDetail)
+async def update_survey_need(
+    project_id: str,
+    body: SurveyNeedPatch,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update whether a survey is required and the justification if not.
+
+    Only Platform Migration Leads or Admins can maintain these fields.
+    """
+    if not _user_has_platform_lead_role(current_user.role) and not _user_has_admin_role(current_user.role):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Platform Migration Leads or Admins can update survey requirement settings.",
+        )
+
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    old_is_survey_needed = project.is_survey_needed
+    old_justification = project.justification_without_survey
+
+    is_survey_needed = body.is_survey_needed
+    justification = body.justification_without_survey.strip() if body.justification_without_survey else None
+    if is_survey_needed:
+        justification = None
+
+    project.is_survey_needed = is_survey_needed
+    project.justification_without_survey = justification
+
+    changes: list[dict[str, Any]] = []
+    if old_is_survey_needed != is_survey_needed:
+        changes.append({
+            "field": "is_survey_needed",
+            "label": "Survey Required",
+            "old_value": old_is_survey_needed,
+            "new_value": is_survey_needed,
+        })
+    if old_justification != justification:
+        changes.append({
+            "field": "justification_without_survey",
+            "label": "Justification Without Survey",
+            "old_value": old_justification,
+            "new_value": justification,
+        })
+
+    if changes:
+        await audit_service.append_entry(
+            db,
+            project_id=project.id,
+            event_type="section_updated",
+            entity_type="project",
+            actor=_user_to_actor(current_user),
+            changes=changes,
+        )
+
+    await db.flush()
+    await db.refresh(project)
+    return _project_detail(project)
 
 
 def _resolve_status_if_unblocking(project, new_status: str) -> str:

@@ -24,6 +24,7 @@ import type { JiraSubtaskConfig } from '@/types/wave'
 const ENDPOINTS = {
   projects: '/api/v1/projects',
   project: (id: string) => `/api/v1/projects/${id}`,
+  surveyNeed: (id: string) => `/api/v1/projects/${id}/survey-need`,
   section: (id: string, key: string) => `/api/v1/projects/${id}/sections/${key}`,
   planning: (id: string) => `/api/v1/projects/${id}/planning`,
   surveySubmitted: (id: string) => `/api/v1/projects/${id}/survey-submitted`,
@@ -93,6 +94,8 @@ interface ProjectListItemApi {
   jira_story_key: string | null
   jira_job_status: string | null
   planning: ProjectPlanning | null
+  is_survey_needed: boolean
+  justification_without_survey: string | null
   migration_constraints: MigrationConstraints | null
   migration_effort_estimation: MigrationEffortEstimation | null
   data_migration_schedule: DataMigrationSchedule | null
@@ -203,6 +206,8 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     jiraJobStatus: raw.jira_job_status as Project['jiraJobStatus'] ?? undefined,
     planning: raw.planning ?? undefined,
     surveySubmittedAt: raw.survey_submitted_at ?? undefined,
+    isSurveyNeeded: raw.is_survey_needed ?? true,
+    justificationWithoutSurvey: raw.justification_without_survey ?? undefined,
     stageProgress: raw.stage_progress ?? undefined,
     migrationConstraints: raw.migration_constraints ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
@@ -524,6 +529,29 @@ export async function updateGovernanceRoles(
     `/api/v1/projects/${projectId}/governance-roles`,
     payload,
   )
+  return fromApi(raw)
+}
+
+export async function updateSurveyNeed(
+  projectId: string,
+  payload: { isSurveyNeeded: boolean; justificationWithoutSurvey?: string | null },
+): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const p = store.getProject(projectId)
+    if (!p) throw new Error('Project not found')
+    store.updateProject(projectId, 'isSurveyNeeded', payload.isSurveyNeeded)
+    store.updateProject(
+      projectId,
+      'justificationWithoutSurvey',
+      payload.justificationWithoutSurvey ? payload.justificationWithoutSurvey : undefined,
+    )
+    return store.getProject(projectId)!
+  }
+  const raw = await apiClient.put<ProjectApiResponse>(ENDPOINTS.surveyNeed(projectId), {
+    is_survey_needed: payload.isSurveyNeeded,
+    justification_without_survey: payload.justificationWithoutSurvey || null,
+  })
   return fromApi(raw)
 }
 

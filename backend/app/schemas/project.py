@@ -50,6 +50,8 @@ class ProjectListItem(BaseModel):
     jira_job_status: str | None = None
     planning: dict[str, Any] | None = None
     survey_submitted_at: datetime | None = None
+    is_survey_needed: bool = True
+    justification_without_survey: str | None = None
     data_migration_schedule: dict[str, Any] | None = None
     data_migration_survey_submitted_at: datetime | None = None
     data_migration_survey_submitted_by: str | None = None
@@ -92,6 +94,8 @@ class ProjectDetail(BaseModel):
     jira_job_status: str | None = None
     planning: dict[str, Any] | None = None
     survey_submitted_at: datetime | None = None
+    is_survey_needed: bool = True
+    justification_without_survey: str | None = None
     data_migration_schedule: dict[str, Any] | None = None
     data_migration_survey_submitted_at: datetime | None = None
     data_migration_survey_submitted_by: str | None = None
@@ -134,6 +138,8 @@ class ProjectHomeItem(BaseModel):
     jira_job_status: str | None = None
     planning: dict[str, Any] | None = None
     survey_submitted_at: datetime | None = None
+    is_survey_needed: bool = True
+    justification_without_survey: str | None = None
     data_migration_schedule: dict[str, Any] | None = None
     data_migration_survey_submitted_at: datetime | None = None
     data_migration_survey_submitted_by: str | None = None
@@ -170,6 +176,11 @@ class ProjectPatch(BaseModel):
     jira_subtask_config: dict[str, Any] | None = None
     migration_effort_estimation: dict[str, Any] | None = None
     bgi_id: str | None = None
+
+
+class SurveyNeedPatch(BaseModel):
+    is_survey_needed: bool
+    justification_without_survey: str | None = None
 
 
 class SectionPatch(BaseModel):

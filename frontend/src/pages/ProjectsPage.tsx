@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download, Network, X, MoreVertical } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   Table,
@@ -49,7 +50,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
-import { getSurveyDraftProjectIds, updateApplicationOverview } from '@/services/projects'
+import { getSurveyDraftProjectIds, updateApplicationOverview, updateSurveyNeed } from '@/services/projects'
 import { getBgiHierarchy } from '@/services/bgi'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { BgiTree } from '@/components/bgi/BgiTree'
@@ -102,6 +103,11 @@ export function ProjectsPage() {
   const [mappingDialogValue, setMappingDialogValue] = useState('')
   const [mappingDialogSaving, setMappingDialogSaving] = useState(false)
   const [mappingDialogError, setMappingDialogError] = useState<string | null>(null)
+  const [surveyNeedDialogProject, setSurveyNeedDialogProject] = useState<Project | null>(null)
+  const [surveyNeedDialogValue, setSurveyNeedDialogValue] = useState(true)
+  const [surveyNeedDialogJustification, setSurveyNeedDialogJustification] = useState('')
+  const [surveyNeedDialogSaving, setSurveyNeedDialogSaving] = useState(false)
+  const [surveyNeedDialogError, setSurveyNeedDialogError] = useState<string | null>(null)
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
@@ -120,6 +126,27 @@ export function ProjectsPage() {
       setMappingDialogError(message)
     } finally {
       setMappingDialogSaving(false)
+    }
+  }
+
+  async function handleSaveSurveyNeed() {
+    if (!surveyNeedDialogProject) return
+    setSurveyNeedDialogSaving(true)
+    setSurveyNeedDialogError(null)
+    try {
+      await updateSurveyNeed(surveyNeedDialogProject.id, {
+        isSurveyNeeded: surveyNeedDialogValue,
+        justificationWithoutSurvey: surveyNeedDialogValue ? null : surveyNeedDialogJustification.trim() || null,
+      })
+      setSurveyNeedDialogProject(null)
+      setSurveyNeedDialogValue(true)
+      setSurveyNeedDialogJustification('')
+      refresh()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update survey requirement.'
+      setSurveyNeedDialogError(message)
+    } finally {
+      setSurveyNeedDialogSaving(false)
     }
   }
 
@@ -705,6 +732,17 @@ export function ProjectsPage() {
                             >
                               Update project ID mapping
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="whitespace-nowrap"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSurveyNeedDialogProject(project)
+                                setSurveyNeedDialogValue(project.isSurveyNeeded ?? true)
+                                setSurveyNeedDialogJustification(project.justificationWithoutSurvey ?? '')
+                              }}
+                            >
+                              Set survey requirement
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
@@ -815,6 +853,79 @@ export function ProjectsPage() {
               </Button>
               <Button onClick={handleSaveMapping} disabled={mappingDialogSaving}>
                 {mappingDialogSaving ? 'Saving...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Survey Requirement Dialog */}
+        <Dialog open={!!surveyNeedDialogProject} onOpenChange={(open) => {
+          if (!open) {
+            setSurveyNeedDialogProject(null)
+            setSurveyNeedDialogValue(true)
+            setSurveyNeedDialogJustification('')
+            setSurveyNeedDialogError(null)
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Survey Requirement</DialogTitle>
+              <DialogDescription>
+                Configure whether a survey is required for {surveyNeedDialogProject?.name}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="flex items-center justify-between gap-4">
+                <Label htmlFor="survey-needed" className="cursor-pointer">
+                  Survey needed
+                </Label>
+                <Switch
+                  id="survey-needed"
+                  checked={surveyNeedDialogValue}
+                  onCheckedChange={(checked) => {
+                    setSurveyNeedDialogValue(checked)
+                    if (checked) setSurveyNeedDialogJustification('')
+                    setSurveyNeedDialogError(null)
+                  }}
+                />
+              </div>
+              {!surveyNeedDialogValue && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="survey-justification">
+                    Justification without survey <span className="text-muted-foreground">(optional)</span>
+                  </Label>
+                  <textarea
+                    id="survey-justification"
+                    value={surveyNeedDialogJustification}
+                    onChange={(e) => {
+                      setSurveyNeedDialogJustification(e.target.value)
+                      setSurveyNeedDialogError(null)
+                    }}
+                    rows={3}
+                    placeholder="Provide a reason for waiving the survey..."
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              )}
+              {surveyNeedDialogError && (
+                <p className="text-xs text-destructive">{surveyNeedDialogError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSurveyNeedDialogProject(null)
+                  setSurveyNeedDialogValue(true)
+                  setSurveyNeedDialogJustification('')
+                  setSurveyNeedDialogError(null)
+                }}
+                disabled={surveyNeedDialogSaving}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveSurveyNeed} disabled={surveyNeedDialogSaving}>
+                {surveyNeedDialogSaving ? 'Saving...' : 'Save'}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -74,13 +74,15 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
   const draftIdSet = useMemo(() => new Set(draftProjectIds), [draftProjectIds])
 
   const applicationSurveyData = useMemo(() => {
-    const submitted = projects.filter(
+    const notRequired = projects.filter((p) => p.isSurveyNeeded === false).length
+    const eligibleProjects = projects.filter((p) => p.isSurveyNeeded !== false)
+    const submitted = eligibleProjects.filter(
       (p) => (p.stageProgress?.survey ?? 0) === 100 || !!p.surveySubmittedAt,
     ).length
-    const draft = projects.filter(
+    const draft = eligibleProjects.filter(
       (p) => !((p.stageProgress?.survey ?? 0) === 100 || !!p.surveySubmittedAt) && draftIdSet.has(p.id),
     ).length
-    const notSubmitted = projects.length - submitted - draft
+    const notSubmitted = eligibleProjects.length - submitted - draft
     return [
       {
         label: 'Submitted',
@@ -97,14 +99,21 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
         value: notSubmitted,
         color: 'var(--chart-4)',
       },
+      {
+        label: 'Not Required',
+        value: notRequired,
+        color: 'var(--chart-5)',
+      },
     ].filter((d) => d.value > 0)
   }, [projects, draftIdSet])
 
   const dataMigrationSurveyData = useMemo(() => {
-    const submitted = projects.filter(
+    const notRequired = projects.filter((p) => p.isSurveyNeeded === false).length
+    const eligibleProjects = projects.filter((p) => p.isSurveyNeeded !== false)
+    const submitted = eligibleProjects.filter(
       (p) => !!p.dataMigrationSurveySubmittedAt,
     ).length
-    const notSubmitted = projects.length - submitted
+    const notSubmitted = eligibleProjects.length - submitted
     return [
       {
         label: 'Submitted',
@@ -115,6 +124,11 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
         label: 'Not Submitted',
         value: notSubmitted,
         color: 'var(--chart-4)',
+      },
+      {
+        label: 'Not Required',
+        value: notRequired,
+        color: 'var(--chart-5)',
       },
     ].filter((d) => d.value > 0)
   }, [projects])

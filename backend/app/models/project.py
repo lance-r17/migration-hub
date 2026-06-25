@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +23,8 @@ class Project(Base, TimestampMixin):
     jira_job_status: Mapped[str | None] = mapped_column(String, nullable=True)
     planning: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     survey_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_survey_needed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    justification_without_survey: Mapped[str | None] = mapped_column(String, nullable=True)
     data_migration_schedule: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     data_migration_survey_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     data_migration_survey_submitted_by: Mapped[str | None] = mapped_column(String, nullable=True)

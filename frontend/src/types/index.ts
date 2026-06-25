@@ -338,6 +338,8 @@ export interface Project {
   progress: number
   stageProgress?: StageProgress
   surveySubmittedAt?: string
+  isSurveyNeeded?: boolean
+  justificationWithoutSurvey?: string
   team: TeamMember[]
   description?: string
   bgi_id?: string
