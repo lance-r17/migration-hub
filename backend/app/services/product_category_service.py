@@ -16,6 +16,7 @@ PRODUCT_CATEGORY_MAP = [
     {"product": "rocketmq",       "product_name": "Rocket MQ",                       "category": "middleware"},
     {"product": "dataworks",      "product_name": "DataWorks",                       "category": "analytics-computing"},
     {"product": "quickbi-public", "product_name": "QuickBI",                         "category": "analytics-computing"},
+    {"product": "maxcompute",     "product_name": "MaxCompute",                      "category": "analytics-computing"},
     {"product": "cms",            "product_name": "Cloud Monitor",                   "category": "monitoring"},
 ]
 
