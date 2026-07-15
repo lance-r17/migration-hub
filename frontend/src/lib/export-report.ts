@@ -9,6 +9,8 @@ import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
 import { getBgiAncestry } from '@/lib/bgi-utils'
 import type { Project, User, EngagementStatus } from '@/types'
+import type { Wave } from '@/types/wave'
+import type { CategoryMilestone } from '@/types/categoryMilestone'
 import type { BgiNode } from '@/types/bgi'
 
 const ENGAGEMENT_STATUS_META: { key: EngagementStatus | 'none'; label: string }[] = [
@@ -365,6 +367,12 @@ export async function exportProjectDependenciesReport() {
   }
 }
 
+function getDataMigrationSurveyStatusLabel(project: Project): string {
+  if (project.isSurveyNeeded === false) return 'Not Required'
+  if (project.dataMigrationSurveySubmittedAt) return 'Submitted'
+  return 'Not Submitted'
+}
+
 export async function exportDataMigrationReport() {
   const toastId = toast.loading('Generating data migration report...')
 
@@ -382,14 +390,12 @@ export async function exportDataMigrationReport() {
 
     for (const project of projects) {
       const schedule = project.dataMigrationSchedule
-      if (!schedule) continue
-
       const bgiAncestry = bgiRoot && project.bgi_id ? getBgiAncestry(bgiRoot, project.bgi_id) : null
-      const lead = schedule.bgiCloudLeadId ? userMap.get(schedule.bgiCloudLeadId) : undefined
+      const lead = schedule?.bgiCloudLeadId ? userMap.get(schedule.bgiCloudLeadId) : undefined
 
-      const cycleCountDisplay = schedule.cycleCountOption === 'more'
+      const cycleCountDisplay = schedule?.cycleCountOption === 'more'
         ? `> ${minCycle}`
-        : (schedule.cycleCount ?? '')
+        : (schedule?.cycleCount ?? '')
 
       rows.push({
         'Project ID': project.id,
@@ -397,23 +403,24 @@ export async function exportDataMigrationReport() {
         'BGI L2': bgiAncestry?.l2 ?? '',
         'BGI L3': bgiAncestry?.l3 ?? '',
         'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? project.bgi_id ?? '') : (project.bgi_id ?? ''),
-        'Migration Start Date': schedule.startDate ? formatDate(schedule.startDate) : '',
-        'Migration End Date': schedule.endDate ? formatDate(schedule.endDate) : '',
+        'Survey Status': getDataMigrationSurveyStatusLabel(project),
+        'Migration Start Date': schedule?.startDate ? formatDate(schedule.startDate) : '',
+        'Migration End Date': schedule?.endDate ? formatDate(schedule.endDate) : '',
         'Cycle Count': cycleCountDisplay,
-        'Cycle Justification': schedule.cycleJustification ?? '',
-        'DTS Instance Count': schedule.dtsInstanceCount ?? '',
-        'DTS Justification': schedule.dtsJustification ?? '',
-        'ASR-DR Requested': schedule.needAsrDr ? 'Yes' : schedule.needAsrDr === false ? 'No' : '',
-        'ASR-DR Justification': schedule.asrDrJustification ?? '',
+        'Cycle Justification': schedule?.cycleJustification ?? '',
+        'DTS Instance Count': schedule?.dtsInstanceCount ?? '',
+        'DTS Justification': schedule?.dtsJustification ?? '',
+        'ASR-DR Requested': schedule?.needAsrDr ? 'Yes' : schedule?.needAsrDr === false ? 'No' : '',
+        'ASR-DR Justification': schedule?.asrDrJustification ?? '',
         'BGI Cloud Lead': lead ? `${lead.name} (${lead.email})` : '',
         'Submitted At': project.dataMigrationSurveySubmittedAt ? formatDate(project.dataMigrationSurveySubmittedAt) : '',
         'Submitted By': project.dataMigrationSurveySubmittedBy ? (userMap.get(project.dataMigrationSurveySubmittedBy)?.name ?? project.dataMigrationSurveySubmittedBy) : '',
-        'Accepts Time Adjustment': schedule.acceptsTimeAdjustment ? 'Yes' : schedule.acceptsTimeAdjustment === false ? 'No' : '',
+        'Accepts Time Adjustment': schedule?.acceptsTimeAdjustment ? 'Yes' : schedule?.acceptsTimeAdjustment === false ? 'No' : '',
       })
     }
 
     if (rows.length === 0) {
-      toast.info('No data migration schedules found across projects.', { id: toastId })
+      toast.info('No projects found.', { id: toastId })
       return
     }
 
@@ -423,6 +430,7 @@ export async function exportDataMigrationReport() {
       'BGI L2',
       'BGI L3',
       'BGI L4',
+      'Survey Status',
       'Migration Start Date',
       'Migration End Date',
       'Cycle Count',
@@ -449,6 +457,7 @@ export async function exportDataMigrationReport() {
       { wch: 28 },
       { wch: 28 },
       { wch: 28 },
+      { wch: 16 },
       { wch: 20 },
       { wch: 20 },
       { wch: 12 },
@@ -931,11 +940,17 @@ export async function exportProjectEngagementReport() {
   }
 }
 
-export function exportEngagementCalendarReport(projects: Project[], users: User[]) {
+export function exportEngagementCalendarReport(
+  projects: Project[],
+  users: User[],
+  bgiRoot?: BgiNode | null,
+  categoryMilestones?: CategoryMilestone[],
+) {
   const toastId = toast.loading('Generating engagement report...')
 
   try {
     const userMap = new Map(users.map(u => [u.id, u.name]))
+    const cmMap = new Map((categoryMilestones ?? []).map(cm => [cm.id, cm.name]))
     const rows = projects
       .filter(p => p.engagement)
       .map(p => {
@@ -946,11 +961,34 @@ export function exportEngagementCalendarReport(projects: Project[], users: User[
         const manager = engagement.engagementManagerId
           ? userMap.get(engagement.engagementManagerId) ?? engagement.engagementManagerId
           : ''
+        const bgiAncestry = bgiRoot && p.bgi_id ? getBgiAncestry(bgiRoot, p.bgi_id) : null
+        const bgi = bgiAncestry
+          ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? p.bgi_id ?? '')
+          : (p.bgi_id ?? '')
+        const plannedSlots = engagement.plannedSlots
+          ?.map(s => {
+            const start = new Date(s.start)
+            const end = new Date(s.end)
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) return ''
+            const date = start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            const startTime = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+            const endTime = end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+            return `${date} ${startTime}-${endTime}`
+          })
+          .filter(Boolean)
+          .join('; ') ?? ''
+        const categoryMilestone = p.categoryMilestoneIds
+          ?.map(id => cmMap.get(id) ?? id)
+          .join('; ') ?? ''
         return {
           'Project ID': p.id,
           'Project Name': p.name,
+          'BGI': bgi,
           'Engagement Status': getEngagementStatusLabel(engagement.status),
           'Interview Subject': engagement.interviewSubject ?? '',
+          'Planned Slots': plannedSlots,
+          'Category Milestone': categoryMilestone,
+          'Confluence Page Link': engagement.confluencePageUrl ?? '',
           'Engagement Reviewers': reviewers,
           'Engagement Manager': manager,
           'Project ITSO': p.itso ?? '',
@@ -966,8 +1004,12 @@ export function exportEngagementCalendarReport(projects: Project[], users: User[
     const headers = [
       'Project ID',
       'Project Name',
+      'BGI',
       'Engagement Status',
       'Interview Subject',
+      'Planned Slots',
+      'Category Milestone',
+      'Confluence Page Link',
       'Engagement Reviewers',
       'Engagement Manager',
       'Project ITSO',
@@ -982,8 +1024,12 @@ export function exportEngagementCalendarReport(projects: Project[], users: User[
     worksheet['!cols'] = [
       { wch: 18 },
       { wch: 32 },
+      { wch: 28 },
       { wch: 22 },
       { wch: 40 },
+      { wch: 36 },
+      { wch: 28 },
+      { wch: 48 },
       { wch: 32 },
       { wch: 24 },
       { wch: 24 },
@@ -1004,6 +1050,77 @@ export function exportEngagementCalendarReport(projects: Project[], users: User[
     ]
 
     XLSX.writeFile(workbook, `engagement-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Report downloaded', { id: toastId })
+  } catch {
+    toast.error('Failed to generate report', { id: toastId })
+  }
+}
+
+export function exportWavePlanningToExcel(projects: Project[], waves: Wave[]) {
+  const toastId = toast.loading('Generating wave planning report...')
+
+  try {
+    const waveMap = new Map(waves.map(w => [w.id, w]))
+    const rows: Record<string, string | number>[] = []
+
+    for (const project of projects) {
+      if (!project.waveId) continue
+      const wave = waveMap.get(project.waveId)
+      if (!wave) continue
+      rows.push({
+        'Project ID': project.id,
+        'Project Name': project.name,
+        'Wave Name': wave.name,
+        'Wave Start Date': formatDate(wave.startDate),
+        'Wave End Date': formatDate(wave.cutoverDate),
+        'Project Plan Start Date': formatDate(project.planning?.planStartDate),
+        'Project Plan End Date': formatDate(project.planning?.planEndDate),
+      })
+    }
+
+    if (rows.length === 0) {
+      toast.info('No projects assigned to waves to export.', { id: toastId })
+      return
+    }
+
+    const headers = [
+      'Project ID',
+      'Project Name',
+      'Wave Name',
+      'Wave Start Date',
+      'Wave End Date',
+      'Project Plan Start Date',
+      'Project Plan End Date',
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+    const lastRow = rows.length + 1
+    const lastCol = XLSX.utils.encode_col(headers.length - 1)
+    worksheet['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` }
+    worksheet['!cols'] = [
+      { wch: 18 },
+      { wch: 32 },
+      { wch: 24 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 24 },
+      { wch: 24 },
+    ]
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }
+
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Wave Planning')
+
+    workbook.Workbook = workbook.Workbook || {}
+    workbook.Workbook.Names = [
+      {
+        Name: 'WavePlanningData',
+        Ref: `'Wave Planning'!$A$1:$G$${lastRow}`,
+        Sheet: 0,
+      },
+    ]
+
+    XLSX.writeFile(workbook, `wave-planning-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
     toast.success('Report downloaded', { id: toastId })
   } catch {
     toast.error('Failed to generate report', { id: toastId })

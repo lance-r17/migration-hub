@@ -40,5 +40,6 @@ export interface MigrationSettings {
   cloudSetupPeriod?: CloudSetupPeriod
   durationOptions: number[]
   bgiTierDepth?: number
+  dataMigrationAdjustmentEnabled: boolean
   dataMigration: DataMigrationSettings
 }

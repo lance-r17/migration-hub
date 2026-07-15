@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
+import { MigrationSettingsProvider, useMigrationSettingsContext } from '@/context/MigrationSettingsContext'
 import { HomePage } from './pages/HomePage'
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
 import { LoginPage } from './pages/LoginPage'
 import { WavesPage } from './pages/WavesPage'
 import { WaveGanttPage } from './pages/WaveGanttPage'
+import { DataMigrationPage } from './pages/DataMigrationPage'
 import { EngagementCalendarPage } from './pages/EngagementCalendarPage'
 import { EngagementNotesPage } from './pages/EngagementNotesPage'
 import { EngagementNotesEditPage } from './pages/EngagementNotesEditPage'
@@ -51,49 +53,59 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function DataMigrationRoute() {
+  const { settings, loading } = useMigrationSettingsContext()
+  if (loading) return null
+  if (!settings?.dataMigrationAdjustmentEnabled) return <Navigate to="/" replace />
+  return <DataMigrationPage />
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/callback" element={<CallbackPage />} />
-        <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
-        <Route path="/engagements" element={<ProtectedRoute><EngagementCalendarPage /></ProtectedRoute>} />
-        <Route path="/engagements/:projectId" element={<ProtectedRoute><EngagementNotesPage /></ProtectedRoute>} />
-        <Route path="/engagements/:projectId/edit" element={<ProtectedRoute><EngagementNotesEditPage /></ProtectedRoute>} />
-        <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
-        <Route path="/waves/gantt" element={<ProtectedRoute><WaveGanttPage /></ProtectedRoute>} />
-        <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
-        <Route path="/email" element={<ProtectedRoute><EmailTemplatesPage /></ProtectedRoute>} />
-        <Route path="/email/new" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
-        <Route path="/email/:id/edit" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
-        <Route path="/email/:id/preview" element={<ProtectedRoute><EmailPreviewPage /></ProtectedRoute>} />
-        <Route path="/templates" element={<ProtectedRoute><NoteTemplatesPage /></ProtectedRoute>} />
-        <Route path="/templates/:id" element={<ProtectedRoute><TemplatePreviewPage /></ProtectedRoute>} />
-        <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
-          <Route index element={<AdminHome />} />
-          <Route path="users" element={<UserAccountsPage />} />
-          <Route path="jobs" element={<AdminJiraJobsPage />} />
-          <Route path="email-jobs" element={<EmailJobsPage />} />
-          <Route path="notifications" element={<NotificationSettingsPage />} />
-          <Route path="service-accounts" element={<ServiceAccountsPage />} />
-          <Route path="attachments" element={<AdminAttachmentsPage />} />
-          <Route path="bgi-cloud-leads" element={<BgiCloudLeadsPage />} />
-          <Route path="engagement-reviewers" element={<EngagementReviewersPage />} />
-        </Route>
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
-          <Route index element={<SettingsHome />} />
-          <Route path="survey" element={<SurveyBuilderPage />} />
-          <Route path="embargo" element={<EmbargoPage />} />
-          <Route path="billing" element={<BillingSettingsPage />} />
-          <Route path="signoff" element={<SignoffSettingsPage />} />
-          <Route path="migration" element={<MigrationSettingsPage />} />
-          <Route path="bgi" element={<BgiSettingsPage />} />
-        </Route>
-      </Routes>
-      <Toaster />
+      <MigrationSettingsProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/callback" element={<CallbackPage />} />
+          <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+          <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
+          <Route path="/engagements" element={<ProtectedRoute><EngagementCalendarPage /></ProtectedRoute>} />
+          <Route path="/engagements/:projectId" element={<ProtectedRoute><EngagementNotesPage /></ProtectedRoute>} />
+          <Route path="/engagements/:projectId/edit" element={<ProtectedRoute><EngagementNotesEditPage /></ProtectedRoute>} />
+          <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
+          <Route path="/waves/gantt" element={<ProtectedRoute><WaveGanttPage /></ProtectedRoute>} />
+          <Route path="/waves/data-migration" element={<ProtectedRoute><DataMigrationRoute /></ProtectedRoute>} />
+          <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
+          <Route path="/email" element={<ProtectedRoute><EmailTemplatesPage /></ProtectedRoute>} />
+          <Route path="/email/new" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
+          <Route path="/email/:id/edit" element={<ProtectedRoute><EmailBuilderPage /></ProtectedRoute>} />
+          <Route path="/email/:id/preview" element={<ProtectedRoute><EmailPreviewPage /></ProtectedRoute>} />
+          <Route path="/templates" element={<ProtectedRoute><NoteTemplatesPage /></ProtectedRoute>} />
+          <Route path="/templates/:id" element={<ProtectedRoute><TemplatePreviewPage /></ProtectedRoute>} />
+          <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
+            <Route index element={<AdminHome />} />
+            <Route path="users" element={<UserAccountsPage />} />
+            <Route path="jobs" element={<AdminJiraJobsPage />} />
+            <Route path="email-jobs" element={<EmailJobsPage />} />
+            <Route path="notifications" element={<NotificationSettingsPage />} />
+            <Route path="service-accounts" element={<ServiceAccountsPage />} />
+            <Route path="attachments" element={<AdminAttachmentsPage />} />
+            <Route path="bgi-cloud-leads" element={<BgiCloudLeadsPage />} />
+            <Route path="engagement-reviewers" element={<EngagementReviewersPage />} />
+          </Route>
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
+            <Route index element={<SettingsHome />} />
+            <Route path="survey" element={<SurveyBuilderPage />} />
+            <Route path="embargo" element={<EmbargoPage />} />
+            <Route path="billing" element={<BillingSettingsPage />} />
+            <Route path="signoff" element={<SignoffSettingsPage />} />
+            <Route path="migration" element={<MigrationSettingsPage />} />
+            <Route path="bgi" element={<BgiSettingsPage />} />
+          </Route>
+        </Routes>
+        <Toaster />
+      </MigrationSettingsProvider>
     </BrowserRouter>
   )
 }

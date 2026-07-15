@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { DateRange } from 'react-day-picker'
-import { CalendarRange, Database, CloudCog } from 'lucide-react'
+import { CalendarRange, Database, CloudCog, ToggleLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Breadcrumb,
@@ -15,17 +15,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { CalendarIcon, X, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { getMigrationSettings, saveMigrationSettings } from '@/services/migrationSettings'
+import { useMigrationSettingsContext } from '@/context/MigrationSettingsContext'
 import type { MigrationSettings } from '@/types/settings'
 
 const DEFAULTS: MigrationSettings = {
   durationOptions: [15, 30, 45],
   cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' },
+  dataMigrationAdjustmentEnabled: true,
   dataMigration: {
     cycleDurationDays: 7,
     minCycle: 1,
@@ -49,6 +52,7 @@ function rangeLabel(range?: { startDate?: string; endDate?: string }): string {
 
 export function MigrationSettingsPage() {
   const navigate = useNavigate()
+  const { refresh } = useMigrationSettingsContext()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -66,6 +70,7 @@ export function MigrationSettingsPage() {
     setSaving(true)
     try {
       await saveMigrationSettings(config)
+      await refresh()
       toast.success('Migration settings saved')
     } catch {
       toast.error('Failed to save migration settings')
@@ -186,6 +191,28 @@ export function MigrationSettingsPage() {
         </div>
       ) : (
         <div className="space-y-6">
+          <div className="rounded-lg border border-border bg-card p-5 max-w-7xl">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <ToggleLeft className="size-5 text-muted-foreground mt-0.5" />
+                <div className="space-y-1">
+                  <h2 className="text-lg font-semibold">Data Migration Adjustment</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Control whether the Data Migration page is accessible. When disabled, the
+                    page, route, and navigation links are hidden for all users.
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="data-migration-adjustment-toggle"
+                checked={config.dataMigrationAdjustmentEnabled}
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => ({ ...prev, dataMigrationAdjustmentEnabled: checked }))
+                }
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start max-w-7xl">
           <div className="rounded-lg border border-border bg-card p-5 space-y-5">
             <div className="flex items-center gap-2">

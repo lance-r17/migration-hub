@@ -363,7 +363,7 @@ export function EngagementCalendarPage() {
           </div>
           <button
             className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => exportEngagementCalendarReport(projectsWithEngagement, allUsers)}
+            onClick={() => exportEngagementCalendarReport(projectsWithEngagement, allUsers, bgiRoot, categoryMilestones)}
             disabled={projectsWithEngagement.length === 0 || loading}
           >
             <Download size={14} />

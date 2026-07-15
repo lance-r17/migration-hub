@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import func, select
@@ -55,6 +56,7 @@ SECTION_COLUMN_MAP: dict[str, str | None] = {
     "targetArchitecture": "target_architecture",
     "migrationEffortEstimation": "migration_effort_estimation",
     "dataMigrationSchedule": "data_migration_schedule",
+    "dataMigrationPlan": "data_migration_plan",
     "jiraSubtaskConfig": "jira_subtask_config",
     "status": "status",
     "waveId": "wave_id",
@@ -75,6 +77,7 @@ SECTION_LABELS: dict[str, str] = {
     "targetArchitecture": "Target Architecture",
     "migrationEffortEstimation": "Migration Effort Estimation",
     "dataMigrationSchedule": "Data Migration Schedule",
+    "dataMigrationPlan": "Data Migration Plan",
     "engagement": "Engagement",
     "status": "Project Status",
     "waveId": "Migration Wave",
@@ -556,6 +559,64 @@ async def update_section(
         await _derive_and_store_status(session, project)
         await session.flush()
 
+    return project
+
+
+async def mark_data_migration_complete(
+    session: AsyncSession,
+    project: Project,
+    remark: str | None,
+    actor: dict[str, Any],
+) -> Project:
+    plan = dict(project.data_migration_plan or {})
+    completed_at = datetime.now(timezone.utc).isoformat()
+    plan["completedAt"] = completed_at
+    plan["completedBy"] = actor.get("id")
+    if remark is not None:
+        plan["completionRemark"] = remark
+    project.data_migration_plan = plan
+    await session.flush()
+    await session.refresh(project)
+    await audit_service.append_entry(
+        session,
+        project_id=project.id,
+        event_type="data_migration_completed",
+        entity_type="data_migration",
+        actor=actor,
+        changes=[{"field": "dataMigrationPlan.completedAt", "new": completed_at}],
+    )
+    return project
+
+
+async def mark_data_migration_reopen(
+    session: AsyncSession,
+    project: Project,
+    reason: str,
+    actor: dict[str, Any],
+) -> Project:
+    plan = dict(project.data_migration_plan or {})
+    reopened_at = datetime.now(timezone.utc).isoformat()
+    plan["reopenedAt"] = reopened_at
+    plan["reopenedBy"] = actor.get("id")
+    plan["reopenReason"] = reason
+    # Clear completion fields so the plan can be edited again.
+    plan.pop("completedAt", None)
+    plan.pop("completedBy", None)
+    plan.pop("completionRemark", None)
+    project.data_migration_plan = plan
+    await session.flush()
+    await session.refresh(project)
+    await audit_service.append_entry(
+        session,
+        project_id=project.id,
+        event_type="data_migration_reopened",
+        entity_type="data_migration",
+        actor=actor,
+        changes=[
+            {"field": "dataMigrationPlan.reopenedAt", "new": reopened_at},
+            {"field": "dataMigrationPlan.reopenReason", "new": reason},
+        ],
+    )
     return project
 
 
@@ -1073,6 +1134,10 @@ async def reset_project(
     if project.data_migration_schedule is not None:
         changes.append({"field": "data_migration_schedule", "label": "Data Migration Schedule", "old_value": project.data_migration_schedule, "new_value": None})
         project.data_migration_schedule = None
+
+    if project.data_migration_plan is not None:
+        changes.append({"field": "data_migration_plan", "label": "Data Migration Plan", "old_value": project.data_migration_plan, "new_value": None})
+        project.data_migration_plan = None
 
     if project.data_migration_survey_submitted_at is not None:
         changes.append({"field": "data_migration_survey_submitted_at", "label": "Data Migration Survey Submitted At", "old_value": project.data_migration_survey_submitted_at.isoformat() if project.data_migration_survey_submitted_at else None, "new_value": None})

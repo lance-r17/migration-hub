@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.schemas.approval import ApprovalOut
 from app.schemas.cloud_resource import CloudResourceHomeOut, CloudResourceOut
@@ -53,6 +53,7 @@ class ProjectListItem(BaseModel):
     is_survey_needed: bool = True
     justification_without_survey: str | None = None
     data_migration_schedule: dict[str, Any] | None = None
+    data_migration_plan: dict[str, Any] | None = None
     data_migration_survey_submitted_at: datetime | None = None
     data_migration_survey_submitted_by: str | None = None
     stage_progress: dict[str, int] | None = None
@@ -97,6 +98,7 @@ class ProjectDetail(BaseModel):
     is_survey_needed: bool = True
     justification_without_survey: str | None = None
     data_migration_schedule: dict[str, Any] | None = None
+    data_migration_plan: dict[str, Any] | None = None
     data_migration_survey_submitted_at: datetime | None = None
     data_migration_survey_submitted_by: str | None = None
     stage_progress: dict[str, int] | None = None
@@ -141,6 +143,7 @@ class ProjectHomeItem(BaseModel):
     is_survey_needed: bool = True
     justification_without_survey: str | None = None
     data_migration_schedule: dict[str, Any] | None = None
+    data_migration_plan: dict[str, Any] | None = None
     data_migration_survey_submitted_at: datetime | None = None
     data_migration_survey_submitted_by: str | None = None
     stage_progress: dict[str, int] | None = None
@@ -152,6 +155,21 @@ class ProjectHomeItem(BaseModel):
     risks: list[RiskHomeOut] | None = None
     bgi_id: str | None = None
     category_milestone_ids: list[str] | None = None
+
+
+class DataMigrationCompleteRequest(BaseModel):
+    remark: str | None = None
+
+
+class DataMigrationReopenRequest(BaseModel):
+    reason: str
+
+    @field_validator("reason")
+    @classmethod
+    def _reason_must_be_non_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("Reopen reason is required")
+        return value
 
 
 class ProjectCreate(BaseModel):

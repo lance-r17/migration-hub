@@ -24,10 +24,12 @@ import {
   FolderOpen,
   GanttChart,
   CalendarDays,
+  Database,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
 import { useCurrentUser } from "@/context/UserContext"
+import { useMigrationSettingsContext } from "@/context/MigrationSettingsContext"
 
 interface NavItem {
   title: string
@@ -98,6 +100,12 @@ const data = {
       icon: <GanttChart />,
       excludesRole: ["platform_migration_lead", "engagement_reviewer"],
     },
+    {
+      title: "Data Migration",
+      url: "/waves/data-migration",
+      icon: <Database />,
+      excludesRole: "platform_migration_lead",
+    },
   ] satisfies NavItem[],
   navSecondary: [
     {
@@ -111,8 +119,10 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation()
   const { user } = useCurrentUser()
+  const { settings } = useMigrationSettingsContext()
 
   const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
+  const dataMigrationEnabled = settings?.dataMigrationAdjustmentEnabled ?? true
 
   const hasAnyRole = (roles: string | string[]) => {
     const list = Array.isArray(roles) ? roles : [roles]
@@ -120,9 +130,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   const visibleItems = data.navMain.filter(item => {
+    if (item.url === '/waves/data-migration' && !dataMigrationEnabled) return false
     if (isBgiCloudLead) {
-      // BGI cloud leads only see Dashboard, Projects, and Wave Gantt
-      return ['/', '/projects', '/waves/gantt'].includes(item.url)
+      // BGI cloud leads only see Dashboard, Projects, Wave Gantt, and Data Migration
+      return ['/', '/projects', '/waves/gantt', '/waves/data-migration'].includes(item.url)
     }
     if (item.requiresRole && !hasAnyRole(item.requiresRole)) return false
     if (item.excludesRole && hasAnyRole(item.excludesRole)) return false

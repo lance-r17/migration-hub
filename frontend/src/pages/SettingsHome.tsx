@@ -11,7 +11,7 @@ const SETTINGS_SECTIONS = [
   },
   {
     title: 'Migration Settings',
-    description: 'Set the platform migration period and configurable duration options for migration windows.',
+    description: 'Set the platform migration period, configure duration options, and enable or disable the data migration adjustment page.',
     icon: <CalendarRange size={20} className="text-primary" />,
     href: '/settings/migration',
   },

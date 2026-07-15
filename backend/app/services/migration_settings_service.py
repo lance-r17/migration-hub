@@ -14,6 +14,7 @@ _DEFAULT = {
     "new_cloud_setup_period": {"start_date": "2026-04-01", "end_date": "2026-12-12"},
     "duration_options": [15, 30, 45],
     "bgi_tier_depth": None,
+    "data_migration_adjustment_enabled": True,
     "data_migration": {
         "cycle_duration_days": 7,
         "min_cycle": 1,
@@ -40,6 +41,7 @@ async def get_migration_settings(session: AsyncSession) -> MigrationSettingsOut:
         new_cloud_setup_period=data.get("new_cloud_setup_period"),
         duration_options=data.get("duration_options", _DEFAULT["duration_options"]),
         bgi_tier_depth=data.get("bgi_tier_depth"),
+        data_migration_adjustment_enabled=data.get("data_migration_adjustment_enabled", True),
         data_migration=data.get("data_migration", _default_data_migration()),
     )
 
@@ -62,6 +64,8 @@ async def update_migration_settings(
         current["duration_options"] = patch.duration_options
     if "bgi_tier_depth" in patch.model_fields_set:
         current["bgi_tier_depth"] = patch.bgi_tier_depth
+    if patch.data_migration_adjustment_enabled is not None:
+        current["data_migration_adjustment_enabled"] = patch.data_migration_adjustment_enabled
     if patch.data_migration is not None:
         current["data_migration"] = patch.data_migration.model_dump()
 
@@ -77,5 +81,8 @@ async def update_migration_settings(
         new_cloud_setup_period=current.get("new_cloud_setup_period"),
         duration_options=current.get("duration_options", _DEFAULT["duration_options"]),
         bgi_tier_depth=current.get("bgi_tier_depth"),
+        data_migration_adjustment_enabled=current.get(
+            "data_migration_adjustment_enabled", True
+        ),
         data_migration=current.get("data_migration", _default_data_migration()),
     )

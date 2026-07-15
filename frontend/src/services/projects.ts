@@ -30,6 +30,8 @@ const ENDPOINTS = {
   surveySubmitted: (id: string) => `/api/v1/projects/${id}/survey-submitted`,
   surveyDraft: (id: string) => `/api/v1/projects/${id}/survey-draft`,
   dataMigrationSurveySubmitted: (id: string) => `/api/v1/projects/${id}/data-migration-survey-submitted`,
+  dataMigrationComplete: (id: string) => `/api/v1/projects/${id}/data-migration-complete`,
+  dataMigrationReopen: (id: string) => `/api/v1/projects/${id}/data-migration-reopen`,
   dataMigrationCycleBlocks: '/api/v1/projects/data-migration-cycle-blocks',
   resourceSyncComplete: (projectId: string, resourceId: string) => `/api/v1/projects/${projectId}/resources/${resourceId}/sync-complete`,
 }
@@ -99,6 +101,7 @@ interface ProjectListItemApi {
   migration_constraints: MigrationConstraints | null
   migration_effort_estimation: MigrationEffortEstimation | null
   data_migration_schedule: DataMigrationSchedule | null
+  data_migration_plan: DataMigrationSchedule | null
   data_migration_survey_submitted_at: string | null
   data_migration_survey_submitted_by: string | null
   application_overview: ApplicationOverview | null
@@ -136,6 +139,7 @@ interface ProjectApiResponse extends ProjectListItemApi {
   target_architecture: TargetArchitecture | null
   migration_effort_estimation: MigrationEffortEstimation | null
   data_migration_schedule: DataMigrationSchedule | null
+  data_migration_plan: DataMigrationSchedule | null
   data_migration_survey_submitted_at: string | null
   data_migration_survey_submitted_by: string | null
   engagement: Engagement | null
@@ -212,6 +216,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     migrationConstraints: raw.migration_constraints ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
     dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
+    dataMigrationPlan: raw.data_migration_plan ?? undefined,
     dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
     dataMigrationSurveySubmittedBy: raw.data_migration_survey_submitted_by ?? undefined,
     applicationOverview: raw.application_overview ?? undefined,
@@ -256,6 +261,7 @@ function fromApi(raw: ProjectApiResponse): Project {
     targetArchitecture: raw.target_architecture ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
     dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
+    dataMigrationPlan: raw.data_migration_plan ?? undefined,
     dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
     dataMigrationSurveySubmittedBy: raw.data_migration_survey_submitted_by ?? undefined,
     engagement: raw.engagement ?? undefined,
@@ -384,6 +390,55 @@ export async function markDataMigrationSurveySubmitted(id: string): Promise<Proj
     return store.getProject(id)!
   }
   const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.dataMigrationSurveySubmitted(id), {})
+  return fromApi(raw)
+}
+
+export interface MarkDataMigrationCompleteRequest {
+  remark?: string
+}
+
+export interface ReopenDataMigrationRequest {
+  reason: string
+}
+
+export async function markDataMigrationComplete(
+  id: string,
+  payload: MarkDataMigrationCompleteRequest,
+): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const p = store.getProject(id)
+    if (!p) throw new Error('Project not found')
+    const plan = { ...(p.dataMigrationPlan ?? {}) }
+    plan.completedAt = new Date().toISOString()
+    plan.completedBy = 'mock-user'
+    if (payload.remark) plan.completionRemark = payload.remark
+    store.updateProject(id, 'dataMigrationPlan', plan as Project['dataMigrationPlan'])
+    return store.getProject(id)!
+  }
+  const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.dataMigrationComplete(id), payload)
+  return fromApi(raw)
+}
+
+export async function reopenDataMigration(
+  id: string,
+  payload: ReopenDataMigrationRequest,
+): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const p = store.getProject(id)
+    if (!p) throw new Error('Project not found')
+    const plan = { ...(p.dataMigrationPlan ?? {}) }
+    plan.reopenedAt = new Date().toISOString()
+    plan.reopenedBy = 'mock-user'
+    plan.reopenReason = payload.reason
+    delete plan.completedAt
+    delete plan.completedBy
+    delete plan.completionRemark
+    store.updateProject(id, 'dataMigrationPlan', plan as Project['dataMigrationPlan'])
+    return store.getProject(id)!
+  }
+  const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.dataMigrationReopen(id), payload)
   return fromApi(raw)
 }
 

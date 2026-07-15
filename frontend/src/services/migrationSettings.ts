@@ -26,6 +26,7 @@ interface MigrationSettingsApi {
   new_cloud_setup_period: PeriodApi | null
   duration_options: number[]
   bgi_tier_depth: number | null
+  data_migration_adjustment_enabled: boolean
   data_migration: DataMigrationSettingsApi
 }
 
@@ -87,6 +88,7 @@ function fromApi(raw: MigrationSettingsApi): MigrationSettings {
     cloudSetupPeriod: periodFromApi(raw.new_cloud_setup_period),
     durationOptions: raw.duration_options,
     bgiTierDepth: raw.bgi_tier_depth ?? undefined,
+    dataMigrationAdjustmentEnabled: raw.data_migration_adjustment_enabled ?? true,
     dataMigration: raw.data_migration
       ? dataMigrationFromApi(raw.data_migration)
       : {
@@ -107,6 +109,7 @@ function toApi(config: MigrationSettings): MigrationSettingsApi {
     new_cloud_setup_period: periodToApi(config.cloudSetupPeriod),
     duration_options: config.durationOptions,
     bgi_tier_depth: config.bgiTierDepth ?? null,
+    data_migration_adjustment_enabled: config.dataMigrationAdjustmentEnabled ?? true,
     data_migration: config.dataMigration ? dataMigrationToApi(config.dataMigration) : dataMigrationToApi({
       cycleDurationDays: 7,
       minCycle: 1,

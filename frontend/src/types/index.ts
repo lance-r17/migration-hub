@@ -168,6 +168,7 @@ export type DataMigrationCycleCountOption = 'min' | 'more'
 export interface DataMigrationSchedule {
   startDate?: string
   endDate?: string
+  cycleBlocks?: { startDate: string; endDate: string }[]
   cycleCount?: number
   cycleCountOption?: DataMigrationCycleCountOption
   cycleJustification?: string
@@ -180,6 +181,12 @@ export interface DataMigrationSchedule {
   forwardAcknowledged?: boolean
   confirmAcknowledged?: boolean
   acceptsTimeAdjustment?: boolean
+  completedAt?: string
+  completedBy?: string
+  completionRemark?: string
+  reopenedAt?: string
+  reopenedBy?: string
+  reopenReason?: string
 }
 
 // ─── Section 8: Target Architecture ─────────────────────────────────────────
@@ -361,6 +368,7 @@ export interface Project {
   nfrs?: NonFunctionalRequirements
   migrationConstraints?: MigrationConstraints
   dataMigrationSchedule?: DataMigrationSchedule
+  dataMigrationPlan?: DataMigrationSchedule
   dataMigrationSurveySubmittedAt?: string
   dataMigrationSurveySubmittedBy?: string
   targetArchitecture?: TargetArchitecture

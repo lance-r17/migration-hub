@@ -19,6 +19,8 @@ from app.schemas.migration_settings import DataMigrationCycleBlock
 from app.schemas.risk import RiskHomeOut, RiskOut
 from app.schemas.survey import SurveyDraftOut, SurveyDraftSave
 from app.schemas.project import (
+    DataMigrationCompleteRequest,
+    DataMigrationReopenRequest,
     GovernanceRolesOut,
     GovernanceRolesPatch,
     PlanningPatch,
@@ -203,6 +205,7 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
                 "is_survey_needed": p.is_survey_needed,
                 "justification_without_survey": p.justification_without_survey,
                 "data_migration_schedule": p.data_migration_schedule,
+                "data_migration_plan": p.data_migration_plan,
                 "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "data_migration_survey_submitted_by": p.data_migration_survey_submitted_by,
                 "migration_constraints": p.migration_constraints,
@@ -305,6 +308,7 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
             is_survey_needed=p.is_survey_needed,
             justification_without_survey=p.justification_without_survey,
             data_migration_schedule=p.data_migration_schedule,
+            data_migration_plan=p.data_migration_plan,
             data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
             stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
             team=_team_from_project_users(p),
@@ -336,6 +340,7 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
                 "is_survey_needed": p.is_survey_needed,
                 "justification_without_survey": p.justification_without_survey,
                 "data_migration_schedule": p.data_migration_schedule,
+                "data_migration_plan": p.data_migration_plan,
                 "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "data_migration_survey_submitted_by": p.data_migration_survey_submitted_by,
                 "migration_constraints": p.migration_constraints,
@@ -403,6 +408,7 @@ def _project_detail(p) -> ProjectDetail:
         is_survey_needed=p.is_survey_needed,
         justification_without_survey=p.justification_without_survey,
         data_migration_schedule=p.data_migration_schedule,
+        data_migration_plan=p.data_migration_plan,
         data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
         data_migration_survey_submitted_by=p.data_migration_survey_submitted_by,
         stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
@@ -769,6 +775,19 @@ async def update_section(
                 detail="Only Platform Migration Leads or Admins can update engagements.",
             )
 
+    if section_key == "dataMigrationPlan":
+        existing_plan = project.data_migration_plan or {}
+        if existing_plan.get("completedAt"):
+            raise HTTPException(
+                status_code=400,
+                detail="Data migration plan is immutable after completion.",
+            )
+        if "platform_migration_lead" not in (current_user.role or "") and not _user_has_admin_role(current_user.role):
+            raise HTTPException(
+                status_code=403,
+                detail="Only Platform Migration Leads or Admins can update the data migration plan.",
+            )
+
     if section_key == "applicationOverview":
         if isinstance(value, dict) and "newProjectId" in value:
             current_new_project_id = (project.application_overview or {}).get("newProjectId")
@@ -1038,6 +1057,60 @@ async def mark_data_migration_survey_submitted(
     await db.flush()
     await db.refresh(project)
     return _project_detail(project)
+
+
+@router.post("/{project_id}/data-migration-complete", response_model=ProjectDetail)
+async def mark_data_migration_complete(
+    project_id: str,
+    body: DataMigrationCompleteRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    is_member = any(pu.user_id == current_user.id for pu in (project.project_users or []))
+    is_platform_lead = "platform_migration_lead" in (current_user.role or "")
+    if not is_member and not is_platform_lead and not _user_has_admin_role(current_user.role):
+        raise HTTPException(
+            status_code=403,
+            detail="Only project members, platform leads, or admins can mark data migration as complete.",
+        )
+
+    actor = _user_to_actor(current_user)
+    updated = await project_service.mark_data_migration_complete(db, project, body.remark, actor)
+    return _project_detail(updated)
+
+
+@router.post("/{project_id}/data-migration-reopen", response_model=ProjectDetail)
+async def mark_data_migration_reopen(
+    project_id: str,
+    body: DataMigrationReopenRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    is_platform_lead = "platform_migration_lead" in (current_user.role or "")
+    if not is_platform_lead and not _user_has_admin_role(current_user.role):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Platform Migration Leads or Admins can reopen a completed data migration plan.",
+        )
+
+    plan = project.data_migration_plan or {}
+    if not plan.get("completedAt"):
+        raise HTTPException(
+            status_code=400,
+            detail="Data migration plan is not completed.",
+        )
+
+    actor = _user_to_actor(current_user)
+    updated = await project_service.mark_data_migration_reopen(db, project, body.reason.strip(), actor)
+    return _project_detail(updated)
 
 
 @router.get("/{project_id}/survey-draft", response_model=SurveyDraftOut | None)

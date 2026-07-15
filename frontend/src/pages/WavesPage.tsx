@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Waves, Download, Plus, Lock, GanttChart, Tag, Users, Link, Pencil, Trash2, RotateCcw,
+import { Waves, Download, Plus, Lock, GanttChart, Database, Tag, Link, Pencil, Trash2, RotateCcw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
@@ -29,6 +28,7 @@ import { ImportWaveDrawer } from '@/components/drawers/ImportWaveDrawer'
 import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
+import { useMigrationSettingsContext } from '@/context/MigrationSettingsContext'
 import { EditWaveDrawer } from '@/components/drawers/EditWaveDrawer'
 import { CategoryMilestoneDrawer } from '@/components/drawers/CategoryMilestoneDrawer'
 import { AssignCategoryMilestoneDrawer } from '@/components/drawers/AssignCategoryMilestoneDrawer'
@@ -36,6 +36,7 @@ import { useCategoryMilestones } from '@/hooks/use-category-milestones'
 import { updateProject } from '@/services/projects'
 import { appendAuditEntryMock } from '@/services/auditLog'
 import { USE_MOCK } from '@/services/client'
+import { exportWavePlanningToExcel } from '@/lib/export-report'
 import type { Wave } from '@/types/wave'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
 import { CATEGORY_MILESTONE_ICON_MAP } from '@/lib/categoryMilestoneIcons'
@@ -49,6 +50,7 @@ function formatDate(iso: string) {
 
 export function WavesPage() {
   const { user } = useCurrentUser()
+  const { settings } = useMigrationSettingsContext()
   const { waves, loading, createWave, importWave, deleteWave, restoreWave } = useWaves()
   const { projects: initialProjects } = useProjects({ fields: ['basic'] })
   const navigate = useNavigate()
@@ -98,6 +100,7 @@ export function WavesPage() {
   }, [waves])
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const dataMigrationEnabled = settings?.dataMigrationAdjustmentEnabled ?? true
   
   const sortedWaves = useMemo(() => {
     const source = showDeleted ? liveWaves : liveWaves.filter(w => !w.deleted)
@@ -114,7 +117,7 @@ export function WavesPage() {
   }, [])
 
   const handleAssign = useCallback(async (projectIds: string[], waveId: string | undefined) => {
-    setLiveProjects(prev => prev.map(p => 
+    setLiveProjects(prev => prev.map(p =>
       projectIds.includes(p.id) ? { ...p, waveId } : p
     ))
     
@@ -151,14 +154,40 @@ export function WavesPage() {
   if (!isPlatformLead) {
     return (
       <AppShell title="Wave Planning">
-        <div className="max-w-screen-xl mx-auto w-full">
-          <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
+        <div className="max-w-screen-xl mx-auto w-full flex flex-col flex-1 min-h-0 space-y-8">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-4 flex-wrap shrink-0">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Waves className="size-5 text-muted-foreground" />
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">Wave Planning</h1>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                Wave planning tools are only available to the Platform Migration Lead.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="lg" onClick={() => navigate('/waves/gantt')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
+                <GanttChart className="size-4 mr-2" />
+                Gantt Chart
+              </Button>
+              {dataMigrationEnabled && (
+                <Button variant="outline" size="lg" onClick={() => navigate('/waves/data-migration')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
+                  <Database className="size-4 mr-2" />
+                  Data Migration
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center min-h-[40vh] text-center rounded-lg border border-border bg-muted/20 p-8">
             <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
               <Lock className="size-5 text-muted-foreground" />
             </div>
-            <p className="text-xl font-semibold text-foreground mb-2">Access Restricted</p>
+            <p className="text-xl font-semibold text-foreground mb-2">Wave Management Restricted</p>
             <p className="text-muted-foreground text-sm">
-              Wave planning is only accessible to the Platform Migration Lead.
+              You can view the Gantt Chart{dataMigrationEnabled ? ' and Data Migration pages' : ' page'} above. Wave management is only accessible to the Platform Migration Lead.
             </p>
           </div>
         </div>
@@ -302,16 +331,28 @@ export function WavesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/waves/gantt')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
+            <Button variant="outline" size="lg" onClick={() => navigate('/waves/gantt')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
               <GanttChart className="size-4 mr-2" />
               Gantt Chart
             </Button>
+            {dataMigrationEnabled && (
+              <Button variant="outline" size="lg" onClick={() => navigate('/waves/data-migration')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
+                <Database className="size-4 mr-2" />
+                Data Migration
+              </Button>
+            )}
             <div className="w-px h-8 bg-border mx-2" />
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <button
+              className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2"
+              onClick={() => exportWavePlanningToExcel(liveProjects, liveWaves)}
+            >
+              <Download size={14} /> Export
+            </button>
+            <Button variant="outline" size="lg" onClick={() => setImportOpen(true)}>
               <Download className="size-4 mr-2" />
               Import Wave
             </Button>
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Button size="lg" onClick={() => setCreateOpen(true)}>
               <Plus className="size-4 mr-2" />
               Create Wave
             </Button>
@@ -456,7 +497,7 @@ export function WavesPage() {
                 Maintain category milestones and batch-assign them to projects.
               </p>
             </div>
-            <Button size="sm" onClick={() => { setEditingCM(null); setCmDrawerOpen(true) }} data-testid="create-category-milestone-btn">
+            <Button size="lg" onClick={() => { setEditingCM(null); setCmDrawerOpen(true) }} data-testid="create-category-milestone-btn">
               <Plus className="size-4 mr-2" />
               Create Category Milestone
             </Button>

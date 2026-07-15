@@ -48,6 +48,7 @@ let _migrationSettings: MigrationSettings = {
   cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' },
   durationOptions: [15, 30, 45],
   bgiTierDepth: undefined,
+  dataMigrationAdjustmentEnabled: true,
   dataMigration: {
     cycleDurationDays: 7,
     minCycle: 1,
@@ -93,6 +94,7 @@ export const store = {
       blockedReason: undefined,
       surveySubmittedAt: undefined,
       dataMigrationSchedule: undefined,
+      dataMigrationPlan: undefined,
       dataMigrationSurveySubmittedAt: undefined,
       dataMigrationSurveySubmittedBy: undefined,
       planning: undefined,

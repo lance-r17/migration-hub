@@ -35,6 +35,7 @@ class MigrationSettingsOut(BaseModel):
     new_cloud_setup_period: CloudSetupPeriod | None = None
     duration_options: list[int] = [15, 30, 45]
     bgi_tier_depth: int | None = None
+    data_migration_adjustment_enabled: bool = True
     data_migration: DataMigrationSettings = Field(default_factory=DataMigrationSettings)
 
 
@@ -43,6 +44,7 @@ class MigrationSettingsUpdate(BaseModel):
     new_cloud_setup_period: CloudSetupPeriod | None = None
     duration_options: list[int] | None = None
     bgi_tier_depth: int | None = None
+    data_migration_adjustment_enabled: bool | None = None
     data_migration: DataMigrationSettings | None = None
 
 
