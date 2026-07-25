@@ -521,6 +521,12 @@ async def update_section(
     else:
         if section_key == "waveId" and value:
             await _check_wave_completed(session, value)
+        if section_key == "dataMigrationPlan" and isinstance(value, dict):
+            value = {
+                **value,
+                "adjustedAt": datetime.now(timezone.utc).isoformat(),
+                "adjustedBy": actor.get("id"),
+            }
         old = getattr(project, column, None)
         # Merge dict values for JSONB columns so PATCH only updates provided keys.
         # Data migration schedule is replaced wholesale because fields such as

@@ -35,6 +35,21 @@ function formatBlockRange(block: DataMigrationCycleBlock) {
   return `${format(new Date(block.startDate), 'MMM d, y')} – ${format(new Date(block.endDate), 'MMM d, y')}`
 }
 
+function combinePeriods(
+  a?: { startDate?: string; endDate?: string },
+  b?: { startDate?: string; endDate?: string },
+): { startDate?: string; endDate?: string } | undefined {
+  const hasA = a?.startDate && a?.endDate
+  const hasB = b?.startDate && b?.endDate
+  if (!hasA && !hasB) return undefined
+  if (!hasA) return b
+  if (!hasB) return a
+  return {
+    startDate: a.startDate! < b.startDate! ? a.startDate : b.startDate,
+    endDate: a.endDate! > b.endDate! ? a.endDate : b.endDate,
+  }
+}
+
 function CycleBlockSelectItem({
   isSelected,
   className,
@@ -171,6 +186,8 @@ export function DataMigrationPage() {
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
+  const combinedCyclePeriod = useMemo(() => combinePeriods(dm?.cyclePeriod, dm?.extendedAdjustmentPeriod), [dm])
+
   const { projects: initialProjects, loading: projectsLoading } = useProjects({
     fields: ['basic', 'progress', 'resources', 'team'],
   })
@@ -213,8 +230,8 @@ export function DataMigrationPage() {
     loading: blocksLoading,
     error: blocksError,
   } = useDataMigrationCycleBlocks({
-    startDate: dm?.cyclePeriod?.startDate,
-    endDate: dm?.cyclePeriod?.endDate,
+    startDate: combinedCyclePeriod?.startDate,
+    endDate: combinedCyclePeriod?.endDate,
     durationDays: dm?.cycleDurationDays,
     enabled: !settingsLoading && !!dm,
   })
@@ -491,10 +508,15 @@ export function DataMigrationPage() {
   const executeSave = useCallback(async (payload: DataMigrationSchedule) => {
     if (!selectedProject) return
     const previous = selectedProject.dataMigrationPlan
-    setProjectOverrides(prev => ({ ...prev, [selectedProject.id]: { dataMigrationPlan: payload } }))
+    const payloadWithMeta: DataMigrationSchedule = {
+      ...payload,
+      adjustedAt: new Date().toISOString(),
+      adjustedBy: user?.id,
+    }
+    setProjectOverrides(prev => ({ ...prev, [selectedProject.id]: { dataMigrationPlan: payloadWithMeta } }))
     setSaving(true)
     try {
-      const updated = await updateProject(selectedProject.id, 'dataMigrationPlan', payload)
+      const updated = await updateProject(selectedProject.id, 'dataMigrationPlan', payloadWithMeta)
       setProjectOverrides(prev => ({ ...prev, [selectedProject.id]: { dataMigrationPlan: updated.dataMigrationPlan } }))
       setHasPendingChanges(false)
       toast.success('Data migration plan saved')
@@ -504,7 +526,7 @@ export function DataMigrationPage() {
     } finally {
       setSaving(false)
     }
-  }, [selectedProject])
+  }, [selectedProject, user?.id])
 
   const isPlanCompleted = useMemo(() => !!selectedProject?.dataMigrationPlan?.completedAt, [selectedProject])
 
@@ -650,9 +672,9 @@ export function DataMigrationPage() {
             <div className="lg:col-span-3 flex flex-col gap-3 min-h-0 p-4 lg:border-r lg:border-border">
               <div className="flex items-center justify-between shrink-0">
                 <Label className="text-sm font-semibold">Migration Cycle Block</Label>
-                {dm?.cyclePeriod?.startDate && dm?.cyclePeriod?.endDate && (
+                {combinedCyclePeriod?.startDate && combinedCyclePeriod?.endDate && (
                   <span className="text-xs text-muted-foreground">
-                    {format(new Date(dm.cyclePeriod.startDate), 'MMM d')} – {format(new Date(dm.cyclePeriod.endDate), 'MMM d')}
+                    {format(new Date(combinedCyclePeriod.startDate), 'MMM d')} – {format(new Date(combinedCyclePeriod.endDate), 'MMM d')}
                   </span>
                 )}
               </div>

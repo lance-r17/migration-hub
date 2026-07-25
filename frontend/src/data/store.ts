@@ -55,6 +55,8 @@ let _migrationSettings: MigrationSettings = {
     maxCycle: 3,
     minDtsInstanceCount: 1,
     maxDtsInstanceCount: 5,
+    cyclePeriod: undefined,
+    extendedAdjustmentPeriod: undefined,
     cycleCapacity: 20,
     asrDrLicenseCapacity: 2,
     supportEmail: '',

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { DateRange } from 'react-day-picker'
-import { CalendarRange, Database, CloudCog, ToggleLeft } from 'lucide-react'
+import { CalendarRange, Database, CloudCog } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Breadcrumb,
@@ -147,6 +147,24 @@ export function MigrationSettingsPage() {
     }))
   }
 
+  const selectedExtendedAdjustmentRange: DateRange = {
+    from: config.dataMigration?.extendedAdjustmentPeriod?.startDate ? new Date(config.dataMigration.extendedAdjustmentPeriod.startDate) : undefined,
+    to: config.dataMigration?.extendedAdjustmentPeriod?.endDate ? new Date(config.dataMigration.extendedAdjustmentPeriod.endDate) : undefined,
+  }
+
+  const handleExtendedAdjustmentRangeSelect = (range: DateRange | undefined) => {
+    setConfig(prev => ({
+      ...prev,
+      dataMigration: {
+        ...prev.dataMigration,
+        extendedAdjustmentPeriod: {
+          startDate: range?.from ? format(range.from, 'yyyy-MM-dd') : undefined,
+          endDate: range?.to ? format(range.to, 'yyyy-MM-dd') : undefined,
+        },
+      },
+    }))
+  }
+
   const updateDataMigrationNumber = (key: keyof NonNullable<MigrationSettings['dataMigration']>, value: string) => {
     const parsed = value === '' ? undefined : parseInt(value, 10)
     setConfig(prev => ({
@@ -191,28 +209,6 @@ export function MigrationSettingsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="rounded-lg border border-border bg-card p-5 max-w-7xl">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <ToggleLeft className="size-5 text-muted-foreground mt-0.5" />
-                <div className="space-y-1">
-                  <h2 className="text-lg font-semibold">Data Migration Adjustment</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Control whether the Data Migration page is accessible. When disabled, the
-                    page, route, and navigation links are hidden for all users.
-                  </p>
-                </div>
-              </div>
-              <Switch
-                id="data-migration-adjustment-toggle"
-                checked={config.dataMigrationAdjustmentEnabled}
-                onCheckedChange={(checked) =>
-                  setConfig((prev) => ({ ...prev, dataMigrationAdjustmentEnabled: checked }))
-                }
-              />
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start max-w-7xl">
           <div className="rounded-lg border border-border bg-card p-5 space-y-5">
             <div className="flex items-center gap-2">
@@ -345,6 +341,23 @@ export function MigrationSettingsPage() {
               Configure defaults and constraints for the data migration schedule survey.
             </p>
 
+            {/* Allow Adjustment */}
+            <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/30 p-3">
+              <div className="space-y-1">
+                <Label htmlFor="allow-adjustment" className="text-sm font-medium">Allow Adjustment</Label>
+                <p className="text-xs text-muted-foreground">
+                  Control whether the Data Migration page is accessible. When disabled, the page, route, and navigation links are hidden for all users.
+                </p>
+              </div>
+              <Switch
+                id="allow-adjustment"
+                checked={config.dataMigrationAdjustmentEnabled}
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => ({ ...prev, dataMigrationAdjustmentEnabled: checked }))
+                }
+              />
+            </div>
+
             {/* Cycle Period */}
             <div className="space-y-1.5">
               <Label>Cycle Period</Label>
@@ -377,6 +390,42 @@ export function MigrationSettingsPage() {
               </Popover>
               {config.dataMigration?.cyclePeriod?.startDate && config.dataMigration?.cyclePeriod?.endDate &&
                 new Date(config.dataMigration.cyclePeriod.startDate) > new Date(config.dataMigration.cyclePeriod.endDate) && (
+                <p className="text-xs text-destructive">End date must be after start date.</p>
+              )}
+            </div>
+
+            {/* Extended Adjustment Period */}
+            <div className="space-y-1.5">
+              <Label>Extended Adjustment Period</Label>
+              <p className="text-xs text-muted-foreground">
+                Additional window combined with the cycle period to form the full migration cycle block range on the Data Migration page.
+              </p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'h-9 w-full justify-start text-left text-sm font-normal',
+                      !config.dataMigration?.extendedAdjustmentPeriod?.startDate && !config.dataMigration?.extendedAdjustmentPeriod?.endDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon size={14} className="mr-2 shrink-0" />
+                    {rangeLabel(config.dataMigration?.extendedAdjustmentPeriod)}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    numberOfMonths={2}
+                    defaultMonth={selectedExtendedAdjustmentRange.from}
+                    selected={selectedExtendedAdjustmentRange}
+                    onSelect={handleExtendedAdjustmentRangeSelect}
+                  />
+                </PopoverContent>
+              </Popover>
+              {config.dataMigration?.extendedAdjustmentPeriod?.startDate && config.dataMigration?.extendedAdjustmentPeriod?.endDate &&
+                new Date(config.dataMigration.extendedAdjustmentPeriod.startDate) > new Date(config.dataMigration.extendedAdjustmentPeriod.endDate) && (
                 <p className="text-xs text-destructive">End date must be after start date.</p>
               )}
             </div>

@@ -187,6 +187,8 @@ export interface DataMigrationSchedule {
   reopenedAt?: string
   reopenedBy?: string
   reopenReason?: string
+  adjustedAt?: string
+  adjustedBy?: string
 }
 
 // ─── Section 8: Target Architecture ─────────────────────────────────────────

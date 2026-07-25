@@ -22,6 +22,7 @@ _DEFAULT = {
         "min_dts_instance_count": 1,
         "max_dts_instance_count": 5,
         "cycle_period": None,
+        "extended_adjustment_period": None,
         "cycle_capacity": 20,
         "asr_dr_license_capacity": 2,
         "support_email": None,

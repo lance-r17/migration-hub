@@ -8,7 +8,7 @@ import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
 import { getBgiAncestry } from '@/lib/bgi-utils'
-import type { Project, User, EngagementStatus } from '@/types'
+import type { Project, User, EngagementStatus, DataMigrationSchedule } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
 import type { BgiNode } from '@/types/bgi'
@@ -373,6 +373,27 @@ function getDataMigrationSurveyStatusLabel(project: Project): string {
   return 'Not Submitted'
 }
 
+function effectiveDataMigrationRange(plan?: DataMigrationSchedule): { startDate?: string; endDate?: string } {
+  if (!plan) return {}
+  if (plan.cycleBlocks && plan.cycleBlocks.length > 0) {
+    return {
+      startDate: plan.cycleBlocks[0].startDate,
+      endDate: plan.cycleBlocks[plan.cycleBlocks.length - 1].endDate,
+    }
+  }
+  return { startDate: plan.startDate, endDate: plan.endDate }
+}
+
+function allowMultipleCycleBlocks(plan?: DataMigrationSchedule): boolean {
+  return (plan?.cycleBlocks?.length ?? 0) > 1
+}
+
+function isDataMigrationAdjusted(plan?: DataMigrationSchedule, schedule?: DataMigrationSchedule): boolean {
+  if (!plan) return false
+  if (!schedule) return true
+  return JSON.stringify(plan) !== JSON.stringify(schedule)
+}
+
 export async function exportDataMigrationReport() {
   const toastId = toast.loading('Generating data migration report...')
 
@@ -390,12 +411,16 @@ export async function exportDataMigrationReport() {
 
     for (const project of projects) {
       const schedule = project.dataMigrationSchedule
+      const plan = project.dataMigrationPlan
       const bgiAncestry = bgiRoot && project.bgi_id ? getBgiAncestry(bgiRoot, project.bgi_id) : null
       const lead = schedule?.bgiCloudLeadId ? userMap.get(schedule.bgiCloudLeadId) : undefined
 
       const cycleCountDisplay = schedule?.cycleCountOption === 'more'
         ? `> ${minCycle}`
         : (schedule?.cycleCount ?? '')
+
+      const isAdjusted = isDataMigrationAdjusted(plan, schedule)
+      const adjustedRange = effectiveDataMigrationRange(plan)
 
       rows.push({
         'Project ID': project.id,
@@ -416,6 +441,16 @@ export async function exportDataMigrationReport() {
         'Submitted At': project.dataMigrationSurveySubmittedAt ? formatDate(project.dataMigrationSurveySubmittedAt) : '',
         'Submitted By': project.dataMigrationSurveySubmittedBy ? (userMap.get(project.dataMigrationSurveySubmittedBy)?.name ?? project.dataMigrationSurveySubmittedBy) : '',
         'Accepts Time Adjustment': schedule?.acceptsTimeAdjustment ? 'Yes' : schedule?.acceptsTimeAdjustment === false ? 'No' : '',
+        'Is Adjusted': isAdjusted ? 'Yes' : 'No',
+        'Adjusted At': isAdjusted ? (plan?.adjustedAt ? formatDate(plan.adjustedAt) : '') : '',
+        'Adjusted By': isAdjusted ? (plan?.adjustedBy ? (userMap.get(plan.adjustedBy)?.name ?? plan.adjustedBy) : '') : '',
+        'Adjusted Migration Start Date': isAdjusted ? (adjustedRange.startDate ? formatDate(adjustedRange.startDate) : '') : '',
+        'Adjusted Migration End Date': isAdjusted ? (adjustedRange.endDate ? formatDate(adjustedRange.endDate) : '') : '',
+        'Adjusted Allow Multiple Blocks': isAdjusted ? (allowMultipleCycleBlocks(plan) ? 'Yes' : 'No') : '',
+        'Adjusted Cycle Count': isAdjusted ? (plan?.cycleCountOption === 'more' ? '>1' : '1') : '',
+        'Adjusted DTS Instance Count': isAdjusted ? (plan?.dtsInstanceCount ?? '') : '',
+        'Adjusted ASR-DR Requested': isAdjusted ? (plan?.needAsrDr ? 'Yes' : plan?.needAsrDr === false ? 'No' : '') : '',
+        'Adjusted Accepts Time Adjustment': isAdjusted ? (plan?.acceptsTimeAdjustment ? 'Yes' : plan?.acceptsTimeAdjustment === false ? 'No' : '') : '',
       })
     }
 
@@ -443,6 +478,16 @@ export async function exportDataMigrationReport() {
       'Submitted At',
       'Submitted By',
       'Accepts Time Adjustment',
+      'Is Adjusted',
+      'Adjusted At',
+      'Adjusted By',
+      'Adjusted Migration Start Date',
+      'Adjusted Migration End Date',
+      'Adjusted Allow Multiple Blocks',
+      'Adjusted Cycle Count',
+      'Adjusted DTS Instance Count',
+      'Adjusted ASR-DR Requested',
+      'Adjusted Accepts Time Adjustment',
     ]
 
     const worksheet = XLSX.utils.json_to_sheet(rows)
@@ -470,6 +515,16 @@ export async function exportDataMigrationReport() {
       { wch: 16 },
       { wch: 24 },
       { wch: 20 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 26 },
+      { wch: 18 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 28 },
     ]
 
     worksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }

@@ -24,6 +24,7 @@ export interface DataMigrationSettings {
   minDtsInstanceCount: number
   maxDtsInstanceCount: number
   cyclePeriod?: DataMigrationPeriod
+  extendedAdjustmentPeriod?: DataMigrationPeriod
   cycleCapacity: number
   asrDrLicenseCapacity: number
   supportEmail?: string

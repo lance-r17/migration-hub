@@ -16,6 +16,7 @@ interface DataMigrationSettingsApi {
   min_dts_instance_count: number
   max_dts_instance_count: number
   cycle_period: PeriodApi | null
+  extended_adjustment_period: PeriodApi | null
   cycle_capacity: number
   asr_dr_license_capacity: number
   support_email: string | null
@@ -62,6 +63,7 @@ function dataMigrationFromApi(raw: DataMigrationSettingsApi): DataMigrationSetti
     minDtsInstanceCount: raw.min_dts_instance_count,
     maxDtsInstanceCount: raw.max_dts_instance_count,
     cyclePeriod: periodFromApi(raw.cycle_period),
+    extendedAdjustmentPeriod: periodFromApi(raw.extended_adjustment_period),
     cycleCapacity: raw.cycle_capacity,
     asrDrLicenseCapacity: raw.asr_dr_license_capacity,
     supportEmail: raw.support_email ?? undefined,
@@ -76,6 +78,7 @@ function dataMigrationToApi(settings: DataMigrationSettings): DataMigrationSetti
     min_dts_instance_count: settings.minDtsInstanceCount,
     max_dts_instance_count: settings.maxDtsInstanceCount,
     cycle_period: dataMigrationPeriodToApi(settings.cyclePeriod),
+    extended_adjustment_period: dataMigrationPeriodToApi(settings.extendedAdjustmentPeriod),
     cycle_capacity: settings.cycleCapacity,
     asr_dr_license_capacity: settings.asrDrLicenseCapacity,
     support_email: settings.supportEmail ?? null,

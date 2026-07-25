@@ -23,6 +23,7 @@ class DataMigrationSettings(BaseModel):
     min_dts_instance_count: int = 1
     max_dts_instance_count: int = 5
     cycle_period: DataMigrationPeriod | None = None
+    extended_adjustment_period: DataMigrationPeriod | None = None
     cycle_capacity: int = 20
     asr_dr_license_capacity: int = 2
     support_email: str | None = None
