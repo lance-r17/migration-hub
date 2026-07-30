@@ -124,6 +124,8 @@ interface GovernanceRolesApi {
   technical_lead: { id: string; name: string; email: string; department: string; initials: string } | null
   business_owner: { id: string; name: string; email: string; department: string; initials: string } | null
   dba_data_owner: { id: string; name: string; email: string; department: string; initials: string } | null
+  gbi_champion: { id: string; name: string; email: string; department: string; initials: string } | null
+  gbi_champion_delegate: { id: string; name: string; email: string; department: string; initials: string } | null
 }
 
 interface ProjectApiResponse extends ProjectListItemApi {
@@ -244,6 +246,8 @@ function mapGovernanceRoles(raw: GovernanceRolesApi | null): Project['governance
     technicalLead: raw.technical_lead ?? undefined,
     businessOwner: raw.business_owner ?? undefined,
     dbaDataOwner: raw.dba_data_owner ?? undefined,
+    gbiChampion: raw.gbi_champion ?? undefined,
+    gbiChampionDelegate: raw.gbi_champion_delegate ?? undefined,
   }
 }
 
@@ -561,7 +565,13 @@ export async function markResourceSyncComplete(
 
 export async function updateGovernanceRoles(
   projectId: string,
-  payload: { technicalLeadId?: string; businessOwnerId?: string; dbaDataOwnerId?: string },
+  payload: {
+    technicalLeadId?: string
+    businessOwnerId?: string
+    dbaDataOwnerId?: string
+    gbiChampionId?: string
+    gbiChampionDelegateId?: string
+  },
 ): Promise<Project> {
   if (USE_MOCK) {
     await delay()
@@ -576,6 +586,12 @@ export async function updateGovernanceRoles(
         : undefined,
       dbaDataOwner: payload.dbaDataOwnerId
         ? { id: payload.dbaDataOwnerId, name: '', email: '', department: '', initials: '' }
+        : undefined,
+      gbiChampion: payload.gbiChampionId
+        ? { id: payload.gbiChampionId, name: '', email: '', department: '', initials: '' }
+        : undefined,
+      gbiChampionDelegate: payload.gbiChampionDelegateId
+        ? { id: payload.gbiChampionDelegateId, name: '', email: '', department: '', initials: '' }
         : undefined,
     } as Project['governanceRoles'])
     return store.getProject(projectId)!

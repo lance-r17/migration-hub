@@ -742,18 +742,33 @@ async def update_governance_roles(
     assignments: dict[str, str | None],
     actor: dict[str, Any],
 ) -> None:
-    """Upsert governance roles (technical_lead, business_owner, dba_data_owner)
-    into project_users, preserving non-governance roles.
+    """Upsert governance roles (technical_lead, business_owner, dba_data_owner,
+    gbi_champion, gbi_champion_delegate) into project_users, preserving
+    non-governance roles.
 
     assignments: mapping of role -> user_id or None to clear.
     """
     from app.models.project_user import ProjectUser
 
-    governance_roles = {"technical_lead", "business_owner", "dba_data_owner"}
+    governance_roles = {
+        "technical_lead",
+        "business_owner",
+        "dba_data_owner",
+        "gbi_champion",
+        "gbi_champion_delegate",
+    }
+    gbi_exclusivity = {"gbi_champion", "gbi_champion_delegate"}
     governed: dict[str, set[str]] = {}
     for role, uid in assignments.items():
         if uid:
             governed.setdefault(uid, set()).add(role)
+
+    # A user cannot hold both GBI Champion and GBI Champion Delegate.
+    for uid, roles in governed.items():
+        if len(roles & gbi_exclusivity) > 1:
+            raise ValueError(
+                "A user cannot hold both GBI Champion and GBI Champion Delegate roles on the same project."
+            )
 
     result = await session.execute(
         select(ProjectUser).where(ProjectUser.project_id == project.id)
@@ -764,8 +779,14 @@ async def update_governance_roles(
 
     for pu in existing_pus:
         current_roles = {r.strip() for r in (pu.role or "").split(",") if r.strip()}
-        non_governance = current_roles - governance_roles
+        current_gbi = current_roles & gbi_exclusivity
         user_gov_roles = governed.get(pu.user_id, set())
+        assigned_gbi = user_gov_roles & gbi_exclusivity
+        if len(current_gbi | assigned_gbi) > 1:
+            raise ValueError(
+                "A user cannot hold both GBI Champion and GBI Champion Delegate roles on the same project."
+            )
+        non_governance = current_roles - governance_roles
         if user_gov_roles:
             new_roles = non_governance | user_gov_roles
         else:

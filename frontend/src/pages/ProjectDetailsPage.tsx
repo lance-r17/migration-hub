@@ -289,6 +289,17 @@ export function ProjectDetailsPage() {
 
   const isProjectMember = project.team.some(m => m.id === user?.id)
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isAdmin = user?.role.includes('admin') ?? false
+  const isAssignedGBI = !!user && (
+    project.governanceRoles?.gbiChampion?.id === user.id ||
+    project.governanceRoles?.gbiChampionDelegate?.id === user.id
+  )
+  const isAssignedEditableGovRole = !!user && (
+    project.governanceRoles?.technicalLead?.id === user.id ||
+    project.governanceRoles?.businessOwner?.id === user.id ||
+    project.governanceRoles?.dbaDataOwner?.id === user.id
+  )
+  const canEditProject = isPlatformLead || isAdmin || isAssignedEditableGovRole || (isProjectMember && !isAssignedGBI)
   const isLocked = project.approvals.find(a => a.role === 'technical_lead')?.status === 'approved'
   const isSurveyActive = !!(surveyConfig?.isActive && surveyConfig.questions.length > 0)
   const assignedWave = waves.find(w => w.id === project.waveId)
@@ -343,7 +354,7 @@ export function ProjectDetailsPage() {
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">{project.name}</h1>
             <StatusBadge status={project.status} stageProgress={project.stageProgress} />
             <div className="ml-auto flex items-center gap-3">
-              {isSurveyActive && !isLocked && (isProjectMember || isPlatformLead) && project.isSurveyNeeded !== false && (
+              {isSurveyActive && !isLocked && canEditProject && project.isSurveyNeeded !== false && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-1.5 text-sm text-primary hover:opacity-80 transition-opacity font-medium">
@@ -478,7 +489,7 @@ export function ProjectDetailsPage() {
             bgiName={bgiName}
             canEditGovernanceRoles={isPlatformLead}
             projectId={project.id}
-            onSave={!isLocked ? (d) => handleSave('applicationOverview', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('applicationOverview', d) : undefined}
             onSaveGovernanceRoles={isPlatformLead ? async (payload) => {
               await updateGovernanceRoles(project.id, payload)
               await refreshProject()
@@ -486,55 +497,55 @@ export function ProjectDetailsPage() {
           />
           <RisksBlockersSection
             risks={project.risks}
-            onSave={!isLocked ? (risks) => handleSave('risks', risks) : undefined}
+            onSave={canEditProject && !isLocked ? (risks) => handleSave('risks', risks) : undefined}
           />
           <CurrentInfrastructureSection
             data={project.currentInfrastructure}
-            onSave={!isLocked ? (d) => handleSave('currentInfrastructure', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('currentInfrastructure', d) : undefined}
             projectStatus={project.status}
-            isProjectMember={isProjectMember}
+            isProjectMember={canEditProject}
             isPlatformLead={isPlatformLead}
             jiraJobStatus={project.jiraJobStatus}
             jiraStoryKey={project.jiraStoryKey}
             jiraBaseUrl={project.jiraBaseUrl}
             onRetryJiraJob={handleRetryJiraJob}
             onOpenOperations={() => setOperationsOpen(true)}
-            onMarkMigrationComplete={(isProjectMember || isPlatformLead) ? handleMarkMigrationComplete : undefined}
-            onMarkSyncCompleted={(isProjectMember || isPlatformLead) ? handleMarkSyncCompleted : undefined}
+            onMarkMigrationComplete={canEditProject ? handleMarkMigrationComplete : undefined}
+            onMarkSyncCompleted={canEditProject ? handleMarkSyncCompleted : undefined}
           />
           <DataPersistenceSection
             data={project.dataPersistence}
-            onSave={!isLocked ? (d) => handleSave('dataPersistence', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('dataPersistence', d) : undefined}
           />
           <AvailabilityResilienceSection
             data={project.availability}
-            onSave={!isLocked ? (d) => handleSave('availability', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('availability', d) : undefined}
           />
           <DependenciesSection
             data={project.dependencies}
-            onSave={!isLocked ? (d) => handleSave('dependencies', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('dependencies', d) : undefined}
           />
           <NonFunctionalRequirementsSection
             data={project.nfrs}
-            onSave={!isLocked ? (d) => handleSave('nfrs', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('nfrs', d) : undefined}
           />
           <MigrationConstraintsSection
             data={project.migrationConstraints}
             dataMigrationSchedule={project.dataMigrationSchedule}
             submittedAt={project.dataMigrationSurveySubmittedAt}
             submittedBy={project.dataMigrationSurveySubmittedBy}
-            onSave={!isLocked ? (d) => handleSave('migrationConstraints', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('migrationConstraints', d) : undefined}
           />
           <TargetArchitectureSection
             data={project.targetArchitecture}
-            onSave={!isLocked ? (d) => handleSave('targetArchitecture', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('targetArchitecture', d) : undefined}
           />
           <MigrationEffortEstimationSection
             data={project.migrationEffortEstimation}
             projectId={project.id}
             projectBaId={project.applicationOverview?.baId}
             softwareOrigin={project.applicationOverview?.softwareOrigin}
-            onSave={!isLocked ? (d) => handleSave('migrationEffortEstimation', d) : undefined}
+            onSave={canEditProject && !isLocked ? (d) => handleSave('migrationEffortEstimation', d) : undefined}
           />
         </div>
       </div>

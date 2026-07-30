@@ -115,12 +115,20 @@ def _governance_roles_from_project_users(p) -> GovernanceRolesOut | None:
         "technical_lead": None,
         "business_owner": None,
         "dba_data_owner": None,
+        "gbi_champion": None,
+        "gbi_champion_delegate": None,
     }
     for pu in (p.project_users or []):
         if not pu.user:
             continue
         user_roles = {r.strip() for r in (pu.role or "").split(",") if r.strip()}
-        for role in ("technical_lead", "business_owner", "dba_data_owner"):
+        for role in (
+            "technical_lead",
+            "business_owner",
+            "dba_data_owner",
+            "gbi_champion",
+            "gbi_champion_delegate",
+        ):
             if role in user_roles:
                 roles[role] = {
                     "id": pu.user.id,
@@ -133,6 +141,8 @@ def _governance_roles_from_project_users(p) -> GovernanceRolesOut | None:
         technical_lead=roles.get("technical_lead"),
         business_owner=roles.get("business_owner"),
         dba_data_owner=roles.get("dba_data_owner"),
+        gbi_champion=roles.get("gbi_champion"),
+        gbi_champion_delegate=roles.get("gbi_champion_delegate"),
     )
 
 
@@ -536,7 +546,8 @@ async def update_governance_roles(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update governance roles (technical_lead, business_owner, dba_data_owner).
+    """Update governance roles (technical_lead, business_owner, dba_data_owner,
+    gbi_champion, gbi_champion_delegate).
 
     Only Platform Migration Leads may assign or clear these roles.
     """
@@ -555,8 +566,13 @@ async def update_governance_roles(
         "technical_lead": body.technicalLeadId,
         "business_owner": body.businessOwnerId,
         "dba_data_owner": body.dbaDataOwnerId,
+        "gbi_champion": body.gbiChampionId,
+        "gbi_champion_delegate": body.gbiChampionDelegateId,
     }
-    await project_service.update_governance_roles(db, project, assignments, actor)
+    try:
+        await project_service.update_governance_roles(db, project, assignments, actor)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     await db.refresh(project)
     return _project_detail(project)
 

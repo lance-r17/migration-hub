@@ -47,6 +47,8 @@ export const TEMPLATE_VARIABLES = [
   { key: 'itso', label: 'ITSO', example: 'John Doe' },
   { key: 'technicalLead', label: 'Technical Lead', example: 'Jane Smith' },
   { key: 'businessOwner', label: 'Business Owner', example: 'Bob Brown' },
+  { key: 'gbiChampion', label: 'GBI Champion', example: 'Charlie Green' },
+  { key: 'gbiChampionDelegate', label: 'GBI Champion Delegate', example: 'Dana White' },
   { key: 'date', label: 'Current Date', example: new Date().toISOString().split('T')[0] },
   { key: 'userName', label: 'Current User', example: 'Jane Smith' },
 ] as const
@@ -73,6 +75,8 @@ export function buildTemplateContext(project: Record<string, unknown> | null, us
   ctx.itso = (project.itso as string) || ''
   ctx.technicalLead = ((govRoles.technicalLead as Record<string, unknown> | undefined)?.name as string) || ''
   ctx.businessOwner = ((govRoles.businessOwner as Record<string, unknown> | undefined)?.name as string) || ''
+  ctx.gbiChampion = ((govRoles.gbiChampion as Record<string, unknown> | undefined)?.name as string) || ''
+  ctx.gbiChampionDelegate = ((govRoles.gbiChampionDelegate as Record<string, unknown> | undefined)?.name as string) || ''
   ctx.date = new Date().toISOString().split('T')[0]
   ctx.userName = userName
 

@@ -41,6 +41,8 @@ Templates support `{{variableName}}` placeholders in any text field. When a temp
 | `{{itso}}` | `project.itso` |
 | `{{technicalLead}}` | `project.governanceRoles.technicalLead.name` |
 | `{{businessOwner}}` | `project.governanceRoles.businessOwner.name` |
+| `{{gbiChampion}}` | `project.governanceRoles.gbiChampion.name` |
+| `{{gbiChampionDelegate}}` | `project.governanceRoles.gbiChampionDelegate.name` |
 | `{{date}}` | Current date (`YYYY-MM-DD`) |
 | `{{userName}}` | Name of the currently logged-in user |
 

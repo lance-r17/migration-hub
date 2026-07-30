@@ -172,7 +172,7 @@ user_map = batch_ensure_users(USER_CSV)
 **Key points**
 - `id` is optional in the request; when omitted the backend generates one (`usr-{uuid}`).
 - `initials` are auto-derived from `name` if not supplied.
-- The `role` field on `User` is for **global roles** only (e.g. `admin`, `platform_migration_lead`). Governance roles such as `technical_lead`, `business_owner`, and `itso` are assigned per-project in Scenario 2 - do not set them here.
+- The `role` field on `User` is for **global roles** only (e.g. `admin`, `platform_migration_lead`). Governance roles such as `technical_lead`, `business_owner`, `dba_data_owner`, `gbi_champion`, and `gbi_champion_delegate` are assigned per-project in Scenario 2 - do not set them here.
 - Duplicate emails within the same batch are deduplicated automatically.
 - The response `users` array preserves the same order as the request (minus duplicates), so you can reliably collect IDs for downstream governance assignment.
 
@@ -184,7 +184,7 @@ Run this periodically to keep project metadata and team assignments in sync with
 
 This scenario performs three operations per project:
 1. Patch the `applicationOverview` JSONB section.
-2. Assign governance roles (`technical_lead`, `business_owner`, `dba_data_owner`).
+2. Assign governance roles (`technical_lead`, `business_owner`, `dba_data_owner`, `gbi_champion`, `gbi_champion_delegate`).
 3. Assign project-level roles (`itso`, plus any additional roles) via `project-user-roles`.
 
 ```python
@@ -226,6 +226,8 @@ def refresh_project_metadata(project_id: str):
                 "technicalLeadId": lead_user["id"],
                 "businessOwnerId": owner_user["id"],
                 # "dbaDataOwnerId": dba_user["id"]   # optional
+                # "gbiChampionId": gbi_champion_user["id"]   # optional; read-only project access
+                # "gbiChampionDelegateId": gbi_champion_delegate_user["id"]   # optional; read-only project access
             },
         )
 
@@ -254,7 +256,7 @@ for pid in ["acme-123456-appone-prod", "acme-123456-appone-dev", "acme-123457-ap
 **Key points**
 - `PATCH /projects/{id}/sections/applicationOverview` replaces the entire JSONB blob. Always send the complete desired overview.
 - Top-level fields such as `description` can also be patched here via `PATCH /projects/{id}` if they were left empty during bulk creation.
-- `PUT /projects/{id}/governance-roles` updates the `project_users` table while preserving non-governance roles (e.g. `member`). Passing `null` for a role clears it.
+- `PUT /projects/{id}/governance-roles` updates the `project_users` table while preserving non-governance roles (e.g. `member`). Passing `null` for a role clears it. `gbi_champion` and `gbi_champion_delegate` are mutually exclusive for the same user.
 - `PUT /projects/{id}/project-user-roles` is strictly for service accounts. An empty `roles` list (`[]`) removes that user from the project entirely.
 - If a referenced user does not exist in the `users` table, the backend silently skips them (no error is raised for missing user IDs in the governance-role upsert).
 
@@ -599,7 +601,12 @@ def main():
             if lead and owner:
                 client.put(
                     f"/projects/{pid}/governance-roles",
-                    json={"technicalLeadId": lead["id"], "businessOwnerId": owner["id"]},
+                    json={
+                        "technicalLeadId": lead["id"],
+                        "businessOwnerId": owner["id"],
+                        # "gbiChampionId": gbi_champion_user["id"],
+                        # "gbiChampionDelegateId": gbi_champion_delegate_user["id"],
+                    },
                 )
             # Project-user roles (service-account only)
             assignments = []

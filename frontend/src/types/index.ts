@@ -47,6 +47,8 @@ export interface GovernanceRoles {
   technicalLead?: GovernanceRoleUser
   businessOwner?: GovernanceRoleUser
   dbaDataOwner?: GovernanceRoleUser
+  gbiChampion?: GovernanceRoleUser
+  gbiChampionDelegate?: GovernanceRoleUser
 }
 
 export interface ApplicationOverview {

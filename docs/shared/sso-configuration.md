@@ -224,7 +224,7 @@ OAUTH_AD_GROUP_MAPPINGS='[
 
 #### Governance roles are protected
 
-**`sync_user_projects` only removes the `member` token from `project_users.role`**. Governance roles (`technical_lead`, `business_owner`, `dba_data_owner`) plus the **ITSO** role assigned via API are **never** revoked by SSO login, even if the user no longer belongs to the project's AD group. The `member` token is stripped from comma-separated role strings; the row is deleted only when no roles remain.
+**`sync_user_projects` only removes the `member` token from `project_users.role`**. Governance roles (`technical_lead`, `business_owner`, `dba_data_owner`, `gbi_champion`, `gbi_champion_delegate`) plus the **ITSO** role assigned via API are **never** revoked by SSO login, even if the user no longer belongs to the project's AD group. The `member` token is stripped from comma-separated role strings; the row is deleted only when no roles remain.
 
 **Example:**
 - Alice is assigned as **Technical Lead** on project `PRJ-A123` via the governance-roles API.

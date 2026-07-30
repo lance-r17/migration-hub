@@ -203,6 +203,38 @@ Upsert project user roles for a single project. Each item in the payload replace
 
 ---
 
+### `PUT /api/v1/projects/:id/governance-roles`
+
+Assign or clear the governance roles for a project. Each role can be assigned to at most one user per project. Omitting a field or passing `null` clears that role.
+
+Supported roles:
+- `technicalLeadId`
+- `businessOwnerId`
+- `dbaDataOwnerId`
+- `gbiChampionId` *(read-only project access; not an approver role)*
+- `gbiChampionDelegateId` *(read-only project access; not an approver role)*
+
+A user cannot hold both `gbi_champion` and `gbi_champion_delegate` on the same project.
+
+**Request body:**
+```json
+{
+  "technicalLeadId": "u2",
+  "businessOwnerId": "u3",
+  "dbaDataOwnerId": "u4",
+  "gbiChampionId": "u5",
+  "gbiChampionDelegateId": null
+}
+```
+
+**Response:** `Project`
+
+**Authorization:** Requires `platform_migration_lead` or `admin` role.
+
+**Audit:** emits `section_updated` with a change entry per affected `project_users` row.
+
+---
+
 ### `POST /api/v1/projects/:id/survey-submitted`
 
 Marks the project's application survey as submitted (sets `surveySubmittedAt` timestamp). The `survey` stage reaches `100` only when both this and the data-migration survey are submitted.
@@ -312,7 +344,7 @@ Returns audit log entries for a project, sorted newest-first.
 | `eventType` | Trigger |
 |---|---|
 | `project_created` | `POST /projects` |
-| `section_updated` | `PATCH /sections/{key}` or `PATCH /planning` |
+| `section_updated` | `PATCH /sections/{key}`, `PATCH /planning`, or `PUT /projects/:id/governance-roles` |
 | `status_changed` | `PATCH /projects/:id` with `status` field |
 | `risks_updated` | `PATCH /sections/risks` |
 | `approval_submitted` | `PATCH /sections/approvals` |

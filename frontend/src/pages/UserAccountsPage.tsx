@@ -74,7 +74,11 @@ const GOVERNANCE_ROLES = [
   { value: 'technical_lead', label: 'Technical Lead' },
   { value: 'business_owner', label: 'Business Owner' },
   { value: 'dba_data_owner', label: 'DBA Data Owner' },
+  { value: 'gbi_champion', label: 'GBI Champion' },
+  { value: 'gbi_champion_delegate', label: 'GBI Champion Delegate' },
 ]
+
+const EXCLUSIVE_GBI_ROLES = ['gbi_champion', 'gbi_champion_delegate'] as const
 
 function formatProjectRoleSummary(roles: UserProjectRole[]): string {
   const gov = roles
@@ -266,15 +270,21 @@ export function UserAccountsPage() {
         technicalLeadId?: string
         businessOwnerId?: string
         dbaDataOwnerId?: string
+        gbiChampionId?: string
+        gbiChampionDelegateId?: string
       } = {
         technicalLeadId: project.governanceRoles?.technicalLead?.id,
         businessOwnerId: project.governanceRoles?.businessOwner?.id,
         dbaDataOwnerId: project.governanceRoles?.dbaDataOwner?.id,
+        gbiChampionId: project.governanceRoles?.gbiChampion?.id,
+        gbiChampionDelegateId: project.governanceRoles?.gbiChampionDelegate?.id,
       }
 
       if (selectedGovRole === 'technical_lead') payload.technicalLeadId = editingUser.id
       if (selectedGovRole === 'business_owner') payload.businessOwnerId = editingUser.id
       if (selectedGovRole === 'dba_data_owner') payload.dbaDataOwnerId = editingUser.id
+      if (selectedGovRole === 'gbi_champion') payload.gbiChampionId = editingUser.id
+      if (selectedGovRole === 'gbi_champion_delegate') payload.gbiChampionDelegateId = editingUser.id
 
       await updateGovernanceRoles(selectedProjectId, payload)
       toast.success('Governance role assigned')
@@ -302,6 +312,20 @@ export function UserAccountsPage() {
 
   const onClickAssign = () => {
     if (!selectedProjectId || !selectedGovRole || !editingUser) return
+
+    // GBI Champion and GBI Champion Delegate are mutually exclusive for one user.
+    if (EXCLUSIVE_GBI_ROLES.includes(selectedGovRole as typeof EXCLUSIVE_GBI_ROLES[number])) {
+      const otherRole = EXCLUSIVE_GBI_ROLES.find((r) => r !== selectedGovRole)!
+      const hasOtherRoleOnProject = userProjectRoles.some(
+        (r) => r.project_id === selectedProjectId && r.roles.includes(otherRole),
+      )
+      if (hasOtherRoleOnProject) {
+        toast.error(
+          `This user already holds ${GOVERNANCE_ROLES.find((g) => g.value === otherRole)?.label} on this project.`,
+        )
+        return
+      }
+    }
 
     const existing = allProjectRoles.find(
       (r) => r.project_id === selectedProjectId && r.roles.includes(selectedGovRole) && r.user_id !== editingUser.id,
@@ -334,10 +358,14 @@ export function UserAccountsPage() {
         technicalLeadId?: string
         businessOwnerId?: string
         dbaDataOwnerId?: string
+        gbiChampionId?: string
+        gbiChampionDelegateId?: string
       } = {
         technicalLeadId: project.governanceRoles?.technicalLead?.id,
         businessOwnerId: project.governanceRoles?.businessOwner?.id,
         dbaDataOwnerId: project.governanceRoles?.dbaDataOwner?.id,
+        gbiChampionId: project.governanceRoles?.gbiChampion?.id,
+        gbiChampionDelegateId: project.governanceRoles?.gbiChampionDelegate?.id,
       }
 
       // Clear only the specific role for this user
@@ -349,6 +377,12 @@ export function UserAccountsPage() {
       }
       if (role === 'dba_data_owner' && payload.dbaDataOwnerId === editingUser.id) {
         delete payload.dbaDataOwnerId
+      }
+      if (role === 'gbi_champion' && payload.gbiChampionId === editingUser.id) {
+        delete payload.gbiChampionId
+      }
+      if (role === 'gbi_champion_delegate' && payload.gbiChampionDelegateId === editingUser.id) {
+        delete payload.gbiChampionDelegateId
       }
 
       await updateGovernanceRoles(projectId, payload)

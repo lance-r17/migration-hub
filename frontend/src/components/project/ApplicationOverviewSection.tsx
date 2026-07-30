@@ -77,6 +77,8 @@ export function ApplicationOverviewSection({
   const technicalLead = governanceRoles?.technicalLead
   const businessOwner = governanceRoles?.businessOwner
   const dbaDataOwner  = governanceRoles?.dbaDataOwner
+  const gbiChampion = governanceRoles?.gbiChampion
+  const gbiChampionDelegate = governanceRoles?.gbiChampionDelegate
 
   return (
     <div>
@@ -229,6 +231,22 @@ export function ApplicationOverviewSection({
                   <Label>DBA / Data Owner</Label>
                   <p className="text-sm font-medium text-foreground">{dbaDataOwner.name}</p>
                   <p className="text-xs text-muted-foreground">{dbaDataOwner.department}</p>
+                </div>
+              )}
+              {gbiChampion && (
+                <div>
+                  <Label>GBI Champion</Label>
+                  <p className="text-sm font-medium text-foreground">{gbiChampion.name}</p>
+                  <p className="text-xs text-muted-foreground">{gbiChampion.department}</p>
+                  <p className="text-xs text-muted-foreground">{gbiChampion.email}</p>
+                </div>
+              )}
+              {gbiChampionDelegate && (
+                <div>
+                  <Label>GBI Champion Delegate</Label>
+                  <p className="text-sm font-medium text-foreground">{gbiChampionDelegate.name}</p>
+                  <p className="text-xs text-muted-foreground">{gbiChampionDelegate.department}</p>
+                  <p className="text-xs text-muted-foreground">{gbiChampionDelegate.email}</p>
                 </div>
               )}
             </div>

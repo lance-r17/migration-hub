@@ -27,6 +27,8 @@ class GovernanceRolesOut(BaseModel):
     technical_lead: GovernanceRoleUser | None = None
     business_owner: GovernanceRoleUser | None = None
     dba_data_owner: GovernanceRoleUser | None = None
+    gbi_champion: GovernanceRoleUser | None = None
+    gbi_champion_delegate: GovernanceRoleUser | None = None
 
 
 class ProjectListItem(BaseModel):
@@ -213,3 +215,5 @@ class GovernanceRolesPatch(BaseModel):
     technicalLeadId: str | None = None
     businessOwnerId: str | None = None
     dbaDataOwnerId: str | None = None
+    gbiChampionId: str | None = None
+    gbiChampionDelegateId: str | None = None

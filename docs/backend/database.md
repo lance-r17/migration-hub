@@ -86,7 +86,7 @@
 |---|---|---|
 | `project_id` | `TEXT FK → projects.id` | composite PK |
 | `user_id` | `TEXT FK → users.id` | composite PK |
-| `role` | `TEXT` | nullable; comma-separated roles (e.g. `itso,technical_lead`) |
+| `role` | `TEXT` | nullable; comma-separated roles (e.g. `itso,technical_lead,gbi_champion`) |
 
 ### `cloud_resources`
 
