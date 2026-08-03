@@ -278,7 +278,7 @@ export interface Approval {
 
 // ─── Wave planning milestones ─────────────────────────────────────────────────
 
-export type MilestoneType = 'env-provision' | 'dev-resource-provision' | 'dev-data-migration' | 'dev-cutover' | 'prd-resource-provision' | 'prd-data-migration' | 'prd-cutover' | 'custom' | 'category-milestone'
+export type MilestoneType = 'env-provision' | 'dev-resource-provision' | 'dev-data-migration' | 'dev-cutover' | 'prd-resource-provision' | 'prd-data-migration' | 'prd-cutover' | 'custom' | 'category-milestone' | 'data-migration-period'
 export type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 
 export interface PlanningMilestone {

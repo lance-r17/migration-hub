@@ -245,6 +245,16 @@ The interactive Gantt chart used by `WaveGanttPage`. Renders waves as collapsibl
 | Category Milestones filter | Dropdown multi-select to show only projects with specific category milestones |
 | Expand / Collapse all | Bulk toggle for wave and project row visibility |
 
+**Milestone rows:**
+
+| Milestone type | Source | Behavior |
+|---|---|---|
+| **Data Migration Period** | Derived from `Project.dataMigrationPlan ?? Project.dataMigrationSchedule` | Always rendered first under a project. Uses a `DatabaseBackup` icon and the label **“Data Migration”**. The period spans the earliest start to the latest end across `startDate`/`endDate` and any `cycleBlocks`. Dates are rendered **inclusively** (the end date is included in the bar width and duration label). It is read-only: no drag, resize, reorder, delete, or status change from the Gantt. Hovering the bar shows a styled tooltip with `start → end`. |
+| Category milestones | `Project.categoryMilestoneIds` linked to `CategoryMilestone` master data | Rendered after the data migration period. Dates and status can be overridden per project from the Gantt. |
+| Planning milestones | `ProjectPlanning.milestones` | Rendered after category milestones. Created, edited, reordered, and deleted via the project row’s **Add milestone** menu. |
+
+> **Add milestone menu:** The dropdown no longer includes the **DEV Data Migration Stage** and **PRD Data Migration Stage** presets. The data migration period is now the authoritative representation for data migration scheduling on the Gantt.
+
 **Filtering logic:** All filters (search, duration, category milestones, BGI) are combined with AND. A wave is hidden when none of its projects match the active filters.
 
 ---

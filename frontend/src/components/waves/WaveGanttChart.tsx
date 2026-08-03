@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo, useCallback, memo, ReactNode } from 'react'
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, DatabaseBackup } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -102,10 +102,8 @@ const ZOOM_DAYS_PER_COL: Record<ZoomLevel, number> = { days: 1,  weeks: 7,  mont
 const MILESTONE_PRESETS: { type: MilestoneType; label: string; icon: LucideIcon }[] = [
   { type: 'env-provision',          label: 'Environment Provision Stage', icon: CloudUpload },
   { type: 'dev-resource-provision', label: 'DEV Resource Provision Stage', icon: Cpu         },
-  { type: 'dev-data-migration',     label: 'DEV Data Migration Stage',    icon: Database    },
   { type: 'dev-cutover',            label: 'DEV Cutover',                 icon: ArrowRight  },
   { type: 'prd-resource-provision', label: 'PRD Resource Provision Stage', icon: HardDrive   },
-  { type: 'prd-data-migration',     label: 'PRD Data Migration Stage',    icon: BarChart2   },
   { type: 'prd-cutover',            label: 'PRD Cutover',                 icon: Sparkles    },
   { type: 'custom',                 label: 'Custom Milestone',            icon: Pencil      },
 ]
@@ -120,6 +118,7 @@ const MILESTONE_TYPE_META: Record<MilestoneType, { bg: string; color: string; la
   'prd-cutover':            { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'PrdCut', icon: Sparkles    },
   'custom':                 { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'Custom', icon: Pencil      },
   'category-milestone':     { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'Category', icon: Pencil      },
+  'data-migration-period':  { bg: 'oklch(0.88 0.06 300)', color: 'oklch(0.40 0.14 300)', label: 'DataMigration', icon: DatabaseBackup },
 }
 
 const WAVE_STATUS_META: Record<string, { bg: string; color: string }> = {
@@ -353,8 +352,8 @@ function formatDate(iso: string): string {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
 }
-function formatDuration(start: string, end: string): string {
-  const days = Math.max(1, daysBetween(parseDate(start), parseDate(end)))
+function formatDuration(start: string, end: string, inclusive = false): string {
+  const days = Math.max(1, daysBetween(parseDate(start), parseDate(end)) + (inclusive ? 1 : 0))
   return `${days}d`
 }
 function formatDDMM(iso: string): string {
@@ -459,6 +458,18 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   const colPx      = ZOOM_COL_PX[zoom]
   const daysPerCol = ZOOM_DAYS_PER_COL[zoom]
 
+  function wrapBar(bar: ReactNode, isDataMigrationPeriod: boolean, start: string, end: string) {
+    if (!isDataMigrationPeriod) return bar
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{bar}</TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">{formatDate(start)} → {formatDate(end)}</p>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
   // ─── Timeline bounds ─────────────────────────────────────────────────────────
 
   const { timelineStart, timelineEnd, todayOffset } = useMemo(() => {
@@ -498,8 +509,9 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   function barLeft(isoDate: string): number {
     return daysBetween(timelineStart, parseDate(isoDate)) * (colPx / daysPerCol)
   }
-  function barWidth(start: string, end: string): number {
-    return Math.max(1, daysBetween(parseDate(start), parseDate(end))) * (colPx / daysPerCol)
+  function barWidth(start: string, end: string, inclusive = false): number {
+    const extra = inclusive ? 1 : 0
+    return Math.max(1, daysBetween(parseDate(start), parseDate(end)) + extra) * (colPx / daysPerCol)
   }
 
   // ─── Embargo helpers ─────────────────────────────────────────────────────────
@@ -556,7 +568,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   }
 
   function getEffectivePlanning(p: Project): ProjectPlanning {
-    let planning = localPlanning[p.id] ?? p.planning
+    const planning = localPlanning[p.id] ?? p.planning
     if (!planning) {
       const wave = p.waveId ? waveMap.get(p.waveId) : undefined
       const today = toIso(new Date())
@@ -583,8 +595,9 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
 
   // ─── Drag handlers ────────────────────────────────────────────────────────────
 
-  function onPointerDown(e: React.PointerEvent, projectId: string, milestoneId: string | null, type: DragType, start: string, end: string) {
+  function onPointerDown(e: React.PointerEvent, projectId: string, milestoneId: string | null, type: DragType, start: string, end: string, milestoneType?: MilestoneType) {
     if (readOnly) return
+    if (milestoneType === 'data-migration-period') return
     e.preventDefault(); e.stopPropagation()
     setDragState({ projectId, milestoneId, type, startX: e.clientX, originalStart: start, originalEnd: end })
     document.body.style.cursor = type === 'move' ? 'grabbing' : 'col-resize'
@@ -801,12 +814,14 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     if (sourceIdxInMilestones === -1) return
     const [moved] = milestones.splice(sourceIdxInMilestones, 1)
     if (!moved) return
-    // Category milestones are rendered first, so regular milestone indices are offset
+    // Category milestones and the data-migration period are rendered first, so regular milestone indices are offset
     const assignedCmIds = new Set(project.categoryMilestoneIds ?? [])
     const cmCount = categoryMilestones.filter(cm => assignedCmIds.has(cm.id)).length
-    const visualSourceIndex = cmCount + sourceIdxInMilestones
+    const dmPeriod = buildDataMigrationPeriodMilestone(project)
+    const fixedCount = (dmPeriod ? 1 : 0) + cmCount
+    const visualSourceIndex = fixedCount + sourceIdxInMilestones
     const visualDropIndex = overIndex > visualSourceIndex ? overIndex - 1 : overIndex
-    const insertAt = Math.max(0, visualDropIndex - cmCount)
+    const insertAt = Math.max(0, visualDropIndex - fixedCount)
     milestones.splice(Math.min(insertAt, milestones.length), 0, moved)
     const updated = { ...base, milestones }
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
@@ -1211,29 +1226,58 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     | { type: 'milestone';             wave: Wave | null; project: Project; milestone: PlanningMilestone; projectIndex: number; milestoneIndex: number }
     | { type: 'unassigned-header' }
 
+  function buildDataMigrationPeriodMilestone(p: Project): PlanningMilestone | undefined {
+    const plan = p.dataMigrationPlan ?? p.dataMigrationSchedule
+    if (!plan) return undefined
+
+    const candidates: { start?: string; end?: string }[] = []
+    if (plan.startDate) candidates.push({ start: plan.startDate, end: plan.endDate })
+    if (plan.cycleBlocks?.length) {
+      for (const block of plan.cycleBlocks) {
+        candidates.push({ start: block.startDate, end: block.endDate })
+      }
+    }
+    if (candidates.length === 0) return undefined
+
+    let start: string | undefined
+    let end: string | undefined
+    for (const c of candidates) {
+      if (c.start && (!start || c.start < start)) start = c.start
+      if (c.end && (!end || c.end > end)) end = c.end
+    }
+    if (!start || !end) return undefined
+
+    const today = toIso(new Date())
+    let status: MilestoneStatus
+    if (plan.completedAt) status = 'done'
+    else if (today >= start && today <= end) status = 'in-progress'
+    else status = 'todo'
+
+    return {
+      id: `data-migration-period-${p.id}`,
+      name: 'Data Migration',
+      type: 'data-migration-period',
+      start,
+      end,
+      status,
+      deps: [],
+    }
+  }
+
   function getMilestonesForProject(p: Project): PlanningMilestone[] {
-    let milestones = (localPlanning[p.id] ?? p.planning)?.milestones ?? []
+    const plan = localPlanning[p.id] ?? p.planning
+    let milestones = plan?.milestones ?? []
     // Remove any category milestones already in planning to avoid duplication
     const assignedCmIds = new Set(p.categoryMilestoneIds ?? [])
     milestones = milestones.filter(m => !assignedCmIds.has(m.id))
-    if (rowMilestoneDragState?.projectId === p.id && milestones.length > 0) {
-      const arr = [...milestones]
-      const [moved] = arr.splice(rowMilestoneDragState.sourceIndex, 1)
-      if (moved) {
-        const insertAt = rowMilestoneDragState.overIndex > rowMilestoneDragState.sourceIndex
-          ? rowMilestoneDragState.overIndex - 1
-          : rowMilestoneDragState.overIndex
-        arr.splice(Math.min(insertAt, arr.length), 0, moved)
-        milestones = arr
-      }
-    }
+
     // Inject category milestones (with per-project overrides), sorted by creation date
     const assignedCMs = (p.categoryMilestoneIds ?? [])
       .map(cmId => categoryMilestones.find(cm => cm.id === cmId))
       .filter((cm): cm is CategoryMilestone => cm !== undefined)
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       .map(cm => {
-        const override = (localPlanning[p.id] ?? p.planning)?.categoryMilestoneOverrides?.[cm.id]
+        const override = plan?.categoryMilestoneOverrides?.[cm.id]
         return {
           id: cm.id,
           name: cm.name,
@@ -1244,7 +1288,28 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
           deps: [],
         }
       })
-    return [...assignedCMs, ...milestones]
+
+    const dmPeriod = buildDataMigrationPeriodMilestone(p)
+    const fixedCount = (dmPeriod ? 1 : 0) + assignedCMs.length
+
+    if (rowMilestoneDragState?.projectId === p.id && milestones.length > 0) {
+      const arr = [...milestones]
+      const sourceIdxInMilestones = arr.findIndex(m => m.id === rowMilestoneDragState.milestoneId)
+      if (sourceIdxInMilestones !== -1) {
+        const [moved] = arr.splice(sourceIdxInMilestones, 1)
+        if (moved) {
+          const visualSourceIndex = fixedCount + sourceIdxInMilestones
+          const visualDropIndex = rowMilestoneDragState.overIndex > visualSourceIndex
+            ? rowMilestoneDragState.overIndex - 1
+            : rowMilestoneDragState.overIndex
+          const insertAt = Math.max(0, visualDropIndex - fixedCount)
+          arr.splice(Math.min(insertAt, arr.length), 0, moved)
+          milestones = arr
+        }
+      }
+    }
+
+    return dmPeriod ? [dmPeriod, ...assignedCMs, ...milestones] : [...assignedCMs, ...milestones]
   }
 
   // ─── Search filter ───────────────────────────────────────────────────────────
@@ -2241,6 +2306,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
               const milestoneIdx0      = milestoneIndex - 1
               const isDraggedMilestone = rowMilestoneDragState?.milestoneId === milestone.id
               const isCategoryMilestone = milestone.type === 'category-milestone'
+              const isDataMigrationPeriod = milestone.type === 'data-migration-period'
               const categoryMilestone = isCategoryMilestone
                 ? categoryMilestones.find(cm => cm.id === milestone.id)
                 : undefined
@@ -2277,10 +2343,20 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     </div>
                     {/* Name col */}
                     <div className={cn(cellClass, 'pl-6 group/taskname gap-[5px] text-[13px] text-[var(--g-text)]')}>
-                      {!isCategoryMilestone ? (
+                      {isDataMigrationPeriod ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Lock className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p className="text-xs">Data migration period is managed on the Data Migration page</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : !isCategoryMilestone ? (
                         <GripVertical
                           className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-grab"
                           onPointerDown={e => {
+                            if (milestone.type === 'data-migration-period') return
                             e.preventDefault(); e.stopPropagation()
                             setRowMilestoneDragState({ projectId: project.id, milestoneId: milestone.id, sourceIndex: milestoneIdx0, overIndex: milestoneIdx0 })
                             document.body.style.cursor = 'grabbing'
@@ -2312,7 +2388,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                           >
                             {milestone.name}
                           </span>
-                          {!isCategoryMilestone && (
+                          {!isCategoryMilestone && !isDataMigrationPeriod && (
                             <button
                               className="opacity-0 group-hover/taskname:opacity-100 shrink-0 bg-transparent border-none cursor-pointer text-[var(--g-text-subtle)] p-0.5 rounded-[4px] flex items-center transition-[opacity] duration-[100ms]"
                               onClick={e => {
@@ -2359,43 +2435,56 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     </div>
                     {/* Duration col */}
                     <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
-                      {formatDuration(start, end)}
+                      {formatDuration(start, end, isDataMigrationPeriod)}
                     </div>
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="bg-transparent border-none cursor-pointer text-[var(--g-text-subtle)] p-0.5 rounded-[4px] flex items-center hover:text-[var(--g-text)]">
-                            <MoreHorizontal className="w-3.5 h-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="min-w-[240px]">
-                          {(() => {
-                            const nextStatus = nextMilestoneStatus(milestone.status)
-                            if (!nextStatus) return null
-                            const nextMeta = MILESTONE_STATUS_META[nextStatus]
-                            const NextIcon = nextMeta.icon
-                            return (
+                      {isDataMigrationPeriod ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-center text-[var(--g-text-subtle)]">
+                              <Lock className="w-3.5 h-3.5" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p className="text-xs">Data migration period is managed on the Data Migration page</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="bg-transparent border-none cursor-pointer text-[var(--g-text-subtle)] p-0.5 rounded-[4px] flex items-center hover:text-[var(--g-text)]">
+                              <MoreHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-[240px]">
+                            {(() => {
+                              const nextStatus = nextMilestoneStatus(milestone.status)
+                              if (!nextStatus) return null
+                              const nextMeta = MILESTONE_STATUS_META[nextStatus]
+                              const NextIcon = nextMeta.icon
+                              return (
+                                <DropdownMenuItem
+                                  onClick={() => setStatusDialog({ open: true, projectId: project.id, milestoneId: milestone.id, nextStatus })}
+                                >
+                                  <NextIcon className="w-[13px] h-[13px] mr-1.5" />
+                                  Mark as {nextMeta.label}
+                                </DropdownMenuItem>
+                              )
+                            })()}
+                            {nextMilestoneStatus(milestone.status) && <DropdownMenuSeparator />}
+                            {!isCategoryMilestone && (
                               <DropdownMenuItem
-                                onClick={() => setStatusDialog({ open: true, projectId: project.id, milestoneId: milestone.id, nextStatus })}
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeleteDialog({ open: true, projectId: project.id, milestoneId: milestone.id, milestoneName: milestone.name })}
                               >
-                                <NextIcon className="w-[13px] h-[13px] mr-1.5" />
-                                Mark as {nextMeta.label}
+                                <Trash2 className="w-[13px] h-[13px] mr-1.5" />
+                                Remove
                               </DropdownMenuItem>
-                            )
-                          })()}
-                          {nextMilestoneStatus(milestone.status) && <DropdownMenuSeparator />}
-                          {!isCategoryMilestone && (
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setDeleteDialog({ open: true, projectId: project.id, milestoneId: milestone.id, milestoneName: milestone.name })}
-                            >
-                              <Trash2 className="w-[13px] h-[13px] mr-1.5" />
-                              Remove
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
 
@@ -2406,13 +2495,16 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     onClick={() => { setSelectedBarId(milestone.id); }}
                   >
 
-                    {start && end ? (
+                    {start && end ? wrapBar(
                       <div
                         data-bar-id={milestone.id}
-                        className="group absolute top-1/2 -translate-y-1/2 cursor-grab select-none z-[1] rounded-[3px]"
+                        className={cn(
+                          'absolute top-1/2 -translate-y-1/2 select-none z-[1] rounded-[3px]',
+                          isDataMigrationPeriod ? 'cursor-default' : 'cursor-grab group'
+                        )}
                         style={{
                           left: barLeft(start),
-                          width: Math.max(8, barWidth(start, end)),
+                          width: Math.max(8, barWidth(start, end, isDataMigrationPeriod)),
                           height: 22,
                           background: categoryMilestone?.color
                             ? hexToRgba(categoryMilestone.color, 0.25)
@@ -2426,7 +2518,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                                 : undefined,
                           opacity: isDragging ? 0.9 : 1,
                         }}
-                        onPointerDown={e => { onPointerDown(e, project.id, milestone.id, 'move', start, end); setSelectedBarId(milestone.id) }}
+                        onPointerDown={isDataMigrationPeriod ? undefined : e => { onPointerDown(e, project.id, milestone.id, 'move', start, end, milestone.type); setSelectedBarId(milestone.id) }}
                       >
                         {/* Progress fill — status background color */}
                         <div
@@ -2447,32 +2539,35 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                           )
                         })()}
                         {/* Resize handles */}
-                        <div
-                          className={cn(
-                            'absolute left-0 top-0 bottom-0 w-[5px] cursor-ew-resize z-[2] rounded-tl-[3px] rounded-bl-[3px]',
-                            isSelected ? 'bg-[rgba(0,0,0,0.18)]' : 'bg-transparent',
-                          )}
-                          onPointerDown={e => onPointerDown(e, project.id, milestone.id, 'resize-start', start, end)}
-                        />
-                        <div
-                          className={cn(
-                            'absolute right-0 top-0 bottom-0 w-[5px] cursor-ew-resize z-[2] rounded-tr-[3px] rounded-br-[3px]',
-                            isSelected ? 'bg-[rgba(0,0,0,0.18)]' : 'bg-transparent',
-                          )}
-                          onPointerDown={e => onPointerDown(e, project.id, milestone.id, 'resize-end', start, end)}
-                        />
-                        {/* Connector dot (right = outward only) */}
-                        <div
-                          className={cn(
-                            isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-                            'absolute cursor-crosshair z-[3] transition-[opacity] duration-[120ms] rounded-full',
-                            'bg-[var(--g-bg)] border-2 border-[var(--g-accent)] w-[10px] h-[10px] top-1/2 -translate-y-1/2',
-                          )}
-                          style={{ left: 'calc(100% + 2px)' }}
-                          onPointerDown={e => beginConn(milestone.id, barLeft(start) + barWidth(start, end), rowTops[rowIdx] + ROW_H / 2, e)}
-                        />
-                      </div>
-                    ) : null}
+                        {!isDataMigrationPeriod && (
+                          <>
+                            <div
+                              className={cn(
+                                'absolute left-0 top-0 bottom-0 w-[5px] cursor-ew-resize z-[2] rounded-tl-[3px] rounded-bl-[3px]',
+                                isSelected ? 'bg-[rgba(0,0,0,0.18)]' : 'bg-transparent',
+                              )}
+                              onPointerDown={e => onPointerDown(e, project.id, milestone.id, 'resize-start', start, end, milestone.type)}
+                            />
+                            <div
+                              className={cn(
+                                'absolute right-0 top-0 bottom-0 w-[5px] cursor-ew-resize z-[2] rounded-tr-[3px] rounded-br-[3px]',
+                                isSelected ? 'bg-[rgba(0,0,0,0.18)]' : 'bg-transparent',
+                              )}
+                              onPointerDown={e => onPointerDown(e, project.id, milestone.id, 'resize-end', start, end, milestone.type)}
+                            />
+                            {/* Connector dot (right = outward only) */}
+                            <div
+                              className={cn(
+                                isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                                'absolute cursor-crosshair z-[3] transition-[opacity] duration-[120ms] rounded-full',
+                                'bg-[var(--g-bg)] border-2 border-[var(--g-accent)] w-[10px] h-[10px] top-1/2 -translate-y-1/2',
+                              )}
+                              style={{ left: 'calc(100% + 2px)' }}
+                              onPointerDown={e => beginConn(milestone.id, barLeft(start) + barWidth(start, end), rowTops[rowIdx] + ROW_H / 2, e)}
+                            />
+                          </>
+                        )}
+                      </div>, isDataMigrationPeriod, start, end) : null}
                   </div>
                 </div>
               )

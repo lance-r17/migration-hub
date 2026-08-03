@@ -16,8 +16,6 @@ type ApplicationTier  = 'T0' | 'T1' | 'T2' | 'T3'
 type WaveStatus       = 'planned' | 'active' | 'completed'
 type MigrationStrategy = 'Lift & Shift' | 'Refactor' | 'Deboard'
 type ResourceCategory = 'computing' | 'security' | 'networking' | 'database' | 'storage' | 'middleware' | 'analytics-computing' | 'monitoring'
-type TaskType         = 'onboarding' | 'migrate-computing' | 'migrate-database' | 'migrate-storage' | 'migrate-logs' | 'migrate-big-data' | 'custom'
-type TaskStatus       = 'todo' | 'in-progress' | 'done'
 type EngagementStatus = 'pending' | 'scheduled' | 'completed' | 'cancelled' | 'no_show'
 type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 ```
@@ -90,6 +88,7 @@ interface Project {
   targetArchitecture?: TargetArchitecture
   migrationEffortEstimation?: MigrationEffortEstimation
   dataMigrationSchedule?: DataMigrationSchedule
+  dataMigrationPlan?: DataMigrationSchedule
   risks: Risk[]
   approvals: Approval[]
   // Wave planning
@@ -231,16 +230,31 @@ interface DateRangeEntry {
 interface DataMigrationSchedule {
   startDate?: string
   endDate?: string
+  cycleBlocks?: { startDate: string; endDate: string }[]
   cycleCount?: number
+  cycleCountOption?: 'min' | 'more'
   cycleJustification?: string
   dtsInstanceCount?: number
   dtsJustification?: string
   needAsrDr?: boolean
   asrDrJustification?: string
+  bgiCloudLeadId?: string
+  approvalAcknowledged?: boolean
+  forwardAcknowledged?: boolean
+  confirmAcknowledged?: boolean
+  acceptsTimeAdjustment?: boolean
+  completedAt?: string
+  completedBy?: string
+  completionRemark?: string
+  reopenedAt?: string
+  reopenedBy?: string
+  reopenReason?: string
+  adjustedAt?: string
+  adjustedBy?: string
 }
 ```
 
-Captured by the data migration survey and stored as a project section.
+Captured by the data migration survey and stored as a project section. `dataMigrationPlan` is a later platform-lead-adjusted copy of the same shape. On the Wave Gantt chart the two are combined into a single immutable **Data Migration Period** milestone: the earliest start and latest end across `startDate`/`endDate` and any `cycleBlocks` are used, and the end date is treated inclusively.
 
 ---
 
@@ -385,20 +399,36 @@ Gantt-managed planning data stored as a JSONB blob:
 interface ProjectPlanning {
   startDate: string
   endDate: string
-  tasks: PlanningTask[]
+  milestones: PlanningMilestone[]
   categoryMilestoneOverrides?: Record<string, { start: string; end: string; status?: MilestoneStatus }>
 }
 
-interface PlanningTask {
+interface PlanningMilestone {
   id: string
   name: string
-  type: TaskType
-  start: string
-  end: string
-  status: TaskStatus
-  deps: string[]
+  type: MilestoneType
+  start: string      // ISO date
+  end: string        // ISO date
+  status: MilestoneStatus
+  deps: string[]     // other PlanningMilestone ids
 }
+
+type MilestoneType =
+  | 'env-provision'
+  | 'dev-resource-provision'
+  | 'dev-data-migration'
+  | 'dev-cutover'
+  | 'prd-resource-provision'
+  | 'prd-data-migration'
+  | 'prd-cutover'
+  | 'custom'
+  | 'category-milestone'
+  | 'data-migration-period'   // derived, read-only, Gantt only
+
+type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 ```
+
+> **Note:** `data-migration-period` is not stored in `ProjectPlanning.milestones`. It is derived at render time from `Project.dataMigrationPlan ?? Project.dataMigrationSchedule` and injected as the first milestone row under each project in the Wave Gantt chart.
 
 ---
 
