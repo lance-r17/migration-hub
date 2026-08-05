@@ -124,6 +124,10 @@ export const mockProjects: Project[] = [
       planEndDate: '2026-09-30',
       tasks: [],
     },
+    environmentProvision: {
+      date: '2026-05-15',
+      environments: ['dev', 'prod'],
+    },
 
     // Section 1
     applicationOverview: {
@@ -477,6 +481,11 @@ export const mockProjects: Project[] = [
       planStartDate: '2025-03-01',
       planEndDate: '2025-08-15',
       tasks: [],
+    },
+    environmentProvision: {
+      date: '2025-02-10',
+      environments: ['dev'],
+      completedAt: '2025-02-12T10:00:00.000Z',
     },
 
     applicationOverview: {

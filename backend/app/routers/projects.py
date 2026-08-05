@@ -216,6 +216,7 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
                 "justification_without_survey": p.justification_without_survey,
                 "data_migration_schedule": p.data_migration_schedule,
                 "data_migration_plan": p.data_migration_plan,
+                "environment_provision": p.environment_provision,
                 "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "data_migration_survey_submitted_by": p.data_migration_survey_submitted_by,
                 "migration_constraints": p.migration_constraints,
@@ -351,6 +352,7 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
                 "justification_without_survey": p.justification_without_survey,
                 "data_migration_schedule": p.data_migration_schedule,
                 "data_migration_plan": p.data_migration_plan,
+                "environment_provision": p.environment_provision,
                 "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "data_migration_survey_submitted_by": p.data_migration_survey_submitted_by,
                 "migration_constraints": p.migration_constraints,
@@ -419,6 +421,7 @@ def _project_detail(p) -> ProjectDetail:
         justification_without_survey=p.justification_without_survey,
         data_migration_schedule=p.data_migration_schedule,
         data_migration_plan=p.data_migration_plan,
+        environment_provision=p.environment_provision,
         data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
         data_migration_survey_submitted_by=p.data_migration_survey_submitted_by,
         stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
@@ -802,6 +805,13 @@ async def update_section(
             raise HTTPException(
                 status_code=403,
                 detail="Only Platform Migration Leads or Admins can update the data migration plan.",
+            )
+
+    if section_key == "environmentProvision":
+        if "platform_migration_lead" not in (current_user.role or "") and not _user_has_admin_role(current_user.role):
+            raise HTTPException(
+                status_code=403,
+                detail="Only Platform Migration Leads or Admins can update environment provision.",
             )
 
     if section_key == "applicationOverview":

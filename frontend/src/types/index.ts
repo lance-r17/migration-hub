@@ -71,6 +71,36 @@ export interface ApplicationOverview {
 
 export interface PartialApplicationOverview extends Partial<ApplicationOverview> {}
 
+// ─── Environment Provision ────────────────────────────────────────────────
+
+export type ProvisionEnvironment = 'dev' | 'prod'
+export type EnvironmentProvisionStatus = 'planned' | 'in-progress' | 'completed'
+
+export interface EnvironmentProvision {
+  date?: string
+  environments?: ProvisionEnvironment[]
+  completedAt?: string | null
+}
+
+export function getEnvironmentProvisionStatus(
+  provision: EnvironmentProvision | undefined,
+): EnvironmentProvisionStatus {
+  if (!provision) return 'planned'
+  if (provision.completedAt) return 'completed'
+  if (!provision.date) return 'planned'
+  const today = new Date().toISOString().slice(0, 10)
+  if (provision.date <= today) return 'in-progress'
+  return 'planned'
+}
+
+export function formatProvisionEnvironments(
+  environments: ProvisionEnvironment[] | undefined,
+): string {
+  if (!environments || environments.length === 0) return '—'
+  if (environments.length === 2) return 'DEV, PROD'
+  return environments[0].toUpperCase()
+}
+
 // ─── Section 2: Current Infrastructure ──────────────────────────────────────
 
 export type ResourceCategory = 'computing' | 'security' | 'networking' | 'database' | 'storage' | 'middleware' | 'analytics-computing' | 'monitoring'
@@ -289,6 +319,7 @@ export interface PlanningMilestone {
   end: string        // ISO date
   status: MilestoneStatus
   deps: string[]     // other PlanningMilestone ids
+  immutable?: boolean
 }
 
 export interface ProjectPlanning {
@@ -383,6 +414,7 @@ export interface Project {
   // Wave planning
   waveId?: string              // references Wave.id; takes precedence over migrationWave for display
   planning?: ProjectPlanning   // Gantt-managed planning blob (dates + tasks)
+  environmentProvision?: EnvironmentProvision
   jiraSubtaskConfig?: JiraSubtaskConfig
   jiraStoryKey?: string        // e.g. "MIG-42", populated by async Jira job
   jiraJobStatus?: 'pending' | 'processing' | 'completed' | 'failed'

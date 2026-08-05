@@ -7,6 +7,7 @@ import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
 import { LoginPage } from './pages/LoginPage'
 import { WavesPage } from './pages/WavesPage'
 import { WaveGanttPage } from './pages/WaveGanttPage'
+import { EnvironmentProvisionPage } from './pages/EnvironmentProvisionPage'
 import { DataMigrationPage } from './pages/DataMigrationPage'
 import { EngagementCalendarPage } from './pages/EngagementCalendarPage'
 import { EngagementNotesPage } from './pages/EngagementNotesPage'
@@ -74,6 +75,7 @@ function App() {
           <Route path="/engagements/:projectId/edit" element={<ProtectedRoute><EngagementNotesEditPage /></ProtectedRoute>} />
           <Route path="/waves" element={<ProtectedRoute><WavesPage /></ProtectedRoute>} />
           <Route path="/waves/gantt" element={<ProtectedRoute><WaveGanttPage /></ProtectedRoute>} />
+          <Route path="/waves/environment-provision" element={<ProtectedRoute><EnvironmentProvisionPage /></ProtectedRoute>} />
           <Route path="/waves/data-migration" element={<ProtectedRoute><DataMigrationRoute /></ProtectedRoute>} />
           <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
           <Route path="/email" element={<ProtectedRoute><EmailTemplatesPage /></ProtectedRoute>} />

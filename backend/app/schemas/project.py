@@ -62,6 +62,7 @@ class ProjectListItem(BaseModel):
     team: list[dict[str, Any]] | None = None
     migration_constraints: dict[str, Any] | None = None
     migration_effort_estimation: dict[str, Any] | None = None
+    environment_provision: dict[str, Any] | None = None
     application_overview: dict[str, Any] | None = None
     dependencies: dict[str, Any] | None = None
     governance_roles: GovernanceRolesOut | None = None
@@ -115,6 +116,7 @@ class ProjectDetail(BaseModel):
     nfrs: dict[str, Any] | None = None
     migration_constraints: dict[str, Any] | None = None
     target_architecture: dict[str, Any] | None = None
+    environment_provision: dict[str, Any] | None = None
     engagement: dict[str, Any] | None = None
     cloud_resources: list[CloudResourceOut] = []
     risks: list[RiskOut] = []
@@ -152,6 +154,7 @@ class ProjectHomeItem(BaseModel):
     team: list[dict[str, Any]] | None = None
     migration_constraints: dict[str, Any] | None = None
     engagement: dict[str, Any] | None = None
+    environment_provision: dict[str, Any] | None = None
     approvals: list[ApprovalOut] | None = None
     cloud_resources: list[CloudResourceHomeOut] | None = None
     risks: list[RiskHomeOut] | None = None

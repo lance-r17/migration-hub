@@ -40,6 +40,7 @@ class Project(Base, TimestampMixin):
     migration_constraints: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     target_architecture: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     migration_effort_estimation: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    environment_provision: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     jira_subtask_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships

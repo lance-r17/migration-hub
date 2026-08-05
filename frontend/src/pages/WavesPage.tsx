@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Waves, Download, Plus, Lock, GanttChart, Database, Tag, Link, Pencil, Trash2, RotateCcw,
+  Cloud, ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/layout/AppShell'
@@ -21,6 +22,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { CreateWaveDrawer } from '@/components/drawers/CreateWaveDrawer'
@@ -330,10 +337,14 @@ export function WavesPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <Button variant="outline" size="lg" onClick={() => navigate('/waves/gantt')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
               <GanttChart className="size-4 mr-2" />
               Gantt Chart
+            </Button>
+            <Button variant="outline" size="lg" onClick={() => navigate('/waves/environment-provision')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
+              <Cloud className="size-4 mr-2" />
+              Provisioning
             </Button>
             {dataMigrationEnabled && (
               <Button variant="outline" size="lg" onClick={() => navigate('/waves/data-migration')} className="bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary">
@@ -348,14 +359,26 @@ export function WavesPage() {
             >
               <Download size={14} /> Export
             </button>
-            <Button variant="outline" size="lg" onClick={() => setImportOpen(true)}>
-              <Download className="size-4 mr-2" />
-              Import Wave
-            </Button>
-            <Button size="lg" onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4 mr-2" />
-              Create Wave
-            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="lg">
+                  <Plus className="size-4 mr-2" />
+                  New Wave
+                  <ChevronDown className="size-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setCreateOpen(true)}>
+                  <Plus className="size-4 mr-2" />
+                  Create Wave
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                  <Download className="size-4 mr-2" />
+                  Import Wave
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -446,17 +469,19 @@ export function WavesPage() {
                     </TableCell>
                     <TableCell>
                       {isDeleted ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-primary hover:text-primary"
-                          onClick={() => { setRestoringWave(wave); setRestoreDialogOpen(true) }}
-                          title="Restore"
-                        >
-                          <RotateCcw className="size-4" />
-                        </Button>
+                        <div className="flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-primary hover:text-primary"
+                            onClick={() => { setRestoringWave(wave); setRestoreDialogOpen(true) }}
+                            title="Restore"
+                          >
+                            <RotateCcw className="size-4" />
+                          </Button>
+                        </div>
                       ) : (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -557,7 +582,7 @@ export function WavesPage() {
                         {projectCountByCM(cm.id)}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="icon"

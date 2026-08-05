@@ -6,6 +6,7 @@ import type {
   ProjectPlanning,
   TeamMember,
   ApplicationOverview,
+  EnvironmentProvision,
   AvailabilityResilience,
   DataPersistence,
   Dependencies,
@@ -102,6 +103,7 @@ interface ProjectListItemApi {
   migration_effort_estimation: MigrationEffortEstimation | null
   data_migration_schedule: DataMigrationSchedule | null
   data_migration_plan: DataMigrationSchedule | null
+  environment_provision: EnvironmentProvision | null
   data_migration_survey_submitted_at: string | null
   data_migration_survey_submitted_by: string | null
   application_overview: ApplicationOverview | null
@@ -142,6 +144,7 @@ interface ProjectApiResponse extends ProjectListItemApi {
   migration_effort_estimation: MigrationEffortEstimation | null
   data_migration_schedule: DataMigrationSchedule | null
   data_migration_plan: DataMigrationSchedule | null
+  environment_provision: EnvironmentProvision | null
   data_migration_survey_submitted_at: string | null
   data_migration_survey_submitted_by: string | null
   engagement: Engagement | null
@@ -217,6 +220,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     stageProgress: raw.stage_progress ?? undefined,
     migrationConstraints: raw.migration_constraints ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
+    environmentProvision: raw.environment_provision ?? undefined,
     dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
     dataMigrationPlan: raw.data_migration_plan ?? undefined,
     dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
@@ -264,6 +268,7 @@ function fromApi(raw: ProjectApiResponse): Project {
     migrationConstraints: raw.migration_constraints ?? undefined,
     targetArchitecture: raw.target_architecture ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
+    environmentProvision: raw.environment_provision ?? undefined,
     dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
     dataMigrationPlan: raw.data_migration_plan ?? undefined,
     dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
@@ -355,6 +360,21 @@ export async function updateApplicationOverview(
     return store.updateProject(id, 'applicationOverview', updated)
   }
   const raw = await apiClient.patch<ProjectApiResponse>(ENDPOINTS.section(id, 'applicationOverview'), { value: partial })
+  return fromApi(raw)
+}
+
+export async function updateEnvironmentProvision(
+  id: string,
+  provision: EnvironmentProvision,
+): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const p = store.getProject(id)
+    if (!p) throw new Error('Project not found')
+    const updated: EnvironmentProvision = { ...p.environmentProvision, ...provision }
+    return store.updateProject(id, 'environmentProvision', updated)
+  }
+  const raw = await apiClient.patch<ProjectApiResponse>(ENDPOINTS.section(id, 'environmentProvision'), { value: provision })
   return fromApi(raw)
 }
 

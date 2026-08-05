@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback, memo, ReactNode } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, memo, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, DatabaseBackup } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -100,7 +100,6 @@ const ZOOM_COL_PX: Record<ZoomLevel, number>      = { days: 28, weeks: 80, month
 const ZOOM_DAYS_PER_COL: Record<ZoomLevel, number> = { days: 1,  weeks: 7,  months: 30  }
 
 const MILESTONE_PRESETS: { type: MilestoneType; label: string; icon: LucideIcon }[] = [
-  { type: 'env-provision',          label: 'Environment Provision Stage', icon: CloudUpload },
   { type: 'dev-resource-provision', label: 'DEV Resource Provision Stage', icon: Cpu         },
   { type: 'dev-cutover',            label: 'DEV Cutover',                 icon: ArrowRight  },
   { type: 'prd-resource-provision', label: 'PRD Resource Provision Stage', icon: HardDrive   },
@@ -1226,6 +1225,28 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     | { type: 'milestone';             wave: Wave | null; project: Project; milestone: PlanningMilestone; projectIndex: number; milestoneIndex: number }
     | { type: 'unassigned-header' }
 
+  function buildEnvironmentProvisionMilestone(p: Project): PlanningMilestone | undefined {
+    const provision = p.environmentProvision
+    if (!provision?.date) return undefined
+
+    const today = toIso(new Date())
+    let status: MilestoneStatus
+    if (provision.completedAt) status = 'done'
+    else if (provision.date <= today) status = 'in-progress'
+    else status = 'todo'
+
+    return {
+      id: `env-provision-date-${p.id}`,
+      name: 'Environment Provision',
+      type: 'env-provision',
+      start: provision.date,
+      end: provision.date,
+      status,
+      deps: [],
+      immutable: true,
+    }
+  }
+
   function buildDataMigrationPeriodMilestone(p: Project): PlanningMilestone | undefined {
     const plan = p.dataMigrationPlan ?? p.dataMigrationSchedule
     if (!plan) return undefined
@@ -1290,7 +1311,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       })
 
     const dmPeriod = buildDataMigrationPeriodMilestone(p)
-    const fixedCount = (dmPeriod ? 1 : 0) + assignedCMs.length
+    const envProvision = buildEnvironmentProvisionMilestone(p)
+    const fixedCount = (dmPeriod ? 1 : 0) + (envProvision ? 1 : 0) + assignedCMs.length
 
     if (rowMilestoneDragState?.projectId === p.id && milestones.length > 0) {
       const arr = [...milestones]
@@ -1309,7 +1331,11 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       }
     }
 
-    return dmPeriod ? [dmPeriod, ...assignedCMs, ...milestones] : [...assignedCMs, ...milestones]
+    return envProvision
+      ? [envProvision, ...(dmPeriod ? [dmPeriod] : []), ...assignedCMs, ...milestones]
+      : dmPeriod
+        ? [dmPeriod, ...assignedCMs, ...milestones]
+        : [...assignedCMs, ...milestones]
   }
 
   // ─── Search filter ───────────────────────────────────────────────────────────
@@ -2307,6 +2333,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
               const isDraggedMilestone = rowMilestoneDragState?.milestoneId === milestone.id
               const isCategoryMilestone = milestone.type === 'category-milestone'
               const isDataMigrationPeriod = milestone.type === 'data-migration-period'
+              const isImmutable = isDataMigrationPeriod || milestone.immutable
               const categoryMilestone = isCategoryMilestone
                 ? categoryMilestones.find(cm => cm.id === milestone.id)
                 : undefined
@@ -2343,13 +2370,17 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     </div>
                     {/* Name col */}
                     <div className={cn(cellClass, 'pl-6 group/taskname gap-[5px] text-[13px] text-[var(--g-text)]')}>
-                      {isDataMigrationPeriod ? (
+                      {isImmutable ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Lock className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-help" />
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            <p className="text-xs">Data migration period is managed on the Data Migration page</p>
+                            <p className="text-xs">
+                              {isDataMigrationPeriod
+                                ? 'Data migration period is managed on the Data Migration page'
+                                : 'Environment provision is managed on the Environment Provision page'}
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       ) : !isCategoryMilestone ? (
@@ -2388,7 +2419,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                           >
                             {milestone.name}
                           </span>
-                          {!isCategoryMilestone && !isDataMigrationPeriod && (
+                          {!isCategoryMilestone && !isImmutable && (
                             <button
                               className="opacity-0 group-hover/taskname:opacity-100 shrink-0 bg-transparent border-none cursor-pointer text-[var(--g-text-subtle)] p-0.5 rounded-[4px] flex items-center transition-[opacity] duration-[100ms]"
                               onClick={e => {
@@ -2439,7 +2470,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     </div>
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
-                      {isDataMigrationPeriod ? (
+                      {isImmutable ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="flex items-center justify-center text-[var(--g-text-subtle)]">
@@ -2447,7 +2478,11 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            <p className="text-xs">Data migration period is managed on the Data Migration page</p>
+                            <p className="text-xs">
+                              {isDataMigrationPeriod
+                                ? 'Data migration period is managed on the Data Migration page'
+                                : 'Environment provision is managed on the Environment Provision page'}
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       ) : (
@@ -2500,7 +2535,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                         data-bar-id={milestone.id}
                         className={cn(
                           'absolute top-1/2 -translate-y-1/2 select-none z-[1] rounded-[3px]',
-                          isDataMigrationPeriod ? 'cursor-default' : 'cursor-grab group'
+                          isImmutable ? 'cursor-default' : 'cursor-grab group'
                         )}
                         style={{
                           left: barLeft(start),
@@ -2518,7 +2553,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                                 : undefined,
                           opacity: isDragging ? 0.9 : 1,
                         }}
-                        onPointerDown={isDataMigrationPeriod ? undefined : e => { onPointerDown(e, project.id, milestone.id, 'move', start, end, milestone.type); setSelectedBarId(milestone.id) }}
+                        onPointerDown={isImmutable ? undefined : e => { onPointerDown(e, project.id, milestone.id, 'move', start, end, milestone.type); setSelectedBarId(milestone.id) }}
                       >
                         {/* Progress fill — status background color */}
                         <div
@@ -2539,7 +2574,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                           )
                         })()}
                         {/* Resize handles */}
-                        {!isDataMigrationPeriod && (
+                        {!isImmutable && (
                           <>
                             <div
                               className={cn(
