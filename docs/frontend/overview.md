@@ -11,7 +11,7 @@ frontend/
 │   ├── App.tsx                     # BrowserRouter + route definitions + ProtectedRoute
 │   ├── pages/
 │   │   ├── HomePage.tsx                  # Dashboard — stats, project cards, activity feed
-│   │   ├── ProjectsPage.tsx              # All projects table (Platform Migration Lead only)
+│   │   ├── ProjectsPage.tsx              # All projects table (Platform Migration Lead only). Includes Infra Footprint and Migration Driver score columns.
 │   │   ├── ProjectDetailsPage.tsx        # Full project register with all 10 sections
 │   │   ├── WavesPage.tsx                 # Wave planning (Platform Migration Lead only)
 │   │   ├── LoginPage.tsx                 # Mock SSO login
@@ -67,7 +67,9 @@ frontend/
 │       ├── utils.ts                   # cn() helper
 │       ├── noteTemplateUtils.ts       # Block sanitisation, variable resolution, smart replacement
 │       ├── bgi-utils.ts               # BGI tree helpers (filter, collectAllIds, findNodeById, prune, promote)
-│       └── categoryMilestoneIcons.ts  # Icon map for category milestone Gantt overlay
+│       ├── categoryMilestoneIcons.ts  # Icon map for category milestone Gantt overlay
+│       ├── scoring.ts                 # Project scoring: Infra Footprint and Migration Driver
+│       └── export-report.ts           # XLSX export helpers for project reports
 │
 └── packages/
     └── notion-editor/              # @frontend/notion-editor workspace package

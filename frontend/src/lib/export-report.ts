@@ -8,6 +8,7 @@ import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
 import { getBgiAncestry } from '@/lib/bgi-utils'
+import { getInfraFootprintScore, getMigrationDriverScore } from '@/lib/scoring'
 import type { Project, User, EngagementStatus, DataMigrationSchedule } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
@@ -1218,6 +1219,8 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
         'Migration Strategy': p.applicationOverview?.migrationStrategy ?? '—',
         'Migration Period': period,
         'Migration Effort': totalCost > 0 ? `$${Math.round(totalCost).toLocaleString()}` : '—',
+        'Infra Footprint': getInfraFootprintScore(p).score ?? '—',
+        'Migration Driver': getMigrationDriverScore(p).score ?? '—',
         'Survey Required': p.isSurveyNeeded === false ? 'No' : 'Yes',
         'Justification Without Survey': p.justificationWithoutSurvey ?? '—',
         'Survey Submitted At': p.surveySubmittedAt ? formatDate(p.surveySubmittedAt) : '—',
@@ -1236,7 +1239,7 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
       { wch: 32 }, { wch: 18 }, { wch: 18 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 28 },
       { wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 24 }, { wch: 8 },
       { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 36 }, { wch: 18 },
-      { wch: 24 }, { wch: 32 }, { wch: 14 },
+      { wch: 16 }, { wch: 16 }, { wch: 24 }, { wch: 32 }, { wch: 14 },
     ]
 
     const workbook = XLSX.utils.book_new()

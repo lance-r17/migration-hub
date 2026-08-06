@@ -188,6 +188,8 @@ When adding fields that should appear in exports:
 2. Add the matching header to the `headers` array (or rely on `json_to_sheet` object key order).
 3. Update `worksheet['!cols']` so the new column is readable.
 
+Score columns exported from `src/lib/scoring.ts` (e.g. **Infra Footprint**, **Migration Driver**) should call the same scoring utilities used in the UI so the spreadsheet stays consistent with the Projects table.
+
 For project-level reports, include survey timestamps consistently:
 - `Survey Submitted At` — application survey submission date.
 - `Data Migration Survey Submitted At` — data migration survey submission date.

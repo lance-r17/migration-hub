@@ -82,3 +82,14 @@ The HTML report is uploaded as an artifact (`playwright-report`) and retained fo
 | react-day-picker hover causes DOM detachment | Use `el.evaluate((el) => el.click())` for end-date selection |
 | Async mock data (200 ms delay) | `await expect(firstRow).toBeVisible({ timeout: 10000 })` before counting rows |
 | Toast notification matches wave name | Use `getByText('...', { exact: true })` to target table row only |
+
+## Logic verification scripts
+
+Pure calculation logic that is hard to exercise fully through UI tests (e.g. project scoring) can be validated with a standalone script run via `pnpm dlx tsx`:
+
+```bash
+cd frontend
+pnpm dlx tsx scripts/verify-scoring.ts
+```
+
+The script imports the mock data and scoring utilities, asserts expected scores for known projects, and exercises synthetic boundary cases (ECS counts, data volume thresholds, MaxCompute counts, tier mappings, and numeric driver thresholds).

@@ -15,6 +15,35 @@ test.describe('Projects Page', () => {
     await expect(page.getByRole('columnheader', { name: 'ID' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Status' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Progress' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Infra Footprint' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Migration Driver' })).toBeVisible()
+  })
+
+  test('infra footprint tooltip shows score matrix and raw values', async ({ authenticatedPage: page }) => {
+    const firstRow = page.locator('table tbody tr').first()
+    const cell = firstRow.getByRole('cell', { name: /Lightweight|Mid-tier|Large|Extended/ }).first()
+    await cell.hover()
+    const tooltip = page.locator('role=tooltip')
+    await expect(tooltip.getByText('Infra Footprint:')).toBeVisible()
+    await expect(tooltip.getByText('No. of ECS')).toBeVisible()
+    await expect(tooltip.getByText('Data Volume (DB / OSS)')).toBeVisible()
+    await expect(tooltip.getByText('No. of MaxCompute')).toBeVisible()
+    await expect(tooltip.getByText(/Raw values:/)).toBeVisible()
+  })
+
+  test('migration driver tooltip shows score matrix and raw values', async ({ authenticatedPage: page }) => {
+    const firstRow = page.locator('table tbody tr').first()
+    const cell = firstRow.getByRole('cell', { name: /Low|Medium|High/ }).first()
+    await cell.hover()
+    const tooltip = page.locator('role=tooltip')
+    await expect(tooltip.getByText('Migration Driver:')).toBeVisible()
+    await expect(tooltip.getByText('App Tier / IITA')).toBeVisible()
+    await expect(tooltip.getByText('Third-party Effort')).toBeVisible()
+    await expect(tooltip.getByText('Dependency')).toBeVisible()
+    await expect(tooltip.getByText('External Users')).toBeVisible()
+    await expect(tooltip.getByText('Internal Users')).toBeVisible()
+    await expect(tooltip.getByText('No. of Apps')).toBeVisible()
+    await expect(tooltip.getByText(/Raw values:/)).toBeVisible()
   })
 
   test('mock projects are shown in the table', async ({ authenticatedPage: page }) => {

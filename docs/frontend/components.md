@@ -124,6 +124,31 @@ interface SectionProps {
 | `StageProgressStepper` | Stage progress | Horizontal stepper for `setup → survey → signoff → migration` |
 | `SignOffWorkflowBar` | Sign-off | Approval status timeline visualization |
 
+### Project scoring tooltips
+
+Two tooltip components render the **Infra Footprint** and **Migration Driver** score matrices on the Projects list page. They wrap a trigger element (usually a table cell label) and highlight the matrix row that matches each input column for the project.
+
+```tsx
+<InfraFootprintTooltip project={project}>
+  <span className="cursor-help border-b border-dashed border-muted-foreground/50">
+    {getInfraFootprintScore(project).score ?? '—'}
+  </span>
+</InfraFootprintTooltip>
+```
+
+```tsx
+<MigrationDriverTooltip project={project}>
+  <span className="cursor-help border-b border-dashed border-muted-foreground/50">
+    {getMigrationDriverScore(project).score ?? '—'}
+  </span>
+</MigrationDriverTooltip>
+```
+
+| Component | Scoring utility | Inputs |
+|---|---|---|
+| `InfraFootprintTooltip` | `src/lib/scoring.ts` `getInfraFootprintScore` | Prod ECS count, DB/OSS data volume (TB), prod MaxCompute count |
+| `MigrationDriverTooltip` | `src/lib/scoring.ts` `getMigrationDriverScore` | Application tier + IITA, third-party FTE, dependency count, external/internal user counts, number of apps |
+
 ### `StageProgressStepper`
 
 Renders the four project stages as a horizontal stepper on `ProjectDetailsPage`.

@@ -55,6 +55,9 @@ import { getBgiHierarchy } from '@/services/bgi'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { BgiTree } from '@/components/bgi/BgiTree'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
+import { InfraFootprintTooltip } from '@/components/project/InfraFootprintTooltip'
+import { MigrationDriverTooltip } from '@/components/project/MigrationDriverTooltip'
+import { getInfraFootprintScore, getMigrationDriverScore } from '@/lib/scoring'
 import {
   exportProjectsToExcel,
   formatDate,
@@ -85,7 +88,7 @@ export function ProjectsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
   const { projects, loading, refresh } = useProjects({
-    fields: ['basic', 'itso', 'itso_delegate', 'progress', 'planning', 'overview', 'effort'],
+    fields: ['basic', 'itso', 'itso_delegate', 'progress', 'planning', 'overview', 'effort', 'resources', 'dependencies'],
   })
 
   const [currentPage, setCurrentPage] = useState(1)
@@ -543,6 +546,8 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Strategy</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Period</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Effort</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Infra Footprint</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Driver</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Migration Story</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
               </TableRow>
@@ -551,14 +556,14 @@ export function ProjectsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 15 }).map((_, j) => (
+                    {Array.from({ length: 18 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filteredProjects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={15} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={18} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -689,6 +694,28 @@ export function ProjectsPage() {
                               </div>
                             </TooltipContent>
                           </Tooltip>
+                        )
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-sm text-right">
+                      {(() => {
+                        const result = getInfraFootprintScore(project)
+                        if (!result.score) return <span className="text-muted-foreground">—</span>
+                        return (
+                          <InfraFootprintTooltip project={project}>
+                            <span className="cursor-help border-b border-dashed border-muted-foreground/50">{result.score}</span>
+                          </InfraFootprintTooltip>
+                        )
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-sm text-right">
+                      {(() => {
+                        const result = getMigrationDriverScore(project)
+                        if (!result.score) return <span className="text-muted-foreground">—</span>
+                        return (
+                          <MigrationDriverTooltip project={project}>
+                            <span className="cursor-help border-b border-dashed border-muted-foreground/50">{result.score}</span>
+                          </MigrationDriverTooltip>
                         )
                       })()}
                     </TableCell>
