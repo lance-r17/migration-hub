@@ -158,7 +158,7 @@ export function getInfraFootprintScore(project: Project): InfraFootprintResult {
   score = maxInfraLevel(score, maxcomputeLevelValue)
 
   if (prodResources.length === 0) {
-    score = null
+    score = 'Lightweight'
   }
 
   return {
