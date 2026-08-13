@@ -157,10 +157,11 @@ def create_app() -> FastAPI:
         admin_email,
         audit,
         billing,
+        category_milestones,
         confluence,
+        custom_nav_card,
         dashboard,
         email_templates,
-        category_milestones,
         embargos,
         bgi,
         jira,
@@ -187,6 +188,7 @@ def create_app() -> FastAPI:
     app.include_router(embargos.router, prefix=prefix)
     app.include_router(billing.router, prefix=prefix)
     app.include_router(billing.settings_router, prefix=prefix)
+    app.include_router(custom_nav_card.router, prefix=prefix)
     app.include_router(jira.router, prefix=prefix)
     app.include_router(jira.admin_router, prefix=prefix)
     app.include_router(product_categories.router, prefix=prefix)

@@ -44,3 +44,9 @@ export interface MigrationSettings {
   dataMigrationAdjustmentEnabled: boolean
   dataMigration: DataMigrationSettings
 }
+
+export interface CustomNavCardConfig {
+  title: string
+  description: string
+  url: string
+}

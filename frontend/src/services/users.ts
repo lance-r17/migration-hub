@@ -10,9 +10,11 @@ const ENDPOINTS = {
 
 export function userFromApi(u: Record<string, unknown>): User {
   const roleRaw = u.role as string | null | undefined
+  const projectRolesRaw = u.project_roles as string[] | null | undefined
   return {
-    ...(u as Omit<User, 'role'>),
+    ...(u as Omit<User, 'role' | 'projectRoles'>),
     role: roleRaw ? roleRaw.split(',').map(r => r.trim()).filter(Boolean) : [],
+    projectRoles: projectRolesRaw ?? [],
   }
 }
 

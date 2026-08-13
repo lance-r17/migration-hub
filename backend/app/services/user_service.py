@@ -46,6 +46,20 @@ async def get_projects_for_user(session: AsyncSession, user_id: str) -> list[Pro
     return list(result.scalars().all())
 
 
+async def get_project_roles(session: AsyncSession, user_id: str) -> set[str]:
+    """Return the distinct role tokens from the user's project_users rows."""
+    result = await session.execute(
+        select(ProjectUser.role).where(ProjectUser.user_id == user_id)
+    )
+    roles: set[str] = set()
+    for role_string in result.scalars().all():
+        for token in (role_string or "").split(","):
+            token = token.strip()
+            if token:
+                roles.add(token)
+    return roles
+
+
 async def get_users_for_project(session: AsyncSession, project_id: str) -> list[User]:
     result = await session.execute(
         select(User)

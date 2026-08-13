@@ -1,7 +1,6 @@
 import * as React from "react"
 import { NavLink, useLocation } from "react-router-dom"
 
-import { NavSecondary } from "@/components/layout/NavSecondary"
 import { NavUser } from "@/components/layout/NavUser"
 import {
   Sidebar,
@@ -15,7 +14,6 @@ import {
 import {
   LayoutDashboardIcon,
   Settings2Icon,
-  CircleHelpIcon,
   Waves,
   DollarSign,
   Mail,
@@ -25,11 +23,20 @@ import {
   GanttChart,
   CalendarDays,
   Database,
+  ExternalLink,
 } from "lucide-react"
 import { NavMain } from "./NavMain"
 import { Logo } from "@/components/shared/Logo"
 import { useCurrentUser } from "@/context/UserContext"
 import { useMigrationSettingsContext } from "@/context/MigrationSettingsContext"
+import { useCustomNavCardContext } from "@/context/CustomNavCardContext"
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 interface NavItem {
   title: string
@@ -50,7 +57,6 @@ const data = {
       title: "Projects",
       url: "/projects",
       icon: <FolderOpen />,
-      requiresRole: "platform_migration_lead",
     },
     {
       title: "Engagements",
@@ -107,19 +113,13 @@ const data = {
       excludesRole: "platform_migration_lead",
     },
   ] satisfies NavItem[],
-  navSecondary: [
-    {
-      title: "Help & Support",
-      url: "#",
-      icon: <CircleHelpIcon />,
-    },
-  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation()
   const { user } = useCurrentUser()
   const { settings } = useMigrationSettingsContext()
+  const { config: navCardConfig } = useCustomNavCardContext()
 
   const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
   const dataMigrationEnabled = settings?.dataMigrationAdjustmentEnabled ?? true
@@ -129,8 +129,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return list.some(r => user?.role.includes(r))
   }
 
+  const isAdmin = user?.role.includes('admin') ?? false
+  const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isGbiChampionOrDelegate = user?.projectRoles?.some(
+    r => r === 'gbi_champion' || r === 'gbi_champion_delegate'
+  ) ?? false
+
+  const canViewProjects = isAdmin || isPlatformLead || isBgiCloudLead || isGbiChampionOrDelegate
+
   const visibleItems = data.navMain.filter(item => {
     if (item.url === '/waves/data-migration' && !dataMigrationEnabled) return false
+    if (item.url === '/projects') return canViewProjects
     if (isBgiCloudLead) {
       // BGI cloud leads only see Dashboard, Projects, Wave Gantt, and Data Migration
       return ['/', '/projects', '/waves/gantt', '/waves/data-migration'].includes(item.url)
@@ -162,7 +171,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           items={visibleItems}
           pathname={location.pathname}
         />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        {navCardConfig && (
+          <a
+            href={navCardConfig.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-auto px-2 pb-2"
+          >
+            <Card size="sm" className="border shadow-sm">
+              <CardHeader>
+                <CardAction>
+                  <ExternalLink className="size-4 text-muted-foreground" />
+                </CardAction>
+                <CardTitle>{navCardConfig.title}</CardTitle>
+                <CardDescription className="text-xs">{navCardConfig.description}</CardDescription>
+              </CardHeader>
+            </Card>
+          </a>
+        )}
       </SidebarContent>
       <SidebarFooter>
         {user && <NavUser user={{ name: user.name, email: user.email, avatar: '' }} />}

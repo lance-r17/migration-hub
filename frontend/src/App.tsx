@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { MigrationSettingsProvider, useMigrationSettingsContext } from '@/context/MigrationSettingsContext'
+import { CustomNavCardProvider } from '@/context/CustomNavCardContext'
+import { CustomNavCardSettingsPage } from './pages/CustomNavCardSettingsPage'
 import { HomePage } from './pages/HomePage'
 import { ProjectDetailsPage } from './pages/ProjectDetailsPage'
 import { LoginPage } from './pages/LoginPage'
@@ -65,7 +67,8 @@ function App() {
   return (
     <BrowserRouter>
       <MigrationSettingsProvider>
-        <Routes>
+        <CustomNavCardProvider>
+          <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/callback" element={<CallbackPage />} />
           <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
@@ -104,9 +107,11 @@ function App() {
             <Route path="signoff" element={<SignoffSettingsPage />} />
             <Route path="migration" element={<MigrationSettingsPage />} />
             <Route path="bgi" element={<BgiSettingsPage />} />
+            <Route path="nav-card" element={<CustomNavCardSettingsPage />} />
           </Route>
         </Routes>
         <Toaster />
+        </CustomNavCardProvider>
       </MigrationSettingsProvider>
     </BrowserRouter>
   )

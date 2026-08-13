@@ -16,8 +16,14 @@ async def list_users(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserOut)
-async def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project_roles = await user_service.get_project_roles(db, current_user.id)
+    return UserOut.model_validate(current_user).model_copy(
+        update={"project_roles": sorted(project_roles)}
+    )
 
 
 @router.get("/{user_id}", response_model=UserOut)

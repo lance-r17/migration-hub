@@ -37,7 +37,7 @@ from app.schemas.risk import RiskOut
 from app.schemas.jira_job import JiraJobCreate
 from app.services import audit_service, attachment_service, bgi_service, jira_client, jira_service, migration_settings_service, project_service, user_service
 from app.config import settings
-from app.auth import _user_has_admin_role, _user_has_bgi_cloud_lead_role, get_current_user, require_admin
+from app.auth import _user_has_admin_role, _user_has_bgi_cloud_lead_role, _user_has_platform_lead_role, get_current_user, require_admin
 from app.models.project import Project
 from app.models.user import User
 from app.models.cloud_resource import CloudResource
@@ -61,13 +61,6 @@ def _user_to_actor(user: User) -> dict[str, Any]:
     if user.is_service_account:
         actor["type"] = "service_account"
     return actor
-
-
-def _user_has_platform_lead_role(role: str | None) -> bool:
-    if not role:
-        return False
-    user_roles = {r.strip() for r in role.split(",") if r.strip()}
-    return "platform_migration_lead" in user_roles
 
 
 def _itso_name(p) -> str | None:

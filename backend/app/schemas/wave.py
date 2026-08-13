@@ -61,3 +61,13 @@ class WavePatch(BaseModel):
 class WaveImportRequest(BaseModel):
     epic_key: str
     color: str | None = None
+
+
+class WaveBatchAssignRequest(BaseModel):
+    project_ids: list[str]
+
+
+class WaveBatchAssignOut(BaseModel):
+    wave: WaveOut
+    assigned: list[str]
+    not_found: list[str]

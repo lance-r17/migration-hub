@@ -269,9 +269,10 @@ export function useProjects(options?: { home?: boolean; fields?: string[]; force
   const [refreshKey, setRefreshKey] = useState(0)
 
   const { user } = useCurrentUser()
+  const isAdmin = user?.role.includes('admin') ?? false
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
   const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
-  const isLead = isPlatformLead || isBgiCloudLead
+  const isLead = isAdmin || isPlatformLead || isBgiCloudLead
 
   useEffect(() => {
     if (!user) return
@@ -295,7 +296,7 @@ export function useProjects(options?: { home?: boolean; fields?: string[]; force
       })
 
     return () => { cancelled = true }
-  }, [user?.id, user?.role, options?.home, options?.forceAll, JSON.stringify(options?.fields), refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role, JSON.stringify(user?.projectRoles), options?.home, options?.forceAll, JSON.stringify(options?.fields), refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), [])
 

@@ -61,13 +61,15 @@ def _derive_initials_from_names(given_name: str, family_name: str) -> str:
     return initials
 
 
-def _create_session_token(user: User) -> str:
+def _create_session_token(user: User, project_roles: list[str] | None = None) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": user.id,
         "email": user.email,
         "name": user.name,
         "role": user.role,
+        "project_roles": project_roles or [],
+        "bgi_ids": user.bgi_ids or [],
         "iat": now,
         "exp": now + timedelta(minutes=settings.session_max_age_minutes),
         "iss": "migration-hub-backend",
@@ -298,10 +300,15 @@ async def sso_exchange(
     )
     await user_service.sync_user_projects(db, user.id, project_ids_list)
 
+    project_roles = await user_service.get_project_roles(db, user.id)
+    user_out = UserOut.model_validate(user).model_copy(
+        update={"project_roles": sorted(project_roles)}
+    )
+
     # 7. Issue backend session token
-    token = _create_session_token(user)
+    token = _create_session_token(user, sorted(project_roles))
 
     return SSOExchangeResponse(
-        user=UserOut.model_validate(user),
+        user=user_out,
         token=token,
     )

@@ -346,6 +346,7 @@ Returns audit log entries for a project, sorted newest-first.
 | `project_created` | `POST /projects` |
 | `section_updated` | `PATCH /sections/{key}`, `PATCH /planning`, or `PUT /projects/:id/governance-roles` |
 | `status_changed` | `PATCH /projects/:id` with `status` field |
+| `wave_assigned` | `POST /waves/:id/assign-projects` |
 | `risks_updated` | `PATCH /sections/risks` |
 | `approval_submitted` | `PATCH /sections/approvals` |
 | `survey_submitted` | `POST /survey-submitted` |
@@ -666,6 +667,45 @@ Imports an existing Jira epic as a migration wave.
 ```
 
 **Response:** `Wave` with `source: "imported"` and `jiraEpicKey` populated
+
+---
+
+### `POST /api/v1/waves/:id/assign-projects`
+
+Batch-assigns multiple projects to a wave in a single call.
+
+**Authorization:** Requires `platform_migration_lead` or `admin` role.
+
+**Request body:**
+```json
+{
+  "project_ids": ["proj-1", "proj-2", "proj-3"]
+}
+```
+
+**Behavior:**
+- Sets `wave_id` on each provided project that exists.
+- Appends newly-assigned project IDs to the wave's `project_order`, preserving the payload order.
+- Already-present IDs in `project_order` are not moved or duplicated.
+- Project IDs that do not exist are returned in `not_found` and do not fail the whole request.
+- Moved projects are removed from the `project_order` of their previous wave.
+- Assignment to a `completed` wave is rejected with `400`.
+
+**Response:**
+```json
+{
+  "wave": {
+    "id": "wave-123",
+    "name": "Wave 1",
+    "project_order": ["existing-proj", "proj-1", "proj-2", "proj-3"],
+    "...": "..."
+  },
+  "assigned": ["proj-1", "proj-2", "proj-3"],
+  "not_found": []
+}
+```
+
+**Audit:** emits one `wave_assigned` event per actually-moved project.
 
 ---
 

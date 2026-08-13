@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,6 +64,85 @@ async def update(session: AsyncSession, wave: Wave, patch: WavePatch) -> Wave:
     await session.flush()
     await session.refresh(wave)
     return wave
+
+
+async def batch_assign_projects(
+    session: AsyncSession,
+    wave: Wave,
+    project_ids: list[str],
+    actor: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    """Assign multiple projects to a wave in one batch.
+
+    - Deduplicates ``project_ids`` while preserving order.
+    - Sets ``project.wave_id`` for each found project.
+    - Appends only new IDs to ``wave.project_order``, preserving existing order.
+    - Removes moved IDs from any previous wave's ``project_order``.
+    - Missing projects are returned in ``not_found`` instead of raising.
+    - Assigning to a completed wave is blocked.
+    """
+    from app.services import audit_service, project_service
+
+    # 1. Deduplicate payload while preserving order.
+    seen: set[str] = set()
+    unique_ids = [pid for pid in project_ids if not (pid in seen or seen.add(pid))]
+
+    # 2. Load all referenced projects in one query.
+    result = await session.execute(select(Project).where(Project.id.in_(unique_ids)))
+    project_map = {p.id: p for p in result.scalars().all()}
+
+    assigned: list[str] = []
+    not_found: list[str] = []
+    source_wave_ids: set[str] = set()
+
+    for pid in unique_ids:
+        project = project_map.get(pid)
+        if not project:
+            not_found.append(pid)
+            continue
+
+        old_wave_id = project.wave_id
+        if old_wave_id and old_wave_id != wave.id:
+            source_wave_ids.add(old_wave_id)
+
+        # Only act if the project is actually changing waves.
+        if project.wave_id == wave.id:
+            continue
+
+        await project_service._check_wave_completed(session, wave.id)
+        project.wave_id = wave.id
+        await audit_service.append_entry(
+            session,
+            project_id=project.id,
+            event_type="wave_assigned",
+            entity_type="wave",
+            actor=actor,
+            entity_id=wave.id,
+            entity_label=wave.name,
+            changes=[{
+                "field": "wave_id",
+                "label": "Wave",
+                "old_value": old_wave_id,
+                "new_value": wave.id,
+            }],
+        )
+        assigned.append(pid)
+
+    # 3. Update target wave project_order: append only new IDs.
+    current_order = wave.project_order or []
+    current_set = set(current_order)
+    wave.project_order = current_order + [pid for pid in unique_ids if pid not in current_set]
+
+    # 4. Clean up source waves' project_order arrays.
+    if source_wave_ids:
+        result = await session.execute(select(Wave).where(Wave.id.in_(list(source_wave_ids))))
+        for src in result.scalars().all():
+            if src.project_order:
+                src.project_order = [pid for pid in src.project_order if pid not in assigned]
+
+    await session.flush()
+    await session.refresh(wave)
+    return assigned, not_found
 
 
 async def sync_from_jira(session: AsyncSession, wave_id: str) -> Wave:

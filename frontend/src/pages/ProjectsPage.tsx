@@ -112,7 +112,14 @@ export function ProjectsPage() {
   const [surveyNeedDialogSaving, setSurveyNeedDialogSaving] = useState(false)
   const [surveyNeedDialogError, setSurveyNeedDialogError] = useState<string | null>(null)
 
+  const isAdmin = user?.role.includes('admin') ?? false
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
+  const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
+  const isGbiChampionOrDelegate = user?.projectRoles?.some(
+    r => r === 'gbi_champion' || r === 'gbi_champion_delegate'
+  ) ?? false
+
+  const canViewProjects = isAdmin || isPlatformLead || isBgiCloudLead || isGbiChampionOrDelegate
 
   async function handleSaveMapping() {
     if (!mappingDialogProject) return
@@ -153,8 +160,6 @@ export function ProjectsPage() {
     }
   }
 
-  const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
-  const canViewProjects = isPlatformLead || isBgiCloudLead
   const { settings: migrationSettings } = useMigrationSettings()
 
   useEffect(() => {
@@ -285,7 +290,7 @@ export function ProjectsPage() {
             </div>
             <p className="text-xl font-semibold text-foreground mb-2">Access Restricted</p>
             <p className="text-muted-foreground text-sm mb-6">
-              Projects listing is only available to Platform Migration Leads.
+              Projects listing is only available to Platform Migration Leads, BGI Cloud Leads, Admins, GBI Champions, and GBI Champion Delegates.
             </p>
             <button
               onClick={() => navigate('/')}

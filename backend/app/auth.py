@@ -281,6 +281,13 @@ def _user_has_engagement_reviewer_role(role: str | None) -> bool:
     return "engagement_reviewer" in user_roles
 
 
+def _user_has_platform_lead_role(role: str | None) -> bool:
+    if not role:
+        return False
+    user_roles = {r.strip() for r in role.split(",") if r.strip()}
+    return "platform_migration_lead" in user_roles
+
+
 async def require_bgi_cloud_lead(
     current_user: User = Depends(get_current_user),
 ) -> User:
@@ -309,5 +316,17 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin role required",
+        )
+    return current_user
+
+
+async def require_platform_lead_or_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Dependency that allows Platform Migration Leads or admin users."""
+    if not _user_has_platform_lead_role(current_user.role) and not _user_has_admin_role(current_user.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform Migration Lead or Admin role required",
         )
     return current_user

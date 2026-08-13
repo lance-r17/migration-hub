@@ -22,7 +22,7 @@ import type { Wave, JiraJobRequest } from '@/types/wave'
 import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
 import type { BillingBreakdownRecord, BillingRecord, BillingThresholdConfig } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
-import type { SignoffConfig, MigrationSettings } from '@/types/settings'
+import type { SignoffConfig, MigrationSettings, CustomNavCardConfig } from '@/types/settings'
 
 // Mutable in-memory session store — deep copy of mock data.
 // Writes persist for the lifetime of the browser tab (resets on page refresh).
@@ -61,6 +61,11 @@ let _migrationSettings: MigrationSettings = {
     asrDrLicenseCapacity: 2,
     supportEmail: '',
   },
+}
+let _customNavCardConfig: CustomNavCardConfig = {
+  title: 'Help & Support',
+  description: 'Open the support portal for guides, FAQs, and assistance.',
+  url: 'https://example.com/support',
 }
 const _users: User[] = structuredClone(mockUsers)
 const _projectUserMap = structuredClone(mockProjectUsers)
@@ -335,6 +340,17 @@ export const store = {
   setMigrationSettings(config: MigrationSettings): MigrationSettings {
     _migrationSettings = { ...config }
     return _migrationSettings
+  },
+
+  // ─── Custom Navigation Card ──────────────────────────────────────────────
+
+  getCustomNavCardConfig(): CustomNavCardConfig {
+    return _customNavCardConfig
+  },
+
+  setCustomNavCardConfig(config: CustomNavCardConfig): CustomNavCardConfig {
+    _customNavCardConfig = { ...config }
+    return _customNavCardConfig
   },
 
   // ─── Category Milestones ───────────────────────────────────────────────────

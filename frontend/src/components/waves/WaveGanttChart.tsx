@@ -1135,7 +1135,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     const pStart = p.planning?.startDate || p.migrationConstraints?.earliestStartDate
     const pEnd   = p.planning?.endDate   || p.migrationConstraints?.latestEndDate
     if (!pStart || !pEnd) return null
-    const activeWaves = waves.filter(w => w.status !== 'completed')
+    const activeWaves = waves.filter(w => !w.deleted && w.status !== 'completed')
     let best: Wave | null = null
     let maxOverlap = 0
     const ps = parseDate(pStart).getTime()
@@ -2775,9 +2775,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                         )}
                         {!p.waveId && onAssign && (() => {
                           const bestWave = findBestWave(p)
-                          const assignableWaves = waves
-                            .filter(w => w.status !== 'completed')
-                            .sort((a, b) => a.startDate.localeCompare(b.startDate))
+                          const assignableWaves = sortedWaves.filter(w => w.status !== 'completed')
                           const orderedWaves = bestWave
                             ? [bestWave, ...assignableWaves.filter(w => w.id !== bestWave.id)]
                             : assignableWaves

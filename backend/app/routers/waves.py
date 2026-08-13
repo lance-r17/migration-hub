@@ -1,12 +1,20 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import require_platform_lead_or_admin
 from app.config import settings
 from app.database import get_db
-from pydantic import BaseModel
-
-from app.schemas.wave import WaveCreate, WaveImportRequest, WaveOut, WavePatch
+from app.models.user import User
+from app.schemas.wave import (
+    WaveBatchAssignOut,
+    WaveBatchAssignRequest,
+    WaveCreate,
+    WaveImportRequest,
+    WaveOut,
+    WavePatch,
+)
 from app.services import jira_client, migration_settings_service, wave_service
 
 router = APIRouter(prefix="/waves", tags=["waves"])
@@ -117,6 +125,39 @@ async def update_project_order(wave_id: str, body: ProjectOrderBody, db: AsyncSe
     wave.project_order = body.project_order
     await db.commit()
     return _wave_out(wave)
+
+
+@router.post("/{wave_id}/assign-projects", response_model=WaveBatchAssignOut)
+async def assign_projects_to_wave(
+    wave_id: str,
+    body: WaveBatchAssignRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_platform_lead_or_admin),
+):
+    """Batch-assign projects to a wave.
+
+    The order of ``project_ids`` is preserved for newly appended projects.
+    IDs already in the wave's ``project_order`` are not moved. Missing project
+    IDs are returned in ``not_found`` without failing the whole request.
+    """
+    wave = await wave_service.get_by_id(db, wave_id)
+    if not wave:
+        raise HTTPException(status_code=404, detail="Wave not found")
+
+    actor = {
+        "id": current_user.id,
+        "name": current_user.name,
+        "initials": current_user.initials or "",
+    }
+    try:
+        assigned, not_found = await wave_service.batch_assign_projects(
+            db, wave, body.project_ids, actor
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    await db.commit()
+    return WaveBatchAssignOut(wave=_wave_out(wave), assigned=assigned, not_found=not_found)
 
 
 @router.delete("/{wave_id}", status_code=204)

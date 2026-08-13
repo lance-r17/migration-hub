@@ -11,6 +11,7 @@ class UserOut(BaseModel):
     team: str | None = None
     initials: str
     role: str | None = None
+    project_roles: list[str] = Field(default_factory=list)
     bgi_ids: list[str] = []
 
 

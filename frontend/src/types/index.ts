@@ -24,6 +24,7 @@ export interface User {
   initials: string
   role: string[]
   bgi_ids?: string[]
+  projectRoles?: string[]
 }
 
 export interface ProjectUsers {

@@ -869,6 +869,7 @@ export const mockCurrentUser: User = {
   department: 'Platform Engineering',
   role: ['platform_migration_lead'],
   initials: 'HW',
+  projectRoles: [],
 }
 
 // ─── Audit Log Seed Data ──────────────────────────────────────────────────────

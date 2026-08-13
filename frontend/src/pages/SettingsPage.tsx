@@ -8,7 +8,9 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
 
-  if (!user?.role.includes('platform_migration_lead')) {
+  const canAccessSettings = user?.role.includes('platform_migration_lead') || user?.role.includes('admin')
+
+  if (!canAccessSettings) {
     return (
       <AppShell title="Settings">
         <div className="max-w-screen-xl mx-auto w-full flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -18,7 +20,7 @@ export function SettingsPage() {
             </div>
             <p className="text-xl font-semibold text-foreground mb-2">Access Restricted</p>
             <p className="text-muted-foreground text-sm mb-6">
-              Settings are only available to Platform Migration Leads.
+              Settings are only available to Platform Migration Leads or Administrators.
             </p>
             <button
               onClick={() => navigate('/')}
