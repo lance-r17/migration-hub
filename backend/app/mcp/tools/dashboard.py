@@ -156,4 +156,6 @@ async def get_migration_settings(args: dict, ctx: McpContext) -> dict:
             if settings.new_cloud_setup_period else None
         ),
         "duration_options": settings.duration_options,
+        "data_migration_adjustment_enabled": settings.data_migration_adjustment_enabled,
+        "create_jira_stories_on_signoff": settings.create_jira_stories_on_signoff,
     }

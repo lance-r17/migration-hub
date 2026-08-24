@@ -85,8 +85,31 @@ SECTION_LABELS: dict[str, str] = {
     "waveId": "Migration Wave",
 }
 
-# Approval sequence — must be approved in this order
-APPROVAL_SEQUENCE = ["technical_lead", "business_owner", "platform_migration_lead"]
+# Approval sequence helpers — the GBI step uses the assigned champion/delegate
+# if one exists on the project, otherwise defaults to gbi_champion.
+GBI_ROLES = ("gbi_champion", "gbi_champion_delegate")
+
+
+def _get_gbi_role(items: list[Any] | None) -> str:
+    """Return the GBI approval role present in the given approval items.
+
+    Items may be Approval ORM instances or plain dicts. Defaults to gbi_champion.
+    """
+    if items:
+        for item in items:
+            role = getattr(item, "role", None)
+            if role is None and isinstance(item, dict):
+                role = item.get("role")
+            if role in GBI_ROLES:
+                return role
+    return "gbi_champion"
+
+
+def approval_sequence_for_project(approvals: list[Any] | None = None) -> list[str]:
+    """Return the ordered approval sequence for a project."""
+    gbi_role = _get_gbi_role(approvals)
+    return ["technical_lead", gbi_role, "platform_migration_lead"]
+
 
 _STAGE_WEIGHTS = {"setup": 5, "survey": 15, "signoff": 10, "migration": 70}
 
@@ -94,8 +117,9 @@ _STAGE_WEIGHTS = {"setup": 5, "survey": 15, "signoff": 10, "migration": 70}
 def compute_stage_progress(project: "Project") -> dict[str, int]:
     """Compute per-stage progress (0-100) and weighted overall progress."""
     has_resources = any(r.need_migration for r in (project.cloud_resources or []))
+    governance_roles = {"technical_lead", "business_owner", "dba_data_owner", "gbi_champion", "gbi_champion_delegate"}
     has_team = any(
-        r.strip() in ("technical_lead", "business_owner")
+        r.strip() in governance_roles
         for pu in (project.project_users or [])
         for r in (pu.role or "").split(",")
     )
@@ -103,8 +127,11 @@ def compute_stage_progress(project: "Project") -> dict[str, int]:
 
     survey = 100 if project.survey_submitted_at is not None else 0
 
-    approved = sum(1 for a in (project.approvals or []) if a.status == "approved")
-    signoff = round(approved / 3 * 100)
+    seq = approval_sequence_for_project(project.approvals)
+    approved = sum(
+        1 for a in (project.approvals or []) if a.status == "approved" and a.role in seq
+    )
+    signoff = round(approved / len(seq) * 100) if seq else 0
 
     in_scope = [r for r in (project.cloud_resources or []) if r.need_migration]
     migration = round(sum(1 for r in in_scope if r.migration_completed) / len(in_scope) * 100) if in_scope else 0
@@ -710,10 +737,11 @@ async def _replace_risks(
 
 def _validate_approval_sequence(approvals_data: list[dict]) -> None:
     """Raise ValueError if any role is approved while its predecessor is not."""
+    seq = approval_sequence_for_project(approvals_data)
     status_map = {a.get("role"): a.get("status", "pending") for a in approvals_data}
-    for i, role in enumerate(APPROVAL_SEQUENCE):
+    for i, role in enumerate(seq):
         if status_map.get(role) == "approved":
-            for predecessor in APPROVAL_SEQUENCE[:i]:
+            for predecessor in seq[:i]:
                 if status_map.get(predecessor) != "approved":
                     raise ValueError(
                         f"Cannot approve '{role}' before '{predecessor}' has approved."

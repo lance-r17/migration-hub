@@ -29,6 +29,7 @@ const DEFAULTS: MigrationSettings = {
   durationOptions: [15, 30, 45],
   cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' },
   dataMigrationAdjustmentEnabled: true,
+  createJiraStoriesOnSignoff: true,
   dataMigration: {
     cycleDurationDays: 7,
     minCycle: 1,
@@ -328,6 +329,22 @@ export function MigrationSettingsPage() {
                   <Plus size={16} />
                 </Button>
               </div>
+            </div>
+            {/* Jira Creation Toggle */}
+            <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/30 p-3">
+              <div className="space-y-1">
+                <Label htmlFor="create-jira-stories" className="text-sm font-medium">Create Jira stories/sub-tasks on sign-off</Label>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, sign-off by the Platform Migration Lead will auto-create Jira stories and sub-tasks for the project.
+                </p>
+              </div>
+              <Switch
+                id="create-jira-stories"
+                checked={config.createJiraStoriesOnSignoff ?? true}
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => ({ ...prev, createJiraStoriesOnSignoff: checked }))
+                }
+              />
             </div>
           </div>
 

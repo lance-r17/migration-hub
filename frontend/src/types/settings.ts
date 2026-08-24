@@ -42,6 +42,7 @@ export interface MigrationSettings {
   durationOptions: number[]
   bgiTierDepth?: number
   dataMigrationAdjustmentEnabled: boolean
+  createJiraStoriesOnSignoff?: boolean
   dataMigration: DataMigrationSettings
 }
 

@@ -429,7 +429,7 @@ async def analyze_risk_exposure(args: dict, ctx: McpContext) -> dict:
 
 @register_tool(
     name="identify_approval_bottlenecks",
-    description="Identify projects stalled at each approval stage (technical_lead, business_owner, platform_migration_lead).",
+    description="Identify projects stalled at each approval stage (technical_lead, gbi_champion/gbi_champion_delegate, platform_migration_lead).",
     input_schema={
         "type": "object",
         "properties": {
@@ -447,22 +447,27 @@ async def identify_approval_bottlenecks(args: dict, ctx: McpContext) -> dict:
     result = await ctx.db.execute(q.order_by(Project.name).options(selectinload(Project.approvals)))
     projects = list(result.scalars().all())
 
-    approval_sequence = ["technical_lead", "business_owner", "platform_migration_lead"]
-    bottlenecks = {role: [] for role in approval_sequence}
+    from app.services.project_service import approval_sequence_for_project
+
+    bottlenecks: dict[str, list[dict]] = {}
 
     for p in projects:
-        approvals = {a.role: a.status for a in (p.approvals or [])}
+        approvals = list(p.approvals or [])
+        approval_sequence = approval_sequence_for_project(approvals)
         for role in approval_sequence:
-            if approvals.get(role) != "approved":
+            bottlenecks.setdefault(role, [])
+        approvals_map = {a.role: a.status for a in approvals}
+        for role in approval_sequence:
+            if approvals_map.get(role) != "approved":
                 # Check if predecessor is approved (for sequence)
                 role_idx = approval_sequence.index(role)
                 predecessors = approval_sequence[:role_idx]
-                if all(approvals.get(r) == "approved" for r in predecessors):
+                if all(approvals_map.get(r) == "approved" for r in predecessors):
                     bottlenecks[role].append({
                         "project_id": p.id,
                         "project_name": p.name,
-                        "status": approvals.get(role, "pending"),
-                        "approver": next((a.approver for a in (p.approvals or []) if a.role == role), None),
+                        "status": approvals_map.get(role, "pending"),
+                        "approver": next((a.approver for a in approvals if a.role == role), None),
                     })
                 break  # Only the first non-approved role in sequence is the bottleneck
 

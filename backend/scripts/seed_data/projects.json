@@ -16503,7 +16503,7 @@
       },
       {
         "id": "apv-M-80037-2",
-        "role": "business_owner",
+        "role": "gbi_champion",
         "approver": "Eve Davis",
         "status": "approved",
         "timestamp": "2025-06-25",
@@ -16514,13 +16514,13 @@
         "id": "apv-M-80037-3",
         "role": "platform_migration_lead",
         "approver": null,
-        "status": "pending",
+        "status": "waiting",
         "timestamp": null,
         "icon": "",
         "user_id": null
       }
     ],
-    "jira_story_key": "MIG-80037",
+    "jira_story_key": null,
     "survey_submitted_at": "2025-06-03T00:00:00.000Z",
     "updated_at": "2025-06-02"
   },
@@ -34241,7 +34241,7 @@
       },
       {
         "id": "apv-M-80079-2",
-        "role": "business_owner",
+        "role": "gbi_champion",
         "approver": "Carol White",
         "status": "approved",
         "timestamp": "2025-11-09",
@@ -34252,13 +34252,13 @@
         "id": "apv-M-80079-3",
         "role": "platform_migration_lead",
         "approver": null,
-        "status": "pending",
+        "status": "waiting",
         "timestamp": null,
         "icon": "",
         "user_id": null
       }
     ],
-    "jira_story_key": "MIG-80079",
+    "jira_story_key": null,
     "survey_submitted_at": "2025-12-19T00:00:00.000Z",
     "updated_at": "2026-02-11"
   },
@@ -59068,7 +59068,7 @@
       },
       {
         "id": "apv-M-80138-2",
-        "role": "business_owner",
+        "role": "gbi_champion",
         "approver": "Monica Shah",
         "status": "approved",
         "timestamp": "2026-04-19",
@@ -59079,13 +59079,13 @@
         "id": "apv-M-80138-3",
         "role": "platform_migration_lead",
         "approver": null,
-        "status": "pending",
+        "status": "waiting",
         "timestamp": null,
         "icon": "",
         "user_id": null
       }
     ],
-    "jira_story_key": "MIG-80138",
+    "jira_story_key": null,
     "survey_submitted_at": "2025-04-10T00:00:00.000Z",
     "updated_at": "2025-03-24"
   },

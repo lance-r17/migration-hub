@@ -15,6 +15,7 @@ _DEFAULT = {
     "duration_options": [15, 30, 45],
     "bgi_tier_depth": None,
     "data_migration_adjustment_enabled": True,
+    "create_jira_stories_on_signoff": True,
     "data_migration": {
         "cycle_duration_days": 7,
         "min_cycle": 1,
@@ -43,6 +44,7 @@ async def get_migration_settings(session: AsyncSession) -> MigrationSettingsOut:
         duration_options=data.get("duration_options", _DEFAULT["duration_options"]),
         bgi_tier_depth=data.get("bgi_tier_depth"),
         data_migration_adjustment_enabled=data.get("data_migration_adjustment_enabled", True),
+        create_jira_stories_on_signoff=data.get("create_jira_stories_on_signoff", True),
         data_migration=data.get("data_migration", _default_data_migration()),
     )
 
@@ -67,6 +69,8 @@ async def update_migration_settings(
         current["bgi_tier_depth"] = patch.bgi_tier_depth
     if patch.data_migration_adjustment_enabled is not None:
         current["data_migration_adjustment_enabled"] = patch.data_migration_adjustment_enabled
+    if patch.create_jira_stories_on_signoff is not None:
+        current["create_jira_stories_on_signoff"] = patch.create_jira_stories_on_signoff
     if patch.data_migration is not None:
         current["data_migration"] = patch.data_migration.model_dump()
 
@@ -85,5 +89,6 @@ async def update_migration_settings(
         data_migration_adjustment_enabled=current.get(
             "data_migration_adjustment_enabled", True
         ),
+        create_jira_stories_on_signoff=current.get("create_jira_stories_on_signoff", True),
         data_migration=current.get("data_migration", _default_data_migration()),
     )

@@ -7,11 +7,14 @@ const ROLE_LABELS: Record<string, string> = {
   platform_migration_lead: 'Platform Migration Lead',
   technical_lead: 'Technical Lead',
   business_owner: 'Business Owner',
+  gbi_champion: 'BGI Champion',
+  gbi_champion_delegate: 'BGI Champion Delegate',
 }
 const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
 
 interface ApprovalTimelineProps {
   approvals: Approval[]
+  expectedRoles?: readonly string[]
 }
 
 function StepDot({ status }: { status: Approval['status'] }) {
@@ -36,8 +39,8 @@ function StepDot({ status }: { status: Approval['status'] }) {
   )
 }
 
-export function ApprovalTimeline({ approvals }: ApprovalTimelineProps) {
-  const allApprovals = ensureAllRoles(approvals)
+export function ApprovalTimeline({ approvals, expectedRoles }: ApprovalTimelineProps) {
+  const allApprovals = ensureAllRoles(approvals, expectedRoles)
   return (
     <div className="flex flex-col h-full">
       <h2 className="text-lg font-bold text-foreground mb-8">Approval Status</h2>

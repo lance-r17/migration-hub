@@ -37,6 +37,7 @@ class MigrationSettingsOut(BaseModel):
     duration_options: list[int] = [15, 30, 45]
     bgi_tier_depth: int | None = None
     data_migration_adjustment_enabled: bool = True
+    create_jira_stories_on_signoff: bool = True
     data_migration: DataMigrationSettings = Field(default_factory=DataMigrationSettings)
 
 
@@ -46,6 +47,7 @@ class MigrationSettingsUpdate(BaseModel):
     duration_options: list[int] | None = None
     bgi_tier_depth: int | None = None
     data_migration_adjustment_enabled: bool | None = None
+    create_jira_stories_on_signoff: bool | None = None
     data_migration: DataMigrationSettings | None = None
 
 

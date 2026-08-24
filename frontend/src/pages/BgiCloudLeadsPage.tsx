@@ -53,6 +53,7 @@ import {
   createBgiCloudLead,
   updateBgiCloudLead,
   deleteBgiCloudLead,
+  updateAdminUser,
   getAdminUsers,
 } from '@/services/adminUsers'
 import { getBgiHierarchy } from '@/services/bgi'
@@ -273,12 +274,13 @@ export function BgiCloudLeadsPage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      await deleteBgiCloudLead(deleteTarget.id)
-      toast.success('User deleted')
+      const remainingRoles = deleteTarget.role.filter(r => r !== 'bgi_cloud_lead')
+      await updateAdminUser(deleteTarget.id, { role: remainingRoles.join(', ') })
+      toast.success('BGI Cloud Lead role removed')
       setDeleteTarget(null)
       await loadData()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete. Please try again.'
+      const msg = err instanceof Error ? err.message : 'Failed to remove role. Please try again.'
       toast.error(msg)
     } finally {
       setDeleting(false)
@@ -749,9 +751,9 @@ export function BgiCloudLeadsPage() {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
+            <DialogTitle>Remove BGI Cloud Lead Role</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete{' '}
+              Are you sure you want to remove the BGI Cloud Lead role from{' '}
               <span className="font-semibold">{deleteTarget?.name}</span>?
               This action cannot be undone.
             </DialogDescription>
@@ -761,7 +763,7 @@ export function BgiCloudLeadsPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm} disabled={deleting}>
-              {deleting ? 'Deleting…' : 'Delete'}
+              {deleting ? 'Removing…' : 'Remove Role'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -49,6 +49,7 @@ let _migrationSettings: MigrationSettings = {
   durationOptions: [15, 30, 45],
   bgiTierDepth: undefined,
   dataMigrationAdjustmentEnabled: true,
+  createJiraStoriesOnSignoff: true,
   dataMigration: {
     cycleDurationDays: 7,
     minCycle: 1,

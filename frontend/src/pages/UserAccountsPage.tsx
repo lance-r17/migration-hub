@@ -74,8 +74,8 @@ const GOVERNANCE_ROLES = [
   { value: 'technical_lead', label: 'Technical Lead' },
   { value: 'business_owner', label: 'Business Owner' },
   { value: 'dba_data_owner', label: 'DBA Data Owner' },
-  { value: 'gbi_champion', label: 'GBI Champion' },
-  { value: 'gbi_champion_delegate', label: 'GBI Champion Delegate' },
+  { value: 'gbi_champion', label: 'BGI Champion' },
+  { value: 'gbi_champion_delegate', label: 'BGI Champion Delegate' },
 ]
 
 const EXCLUSIVE_GBI_ROLES = ['gbi_champion', 'gbi_champion_delegate'] as const
@@ -313,7 +313,7 @@ export function UserAccountsPage() {
   const onClickAssign = () => {
     if (!selectedProjectId || !selectedGovRole || !editingUser) return
 
-    // GBI Champion and GBI Champion Delegate are mutually exclusive for one user.
+    // BGI Champion and BGI Champion Delegate are mutually exclusive for one user.
     if (EXCLUSIVE_GBI_ROLES.includes(selectedGovRole as typeof EXCLUSIVE_GBI_ROLES[number])) {
       const otherRole = EXCLUSIVE_GBI_ROLES.find((r) => r !== selectedGovRole)!
       const hasOtherRoleOnProject = userProjectRoles.some(

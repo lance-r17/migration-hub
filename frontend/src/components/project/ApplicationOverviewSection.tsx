@@ -235,7 +235,7 @@ export function ApplicationOverviewSection({
               )}
               {gbiChampion && (
                 <div>
-                  <Label>GBI Champion</Label>
+                  <Label>BGI Champion</Label>
                   <p className="text-sm font-medium text-foreground">{gbiChampion.name}</p>
                   <p className="text-xs text-muted-foreground">{gbiChampion.department}</p>
                   <p className="text-xs text-muted-foreground">{gbiChampion.email}</p>
@@ -243,7 +243,7 @@ export function ApplicationOverviewSection({
               )}
               {gbiChampionDelegate && (
                 <div>
-                  <Label>GBI Champion Delegate</Label>
+                  <Label>BGI Champion Delegate</Label>
                   <p className="text-sm font-medium text-foreground">{gbiChampionDelegate.name}</p>
                   <p className="text-xs text-muted-foreground">{gbiChampionDelegate.department}</p>
                   <p className="text-xs text-muted-foreground">{gbiChampionDelegate.email}</p>

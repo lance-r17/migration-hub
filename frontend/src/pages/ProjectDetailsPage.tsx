@@ -53,12 +53,13 @@ import {
 import { useProject } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { createJiraJob } from '@/services/jiraJobs'
 import { markResourceSyncComplete, blockProject, updateGovernanceRoles } from '@/services/projects'
 import { getSignoffConfig } from '@/services/signoffConfig'
 import { getBgiHierarchy } from '@/services/bgi'
 import { apiClient } from '@/services/client'
-import { ensureAllRoles } from '@/lib/approvals'
+import { ensureAllRoles, getProjectApprovalSequence } from '@/lib/approvals'
 import type { Project, ProjectStatus } from '@/types'
 import type { JiraSubtaskConfig } from '@/types/wave'
 import type { BgiNode } from '@/types/bgi'
@@ -82,6 +83,7 @@ export function ProjectDetailsPage() {
   const { user } = useCurrentUser()
   const { project, loading, saveSection, refreshProject } = useProject(id)
   const { waves } = useWaves()
+  const { settings: migrationSettings } = useMigrationSettings()
   const { surveyConfig } = useSurveyConfig()
   const { resourceSurveyConfig } = useResourceSurveyConfig()
   const { getCategoryForProduct } = useProductCategoryMap()
@@ -137,6 +139,11 @@ export function ProjectDetailsPage() {
     getSignoffConfig().then(cfg => setSignoffEnabled(cfg.enabled)).catch(() => {})
   }, [])
 
+  const approvalSequence = useMemo(() =>
+    project ? getProjectApprovalSequence(project) : ['technical_lead', 'gbi_champion', 'platform_migration_lead'],
+    [project]
+  )
+
   if (loading) {
     return (
       <AppShell>
@@ -178,8 +185,6 @@ export function ProjectDetailsPage() {
     )
   }
 
-  const APPROVAL_SEQUENCE = ['technical_lead', 'business_owner', 'platform_migration_lead'] as const
-
   const handleSave = async <K extends keyof Project>(key: K, value: Project[K]) => {
     try {
       await saveSection(key, value)
@@ -204,9 +209,9 @@ export function ProjectDetailsPage() {
 
   const applyApproval = async (approvedRole: string) => {
     const now = new Date().toISOString()
-    const idx = APPROVAL_SEQUENCE.indexOf(approvedRole as typeof APPROVAL_SEQUENCE[number])
-    const nextRole = idx >= 0 ? APPROVAL_SEQUENCE[idx + 1] : undefined
-    const allApprovals = ensureAllRoles(project.approvals)
+    const idx = approvalSequence.indexOf(approvedRole)
+    const nextRole = idx >= 0 ? approvalSequence[idx + 1] : undefined
+    const allApprovals = ensureAllRoles(project.approvals, approvalSequence)
     const updatedApprovals = allApprovals.map(a => {
       if (a.role === approvedRole)
         return { ...a, status: 'approved' as const, approver: user?.name ?? '', timestamp: now }
@@ -226,15 +231,28 @@ export function ProjectDetailsPage() {
     try {
       await applyApproval(approvedRole)
       await refreshProject()
-      toast.success('Sign-off submitted successfully', {
-        description: 'Approval recorded. Jira issues will be created shortly.',
-      })
+      if (approvedRole === 'platform_migration_lead' && migrationSettings?.createJiraStoriesOnSignoff === false) {
+        toast.success('Sign-off submitted successfully', {
+          description: 'Approval recorded. Jira story creation is disabled.',
+        })
+      } else if (approvedRole === 'platform_migration_lead') {
+        toast.success('Sign-off submitted successfully', {
+          description: 'Approval recorded. Jira issues will be created shortly.',
+        })
+      } else {
+        toast.success('Sign-off submitted successfully', {
+          description: 'Approval recorded.',
+        })
+      }
     } catch {
       toast.error('Failed to submit sign-off. Please try again.')
     }
   }
 
   const handleConfirmWithJira = async (approvedRole: string, config: JiraSubtaskConfig) => {
+    if (migrationSettings?.createJiraStoriesOnSignoff === false) {
+      return handleConfirm(approvedRole)
+    }
     setModalOpen(false)
     try {
       await applyApproval(approvedRole)
@@ -307,14 +325,19 @@ export function ProjectDetailsPage() {
   const preSignOffStatuses: ProjectStatus[] = ['planning', 'in-progress', 'blocked']
   const gr = project.governanceRoles
   const isAssignedTL = !!gr?.technicalLead && gr.technicalLead.id === user?.id
-  const isAssignedBO = !!gr?.businessOwner && gr.businessOwner.id === user?.id
+  const isAssignedBGI = !!user && (
+    project.governanceRoles?.gbiChampion?.id === user.id ||
+    project.governanceRoles?.gbiChampionDelegate?.id === user.id
+  )
+  const gbiRole = isAssignedBGI
+    ? (project.governanceRoles?.gbiChampion?.id === user?.id ? 'gbi_champion' : 'gbi_champion_delegate')
+    : undefined
   const currentUserRole = isPlatformLead
     ? 'platform_migration_lead'
     : isAssignedTL ? 'technical_lead'
-    : isAssignedBO ? 'business_owner'
-    : null
-  const currentRoleIndex = currentUserRole ? APPROVAL_SEQUENCE.indexOf(currentUserRole) : -1
-  const predecessorsApproved = currentRoleIndex <= 0 || APPROVAL_SEQUENCE
+    : gbiRole ?? null
+  const currentRoleIndex = currentUserRole ? approvalSequence.indexOf(currentUserRole) : -1
+  const predecessorsApproved = currentRoleIndex <= 0 || approvalSequence
     .slice(0, currentRoleIndex)
     .every(role => project.approvals.find(a => a.role === role)?.status === 'approved')
   const eligibleForSignoff =
@@ -558,6 +581,8 @@ export function ProjectDetailsPage() {
         approvals={project.approvals}
         currentUserRole={currentUserRole}
         cloudResources={project.currentInfrastructure?.resources ?? []}
+        jiraCreationEnabled={migrationSettings?.createJiraStoriesOnSignoff ?? true}
+        project={project}
       />
 
       <AuditLogDrawer

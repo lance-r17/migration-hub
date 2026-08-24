@@ -1,7 +1,8 @@
 import { useState, useMemo, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Cloud, Lock, Search, Server, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Cloud, Lock, Search, Server, SlidersHorizontal, X } from 'lucide-react'
 import { format } from 'date-fns'
+import type { DateRange } from 'react-day-picker'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -93,6 +94,8 @@ export function EnvironmentProvisionPage() {
   const [envFilter, setEnvFilter] = useState<ProvisionEnvironment[]>([])
   const [advFilterOpen, setAdvFilterOpen] = useState(false)
   const [selectedMigrationStrategies, setSelectedMigrationStrategies] = useState<Set<MigrationStrategy>>(new Set())
+  const [provisionDateRange, setProvisionDateRange] = useState<DateRange | undefined>(undefined)
+  const [provisionDateOpen, setProvisionDateOpen] = useState(false)
 
   const liveProjects = useMemo<Project[]>(() => {
     return initialProjects.map(project => {
@@ -107,7 +110,7 @@ export function EnvironmentProvisionPage() {
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
   const sortedWaves = useMemo(() => {
-    return [...waves].sort((a, b) => {
+    return [...waves].filter(w => !w.deleted).sort((a, b) => {
       const startCompare = a.startDate.localeCompare(b.startDate)
       if (startCompare !== 0) return startCompare
       return a.cutoverDate.localeCompare(b.cutoverDate)
@@ -163,11 +166,20 @@ export function EnvironmentProvisionPage() {
           if (!strategy || !selectedMigrationStrategies.has(strategy as MigrationStrategy)) return false
         }
 
+        if (provisionDateRange?.from || provisionDateRange?.to) {
+          const date = project.environmentProvision?.date
+          if (!date) return false
+          const fromIso = provisionDateRange.from ? format(provisionDateRange.from, 'yyyy-MM-dd') : undefined
+          const toIso = provisionDateRange.to ? format(provisionDateRange.to, 'yyyy-MM-dd') : undefined
+          if (fromIso && date < fromIso) return false
+          if (toIso && date > toIso) return false
+        }
+
         return true
       })
       return { ...group, projects: filtered }
-    }).filter(group => group.projects.length > 0 || (!term && statusFilter === 'all' && envFilter.length === 0 && selectedMigrationStrategies.size === 0))
-  }, [groups, searchTerm, statusFilter, envFilter, selectedMigrationStrategies])
+    }).filter(group => group.projects.length > 0 || (!term && statusFilter === 'all' && envFilter.length === 0 && selectedMigrationStrategies.size === 0 && !provisionDateRange?.from && !provisionDateRange?.to))
+  }, [groups, searchTerm, statusFilter, envFilter, selectedMigrationStrategies, provisionDateRange])
 
   const allGroupIds = useMemo(() => filteredGroups.map(g => g.id), [filteredGroups])
 
@@ -243,6 +255,7 @@ export function EnvironmentProvisionPage() {
   const isLoading = wavesLoading || projectsLoading
   const advancedFilterCount = (statusFilter !== 'all' ? 1 : 0) + envFilter.length + selectedMigrationStrategies.size
   const hasAdvancedFilter = advancedFilterCount > 0
+  const hasProvisionDateFilter = provisionDateRange?.from != null || provisionDateRange?.to != null
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -268,6 +281,63 @@ export function EnvironmentProvisionPage() {
                   className="pl-8 h-8 text-sm w-[200px]"
                 />
               </div>
+
+              <div className="w-px h-3 bg-border" />
+
+              <Popover open={provisionDateOpen} onOpenChange={setProvisionDateOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-[12px] text-muted-foreground",
+                      hasProvisionDateFilter && "text-primary"
+                    )}
+                  >
+                    <CalendarDays size={13} className={hasProvisionDateFilter ? 'text-primary' : ''} />
+                    <span>
+                      {provisionDateRange?.from || provisionDateRange?.to
+                        ? `${provisionDateRange.from ? format(provisionDateRange.from, 'MMM d') : 'Start'}–${provisionDateRange.to ? format(provisionDateRange.to, 'MMM d') : 'End'}`
+                        : 'Provision Date'}
+                    </span>
+                    {hasProvisionDateFilter && (
+                      <span
+                        className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setProvisionDateRange(undefined)
+                        }}
+                      >
+                        <X size={8} />
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <div className="p-3 border-b border-border">
+                    <p className="text-sm font-semibold">Provision Date</p>
+                    <p className="text-xs text-muted-foreground">Select a date range</p>
+                  </div>
+                  <div className="p-3">
+                    <Calendar
+                      mode="range"
+                      selected={provisionDateRange}
+                      onSelect={setProvisionDateRange}
+                      numberOfMonths={1}
+                    />
+                  </div>
+                  {hasProvisionDateFilter && (
+                    <div className="p-3 border-t border-border flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() => setProvisionDateRange(undefined)}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
 
               <div className="w-px h-3 bg-border" />
 

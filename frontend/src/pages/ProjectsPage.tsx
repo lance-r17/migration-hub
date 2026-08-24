@@ -252,7 +252,9 @@ export function ProjectsPage() {
       if (query) {
         const matchesName = p.name.toLowerCase().includes(query)
         const matchesId = p.id.toLowerCase().includes(query)
-        if (!matchesName && !matchesId) return false
+        const matchesAppName = p.applicationOverview?.applicationName?.toLowerCase().includes(query) ?? false
+        const matchesBaId = p.applicationOverview?.baId?.toLowerCase().includes(query) ?? false
+        if (!matchesName && !matchesId && !matchesAppName && !matchesBaId) return false
       }
       if (migrationRange === 'all') return true
       const days = getMigrationPeriodDays(p)
@@ -290,7 +292,7 @@ export function ProjectsPage() {
             </div>
             <p className="text-xl font-semibold text-foreground mb-2">Access Restricted</p>
             <p className="text-muted-foreground text-sm mb-6">
-              Projects listing is only available to Platform Migration Leads, BGI Cloud Leads, Admins, GBI Champions, and GBI Champion Delegates.
+              Projects listing is only available to Platform Migration Leads, BGI Cloud Leads, Admins, BGI Champions, and BGI Champion Delegates.
             </p>
             <button
               onClick={() => navigate('/')}
@@ -471,7 +473,7 @@ export function ProjectsPage() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
             <Input
               type="text"
-              placeholder="Search name / ID"
+              placeholder="Search name / ID / app / BA"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value)
@@ -540,6 +542,8 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Name</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ID</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">New Project ID</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">Application Name</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">BA ID</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">BGI</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Progress</TableHead>
@@ -561,14 +565,14 @@ export function ProjectsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 18 }).map((_, j) => (
+                    {Array.from({ length: 20 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filteredProjects.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={18} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={20} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -587,6 +591,12 @@ export function ProjectsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground font-mono">
                       {project.applicationOverview?.newProjectId ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {project.applicationOverview?.applicationName ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground font-mono">
+                      {project.applicationOverview?.baId ?? '—'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {project.bgi_id ? (bgiNameMap.get(project.bgi_id) ?? project.bgi_id) : '—'}

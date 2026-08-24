@@ -23,12 +23,16 @@ const RECIPIENT_ROLES = [
   { value: 'platform_migration_lead', label: 'Platform Migration Lead' },
   { value: 'technical_lead', label: 'Technical Lead' },
   { value: 'business_owner', label: 'Business Owner' },
+  { value: 'gbi_champion', label: 'BGI Champion' },
+  { value: 'gbi_champion_delegate', label: 'BGI Champion Delegate' },
 ]
 
 const ROLE_LABELS: Record<string, string> = {
   platform_migration_lead: 'Platform Migration Lead',
   technical_lead: 'Technical Lead',
   business_owner: 'Business Owner',
+  gbi_champion: 'BGI Champion',
+  gbi_champion_delegate: 'BGI Champion Delegate',
 }
 
 export function ConfigTab({ template, onTemplateChange, selectedComponent, onComponentConfigChange, selectedRow }: Props) {

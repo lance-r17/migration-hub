@@ -28,6 +28,7 @@ interface MigrationSettingsApi {
   duration_options: number[]
   bgi_tier_depth: number | null
   data_migration_adjustment_enabled: boolean
+  create_jira_stories_on_signoff: boolean
   data_migration: DataMigrationSettingsApi
 }
 
@@ -92,6 +93,7 @@ function fromApi(raw: MigrationSettingsApi): MigrationSettings {
     durationOptions: raw.duration_options,
     bgiTierDepth: raw.bgi_tier_depth ?? undefined,
     dataMigrationAdjustmentEnabled: raw.data_migration_adjustment_enabled ?? true,
+    createJiraStoriesOnSignoff: raw.create_jira_stories_on_signoff ?? true,
     dataMigration: raw.data_migration
       ? dataMigrationFromApi(raw.data_migration)
       : {
@@ -113,6 +115,7 @@ function toApi(config: MigrationSettings): MigrationSettingsApi {
     duration_options: config.durationOptions,
     bgi_tier_depth: config.bgiTierDepth ?? null,
     data_migration_adjustment_enabled: config.dataMigrationAdjustmentEnabled ?? true,
+    create_jira_stories_on_signoff: config.createJiraStoriesOnSignoff ?? true,
     data_migration: config.dataMigration ? dataMigrationToApi(config.dataMigration) : dataMigrationToApi({
       cycleDurationDays: 7,
       minCycle: 1,

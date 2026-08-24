@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Hourglass, Wrench, CreditCard, Cloud } from 'lucide-react'
+import { CheckCircle2, Clock, Hourglass, Wrench, CreditCard, Cloud, Shield, UserCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ensureAllRoles } from '@/lib/approvals'
 import type { Approval } from '@/types'
@@ -7,18 +7,23 @@ const ROLE_LABELS: Record<string, string> = {
   platform_migration_lead: 'Platform Migration Lead',
   technical_lead: 'Technical Lead',
   business_owner: 'Business Owner',
+  gbi_champion: 'BGI Champion',
+  gbi_champion_delegate: 'BGI Champion Delegate',
 }
 const roleLabel = (r: string) => ROLE_LABELS[r] ?? r
 
 const ROLE_ICONS: Record<string, React.ElementType> = {
   technical_lead: Wrench,
   business_owner: CreditCard,
+  gbi_champion: Shield,
+  gbi_champion_delegate: UserCheck,
   platform_migration_lead: Cloud,
 }
 
 interface SignOffWorkflowBarProps {
   approvals: Approval[]
   pendingCount?: number
+  expectedRoles?: readonly string[]
 }
 
 function ApprovalNode({ approval }: { approval: Approval }) {
@@ -53,8 +58,8 @@ function ApprovalNode({ approval }: { approval: Approval }) {
   )
 }
 
-export function SignOffWorkflowBar({ approvals, pendingCount }: SignOffWorkflowBarProps) {
-  const allApprovals = ensureAllRoles(approvals)
+export function SignOffWorkflowBar({ approvals, pendingCount, expectedRoles }: SignOffWorkflowBarProps) {
+  const allApprovals = ensureAllRoles(approvals, expectedRoles)
   const remaining = pendingCount ?? allApprovals.filter(a => a.status !== 'approved').length
   return (
     <section className="mb-8 bg-card rounded-xl p-6 shadow-sm border border-border relative overflow-hidden">

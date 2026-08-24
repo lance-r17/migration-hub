@@ -1,19 +1,23 @@
 import { useState } from 'react'
-import { Check, ClipboardList, FileText, ShieldCheck, Server, Clock, Hourglass, Wrench, CreditCard, Cloud, Database } from 'lucide-react'
+import { Check, ClipboardList, FileText, ShieldCheck, Server, Clock, Hourglass, Wrench, CreditCard, Cloud, Database, Shield, UserCheck } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
-import { ensureAllRoles } from '@/lib/approvals'
+import { ensureAllRoles, getProjectApprovalSequence } from '@/lib/approvals'
 import type { Project, StageProgress, Approval } from '@/types'
 
 const ROLE_LABELS: Record<string, string> = {
   platform_migration_lead: 'Platform Migration Lead',
   technical_lead: 'Technical Lead',
   business_owner: 'Business Owner',
+  gbi_champion: 'BGI Champion',
+  gbi_champion_delegate: 'BGI Champion Delegate',
 }
 
 const ROLE_ICONS: Record<string, React.ElementType> = {
   technical_lead: Wrench,
   business_owner: CreditCard,
+  gbi_champion: Shield,
+  gbi_champion_delegate: UserCheck,
   platform_migration_lead: Cloud,
 }
 
@@ -105,7 +109,10 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
   const surveyPartial = submittedSurveyCount > 0 && !surveyComplete
 
   const isSurveyClickable = sp.setup === 100 && !surveyComplete
-  const isSignOffClickable = surveyComplete && sp.signoff < 100
+  const isSignOffClickable = sp.signoff < 100
+
+  const approvalSequence = getProjectApprovalSequence(project)
+  const expectedApprovalCount = approvalSequence.length
 
   const stages = [
     {
@@ -124,7 +131,7 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
       key: 'signoff' as const,
       label: 'Sign-off',
       icon: ShieldCheck,
-      detail: approvedCount === 3 ? 'Approved' : `${approvedCount}/3 approved`,
+      detail: approvedCount === expectedApprovalCount ? 'Approved' : `${approvedCount}/${expectedApprovalCount} approved`,
     },
     {
       key: 'migration' as const,
@@ -138,7 +145,7 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
     },
   ]
 
-  const allApprovals = ensureAllRoles(project.approvals)
+  const allApprovals = ensureAllRoles(project.approvals, approvalSequence)
   const remaining = allApprovals.filter(a => a.status !== 'approved').length
 
   return (
@@ -157,7 +164,15 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
                 {(isSurveyStage && isSurveyClickable) || (isSignOffStage && isSignOffClickable) ? (
                   <button
                     type="button"
-                    onClick={() => isSurveyStage ? setSurveyExpanded(prev => !prev) : setSignoffExpanded(prev => !prev)}
+                    onClick={() => {
+                      if (isSurveyStage) {
+                        setSurveyExpanded(prev => !prev)
+                        setSignoffExpanded(false)
+                      } else {
+                        setSignoffExpanded(prev => !prev)
+                        setSurveyExpanded(false)
+                      }
+                    }}
                     aria-expanded={isSurveyStage ? surveyExpanded : signoffExpanded}
                     aria-label={isSurveyStage ? 'Toggle survey submission details' : 'Toggle sign-off workflow details'}
                     className={cn(

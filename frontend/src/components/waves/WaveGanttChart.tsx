@@ -101,7 +101,7 @@ const ZOOM_DAYS_PER_COL: Record<ZoomLevel, number> = { days: 1,  weeks: 7,  mont
 
 const MILESTONE_PRESETS: { type: MilestoneType; label: string; icon: LucideIcon }[] = [
   { type: 'dev-resource-provision', label: 'DEV Resource Provision Stage', icon: Cpu         },
-  { type: 'dev-cutover',            label: 'DEV Cutover',                 icon: ArrowRight  },
+  { type: 'dev-cutover',            label: 'DEV Testing Cutover',       icon: ArrowRight  },
   { type: 'prd-resource-provision', label: 'PRD Resource Provision Stage', icon: HardDrive   },
   { type: 'prd-cutover',            label: 'PRD Cutover',                 icon: Sparkles    },
   { type: 'custom',                 label: 'Custom Milestone',            icon: Pencil      },
@@ -1276,7 +1276,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
 
     return {
       id: `data-migration-period-${p.id}`,
-      name: 'Data Migration',
+      name: 'Data Migration (Prod)',
       type: 'data-migration-period',
       start,
       end,

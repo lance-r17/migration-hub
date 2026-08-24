@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
-import { X, Wrench, CreditCard, Cloud, CheckCircle2, Loader2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { X, Wrench, CreditCard, Cloud, CheckCircle2, Loader2, Shield, UserCheck } from 'lucide-react'
 import { ApprovalTimeline } from './ApprovalTimeline'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useProductCategoryMap } from '@/hooks/use-product-category'
-import type { Approval, CloudResource } from '@/types'
+import type { Approval, CloudResource, Project } from '@/types'
 import type { JiraSubtaskConfig } from '@/types/wave'
+import { getProjectApprovalSequence, ensureAllRoles } from '@/lib/approvals'
 
 interface SignOffModalProps {
   open: boolean
@@ -14,11 +15,15 @@ interface SignOffModalProps {
   approvals: Approval[]
   currentUserRole: string | null
   cloudResources?: CloudResource[]
+  jiraCreationEnabled?: boolean
+  project: Project
 }
 
 const roles = [
   { id: 'technical_lead', label: 'Technical Lead', icon: Wrench },
   { id: 'business_owner', label: 'Business Owner', icon: CreditCard },
+  { id: 'gbi_champion', label: 'BGI Champion', icon: Shield },
+  { id: 'gbi_champion_delegate', label: 'BGI Champion Delegate', icon: UserCheck },
   { id: 'platform_migration_lead', label: 'Platform Migration Lead', icon: Cloud },
 ]
 
@@ -48,6 +53,8 @@ export function SignOffModal({
   approvals,
   currentUserRole,
   cloudResources = [],
+  jiraCreationEnabled = true,
+  project,
 }: SignOffModalProps) {
   const [comment, setComment] = useState('')
   const [acknowledged, setAcknowledged] = useState(false)
@@ -68,6 +75,8 @@ export function SignOffModal({
     }
   }, [open])
 
+  const approvalSequence = useMemo(() => getProjectApprovalSequence(project), [project])
+
   if (!open) return null
 
   const matchedRole = roles.find(r => r.id === currentUserRole)
@@ -79,7 +88,7 @@ export function SignOffModal({
 
   const handleStep1Confirm = () => {
     if (!acknowledged || !currentUserRole) return
-    if (isPlatformLead) {
+    if (isPlatformLead && jiraCreationEnabled) {
       setStep(2)
     } else {
       onConfirm(currentUserRole)
@@ -113,7 +122,7 @@ export function SignOffModal({
       <div className="bg-card w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
         {/* Left Panel */}
         <div className="w-full md:w-80 bg-muted/50 p-8 flex flex-col overflow-y-auto">
-          <ApprovalTimeline approvals={approvals} />
+          <ApprovalTimeline approvals={approvals} expectedRoles={approvalSequence} />
         </div>
 
         {/* Right Panel */}
@@ -154,7 +163,7 @@ export function SignOffModal({
                 <div className="flex items-center gap-3 p-4 rounded-lg bg-card border-2 border-primary shadow-sm">
                   {matchedRole ? <matchedRole.icon size={18} className="text-muted-foreground" /> : null}
                   <span className="text-sm font-semibold text-foreground">
-                    {currentUserRole ?? 'No role assigned for this project'}
+                    {matchedRole?.label ?? currentUserRole ?? 'No role assigned for this project'}
                   </span>
                   {matchedRole && <CheckCircle2 size={18} className="text-primary ml-auto" />}
                 </div>
@@ -203,7 +212,7 @@ export function SignOffModal({
                   disabled={!acknowledged}
                   className="px-8 py-2.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                 >
-                  {isPlatformLead ? 'Next: Configure Jira' : 'Confirm Approval'}
+                  {isPlatformLead && jiraCreationEnabled ? 'Next: Configure Jira' : 'Confirm Approval'}
                 </button>
               </div>
             </div>

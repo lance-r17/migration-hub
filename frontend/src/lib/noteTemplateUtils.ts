@@ -47,8 +47,8 @@ export const TEMPLATE_VARIABLES = [
   { key: 'itso', label: 'ITSO', example: 'John Doe' },
   { key: 'technicalLead', label: 'Technical Lead', example: 'Jane Smith' },
   { key: 'businessOwner', label: 'Business Owner', example: 'Bob Brown' },
-  { key: 'gbiChampion', label: 'GBI Champion', example: 'Charlie Green' },
-  { key: 'gbiChampionDelegate', label: 'GBI Champion Delegate', example: 'Dana White' },
+  { key: 'gbiChampion', label: 'BGI Champion', example: 'Charlie Green' },
+  { key: 'gbiChampionDelegate', label: 'BGI Champion Delegate', example: 'Dana White' },
   { key: 'date', label: 'Current Date', example: new Date().toISOString().split('T')[0] },
   { key: 'userName', label: 'Current User', example: 'Jane Smith' },
 ] as const
