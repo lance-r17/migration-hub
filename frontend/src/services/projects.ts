@@ -2,10 +2,14 @@ import { store } from '@/data/store'
 import { USE_MOCK, delay, apiClient } from './client'
 import type {
   Project,
+  ProjectTableOverview,
+  ProjectTablePage,
+  ProjectTableRow,
   StageProgress,
   ProjectPlanning,
   TeamMember,
   ApplicationOverview,
+  ApplicationTier,
   EnvironmentProvision,
   AvailabilityResilience,
   DataPersistence,
@@ -20,6 +24,14 @@ import type {
   Approval,
   DataMigrationSchedule,
 } from '@/types'
+import {
+  getInfraFootprintScore,
+  getMigrationDriverScore,
+  type InfraFootprintLevel,
+  type InfraFootprintResult,
+  type MigrationDriverLevel,
+  type MigrationDriverResult,
+} from '@/lib/scoring'
 import type { JiraSubtaskConfig } from '@/types/wave'
 
 const ENDPOINTS = {
@@ -315,6 +327,239 @@ export async function getProjectsHomeForUser(userId: string, fields?: string[]):
   const qs = buildFieldsQs(fields)
   const items = await apiClient.get<ProjectListItemApi[]>(`${ENDPOINTS.projects}/home?userId=${userId}${qs ? `&${qs}` : ''}`)
   return items.map(fromApiListItem)
+}
+
+// ─── Projects table (lean, paginated) ────────────────────────────────────────
+
+interface InfraFootprintScoreApi {
+  score: InfraFootprintLevel | null
+  ecs_count: number
+  ecs_level: InfraFootprintLevel | null
+  data_volume_tb: number
+  data_volume_level: InfraFootprintLevel | null
+  maxcompute_count: number
+  maxcompute_level: InfraFootprintLevel | null
+}
+
+interface MigrationDriverScoreApi {
+  score: MigrationDriverLevel | null
+  tier_level: MigrationDriverLevel | null
+  application_tier: ApplicationTier | null
+  iita_applicability: boolean | null
+  third_party_effort: number
+  third_party_level: MigrationDriverLevel | null
+  dependency_count: number
+  dependency_level: MigrationDriverLevel | null
+  external_user_count: number
+  external_user_level: MigrationDriverLevel | null
+  internal_user_count: number
+  internal_user_level: MigrationDriverLevel | null
+  app_count: number
+  app_level: MigrationDriverLevel | null
+}
+
+interface ProjectTableRowApi {
+  id: string
+  name: string
+  status: string
+  progress: number
+  stage_progress: StageProgress | null
+  survey_submitted_at: string | null
+  data_migration_survey_submitted_at: string | null
+  has_survey_draft: boolean
+  bgi_id: string | null
+  itso: string | null
+  itso_delegate: string | null
+  jira_story_key: string | null
+  jira_base_url: string | null
+  is_survey_needed: boolean
+  justification_without_survey: string | null
+  application_overview: ProjectTableOverview | null
+  planning: { startDate?: string; endDate?: string } | null
+  migration_constraints: { earliestStartDate?: string; latestEndDate?: string } | null
+  migration_effort_estimation: MigrationEffortEstimation | null
+  infra_footprint: InfraFootprintScoreApi
+  migration_driver: MigrationDriverScoreApi
+}
+
+interface ProjectTablePageApi {
+  items: ProjectTableRowApi[]
+  total: number
+  page: number
+  page_size: number
+}
+
+function mapInfraFootprintScore(raw: InfraFootprintScoreApi): InfraFootprintResult {
+  return {
+    score: raw.score,
+    ecsCount: raw.ecs_count,
+    ecsLevel: raw.ecs_level,
+    dataVolumeTb: raw.data_volume_tb,
+    dataVolumeLevel: raw.data_volume_level,
+    maxcomputeCount: raw.maxcompute_count,
+    maxcomputeLevel: raw.maxcompute_level,
+  }
+}
+
+function mapMigrationDriverScore(raw: MigrationDriverScoreApi): MigrationDriverResult {
+  return {
+    score: raw.score,
+    tierLevel: raw.tier_level,
+    applicationTier: raw.application_tier ?? undefined,
+    iitaApplicability: raw.iita_applicability ?? undefined,
+    thirdPartyEffort: raw.third_party_effort,
+    thirdPartyLevel: raw.third_party_level,
+    dependencyCount: raw.dependency_count,
+    dependencyLevel: raw.dependency_level,
+    externalUserCount: raw.external_user_count,
+    externalUserLevel: raw.external_user_level,
+    internalUserCount: raw.internal_user_count,
+    internalUserLevel: raw.internal_user_level,
+    appCount: raw.app_count,
+    appLevel: raw.app_level,
+  }
+}
+
+function fromApiTableRow(raw: ProjectTableRowApi): ProjectTableRow {
+  return {
+    id: raw.id,
+    name: raw.name,
+    status: raw.status as ProjectTableRow['status'],
+    progress: raw.progress,
+    stageProgress: raw.stage_progress ?? undefined,
+    surveySubmittedAt: raw.survey_submitted_at ?? undefined,
+    dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
+    hasSurveyDraft: raw.has_survey_draft,
+    bgi_id: raw.bgi_id ?? undefined,
+    itso: raw.itso ?? undefined,
+    itsoDelegate: raw.itso_delegate ?? undefined,
+    jiraStoryKey: raw.jira_story_key ?? undefined,
+    jiraBaseUrl: raw.jira_base_url ?? undefined,
+    isSurveyNeeded: raw.is_survey_needed,
+    justificationWithoutSurvey: raw.justification_without_survey ?? undefined,
+    applicationOverview: raw.application_overview ?? undefined,
+    planning: raw.planning ?? undefined,
+    migrationConstraints: raw.migration_constraints ?? undefined,
+    migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
+    infraFootprint: mapInfraFootprintScore(raw.infra_footprint),
+    migrationDriver: mapMigrationDriverScore(raw.migration_driver),
+  }
+}
+
+export interface ProjectsTableParams {
+  page: number
+  /** 0 returns all matching rows (used by export) */
+  pageSize: number
+  status?: string
+  search?: string
+  migrationRange?: string
+  bgiIds?: string[] | null
+}
+
+function mockTableRow(p: Project): ProjectTableRow {
+  return {
+    id: p.id,
+    name: p.name,
+    status: p.status,
+    progress: p.progress,
+    stageProgress: p.stageProgress,
+    surveySubmittedAt: p.surveySubmittedAt,
+    dataMigrationSurveySubmittedAt: p.dataMigrationSurveySubmittedAt,
+    hasSurveyDraft: false,
+    bgi_id: p.bgi_id,
+    itso: p.itso,
+    itsoDelegate: p.itsoDelegate,
+    jiraStoryKey: p.jiraStoryKey,
+    jiraBaseUrl: p.jiraBaseUrl,
+    isSurveyNeeded: p.isSurveyNeeded,
+    justificationWithoutSurvey: p.justificationWithoutSurvey,
+    applicationOverview: p.applicationOverview,
+    planning: p.planning,
+    migrationConstraints: p.migrationConstraints,
+    migrationEffortEstimation: p.migrationEffortEstimation,
+    infraFootprint: getInfraFootprintScore(p),
+    migrationDriver: getMigrationDriverScore(p),
+  }
+}
+
+function mockMigrationPeriodDays(p: Project): number | null {
+  const start = p.planning?.startDate || p.migrationConstraints?.earliestStartDate
+  const end = p.planning?.endDate || p.migrationConstraints?.latestEndDate
+  if (!start || !end) return null
+  const s = new Date(start)
+  const e = new Date(end)
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
+  return Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function mockGetProjectsTable(params: ProjectsTableParams): ProjectTablePage {
+  const query = (params.search ?? '').trim().toLowerCase()
+  let projects = store.getProjects()
+  if (params.status && params.status !== 'all') {
+    projects = projects.filter((p) => {
+      const sp = p.stageProgress
+      if (params.status === 'drafting-survey') return false // no drafts in mock mode
+      if (params.status === 'awaiting-survey')
+        return p.status === 'in-progress' && sp?.setup === 100 && (sp?.survey ?? 0) < 100
+      if (params.status === 'survey-submitted')
+        return p.status === 'in-progress' && sp?.setup === 100 && sp?.survey === 100 && sp?.signoff === 0
+      if (params.status === 'awaiting-signoff')
+        return p.status === 'in-progress' && sp?.setup === 100 && sp?.survey === 100 && (sp?.signoff ?? 0) > 0 && (sp?.signoff ?? 0) < 100
+      return p.status === params.status
+    })
+  }
+  if (params.bgiIds?.length) {
+    const allowed = new Set(params.bgiIds)
+    projects = projects.filter((p) => p.bgi_id && allowed.has(p.bgi_id))
+  }
+  if (query) {
+    projects = projects.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.id.toLowerCase().includes(query) ||
+        (p.applicationOverview?.applicationName?.toLowerCase().includes(query) ?? false) ||
+        (p.applicationOverview?.baId?.toLowerCase().includes(query) ?? false),
+    )
+  }
+  if (params.migrationRange && params.migrationRange !== 'all') {
+    projects = projects.filter((p) => {
+      const days = mockMigrationPeriodDays(p)
+      if (days === null) return false
+      switch (params.migrationRange) {
+        case 'lt30': return days < 30
+        case '30to90': return days >= 30 && days < 90
+        case '90to180': return days >= 90 && days < 180
+        case 'gte180': return days >= 180
+        default: return true
+      }
+    })
+  }
+  const total = projects.length
+  const sliced = params.pageSize > 0
+    ? projects.slice((params.page - 1) * params.pageSize, params.page * params.pageSize)
+    : projects
+  return { items: sliced.map(mockTableRow), total, page: params.page, pageSize: params.pageSize }
+}
+
+export async function getProjectsTable(params: ProjectsTableParams): Promise<ProjectTablePage> {
+  if (USE_MOCK) {
+    await delay()
+    return mockGetProjectsTable(params)
+  }
+  const qs = new URLSearchParams()
+  qs.set('page', String(params.page))
+  qs.set('page_size', String(params.pageSize))
+  if (params.status && params.status !== 'all') qs.set('status', params.status)
+  if (params.search?.trim()) qs.set('search', params.search.trim())
+  if (params.migrationRange && params.migrationRange !== 'all') qs.set('migration_range', params.migrationRange)
+  for (const id of params.bgiIds ?? []) qs.append('bgi_ids', id)
+  const raw = await apiClient.get<ProjectTablePageApi>(`${ENDPOINTS.projects}/table?${qs.toString()}`)
+  return {
+    items: raw.items.map(fromApiTableRow),
+    total: raw.total,
+    page: raw.page,
+    pageSize: raw.page_size,
+  }
 }
 
 export async function getAssetStats(): Promise<Record<string, number>> {

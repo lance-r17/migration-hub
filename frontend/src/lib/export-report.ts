@@ -8,8 +8,7 @@ import { fetchProductCategoryMap } from '@/services/productCategory'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { getStatusLabel } from '@/components/shared/StatusBadge'
 import { getBgiAncestry } from '@/lib/bgi-utils'
-import { getInfraFootprintScore, getMigrationDriverScore } from '@/lib/scoring'
-import type { Project, User, EngagementStatus, DataMigrationSchedule } from '@/types'
+import type { Project, ProjectTableRow, User, EngagementStatus, DataMigrationSchedule } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
 import type { BgiNode } from '@/types/bgi'
@@ -805,7 +804,12 @@ export function formatDate(value: string | undefined) {
   })
 }
 
-export function getMigrationDates(project: Project) {
+interface MigrationDatesSource {
+  planning?: { startDate?: string; endDate?: string }
+  migrationConstraints?: { earliestStartDate?: string; latestEndDate?: string }
+}
+
+export function getMigrationDates(project: MigrationDatesSource) {
   const p = project.planning
   const mc = project.migrationConstraints
   const start = p?.startDate || mc?.earliestStartDate
@@ -813,7 +817,7 @@ export function getMigrationDates(project: Project) {
   return { start, end }
 }
 
-export function getMigrationPeriodDays(project: Project): number | null {
+export function getMigrationPeriodDays(project: MigrationDatesSource): number | null {
   const { start, end } = getMigrationDates(project)
   if (!start || !end) return null
   const s = new Date(start)
@@ -823,7 +827,7 @@ export function getMigrationPeriodDays(project: Project): number | null {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 }
 
-export function getMigrationEffortSummary(project: Project): {
+export function getMigrationEffortSummary(project: Pick<Project, 'migrationEffortEstimation'>): {
   totalCost: number
   groups: {
     baId: string
@@ -1191,7 +1195,7 @@ export function exportWavePlanningToExcel(projects: Project[], waves: Wave[]) {
   }
 }
 
-export function exportProjectsToExcel(projects: Project[], draftProjectIds: string[], bgiRoot?: BgiNode | null) {
+export function exportProjectsToExcel(projects: ProjectTableRow[], bgiRoot?: BgiNode | null) {
   const toastId = toast.loading('Generating projects report...')
 
   try {
@@ -1210,7 +1214,7 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
         'BGI L2': bgiAncestry?.l2 ?? '—',
         'BGI L3': bgiAncestry?.l3 ?? '—',
         'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName) : (p.bgi_id ?? '—'),
-        'Status': getStatusLabel(p.status, p.stageProgress, draftProjectIds.includes(p.id)),
+        'Status': getStatusLabel(p.status, p.stageProgress, p.hasSurveyDraft),
         'Progress (%)': p.progress,
         'ITSO': p.itso ?? '—',
         'ITSO Delegate': p.itsoDelegate ?? '—',
@@ -1220,8 +1224,8 @@ export function exportProjectsToExcel(projects: Project[], draftProjectIds: stri
         'Migration Strategy': p.applicationOverview?.migrationStrategy ?? '—',
         'Migration Period': period,
         'Migration Effort': totalCost > 0 ? `$${Math.round(totalCost).toLocaleString()}` : '—',
-        'Infra Footprint': getInfraFootprintScore(p).score ?? '—',
-        'Migration Driver': getMigrationDriverScore(p).score ?? '—',
+        'Infra Footprint': p.infraFootprint.score ?? '—',
+        'Migration Driver': p.migrationDriver.score ?? '—',
         'Survey Required': p.isSurveyNeeded === false ? 'No' : 'Yes',
         'Justification Without Survey': p.justificationWithoutSurvey ?? '—',
         'Survey Submitted At': p.surveySubmittedAt ? formatDate(p.surveySubmittedAt) : '—',

@@ -162,6 +162,70 @@ class ProjectHomeItem(BaseModel):
     category_milestone_ids: list[str] | None = None
 
 
+class InfraFootprintScoreOut(BaseModel):
+    score: str | None = None
+    ecs_count: int = 0
+    ecs_level: str | None = None
+    data_volume_tb: float = 0
+    data_volume_level: str | None = None
+    maxcompute_count: int = 0
+    maxcompute_level: str | None = None
+
+
+class MigrationDriverScoreOut(BaseModel):
+    score: str | None = None
+    tier_level: str | None = None
+    application_tier: str | None = None
+    iita_applicability: bool | None = None
+    third_party_effort: float = 0
+    third_party_level: str | None = None
+    dependency_count: int = 0
+    dependency_level: str | None = None
+    external_user_count: float = 0
+    external_user_level: str | None = None
+    internal_user_count: float = 0
+    internal_user_level: str | None = None
+    app_count: int = 0
+    app_level: str | None = None
+
+
+class ProjectTableRow(BaseModel):
+    """Lean project payload for the projects table — only what the columns render."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    status: str
+    progress: int
+    stage_progress: dict[str, int] | None = None
+    survey_submitted_at: datetime | None = None
+    data_migration_survey_submitted_at: datetime | None = None
+    has_survey_draft: bool = False
+    bgi_id: str | None = None
+    itso: str | None = None
+    itso_delegate: str | None = None
+    jira_story_key: str | None = None
+    jira_base_url: str | None = None
+    is_survey_needed: bool = True
+    justification_without_survey: str | None = None
+    # Trimmed JSONB sections (only keys the table needs; contents stay camelCase)
+    application_overview: dict[str, Any] | None = None
+    planning: dict[str, Any] | None = None
+    migration_constraints: dict[str, Any] | None = None
+    # Full effort tables — the tooltip renders the per-task breakdown
+    migration_effort_estimation: dict[str, Any] | None = None
+    infra_footprint: InfraFootprintScoreOut
+    migration_driver: MigrationDriverScoreOut
+
+
+class ProjectTablePage(BaseModel):
+    items: list[ProjectTableRow]
+    total: int
+    page: int
+    page_size: int
+
+
 class DataMigrationCompleteRequest(BaseModel):
     remark: str | None = None
 

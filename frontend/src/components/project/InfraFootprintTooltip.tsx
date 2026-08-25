@@ -1,5 +1,4 @@
-import { getInfraFootprintScore, type InfraFootprintLevel, formatTb } from '@/lib/scoring'
-import type { Project } from '@/types'
+import { type InfraFootprintLevel, type InfraFootprintResult, formatTb } from '@/lib/scoring'
 import {
   Tooltip,
   TooltipContent,
@@ -7,7 +6,7 @@ import {
 } from '@/components/ui/tooltip'
 
 interface InfraFootprintTooltipProps {
-  project: Project
+  result: InfraFootprintResult
   children: React.ReactNode
 }
 
@@ -21,9 +20,7 @@ function rowClass(hasActive: boolean): string {
   return hasActive ? 'border-l-2 border-l-primary' : ''
 }
 
-export function InfraFootprintTooltip({ project, children }: InfraFootprintTooltipProps) {
-  const result = getInfraFootprintScore(project)
-
+export function InfraFootprintTooltip({ result, children }: InfraFootprintTooltipProps) {
   const matrix: { level: InfraFootprintLevel; ecs: string; data: string; maxcompute: string }[] = [
     { level: 'Lightweight', ecs: '1 – 10', data: '< 1 TB', maxcompute: '0' },
     { level: 'Mid-tier', ecs: '11 – 20', data: '1 – 10 TB', maxcompute: '1 – 20' },

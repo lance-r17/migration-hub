@@ -126,28 +126,28 @@ interface SectionProps {
 
 ### Project scoring tooltips
 
-Two tooltip components render the **Infra Footprint** and **Migration Driver** score matrices on the Projects list page. They wrap a trigger element (usually a table cell label) and highlight the matrix row that matches each input column for the project.
+Two tooltip components render the **Infra Footprint** and **Migration Driver** score matrices on the Projects list page. They wrap a trigger element (usually a table cell label) and highlight the matrix row that matches each input column for the project. Scores are precomputed server-side (`backend/app/services/scoring_service.py`) and shipped on each `ProjectTableRow`; the tooltips take the result object directly.
 
 ```tsx
-<InfraFootprintTooltip project={project}>
+<InfraFootprintTooltip result={project.infraFootprint}>
   <span className="cursor-help border-b border-dashed border-muted-foreground/50">
-    {getInfraFootprintScore(project).score ?? '—'}
+    {project.infraFootprint.score ?? '—'}
   </span>
 </InfraFootprintTooltip>
 ```
 
 ```tsx
-<MigrationDriverTooltip project={project}>
+<MigrationDriverTooltip result={project.migrationDriver}>
   <span className="cursor-help border-b border-dashed border-muted-foreground/50">
-    {getMigrationDriverScore(project).score ?? '—'}
+    {project.migrationDriver.score ?? '—'}
   </span>
 </MigrationDriverTooltip>
 ```
 
-| Component | Scoring utility | Inputs |
+| Component | Score source | Inputs |
 |---|---|---|
-| `InfraFootprintTooltip` | `src/lib/scoring.ts` `getInfraFootprintScore` | Prod ECS count, DB/OSS data volume (TB), prod MaxCompute count |
-| `MigrationDriverTooltip` | `src/lib/scoring.ts` `getMigrationDriverScore` | Application tier + IITA, third-party FTE, dependency count, external/internal user counts, number of apps |
+| `InfraFootprintTooltip` | `ProjectTableRow.infraFootprint` (`GET /api/v1/projects/table`; computed by `scoring_service.get_infra_footprint_score`, mirroring `src/lib/scoring.ts`) | Prod ECS count, DB/OSS data volume (TB), prod MaxCompute count |
+| `MigrationDriverTooltip` | `ProjectTableRow.migrationDriver` (`GET /api/v1/projects/table`; computed by `scoring_service.get_migration_driver_score`, mirroring `src/lib/scoring.ts`) | Application tier + IITA, third-party FTE, dependency count, external/internal user counts, number of apps |
 
 ### `StageProgressStepper`
 

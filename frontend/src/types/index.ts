@@ -1,4 +1,5 @@
 import type { JiraSubtaskConfig } from './wave'
+import type { InfraFootprintResult, MigrationDriverResult } from '@/lib/scoring'
 export type { JiraSubtaskConfig }
 
 export type ProjectStatus = 'migrating' | 'signed-off' | 'blocked' | 'planning' | 'in-progress' | 'completed'
@@ -422,6 +423,50 @@ export interface Project {
   categoryMilestoneIds?: string[]
   // Lean fields
   resourceSets?: string[]      // deduplicated resource_set values from cloud_resources
+}
+
+// ─── Projects table (lean, paginated) ─────────────────────────────────────────
+
+/** Trimmed application overview — only the keys the projects table renders. */
+export type ProjectTableOverview = Pick<
+  ApplicationOverview,
+  'newProjectId' | 'applicationName' | 'baId' | 'systemImportanceClassification' | 'iitaApplicability' | 'migrationStrategy'
+>
+
+/**
+ * Lean project payload returned by GET /api/v1/projects/table.
+ * Contains only what the projects table columns render; scores are precomputed
+ * server-side (see backend/app/services/scoring_service.py).
+ */
+export interface ProjectTableRow {
+  id: string
+  name: string
+  status: ProjectStatus
+  progress: number
+  stageProgress?: StageProgress
+  surveySubmittedAt?: string
+  dataMigrationSurveySubmittedAt?: string
+  hasSurveyDraft: boolean
+  bgi_id?: string
+  itso?: string
+  itsoDelegate?: string
+  jiraStoryKey?: string
+  jiraBaseUrl?: string
+  isSurveyNeeded?: boolean
+  justificationWithoutSurvey?: string
+  applicationOverview?: ProjectTableOverview
+  planning?: { startDate?: string; endDate?: string }
+  migrationConstraints?: Pick<MigrationConstraints, 'earliestStartDate' | 'latestEndDate'>
+  migrationEffortEstimation?: MigrationEffortEstimation
+  infraFootprint: InfraFootprintResult
+  migrationDriver: MigrationDriverResult
+}
+
+export interface ProjectTablePage {
+  items: ProjectTableRow[]
+  total: number
+  page: number
+  pageSize: number
 }
 
 // ─── Dashboard / Home ─────────────────────────────────────────────────────────

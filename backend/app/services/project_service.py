@@ -1,3 +1,4 @@
+import math
 import re
 import uuid
 from datetime import datetime, timezone
@@ -370,6 +371,152 @@ async def get_all(
         q = q.where(Project.bgi_id.in_(bgi_ids))
     result = await session.execute(q.order_by(Project.name))
     return list(result.scalars().all())
+
+
+# ─── Projects table (paginated, filtered) ────────────────────────────────────
+
+_DERIVED_STATUS_FILTERS = {
+    "awaiting-survey",
+    "drafting-survey",
+    "survey-submitted",
+    "awaiting-signoff",
+}
+
+
+def _parse_iso_datetime(value: Any) -> datetime | None:
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    # JS `new Date(...)` treats date-only strings as UTC; mirror that.
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def get_migration_period_days(project: "Project") -> int | None:
+    """Days between migration start/end (planning dates, falling back to constraints).
+
+    Mirrors ``getMigrationPeriodDays`` in frontend/src/lib/export-report.ts.
+    """
+    planning = project.planning or {}
+    constraints = project.migration_constraints or {}
+    start = _parse_iso_datetime(planning.get("startDate") or constraints.get("earliestStartDate"))
+    end = _parse_iso_datetime(planning.get("endDate") or constraints.get("latestEndDate"))
+    if not start or not end:
+        return None
+    return math.ceil((end - start).total_seconds() / 86400)
+
+
+def _matches_migration_range(days: int | None, migration_range: str) -> bool:
+    if days is None:
+        return False
+    if migration_range == "lt30":
+        return days < 30
+    if migration_range == "30to90":
+        return 30 <= days < 90
+    if migration_range == "90to180":
+        return 90 <= days < 180
+    if migration_range == "gte180":
+        return days >= 180
+    return True
+
+
+def _matches_status_filter(
+    effective_status: str,
+    stage_data: dict[str, int],
+    status_filter: str,
+    has_draft: bool,
+) -> bool:
+    """Mirrors the status-filter predicates in frontend ProjectsPage."""
+    setup = stage_data.get("setup", 0)
+    survey = stage_data.get("survey", 0)
+    signoff = stage_data.get("signoff", 0)
+    if status_filter == "drafting-survey":
+        return effective_status == "in-progress" and setup == 100 and survey < 100 and has_draft
+    if status_filter == "awaiting-survey":
+        return effective_status == "in-progress" and setup == 100 and survey < 100 and not has_draft
+    if status_filter == "survey-submitted":
+        return effective_status == "in-progress" and setup == 100 and survey == 100 and signoff == 0
+    if status_filter == "awaiting-signoff":
+        return effective_status == "in-progress" and setup == 100 and survey == 100 and 0 < signoff < 100
+    return effective_status == status_filter
+
+
+async def get_table_page(
+    session: AsyncSession,
+    *,
+    member_user_id: str | None = None,
+    role_bgi_ids: list[str] | None = None,
+    filter_bgi_ids: list[str] | None = None,
+    search: str | None = None,
+    status: str | None = None,
+    migration_range: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> tuple[list[tuple["Project", dict[str, int], str, bool]], int]:
+    """Return (page rows, total) for the projects table.
+
+    Each row is a tuple of (project, stage_data, effective_status, has_survey_draft).
+    ``page_size == 0`` returns all matching rows (used by export).
+    """
+    from sqlalchemy import or_
+
+    from app.models.project_user import ProjectUser
+
+    q = select(Project).options(
+        selectinload(Project.cloud_resources),
+        selectinload(Project.approvals),
+        selectinload(Project.project_users).selectinload(ProjectUser.user),
+    )
+    if member_user_id:
+        q = q.join(ProjectUser, ProjectUser.project_id == Project.id).where(
+            ProjectUser.user_id == member_user_id
+        )
+    if role_bgi_ids is not None:
+        q = q.where(Project.bgi_id.in_(role_bgi_ids))
+    if filter_bgi_ids:
+        q = q.where(Project.bgi_id.in_(filter_bgi_ids))
+    if search and search.strip():
+        like = f"%{search.strip()}%"
+        q = q.where(
+            or_(
+                Project.name.ilike(like),
+                Project.id.ilike(like),
+                Project.application_overview["applicationName"].astext.ilike(like),
+                Project.application_overview["baId"].astext.ilike(like),
+            )
+        )
+
+    result = await session.execute(q.order_by(Project.name))
+    candidates = list(result.scalars().all())
+
+    draft_ids = set(await get_survey_draft_project_ids(session))
+
+    rows: list[tuple["Project", dict[str, int], str, bool]] = []
+    for project in candidates:
+        stage_data = compute_stage_progress(project)
+        effective_status = (
+            "blocked"
+            if project.status == "blocked"
+            else derive_status_from_stage_progress(stage_data)
+        )
+        has_draft = project.id in draft_ids
+        if status and status != "all":
+            if not _matches_status_filter(effective_status, stage_data, status, has_draft):
+                continue
+        if migration_range and migration_range != "all":
+            if not _matches_migration_range(get_migration_period_days(project), migration_range):
+                continue
+        rows.append((project, stage_data, effective_status, has_draft))
+
+    total = len(rows)
+    if page_size > 0:
+        start = (page - 1) * page_size
+        rows = rows[start : start + page_size]
+    return rows, total
 
 
 async def get_all_home(

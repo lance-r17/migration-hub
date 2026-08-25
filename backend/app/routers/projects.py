@@ -29,13 +29,15 @@ from app.schemas.project import (
     ProjectHomeItem,
     ProjectListItem,
     ProjectPatch,
+    ProjectTablePage,
+    ProjectTableRow,
     SectionPatch,
     SurveyNeedPatch,
 )
 from app.schemas.user import ProjectUserRoleAssignment, UserOut
 from app.schemas.risk import RiskOut
 from app.schemas.jira_job import JiraJobCreate
-from app.services import audit_service, attachment_service, bgi_service, jira_client, jira_service, migration_settings_service, project_service, user_service
+from app.services import audit_service, attachment_service, bgi_service, jira_client, jira_service, migration_settings_service, project_service, scoring_service, user_service
 from app.config import settings
 from app.auth import _user_has_admin_role, _user_has_bgi_cloud_lead_role, _user_has_platform_lead_role, get_current_user, require_admin
 from app.models.project import Project
@@ -466,6 +468,103 @@ async def list_projects_home(
         bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
     projects = await project_service.get_all_home(db, user_id=userId, fields=field_set, bgi_ids=bgi_ids)
     return [_project_home_item(p, fields=field_set) for p in projects]
+
+
+_TABLE_OVERVIEW_KEYS = (
+    "newProjectId",
+    "applicationName",
+    "baId",
+    "systemImportanceClassification",
+    "iitaApplicability",
+    "migrationStrategy",
+)
+_TABLE_PLANNING_KEYS = ("startDate", "endDate")
+_TABLE_CONSTRAINT_KEYS = ("earliestStartDate", "latestEndDate")
+
+
+def _trim_keys(source: dict | None, keys: tuple[str, ...]) -> dict | None:
+    if not source:
+        return None
+    trimmed = {k: source[k] for k in keys if k in source}
+    return trimmed or None
+
+
+def _project_table_row(
+    p,
+    stage_data: dict[str, int],
+    effective_status: str,
+    has_survey_draft: bool,
+) -> ProjectTableRow:
+    return ProjectTableRow(
+        id=p.id,
+        name=p.name,
+        status=effective_status,
+        progress=stage_data["overall"],
+        stage_progress={k: v for k, v in stage_data.items() if k != "overall"},
+        survey_submitted_at=p.survey_submitted_at,
+        data_migration_survey_submitted_at=p.data_migration_survey_submitted_at,
+        has_survey_draft=has_survey_draft,
+        bgi_id=p.bgi_id,
+        itso=_itso_name(p),
+        itso_delegate=_itso_delegate_name(p),
+        jira_story_key=p.jira_story_key,
+        jira_base_url=settings.jira_base_url,
+        is_survey_needed=p.is_survey_needed,
+        justification_without_survey=p.justification_without_survey,
+        application_overview=_trim_keys(p.application_overview, _TABLE_OVERVIEW_KEYS),
+        planning=_trim_keys(p.planning, _TABLE_PLANNING_KEYS),
+        migration_constraints=_trim_keys(p.migration_constraints, _TABLE_CONSTRAINT_KEYS),
+        migration_effort_estimation=p.migration_effort_estimation,
+        infra_footprint=scoring_service.get_infra_footprint_score(p.cloud_resources or []),
+        migration_driver=scoring_service.get_migration_driver_score(
+            p.application_overview, p.migration_effort_estimation, p.dependencies
+        ),
+    )
+
+
+@router.get("/table", response_model=ProjectTablePage)
+async def list_projects_table(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=0, le=1000),
+    status: str | None = None,
+    search: str | None = None,
+    migration_range: str | None = None,
+    bgi_ids: list[str] | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Paginated, filtered, lean project rows for the projects table.
+
+    ``page_size=0`` returns all matching rows (used by export).
+    Role scoping: leads see everything, others see only projects they belong to.
+    """
+    is_lead = (
+        _user_has_admin_role(current_user.role)
+        or _user_has_platform_lead_role(current_user.role)
+        or _user_has_bgi_cloud_lead_role(current_user.role)
+    )
+    member_user_id = None if is_lead else current_user.id
+    role_bgi_ids: list[str] | None = None
+    if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
+        role_bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
+
+    rows, total = await project_service.get_table_page(
+        db,
+        member_user_id=member_user_id,
+        role_bgi_ids=role_bgi_ids,
+        filter_bgi_ids=bgi_ids or None,
+        search=search,
+        status=status,
+        migration_range=migration_range,
+        page=page,
+        page_size=page_size,
+    )
+    return ProjectTablePage(
+        items=[_project_table_row(p, sd, st, hd) for p, sd, st, hd in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/asset-stats", response_model=dict[str, int])

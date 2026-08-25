@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download, Network, X, MoreVertical } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { AppShell } from '@/components/layout/AppShell'
@@ -48,16 +49,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
-import { useProjects } from '@/hooks/use-projects'
+import { useProjectsTable } from '@/hooks/use-projects-table'
 import { useCurrentUser } from '@/context/UserContext'
-import { getSurveyDraftProjectIds, updateApplicationOverview, updateSurveyNeed } from '@/services/projects'
+import { getProjectsTable, updateApplicationOverview, updateSurveyNeed } from '@/services/projects'
 import { getBgiHierarchy } from '@/services/bgi'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { BgiTree } from '@/components/bgi/BgiTree'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { InfraFootprintTooltip } from '@/components/project/InfraFootprintTooltip'
 import { MigrationDriverTooltip } from '@/components/project/MigrationDriverTooltip'
-import { getInfraFootprintScore, getMigrationDriverScore } from '@/lib/scoring'
 import {
   exportProjectsToExcel,
   formatDate,
@@ -65,7 +65,7 @@ import {
   getMigrationPeriodDays,
   getMigrationEffortSummary,
 } from '@/lib/export-report'
-import type { Project } from '@/types'
+import type { ProjectTableRow } from '@/types'
 import type { BgiNode } from '@/types/bgi'
 import type { SelectAction } from '@/components/bgi/BgiTree'
 import {
@@ -77,7 +77,7 @@ import {
   promoteFullSelections,
 } from '@/lib/bgi-utils'
 
-function getProgressVariant(project: Project) {
+function getProgressVariant(project: Pick<ProjectTableRow, 'progress' | 'status'>) {
   if (project.progress === 100) return 'tertiary'
   if (project.status === 'blocked') return 'error'
   if (project.status === 'planning') return 'muted'
@@ -87,26 +87,22 @@ function getProgressVariant(project: Project) {
 export function ProjectsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
-  const { projects, loading, refresh } = useProjects({
-    fields: ['basic', 'itso', 'itso_delegate', 'progress', 'planning', 'overview', 'effort', 'resources', 'dependencies'],
-  })
 
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [migrationRange, setMigrationRange] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
   const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
   const [bgiPopoverOpen, setBgiPopoverOpen] = useState(false)
   const [bgiSearchQuery, setBgiSearchQuery] = useState('')
   const [selectedBgiIds, setSelectedBgiIds] = useState<Set<string>>(new Set())
   const [excludedBgiIds, setExcludedBgiIds] = useState<Set<string>>(new Set())
-  const [mappingDialogProject, setMappingDialogProject] = useState<Project | null>(null)
+  const [mappingDialogProject, setMappingDialogProject] = useState<ProjectTableRow | null>(null)
   const [mappingDialogValue, setMappingDialogValue] = useState('')
   const [mappingDialogSaving, setMappingDialogSaving] = useState(false)
   const [mappingDialogError, setMappingDialogError] = useState<string | null>(null)
-  const [surveyNeedDialogProject, setSurveyNeedDialogProject] = useState<Project | null>(null)
+  const [surveyNeedDialogProject, setSurveyNeedDialogProject] = useState<ProjectTableRow | null>(null)
   const [surveyNeedDialogValue, setSurveyNeedDialogValue] = useState(true)
   const [surveyNeedDialogJustification, setSurveyNeedDialogJustification] = useState('')
   const [surveyNeedDialogSaving, setSurveyNeedDialogSaving] = useState(false)
@@ -121,58 +117,7 @@ export function ProjectsPage() {
 
   const canViewProjects = isAdmin || isPlatformLead || isBgiCloudLead || isGbiChampionOrDelegate
 
-  async function handleSaveMapping() {
-    if (!mappingDialogProject) return
-    const trimmed = mappingDialogValue.trim()
-    setMappingDialogSaving(true)
-    setMappingDialogError(null)
-    try {
-      await updateApplicationOverview(mappingDialogProject.id, { newProjectId: trimmed || null })
-      setMappingDialogProject(null)
-      setMappingDialogValue('')
-      refresh()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update project ID mapping.'
-      setMappingDialogError(message)
-    } finally {
-      setMappingDialogSaving(false)
-    }
-  }
-
-  async function handleSaveSurveyNeed() {
-    if (!surveyNeedDialogProject) return
-    setSurveyNeedDialogSaving(true)
-    setSurveyNeedDialogError(null)
-    try {
-      await updateSurveyNeed(surveyNeedDialogProject.id, {
-        isSurveyNeeded: surveyNeedDialogValue,
-        justificationWithoutSurvey: surveyNeedDialogValue ? null : surveyNeedDialogJustification.trim() || null,
-      })
-      setSurveyNeedDialogProject(null)
-      setSurveyNeedDialogValue(true)
-      setSurveyNeedDialogJustification('')
-      refresh()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update survey requirement.'
-      setSurveyNeedDialogError(message)
-    } finally {
-      setSurveyNeedDialogSaving(false)
-    }
-  }
-
   const { settings: migrationSettings } = useMigrationSettings()
-
-  useEffect(() => {
-    let cancelled = false
-    getSurveyDraftProjectIds()
-      .then(ids => {
-        if (!cancelled) setDraftProjectIds(ids)
-      })
-      .catch(() => {
-        if (!cancelled) setDraftProjectIds([])
-      })
-    return () => { cancelled = true }
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -226,61 +171,78 @@ export function ProjectsPage() {
     return allIds
   }, [bgiRoot, selectedBgiIds, excludedBgiIds])
 
-  const filteredProjects = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    return (projects || []).filter((p) => {
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'drafting-survey') {
-          const sp = p.stageProgress
-          if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey < 100 && draftProjectIds.includes(p.id))) return false
-        } else if (statusFilter === 'awaiting-survey') {
-          const sp = p.stageProgress
-          if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey < 100 && !draftProjectIds.includes(p.id))) return false
-        } else if (statusFilter === 'survey-submitted') {
-          const sp = p.stageProgress
-          if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey === 100 && sp?.signoff === 0)) return false
-        } else if (statusFilter === 'awaiting-signoff') {
-          const sp = p.stageProgress
-          if (!(p.status === 'in-progress' && sp?.setup === 100 && sp?.survey === 100 && sp?.signoff > 0 && sp?.signoff < 100)) return false
-        } else if (p.status !== statusFilter) {
-          return false
-        }
-      }
-      if (selectedBgiDescendantIds != null) {
-        if (!p.bgi_id || !selectedBgiDescendantIds.has(p.bgi_id)) return false
-      }
-      if (query) {
-        const matchesName = p.name.toLowerCase().includes(query)
-        const matchesId = p.id.toLowerCase().includes(query)
-        const matchesAppName = p.applicationOverview?.applicationName?.toLowerCase().includes(query) ?? false
-        const matchesBaId = p.applicationOverview?.baId?.toLowerCase().includes(query) ?? false
-        if (!matchesName && !matchesId && !matchesAppName && !matchesBaId) return false
-      }
-      if (migrationRange === 'all') return true
-      const days = getMigrationPeriodDays(p)
-      if (days === null) return false
-      switch (migrationRange) {
-        case 'lt30':
-          return days < 30
-        case '30to90':
-          return days >= 30 && days < 90
-        case '90to180':
-          return days >= 90 && days < 180
-        case 'gte180':
-          return days >= 180
-        default:
-          return true
-      }
-    })
-  }, [projects, migrationRange, statusFilter, selectedBgiDescendantIds, searchQuery, draftProjectIds])
-
-  const totalPages = Math.ceil(filteredProjects.length / pageSize)
-  const startIndex = (currentPage - 1) * pageSize
-  const endIndex = startIndex + pageSize
-  const paginatedProjects = useMemo(
-    () => filteredProjects.slice(startIndex, endIndex),
-    [filteredProjects, startIndex, endIndex]
+  const bgiIdList = useMemo(
+    () => (selectedBgiDescendantIds ? Array.from(selectedBgiDescendantIds) : null),
+    [selectedBgiDescendantIds]
   )
+
+  const { rows, total, loading, refresh } = useProjectsTable({
+    page: currentPage,
+    pageSize,
+    status: statusFilter,
+    search: searchQuery,
+    migrationRange,
+    bgiIds: bgiIdList,
+  })
+
+  const totalPages = Math.ceil(total / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, total)
+
+  async function handleSaveMapping() {
+    if (!mappingDialogProject) return
+    const trimmed = mappingDialogValue.trim()
+    setMappingDialogSaving(true)
+    setMappingDialogError(null)
+    try {
+      await updateApplicationOverview(mappingDialogProject.id, { newProjectId: trimmed || null })
+      setMappingDialogProject(null)
+      setMappingDialogValue('')
+      refresh()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update project ID mapping.'
+      setMappingDialogError(message)
+    } finally {
+      setMappingDialogSaving(false)
+    }
+  }
+
+  async function handleSaveSurveyNeed() {
+    if (!surveyNeedDialogProject) return
+    setSurveyNeedDialogSaving(true)
+    setSurveyNeedDialogError(null)
+    try {
+      await updateSurveyNeed(surveyNeedDialogProject.id, {
+        isSurveyNeeded: surveyNeedDialogValue,
+        justificationWithoutSurvey: surveyNeedDialogValue ? null : surveyNeedDialogJustification.trim() || null,
+      })
+      setSurveyNeedDialogProject(null)
+      setSurveyNeedDialogValue(true)
+      setSurveyNeedDialogJustification('')
+      refresh()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update survey requirement.'
+      setSurveyNeedDialogError(message)
+    } finally {
+      setSurveyNeedDialogSaving(false)
+    }
+  }
+
+  async function handleExport() {
+    try {
+      const result = await getProjectsTable({
+        page: 1,
+        pageSize: 0,
+        status: statusFilter,
+        search: searchQuery,
+        migrationRange,
+        bgiIds: bgiIdList,
+      })
+      exportProjectsToExcel(result.items, bgiRoot)
+    } catch {
+      toast.error('Failed to load projects for export')
+    }
+  }
 
   if (!canViewProjects) {
     return (
@@ -485,7 +447,7 @@ export function ProjectsPage() {
           </div>
           <button
             className="px-4 py-2 bg-muted text-foreground text-sm font-semibold rounded-lg hover:bg-muted/80 transition-colors flex items-center gap-2"
-            onClick={() => exportProjectsToExcel(filteredProjects, draftProjectIds, bgiRoot)}
+            onClick={handleExport}
           >
             <Download size={14} /> Export
           </button>
@@ -570,14 +532,14 @@ export function ProjectsPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : filteredProjects.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={20} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedProjects.map((project) => (
+                rows.map((project) => (
                   <TableRow
                     key={project.id}
                     className="cursor-pointer hover:bg-muted/40"
@@ -602,7 +564,7 @@ export function ProjectsPage() {
                       {project.bgi_id ? (bgiNameMap.get(project.bgi_id) ?? project.bgi_id) : '—'}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={project.status} stageProgress={project.stageProgress} hasSurveyDraft={draftProjectIds.includes(project.id)} surveySubmittedAt={project.surveySubmittedAt} />
+                      <StatusBadge status={project.status} stageProgress={project.stageProgress} hasSurveyDraft={project.hasSurveyDraft} surveySubmittedAt={project.surveySubmittedAt} />
                     </TableCell>
                     <TableCell>
                       <div className="w-full max-w-[120px]">
@@ -714,10 +676,10 @@ export function ProjectsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-right">
                       {(() => {
-                        const result = getInfraFootprintScore(project)
+                        const result = project.infraFootprint
                         if (!result.score) return <span className="text-muted-foreground">—</span>
                         return (
-                          <InfraFootprintTooltip project={project}>
+                          <InfraFootprintTooltip result={result}>
                             <span className="cursor-help border-b border-dashed border-muted-foreground/50">{result.score}</span>
                           </InfraFootprintTooltip>
                         )
@@ -725,10 +687,10 @@ export function ProjectsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-right">
                       {(() => {
-                        const result = getMigrationDriverScore(project)
+                        const result = project.migrationDriver
                         if (!result.score) return <span className="text-muted-foreground">—</span>
                         return (
-                          <MigrationDriverTooltip project={project}>
+                          <MigrationDriverTooltip result={result}>
                             <span className="cursor-help border-b border-dashed border-muted-foreground/50">{result.score}</span>
                           </MigrationDriverTooltip>
                         )
@@ -797,11 +759,11 @@ export function ProjectsPage() {
         </div>
 
         {/* Pagination */}
-        {!loading && filteredProjects.length > 0 && (
+        {!loading && total > 0 && (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span>
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length}
+                Showing {startIndex + 1}-{endIndex} of {total}
               </span>
               <select
                 value={pageSize}

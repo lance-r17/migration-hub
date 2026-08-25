@@ -1,5 +1,4 @@
-import { getMigrationDriverScore, type MigrationDriverLevel } from '@/lib/scoring'
-import type { Project } from '@/types'
+import { type MigrationDriverLevel, type MigrationDriverResult } from '@/lib/scoring'
 import {
   Tooltip,
   TooltipContent,
@@ -7,7 +6,7 @@ import {
 } from '@/components/ui/tooltip'
 
 interface MigrationDriverTooltipProps {
-  project: Project
+  result: MigrationDriverResult
   children: React.ReactNode
 }
 
@@ -21,9 +20,7 @@ function rowClass(hasActive: boolean): string {
   return hasActive ? 'border-l-2 border-l-primary' : ''
 }
 
-export function MigrationDriverTooltip({ project, children }: MigrationDriverTooltipProps) {
-  const result = getMigrationDriverScore(project)
-
+export function MigrationDriverTooltip({ result, children }: MigrationDriverTooltipProps) {
   const matrix: { level: MigrationDriverLevel; tier: string; thirdParty: string; dep: string; external: string; internal: string; apps: string }[] = [
     { level: 'Low', tier: 'Tier 3 / Tier 2', thirdParty: '1 – 2 FTE', dep: '1 – 4', external: '1 – 1000', internal: '1 – 1000', apps: '1' },
     { level: 'Medium', tier: 'Tier 2 + IITA / Tier 1', thirdParty: '3 – 4 FTE', dep: '5 – 10', external: '1001 – 10000', internal: '1001 – 5000', apps: '2 – 5' },
