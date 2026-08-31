@@ -69,6 +69,9 @@ SECTION_COLUMN_MAP: dict[str, str | None] = {
     "engagement": None,
 }
 
+# Sections whose JSONB value is replaced wholesale on PATCH (keys can be intentionally cleared)
+SECTION_REPLACE_WHOLESALE = {"dataMigrationSchedule", "environmentProvision"}
+
 SECTION_LABELS: dict[str, str] = {
     "applicationOverview": "Application Overview",
     "availability": "Availability & Resilience",
@@ -396,15 +399,84 @@ def _parse_iso_datetime(value: Any) -> datetime | None:
     return dt
 
 
-def get_migration_period_days(project: "Project") -> int | None:
-    """Days between migration start/end (planning dates, falling back to constraints).
+def _iso_date(value: Any) -> str | None:
+    """Return a 'yyyy-MM-dd' string for date-like values, else None."""
+    if not value or not isinstance(value, str):
+        return None
+    return value[:10] if len(value) >= 10 and value[4] == "-" else None
 
-    Mirrors ``getMigrationPeriodDays`` in frontend/src/lib/export-report.ts.
+
+def get_derived_project_dates(project: "Project") -> tuple[str, str] | None:
+    """Project timeline derived from the union of its milestones — mirrors
+    ``deriveProjectDates`` in frontend/src/components/waves/WaveGanttChart.tsx:
+
+    planning.milestones (excluding entries shadowed by assigned category milestones)
+    + env-provision dev/prod dates + data-migration plan/schedule (incl. cycleBlocks)
+    + assigned category milestones (per-project overrides, else global CM dates).
     """
     planning = project.planning or {}
-    constraints = project.migration_constraints or {}
-    start = _parse_iso_datetime(planning.get("startDate") or constraints.get("earliestStartDate"))
-    end = _parse_iso_datetime(planning.get("endDate") or constraints.get("latestEndDate"))
+    milestones = planning.get("milestones") or []
+    overrides = planning.get("categoryMilestoneOverrides") or {}
+    assigned_cm_ids = {cm.id for cm in (project.category_milestones or [])}
+
+    starts: list[str] = []
+    ends: list[str] = []
+
+    def push(start: Any, end: Any) -> None:
+        s, e = _iso_date(start), _iso_date(end)
+        if s and e:
+            starts.append(s)
+            ends.append(e)
+
+    for m in milestones:
+        if not isinstance(m, dict) or m.get("id") in assigned_cm_ids:
+            continue
+        push(m.get("start"), m.get("end"))
+
+    provision = project.environment_provision or {}
+    for env in ("dev", "prod"):
+        entry = provision.get(env)
+        if isinstance(entry, dict) and entry.get("date"):
+            push(entry["date"], entry["date"])
+
+    dm = project.data_migration_plan or project.data_migration_schedule or {}
+    push(dm.get("startDate"), dm.get("endDate"))
+    for block in dm.get("cycleBlocks") or []:
+        if isinstance(block, dict):
+            push(block.get("startDate"), block.get("endDate"))
+
+    for cm in project.category_milestones or []:
+        override = overrides.get(cm.id) or {}
+        push(override.get("start") or cm.start_date, override.get("end") or cm.end_date)
+
+    if not starts:
+        return None
+    return min(starts), max(ends)
+
+
+def get_migration_period_days(project: "Project") -> int | None:
+    """Days between derived migration start/end (milestone union), falling back to
+    constraints, then wave dates. Mirrors ``getMigrationPeriodDays`` in
+    frontend/src/lib/export-report.ts.
+    """
+    start_s: str | None = None
+    end_s: str | None = None
+    derived = get_derived_project_dates(project)
+    if derived:
+        start_s, end_s = derived
+    if not start_s or not end_s:
+        planning = project.planning or {}
+        start_s = planning.get("startDate")
+        end_s = planning.get("endDate")
+    if not start_s or not end_s:
+        constraints = project.migration_constraints or {}
+        start_s = constraints.get("earliestStartDate")
+        end_s = constraints.get("latestEndDate")
+    if (not start_s or not end_s) and project.wave:
+        start_s = project.wave.start_date
+        end_s = project.wave.cutover_date
+    start = _parse_iso_datetime(start_s)
+    end = _parse_iso_datetime(end_s)
     if not start or not end:
         return None
     return math.ceil((end - start).total_seconds() / 86400)
@@ -422,6 +494,16 @@ def _matches_migration_range(days: int | None, migration_range: str) -> bool:
     if migration_range == "gte180":
         return days >= 180
     return True
+
+
+def _project_has_role_user(project: "Project", role: str, user_id: str) -> bool:
+    """True when user_id holds the given comma-separated project role on this project."""
+    for pu in project.project_users or []:
+        if pu.user_id != user_id or not pu.role:
+            continue
+        if role in {r.strip() for r in pu.role.split(",") if r.strip()}:
+            return True
+    return False
 
 
 def _matches_status_filter(
@@ -454,6 +536,8 @@ async def get_table_page(
     search: str | None = None,
     status: str | None = None,
     migration_range: str | None = None,
+    role: str | None = None,
+    role_user_id: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> tuple[list[tuple["Project", dict[str, int], str, bool]], int]:
@@ -469,6 +553,8 @@ async def get_table_page(
     q = select(Project).options(
         selectinload(Project.cloud_resources),
         selectinload(Project.approvals),
+        selectinload(Project.category_milestones),
+        selectinload(Project.wave),
         selectinload(Project.project_users).selectinload(ProjectUser.user),
     )
     if member_user_id:
@@ -509,6 +595,9 @@ async def get_table_page(
                 continue
         if migration_range and migration_range != "all":
             if not _matches_migration_range(get_migration_period_days(project), migration_range):
+                continue
+        if role and role_user_id:
+            if not _project_has_role_user(project, role, role_user_id):
                 continue
         rows.append((project, stage_data, effective_status, has_draft))
 
@@ -705,9 +794,9 @@ async def update_section(
             }
         old = getattr(project, column, None)
         # Merge dict values for JSONB columns so PATCH only updates provided keys.
-        # Data migration schedule is replaced wholesale because fields such as
-        # asrDrJustification can be intentionally cleared by the client.
-        if isinstance(old, dict) and isinstance(value, dict) and section_key != "dataMigrationSchedule":
+        # Data migration schedule and environment provision are replaced wholesale
+        # because fields/environments can be intentionally cleared by the client.
+        if isinstance(old, dict) and isinstance(value, dict) and section_key not in SECTION_REPLACE_WHOLESALE:
             merged = {**old, **value}
             setattr(project, column, merged)
             changes = _diff_section(old, merged)

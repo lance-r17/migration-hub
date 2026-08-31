@@ -220,6 +220,79 @@ class TestProjectsTableFilters:
         assert short.id not in ids
 
     @pytest.mark.asyncio
+    async def test_migration_range_uses_derived_milestone_union(self, lead_client: AsyncClient, db_session: AsyncSession):
+        """Stored planning dates are short, but milestone union makes the period long."""
+        unioned = await _create_project(
+            db_session,
+            name="Unioned",
+            planning={
+                "startDate": "2026-01-10",
+                "endDate": "2026-01-20",
+                "milestones": [
+                    {"id": "m1", "name": "Dev", "type": "custom", "start": "2026-01-10", "end": "2026-01-20", "status": "todo", "deps": []},
+                    {"id": "m2", "name": "Cutover", "type": "custom", "start": "2026-06-01", "end": "2026-08-31", "status": "todo", "deps": []},
+                ],
+            },
+        )
+        env_extends = await _create_project(
+            db_session,
+            name="EnvExtends",
+            planning={
+                "startDate": "2026-01-10",
+                "endDate": "2026-01-20",
+                "milestones": [
+                    {"id": "m1", "name": "Dev", "type": "custom", "start": "2026-01-10", "end": "2026-01-20", "status": "todo", "deps": []},
+                ],
+            },
+        )
+        env_extends.environment_provision = {"prod": {"date": "2026-09-30"}}
+        db_session.add(env_extends)
+        await db_session.commit()
+
+        r = await lead_client.get(
+            "/api/v1/projects/table", params={"page_size": 0, "migration_range": "gte180"}
+        )
+        ids = [i["id"] for i in r.json()["items"]]
+        assert unioned.id in ids
+        assert env_extends.id in ids
+
+        items = {i["id"]: i for i in r.json()["items"]}
+        assert items[unioned.id]["planning"] == {"startDate": "2026-01-10", "endDate": "2026-08-31"}
+        assert items[env_extends.id]["planning"] == {"startDate": "2026-01-10", "endDate": "2026-09-30"}
+
+    @pytest.mark.asyncio
+    async def test_role_filter(self, lead_client: AsyncClient, db_session: AsyncSession):
+        user = _make_user("member")
+        user.name = "Role Person"
+        db_session.add(user)
+        champion_proj = await _create_project(db_session, name="ChampionProj")
+        itso_proj = await _create_project(db_session, name="ItsoProj")
+        plain_proj = await _create_project(db_session, name="PlainProj")
+        db_session.add(ProjectUser(project_id=champion_proj.id, user_id=user.id, role="gbi_champion"))
+        db_session.add(ProjectUser(project_id=itso_proj.id, user_id=user.id, role="itso"))
+        await db_session.commit()
+
+        r = await lead_client.get(
+            "/api/v1/projects/table",
+            params={"page_size": 0, "role": "gbi_champion", "role_user_id": user.id},
+        )
+        ids = [i["id"] for i in r.json()["items"]]
+        assert champion_proj.id in ids
+        assert itso_proj.id not in ids
+        assert plain_proj.id not in ids
+
+        items = {i["id"]: i for i in r.json()["items"]}
+        assert items[champion_proj.id]["gbi_champion"] == "Role Person"
+
+        r = await lead_client.get(
+            "/api/v1/projects/table",
+            params={"page_size": 0, "role": "itso", "role_user_id": user.id},
+        )
+        ids = [i["id"] for i in r.json()["items"]]
+        assert itso_proj.id in ids
+        assert champion_proj.id not in ids
+
+    @pytest.mark.asyncio
     async def test_plain_status_filter(self, lead_client: AsyncClient, db_session: AsyncSession):
         planning = await _create_project(db_session, name="PlanningProj", status="planning")
         blocked = await _create_project(db_session, name="BlockedProj", status="blocked")

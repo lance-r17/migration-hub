@@ -1,6 +1,6 @@
 import { store } from '@/data/store'
 import { USE_MOCK, delay, apiClient } from './client'
-import type { DataMigrationPeriod, DataMigrationSettings, MigrationSettings } from '@/types/settings'
+import type { DataMigrationPeriod, DataMigrationSettings, MigrationSettings, ProvisionCidrParents } from '@/types/settings'
 
 const ENDPOINT = '/api/v1/settings/migration'
 
@@ -30,6 +30,39 @@ interface MigrationSettingsApi {
   data_migration_adjustment_enabled: boolean
   create_jira_stories_on_signoff: boolean
   data_migration: DataMigrationSettingsApi
+  provision_cidr_parents?: ProvisionCidrParentsApi | null
+  provision_allowed_prefixes?: number[] | null
+}
+
+interface ProvisionCidrZoneMapApi {
+  zone_a?: string[]
+  zone_b?: string[]
+  zone_c?: string[]
+}
+
+interface ProvisionCidrParentsApi {
+  dev?: ProvisionCidrZoneMapApi
+  prod?: ProvisionCidrZoneMapApi
+}
+
+function provisionCidrParentsFromApi(raw: ProvisionCidrParentsApi | null | undefined): ProvisionCidrParents | undefined {
+  if (!raw) return undefined
+  const zoneMap = (m: ProvisionCidrZoneMapApi | undefined) => ({
+    zoneA: m?.zone_a ?? [],
+    zoneB: m?.zone_b ?? [],
+    zoneC: m?.zone_c ?? [],
+  })
+  return { dev: zoneMap(raw.dev), prod: zoneMap(raw.prod) }
+}
+
+function provisionCidrParentsToApi(parents: ProvisionCidrParents | undefined): ProvisionCidrParentsApi | null {
+  if (!parents) return null
+  const zoneMap = (m: Record<'zoneA' | 'zoneB' | 'zoneC', string[]>) => ({
+    zone_a: m.zoneA ?? [],
+    zone_b: m.zoneB ?? [],
+    zone_c: m.zoneC ?? [],
+  })
+  return { dev: zoneMap(parents.dev), prod: zoneMap(parents.prod) }
 }
 
 function periodFromApi(raw: PeriodApi | null): { startDate?: string; endDate?: string } | undefined {
@@ -105,6 +138,8 @@ function fromApi(raw: MigrationSettingsApi): MigrationSettings {
           cycleCapacity: 20,
           asrDrLicenseCapacity: 2,
         },
+    provisionCidrParents: provisionCidrParentsFromApi(raw.provision_cidr_parents),
+    provisionAllowedPrefixes: raw.provision_allowed_prefixes ?? undefined,
   }
 }
 
@@ -125,6 +160,8 @@ function toApi(config: MigrationSettings): MigrationSettingsApi {
       cycleCapacity: 20,
       asrDrLicenseCapacity: 2,
     }),
+    provision_cidr_parents: provisionCidrParentsToApi(config.provisionCidrParents),
+    provision_allowed_prefixes: config.provisionAllowedPrefixes ?? null,
   }
 }
 

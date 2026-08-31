@@ -39,6 +39,7 @@ import { AdminHome } from './pages/AdminHome'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { BgiSettingsPage } from './pages/BgiSettingsPage'
 import { BgiCloudLeadsPage } from './pages/BgiCloudLeadsPage'
+import { AdminProvisionCidrsPage } from './pages/AdminProvisionCidrsPage'
 import { EngagementReviewersPage } from './pages/EngagementReviewersPage'
 import { useCurrentUser } from '@/context/UserContext'
 
@@ -98,6 +99,7 @@ function App() {
             <Route path="attachments" element={<AdminAttachmentsPage />} />
             <Route path="bgi-cloud-leads" element={<BgiCloudLeadsPage />} />
             <Route path="engagement-reviewers" element={<EngagementReviewersPage />} />
+            <Route path="provision-cidrs" element={<AdminProvisionCidrsPage />} />
           </Route>
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}>
             <Route index element={<SettingsHome />} />

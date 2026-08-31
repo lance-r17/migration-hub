@@ -14,6 +14,7 @@
   - [Services](frontend/services.md)
   - [Components](frontend/components.md)
   - [Engagements](frontend/engagements.md)
+  - [Wave Gantt Milestones](frontend/wave-gantt-milestones.md)
   - [Note Templates](frontend/note-templates.md)
   - [Best Practices](frontend/best-practices.md)
   - [Testing](frontend/testing.md)

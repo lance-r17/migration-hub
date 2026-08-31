@@ -10,6 +10,9 @@ interface UseProjectsTableParams {
   status: string
   search: string
   migrationRange: string
+  /** Filter: projects where this user holds this role */
+  role?: string
+  roleUserId?: string
   /** Pre-resolved BGI ids to include; null/undefined = no BGI filter */
   bgiIds?: string[] | null
 }
@@ -43,13 +46,15 @@ export function useProjectsTable(params: UseProjectsTableParams): ProjectsTableS
     params.status,
     debouncedSearch,
     params.migrationRange,
+    params.role ?? null,
+    params.roleUserId ?? null,
     params.bgiIds ?? null,
     refreshKey,
   ])
 
   useEffect(() => {
     let cancelled = false
-    const request = JSON.parse(requestKey) as [number, number, string, string, string, string[] | null, number]
+    const request = JSON.parse(requestKey) as [number, number, string, string, string, string | null, string | null, string[] | null, number]
 
     getProjectsTable({
       page: request[0],
@@ -57,7 +62,9 @@ export function useProjectsTable(params: UseProjectsTableParams): ProjectsTableS
       status: request[2],
       search: request[3],
       migrationRange: request[4],
-      bgiIds: request[5] ?? undefined,
+      role: request[5] ?? undefined,
+      roleUserId: request[6] ?? undefined,
+      bgiIds: request[7] ?? undefined,
     })
       .then(res => {
         if (!cancelled) {

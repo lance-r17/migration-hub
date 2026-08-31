@@ -1,0 +1,26 @@
+{
+  "projects": [
+    {
+      "projectId": "NOPE-999",
+      "milestones": [
+        { "type": "dev-cutover", "start": "2026-05-04", "end": "2026-05-06" }
+      ]
+    },
+    {
+      "projectId": "M-11029"
+    },
+    {
+      "projectId": "M-11029",
+      "milestones": [
+        { "type": "dev-cutover", "start": "2026-05-10", "end": "2026-05-01" },
+        { "type": "not-a-real-type", "start": "2026-05-04", "end": "2026-05-06" },
+        { "type": "dev-cutover", "start": "2026-05-04", "end": "2026-05-06", "status": "todo" },
+        { "type": "dev-cutover", "start": "2026-05-07", "end": "2026-05-08", "status": "todo" },
+        { "type": "custom", "start": "2026-05-11", "end": "2026-05-12" },
+        { "type": "custom", "id": "loop-a", "name": "Loop A", "start": "2026-05-11", "end": "2026-05-13", "deps": ["loop-b"] },
+        { "type": "custom", "id": "loop-b", "name": "Loop B", "start": "2026-05-14", "end": "2026-05-15", "deps": ["loop-a"] },
+        { "type": "custom", "name": "Dangling dep", "start": "2026-05-18", "end": "2026-05-20", "deps": ["ghost-milestone-id"] }
+      ]
+    }
+  ]
+}

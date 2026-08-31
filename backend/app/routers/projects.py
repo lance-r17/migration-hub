@@ -97,6 +97,14 @@ def _category_milestone_ids(p) -> list[str]:
     return [cm.id for cm in (p.category_milestones or [])]
 
 
+def _governance_user_name(p, role: str) -> str | None:
+    """Name of the user holding a governance role (gbi_champion, gbi_champion_delegate, ...)."""
+    for pu in (p.project_users or []):
+        if pu.user and pu.role and role in {r.strip() for r in pu.role.split(",") if r.strip()}:
+            return pu.user.name
+    return None
+
+
 def _team_from_project_users(p) -> list[dict]:
     return [
         {"id": pu.user.id, "name": pu.user.name, "initials": pu.user.initials}
@@ -489,6 +497,16 @@ def _trim_keys(source: dict | None, keys: tuple[str, ...]) -> dict | None:
     return trimmed or None
 
 
+def _table_planning_payload(p) -> dict | None:
+    """Trimmed planning payload whose dates are the derived project timeline
+    (milestone union, mirroring the Wave Gantt), falling back to stored dates."""
+    derived = project_service.get_derived_project_dates(p)
+    stored = _trim_keys(p.planning, _TABLE_PLANNING_KEYS) or {}
+    if derived:
+        return {"startDate": derived[0], "endDate": derived[1]}
+    return stored or None
+
+
 def _project_table_row(
     p,
     stage_data: dict[str, int],
@@ -511,8 +529,10 @@ def _project_table_row(
         jira_base_url=settings.jira_base_url,
         is_survey_needed=p.is_survey_needed,
         justification_without_survey=p.justification_without_survey,
+        gbi_champion=_governance_user_name(p, "gbi_champion"),
+        gbi_champion_delegate=_governance_user_name(p, "gbi_champion_delegate"),
         application_overview=_trim_keys(p.application_overview, _TABLE_OVERVIEW_KEYS),
-        planning=_trim_keys(p.planning, _TABLE_PLANNING_KEYS),
+        planning=_table_planning_payload(p),
         migration_constraints=_trim_keys(p.migration_constraints, _TABLE_CONSTRAINT_KEYS),
         migration_effort_estimation=p.migration_effort_estimation,
         infra_footprint=scoring_service.get_infra_footprint_score(p.cloud_resources or []),
@@ -529,6 +549,8 @@ async def list_projects_table(
     status: str | None = None,
     search: str | None = None,
     migration_range: str | None = None,
+    role: str | None = None,
+    role_user_id: str | None = None,
     bgi_ids: list[str] | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -556,6 +578,8 @@ async def list_projects_table(
         search=search,
         status=status,
         migration_range=migration_range,
+        role=role,
+        role_user_id=role_user_id,
         page=page,
         page_size=page_size,
     )

@@ -1141,8 +1141,8 @@ export function exportWavePlanningToExcel(projects: Project[], waves: Wave[]) {
         'Wave Name': wave.name,
         'Wave Start Date': formatDate(wave.startDate),
         'Wave End Date': formatDate(wave.cutoverDate),
-        'Project Plan Start Date': formatDate(project.planning?.planStartDate),
-        'Project Plan End Date': formatDate(project.planning?.planEndDate),
+        'Project Plan Start Date': formatDate(project.planning?.startDate),
+        'Project Plan End Date': formatDate(project.planning?.endDate),
       })
     }
 
@@ -1216,6 +1216,8 @@ export function exportProjectsToExcel(projects: ProjectTableRow[], bgiRoot?: Bgi
         'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName) : (p.bgi_id ?? '—'),
         'Status': getStatusLabel(p.status, p.stageProgress, p.hasSurveyDraft),
         'Progress (%)': p.progress,
+        'BGI Champion': p.gbiChampion ?? '—',
+        'BGI Champion Delegate': p.gbiChampionDelegate ?? '—',
         'ITSO': p.itso ?? '—',
         'ITSO Delegate': p.itsoDelegate ?? '—',
         'BPS': p.applicationOverview?.systemImportanceClassification?.includes('BPS') ? 'Yes' : 'No',

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MonitorDot, Key, Paperclip, UserCog, Users, Mail, Bell, Building2 } from 'lucide-react'
+import { MonitorDot, Key, Paperclip, UserCog, Users, Mail, Bell, Building2, Network } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const ADMIN_SECTIONS = [
@@ -50,6 +50,12 @@ const ADMIN_SECTIONS = [
     description: 'Review and permanently delete project attachments across all projects.',
     icon: <Paperclip size={20} className="text-primary" />,
     href: '/admin/attachments',
+  },
+  {
+    title: 'Provision CIDR Blocks',
+    description: 'Override the parent CIDR blocks per environment and availability zone.',
+    icon: <Network size={20} className="text-primary" />,
+    href: '/admin/provision-cidrs',
   },
 ]
 

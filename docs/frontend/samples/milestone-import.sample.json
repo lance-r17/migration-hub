@@ -1,0 +1,62 @@
+{
+  "projects": [
+    {
+      "projectId": "PRJ-2024-ALPHA",
+      "milestones": [
+        { "type": "dev-resource-provision", "start": "2026-04-06", "end": "2026-04-17", "status": "done", "deps": [] },
+        {
+          "type": "dev-data-migration",
+          "start": "2026-04-20",
+          "end": "2026-05-08",
+          "status": "in-progress",
+          "deps": ["dev-resource-provision-PRJ-2024-ALPHA"],
+          "comments": [
+            { "text": "DTS instances provisioned, full load running.", "author": "Carol White", "createdAt": "2026-04-22T09:30:00.000Z" },
+            { "text": "Incremental sync lag under 5 minutes.", "author": "Henry Wilson" }
+          ]
+        },
+        { "type": "dev-cutover", "start": "2026-05-11", "end": "2026-05-13", "status": "todo", "deps": ["dev-data-migration-PRJ-2024-ALPHA"] },
+        { "type": "prd-resource-provision", "start": "2026-05-18", "end": "2026-05-29", "status": "todo", "deps": ["dev-cutover-PRJ-2024-ALPHA"] },
+        { "type": "prd-cutover", "start": "2026-06-15", "end": "2026-06-17", "status": "todo", "deps": ["prd-resource-provision-PRJ-2024-ALPHA"] },
+        {
+          "type": "custom",
+          "id": "alpha-uat-signoff",
+          "name": "UAT sign-off",
+          "start": "2026-06-01",
+          "end": "2026-06-12",
+          "status": "todo",
+          "deps": ["prd-resource-provision-PRJ-2024-ALPHA"],
+          "comments": [
+            { "text": "Business owner confirmed UAT window.", "author": "Sarah Jenkins", "createdAt": "2026-04-10T14:00:00.000Z" }
+          ]
+        }
+      ]
+    },
+    {
+      "projectId": "M-77122",
+      "milestones": [
+        { "type": "dev-resource-provision", "start": "2026-04-06", "end": "2026-04-10", "status": "done", "deps": [] },
+        { "type": "dev-data-migration", "start": "2026-04-13", "end": "2026-04-24", "status": "todo", "deps": ["dev-resource-provision-M-77122"] },
+        { "type": "dev-cutover", "start": "2026-04-27", "end": "2026-04-29", "status": "todo", "deps": ["dev-data-migration-M-77122"] },
+        { "type": "prd-resource-provision", "start": "2026-05-04", "end": "2026-05-15", "status": "todo", "deps": [] },
+        { "type": "prd-cutover", "start": "2026-06-22", "end": "2026-06-24", "status": "todo", "deps": ["prd-resource-provision-M-77122", "alpha-uat-signoff"] }
+      ]
+    },
+    {
+      "projectId": "M-88271",
+      "milestones": [
+        { "type": "dev-resource-provision", "start": "2026-07-06", "end": "2026-07-17", "status": "todo", "deps": [] },
+        { "type": "dev-data-migration", "start": "2026-07-20", "end": "2026-08-14", "status": "todo", "deps": ["dev-resource-provision-M-88271"] },
+        { "type": "dev-cutover", "start": "2026-08-17", "end": "2026-08-19", "status": "todo", "deps": ["dev-data-migration-M-88271"] },
+        {
+          "type": "custom",
+          "name": "Warehouse reconciliation report",
+          "start": "2026-08-20",
+          "end": "2026-08-28",
+          "status": "todo",
+          "deps": ["dev-cutover-M-88271"]
+        }
+      ]
+    }
+  ]
+}

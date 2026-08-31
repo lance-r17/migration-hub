@@ -23,6 +23,7 @@ import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
 import type { BillingBreakdownRecord, BillingRecord, BillingThresholdConfig } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
 import type { SignoffConfig, MigrationSettings, CustomNavCardConfig } from '@/types/settings'
+import { DEFAULT_PROVISION_CIDR_PARENTS, DEFAULT_PROVISION_ALLOWED_PREFIXES } from '@/lib/provision-cidr'
 
 // Mutable in-memory session store — deep copy of mock data.
 // Writes persist for the lifetime of the browser tab (resets on page refresh).
@@ -62,6 +63,8 @@ let _migrationSettings: MigrationSettings = {
     asrDrLicenseCapacity: 2,
     supportEmail: '',
   },
+  provisionCidrParents: structuredClone(DEFAULT_PROVISION_CIDR_PARENTS),
+  provisionAllowedPrefixes: [...DEFAULT_PROVISION_ALLOWED_PREFIXES],
 }
 let _customNavCardConfig: CustomNavCardConfig = {
   title: 'Help & Support',

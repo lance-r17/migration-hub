@@ -25,19 +25,37 @@ import { cn } from '@/lib/utils'
 import { useWaves } from '@/hooks/use-waves'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { updateEnvironmentProvision } from '@/services/projects'
 import {
-  getEnvironmentProvisionStatus,
+  DEFAULT_PROVISION_CIDR_PARENTS,
+  DEFAULT_PROVISION_ALLOWED_PREFIXES,
+  cidrRangesOverlap,
+  formatAllowedPrefixes,
+  isValidProvisionCidr,
+  parseCidr,
+} from '@/lib/provision-cidr'
+import {
+  getProvisionEntryStatus,
   type Project,
   type EnvironmentProvision,
+  type EnvironmentProvisionEntry,
   type ProvisionEnvironment,
+  type ProvisionZone,
   type EnvironmentProvisionStatus,
   type MigrationStrategy,
 } from '@/types'
+import type { ProvisionCidrParents } from '@/types/settings'
 
 const ENV_OPTIONS: { value: ProvisionEnvironment; label: string }[] = [
   { value: 'dev', label: 'DEV' },
   { value: 'prod', label: 'PROD' },
+]
+
+const ZONE_OPTIONS: { value: ProvisionZone; label: string }[] = [
+  { value: 'zoneA', label: 'Zone A' },
+  { value: 'zoneB', label: 'Zone B' },
+  { value: 'zoneC', label: 'Zone C' },
 ]
 
 type StatusFilter = 'all' | EnvironmentProvisionStatus | 'not-scheduled'
@@ -109,6 +127,25 @@ export function EnvironmentProvisionPage() {
 
   const isPlatformLead = user?.role.includes('platform_migration_lead') ?? false
 
+  const { settings: migrationSettings } = useMigrationSettings()
+  const cidrParents = migrationSettings?.provisionCidrParents ?? DEFAULT_PROVISION_CIDR_PARENTS
+  const allowedPrefixes = migrationSettings?.provisionAllowedPrefixes ?? DEFAULT_PROVISION_ALLOWED_PREFIXES
+
+  /** All zone CIDRs allocated across projects — used for conflict detection in the sheet. */
+  const allocatedCidrs = useMemo(() => {
+    const list: { cidr: string; projectId: string; projectName: string; env: ProvisionEnvironment; zone: ProvisionZone }[] = []
+    for (const p of liveProjects) {
+      for (const opt of ENV_OPTIONS) {
+        const entry = p.environmentProvision?.[opt.value]
+        for (const zone of ZONE_OPTIONS) {
+          const cidr = entry?.cidrs?.[zone.value]
+          if (cidr) list.push({ cidr, projectId: p.id, projectName: p.name, env: opt.value, zone: zone.value })
+        }
+      }
+    }
+    return list
+  }, [liveProjects])
+
   const sortedWaves = useMemo(() => {
     return [...waves].filter(w => !w.deleted).sort((a, b) => {
       const startCompare = a.startDate.localeCompare(b.startDate)
@@ -148,17 +185,16 @@ export function EnvironmentProvisionPage() {
         }
 
         if (statusFilter !== 'all') {
-          const date = project.environmentProvision?.date
+          const entries = ENV_OPTIONS.map(o => project.environmentProvision?.[o.value]).filter(Boolean)
           if (statusFilter === 'not-scheduled') {
-            if (date) return false
+            if (entries.some(e => e!.date)) return false
           } else {
-            if (!date || getEnvironmentProvisionStatus(project.environmentProvision) !== statusFilter) return false
+            if (!entries.some(e => e!.date && getProvisionEntryStatus(e) === statusFilter)) return false
           }
         }
 
         if (envFilter.length > 0) {
-          const envs = project.environmentProvision?.environments ?? []
-          if (!envs.some(e => envFilter.includes(e))) return false
+          if (!envFilter.some(e => project.environmentProvision?.[e])) return false
         }
 
         if (selectedMigrationStrategies.size > 0) {
@@ -167,12 +203,12 @@ export function EnvironmentProvisionPage() {
         }
 
         if (provisionDateRange?.from || provisionDateRange?.to) {
-          const date = project.environmentProvision?.date
-          if (!date) return false
+          const dates = ENV_OPTIONS.map(o => project.environmentProvision?.[o.value]?.date).filter((d): d is string => Boolean(d))
+          if (dates.length === 0) return false
           const fromIso = provisionDateRange.from ? format(provisionDateRange.from, 'yyyy-MM-dd') : undefined
           const toIso = provisionDateRange.to ? format(provisionDateRange.to, 'yyyy-MM-dd') : undefined
-          if (fromIso && date < fromIso) return false
-          if (toIso && date > toIso) return false
+          const anyInRange = dates.some(date => (!fromIso || date >= fromIso) && (!toIso || date <= toIso))
+          if (!anyInRange) return false
         }
 
         return true
@@ -485,7 +521,8 @@ export function EnvironmentProvisionPage() {
                     <TableHead className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.03em] px-2 border-r border-border last:border-r-0">Project ID</TableHead>
                     <TableHead className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.03em] px-2 border-r border-border last:border-r-0">New Project ID</TableHead>
                     <TableHead className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.03em] px-2 border-r border-border last:border-r-0">Migration Strategy</TableHead>
-                    <TableHead className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.03em] px-2 border-r border-border last:border-r-0">Provision Date</TableHead>
+                    <TableHead className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.03em] px-2 border-r border-border last:border-r-0">DEV Date</TableHead>
+                    <TableHead className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.03em] px-2 border-r border-border last:border-r-0">PROD Date</TableHead>
                     <TableHead className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.03em] px-2 border-r border-border last:border-r-0">Provision Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -509,7 +546,7 @@ export function EnvironmentProvisionPage() {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell colSpan={6} className="px-2 border-r border-border last:border-r-0">
+                            <TableCell colSpan={7} className="px-2 border-r border-border last:border-r-0">
                               <div className="flex items-center gap-2">
                                 {collapsed ? (
                                   <ChevronRight className="size-3.5 text-muted-foreground" />
@@ -529,8 +566,8 @@ export function EnvironmentProvisionPage() {
 
                           {!collapsed &&
                             group.projects.map((project, index) => {
-                              const provisionDate = project.environmentProvision?.date
-                              const status = getEnvironmentProvisionStatus(project.environmentProvision)
+                              const devEntry = project.environmentProvision?.dev
+                              const prodEntry = project.environmentProvision?.prod
                               return (
                                 <TableRow
                                   key={project.id}
@@ -555,14 +592,24 @@ export function EnvironmentProvisionPage() {
                                     {project.applicationOverview?.migrationStrategy ?? '—'}
                                   </TableCell>
                                   <TableCell className="text-[12px] text-muted-foreground px-2 border-r border-border last:border-r-0">
-                                    {formatDate(provisionDate)}
+                                    {formatDate(devEntry?.date)}
+                                  </TableCell>
+                                  <TableCell className="text-[12px] text-muted-foreground px-2 border-r border-border last:border-r-0">
+                                    {formatDate(prodEntry?.date)}
                                   </TableCell>
                                   <TableCell className="px-2 border-r border-border last:border-r-0">
-                                    {provisionDate ? (
-                                      <span className={cn("py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent capitalize", getStatusPillClasses(status))}>
-                                        {status.replace('-', ' ')}
-                                      </span>
-                                    ) : null}
+                                    <div className="flex flex-wrap gap-1">
+                                      {ENV_OPTIONS.map(opt => {
+                                        const entry = opt.value === 'dev' ? devEntry : prodEntry
+                                        if (!entry?.date && !entry?.completedAt) return null
+                                        const status = getProvisionEntryStatus(entry)
+                                        return (
+                                          <span key={opt.value} className={cn("py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent capitalize", getStatusPillClasses(status))}>
+                                            {opt.label} {status.replace('-', ' ')}
+                                          </span>
+                                        )
+                                      })}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               )
@@ -570,7 +617,7 @@ export function EnvironmentProvisionPage() {
 
                           {!collapsed && group.projects.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8 text-[13px] text-muted-foreground px-2">
+                              <TableCell colSpan={8} className="text-center py-8 text-[13px] text-muted-foreground px-2">
                                 No projects in this wave.
                               </TableCell>
                             </TableRow>
@@ -580,7 +627,7 @@ export function EnvironmentProvisionPage() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-16 text-[13px] text-muted-foreground px-2">
+                      <TableCell colSpan={8} className="text-center py-16 text-[13px] text-muted-foreground px-2">
                         No projects found.
                       </TableCell>
                     </TableRow>
@@ -598,6 +645,9 @@ export function EnvironmentProvisionPage() {
         onClose={() => setSelectedProject(null)}
         onSave={handleSave}
         saving={saving}
+        cidrParents={cidrParents}
+        allowedPrefixes={allowedPrefixes}
+        allocatedCidrs={allocatedCidrs}
       />
     </div>
   )
@@ -630,62 +680,185 @@ function Header() {
   )
 }
 
+interface AllocatedCidr {
+  cidr: string
+  projectId: string
+  projectName: string
+  env: ProvisionEnvironment
+  zone: ProvisionZone
+}
+
+interface EnvDraft {
+  checked: boolean
+  date?: string
+  cidrs: Partial<Record<ProvisionZone, string>>
+  completedAt?: string | null
+}
+
 interface ProvisionSheetProps {
   project: Project | null
   onClose: () => void
   onSave: (projectId: string, provision: EnvironmentProvision) => Promise<boolean>
   saving: boolean
+  cidrParents: ProvisionCidrParents
+  allowedPrefixes: number[]
+  allocatedCidrs: AllocatedCidr[]
 }
 
-function ProvisionSheet({ project, onClose, onSave, saving }: ProvisionSheetProps) {
-  const [date, setDate] = useState<string | undefined>(project?.environmentProvision?.date)
-  const [environments, setEnvironments] = useState<ProvisionEnvironment[]>(project?.environmentProvision?.environments ?? [])
-  const [completedAt, setCompletedAt] = useState<string | null | undefined>(project?.environmentProvision?.completedAt)
-  const [confirmOpen, setConfirmOpen] = useState(false)
+function draftFromEntry(entry: EnvironmentProvisionEntry | undefined): EnvDraft {
+  return {
+    checked: !!entry,
+    date: entry?.date,
+    cidrs: { ...entry?.cidrs },
+    completedAt: entry?.completedAt ?? null,
+  }
+}
+
+function zoneLabel(zone: ProvisionZone): string {
+  return ZONE_OPTIONS.find(z => z.value === zone)?.label ?? zone
+}
+
+function ProvisionSheet({ project, onClose, onSave, saving, cidrParents, allowedPrefixes, allocatedCidrs }: ProvisionSheetProps) {
+  const [dev, setDev] = useState<EnvDraft>(() => draftFromEntry(project?.environmentProvision?.dev))
+  const [prod, setProd] = useState<EnvDraft>(() => draftFromEntry(project?.environmentProvision?.prod))
+  const [confirmEnv, setConfirmEnv] = useState<ProvisionEnvironment | null>(null)
 
   if (!project) return null
 
-  const isCompleted = !!completedAt
+  const drafts: Record<ProvisionEnvironment, EnvDraft> = { dev, prod }
 
-  function toggleEnvironment(value: ProvisionEnvironment) {
-    setEnvironments(prev => {
-      if (prev.includes(value)) return prev.filter(v => v !== value)
-      return [...prev, value].sort()
-    })
+  function cidrError(env: ProvisionEnvironment, zone: ProvisionZone, value: string | undefined): string | null {
+    const v = (value ?? '').trim()
+    if (!v) return null
+    if (!parseCidr(v)) return `Invalid CIDR format (expected e.g. 10.248.32.0/${allowedPrefixes[0] ?? 26})`
+    if (!isValidProvisionCidr(v, cidrParents[env][zone], allowedPrefixes)) {
+      return `Must be a ${formatAllowedPrefixes(allowedPrefixes)} block within: ${cidrParents[env][zone].join(', ')}`
+    }
+    const conflict = allocatedCidrs.find(a => a.projectId !== project!.id && cidrRangesOverlap(a.cidr, v))
+    if (conflict) return `Conflicts with ${conflict.projectName} (${conflict.env.toUpperCase()} ${zoneLabel(conflict.zone)}: ${conflict.cidr})`
+    return null
   }
 
-  function handleMarkCompleted() {
-    setConfirmOpen(true)
-  }
+  const hasCidrErrors = ENV_OPTIONS.some(o =>
+    drafts[o.value].checked && ZONE_OPTIONS.some(z => cidrError(o.value, z.value, drafts[o.value].cidrs[z.value]))
+  )
+  const canSave =
+    (dev.checked || prod.checked) &&
+    (!dev.checked || !!dev.date) &&
+    (!prod.checked || !!prod.date) &&
+    !hasCidrErrors
 
-  async function handleConfirm() {
-    if (!project) return
-    const nextCompletedAt = isCompleted ? null : new Date().toISOString()
-    const provision: EnvironmentProvision = {
-      date,
-      environments: environments.length > 0 ? environments : undefined,
-      completedAt: nextCompletedAt,
+  function buildProvision(nextDev: EnvDraft, nextProd: EnvDraft): EnvironmentProvision {
+    const provision: EnvironmentProvision = {}
+    for (const opt of ENV_OPTIONS) {
+      const d = opt.value === 'dev' ? nextDev : nextProd
+      if (!d.checked) continue  // unchecked environment discards its data
+      const cidrs = Object.fromEntries(
+        ZONE_OPTIONS.map(z => [z.value, (d.cidrs[z.value] ?? '').trim()]).filter(([, v]) => v)
+      ) as Partial<Record<ProvisionZone, string>>
+      provision[opt.value] = {
+        date: d.date,
+        cidrs: Object.keys(cidrs).length ? cidrs : undefined,
+        completedAt: d.completedAt ?? null,
+      }
     }
-    const success = await onSave(project.id, provision)
-    if (success) {
-      setCompletedAt(nextCompletedAt)
-      setConfirmOpen(false)
-    }
+    return provision
   }
 
   function handleSave() {
     if (!project) return
-    const provision: EnvironmentProvision = {
-      date,
-      environments: environments.length > 0 ? environments : undefined,
-      completedAt: completedAt,
-    }
-    void onSave(project.id, provision)
+    void onSave(project.id, buildProvision(dev, prod))
   }
+
+  async function handleConfirmComplete() {
+    if (!project || !confirmEnv) return
+    const draft = drafts[confirmEnv]
+    const next: EnvDraft = { ...draft, completedAt: draft.completedAt ? null : new Date().toISOString() }
+    const [nextDev, nextProd] = confirmEnv === 'dev' ? [next, prod] : [dev, next]
+    const success = await onSave(project.id, buildProvision(nextDev, nextProd))
+    if (success) {
+      if (confirmEnv === 'dev') setDev(next); else setProd(next)
+      setConfirmEnv(null)
+    }
+  }
+
+  function renderEnvSection(opt: { value: ProvisionEnvironment; label: string }, draft: EnvDraft, setDraft: (d: EnvDraft) => void) {
+    const status = draft.checked && (draft.date || draft.completedAt)
+      ? getProvisionEntryStatus({ date: draft.date, completedAt: draft.completedAt })
+      : null
+    return (
+      <div key={opt.value} className="rounded-lg border border-border overflow-hidden">
+        <label className="flex items-center gap-3 p-3 hover:bg-muted/40 cursor-pointer transition-colors">
+          <Checkbox
+            checked={draft.checked}
+            onCheckedChange={() => setDraft({ ...draft, checked: !draft.checked })}
+          />
+          <span className="text-sm font-medium flex-1">{opt.label}</span>
+          {status && (
+            <span className={cn("py-0.5 px-[7px] rounded-full text-[11px] font-medium capitalize", getStatusPillClasses(status))}>
+              {status.replace('-', ' ')}
+            </span>
+          )}
+        </label>
+        {draft.checked && (
+          <div className="border-t border-border px-3 py-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <CalendarDays className="size-3.5 text-muted-foreground" />
+                {opt.label} Provision Date
+              </Label>
+              <Calendar
+                className="w-full mx-auto"
+                mode="single"
+                selected={draft.date ? new Date(draft.date + 'T00:00:00') : undefined}
+                defaultMonth={draft.date ? new Date(draft.date + 'T00:00:00') : undefined}
+                onSelect={d => setDraft({ ...draft, date: d ? format(d, 'yyyy-MM-dd') : undefined })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">
+                Zone CIDR Blocks <span className="text-muted-foreground font-normal">(optional, {formatAllowedPrefixes(allowedPrefixes)})</span>
+              </Label>
+              {ZONE_OPTIONS.map(z => {
+                const value = draft.cidrs[z.value] ?? ''
+                const error = cidrError(opt.value, z.value, value)
+                const parentHint = cidrParents[opt.value][z.value][0]
+                return (
+                  <div key={z.value} className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-14 shrink-0">{z.label}</span>
+                      <Input
+                        value={value}
+                        onChange={e => setDraft({ ...draft, cidrs: { ...draft.cidrs, [z.value]: e.target.value } })}
+                        placeholder={parentHint ? `${parentHint.replace(/\/\d+$/, `/${allowedPrefixes[0] ?? 26}`)}` : 'a.b.c.d/26'}
+                        className={cn('h-8 text-xs font-mono', error && 'border-destructive')}
+                      />
+                    </div>
+                    {error && <p className="text-[11px] text-destructive pl-16">{error}</p>}
+                  </div>
+                )
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmEnv(opt.value)}
+              disabled={saving}
+            >
+              {draft.completedAt ? `Reopen ${opt.label} Provision` : `Mark ${opt.label} Completed`}
+            </Button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const confirmDraft = confirmEnv ? drafts[confirmEnv] : null
+  const confirmLabel = confirmEnv === 'dev' ? 'DEV' : 'PROD'
 
   return (
     <>
-      <Sheet open={!!project} onOpenChange={open => { if (!open) { setConfirmOpen(false); onClose() } }}>
+      <Sheet open={!!project} onOpenChange={open => { if (!open) { setConfirmEnv(null); onClose() } }}>
       <SheetContent side="right" className="w-[540px] sm:!max-w-[540px] flex flex-col p-0 gap-0" showCloseButton={false}>
         <SheetHeader className="border-b px-6 py-4 pr-12">
           <SheetTitle className="text-lg">{project.name}</SheetTitle>
@@ -694,82 +867,47 @@ function ProvisionSheet({ project, onClose, onSave, saving }: ProvisionSheetProp
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-          <div className="space-y-3">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <CalendarDays className="size-4 text-muted-foreground" />
-              Provision Date
-            </Label>
-            <Calendar
-              className="w-full mx-auto"
-              mode="single"
-              selected={date ? new Date(date + 'T00:00:00') : undefined}
-              defaultMonth={date ? new Date(date + 'T00:00:00') : undefined}
-              onSelect={(d) => setDate(d ? format(d, 'yyyy-MM-dd') : undefined)}
-              initialFocus
-            />
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Environments to Provision</Label>
-            <div className="flex flex-col gap-3">
-              {ENV_OPTIONS.map(opt => (
-                <label
-                  key={opt.value}
-                  className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted/40 cursor-pointer transition-colors"
-                >
-                  <Checkbox
-                    checked={environments.includes(opt.value)}
-                    onCheckedChange={() => toggleEnvironment(opt.value)}
-                  />
-                  <span className="text-sm">{opt.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <Label className="text-sm font-medium">Environments to Provision</Label>
+          {renderEnvSection(ENV_OPTIONS[0], dev, setDev)}
+          {renderEnvSection(ENV_OPTIONS[1], prod, setProd)}
+          {!canSave && (dev.checked || prod.checked) && !hasCidrErrors && (
+            <p className="text-[11px] text-muted-foreground">Each checked environment requires a provision date.</p>
+          )}
         </div>
 
-        <SheetFooter className="border-t px-6 py-4 flex flex-row gap-2 justify-between">
+        <SheetFooter className="border-t px-6 py-4 flex flex-row gap-2 justify-end">
+          <SheetClose asChild>
+            <Button variant="outline" disabled={saving}>Cancel</Button>
+          </SheetClose>
           <Button
-            variant="outline"
-            onClick={handleMarkCompleted}
-            disabled={saving}
+            onClick={handleSave}
+            disabled={saving || !canSave}
           >
-            {isCompleted ? 'Reopen Environment Provision' : 'Mark Completed'}
+            {saving ? 'Saving...' : 'Save'}
           </Button>
-          <div className="flex items-center gap-2">
-            <SheetClose asChild>
-              <Button variant="outline" disabled={saving}>Cancel</Button>
-            </SheetClose>
-            <Button
-              onClick={handleSave}
-              disabled={saving || !date}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
         </SheetFooter>
       </SheetContent>
     </Sheet>
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <Dialog open={!!confirmEnv} onOpenChange={open => { if (!open) setConfirmEnv(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {isCompleted ? 'Reopen environment provision?' : 'Mark environment provision as completed?'}
+              {confirmDraft?.completedAt ? `Reopen ${confirmLabel} provision?` : `Mark ${confirmLabel} provision as completed?`}
             </DialogTitle>
             <DialogDescription>
-              {isCompleted
-                ? `Are you sure you want to reopen environment provision for ${project.name}?`
-                : `Are you sure you want to mark environment provision as completed for ${project.name}? This action will be recorded in the audit log.`}
+              {confirmDraft?.completedAt
+                ? `Are you sure you want to reopen ${confirmLabel} environment provision for ${project.name}?`
+                : `Are you sure you want to mark ${confirmLabel} environment provision as completed for ${project.name}? This action will be recorded in the audit log.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={saving}>
+            <Button variant="outline" onClick={() => setConfirmEnv(null)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleConfirm} disabled={saving}>
-              {saving ? 'Saving...' : (isCompleted ? 'Reopen' : 'Mark Completed')}
+            <Button onClick={handleConfirmComplete} disabled={saving}>
+              {saving ? 'Saving...' : (confirmDraft?.completedAt ? 'Reopen' : 'Mark Completed')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -778,9 +916,15 @@ function ProvisionSheet({ project, onClose, onSave, saving }: ProvisionSheetProp
   )
 }
 
+function earliestProvisionDate(p: Project): string | undefined {
+  const dates = [p.environmentProvision?.dev?.date, p.environmentProvision?.prod?.date]
+    .filter((d): d is string => Boolean(d))
+  return dates.length ? dates.sort()[0] : undefined
+}
+
 function sortByProvisionDate(a: Project, b: Project): number {
-  const aDate = a.environmentProvision?.date
-  const bDate = b.environmentProvision?.date
+  const aDate = earliestProvisionDate(a)
+  const bDate = earliestProvisionDate(b)
   if (aDate && bDate) return aDate.localeCompare(bDate)
   if (aDate && !bDate) return -1
   if (!aDate && bDate) return 1

@@ -397,20 +397,21 @@ Gantt-managed planning data stored as a JSONB blob:
 
 ```ts
 interface ProjectPlanning {
-  startDate: string
-  endDate: string
+  startDate: string   // derived from the union of the project's milestones; cached for backend consumers
+  endDate: string     // derived (max end across the milestone union)
   milestones: PlanningMilestone[]
   categoryMilestoneOverrides?: Record<string, { start: string; end: string; status?: MilestoneStatus }>
 }
 
 interface PlanningMilestone {
-  id: string
+  id: string           // '<type>-<projectId>' for preset milestones; random UUID for custom
   name: string
   type: MilestoneType
   start: string      // ISO date
   end: string        // ISO date
   status: MilestoneStatus
   deps: string[]     // other PlanningMilestone ids
+  comments?: MilestoneComment[]   // { id, text, author, createdAt }
 }
 
 type MilestoneType =
@@ -429,6 +430,54 @@ type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 ```
 
 > **Note:** `data-migration-period` is not stored in `ProjectPlanning.milestones`. It is derived at render time from `Project.dataMigrationPlan ?? Project.dataMigrationSchedule` and injected as the first milestone row under each project in the Wave Gantt chart.
+>
+> `env-provision` milestones are likewise derived at render time from `Project.environmentProvision` — one per checked environment with a date (`env-provision-date-<projectId>-dev` / `-prd`).
+
+---
+
+## EnvironmentProvision
+
+Per-environment provision data stored as a JSONB blob on the project (`environment_provision`),
+managed on the Environment Provision page:
+
+```ts
+interface EnvironmentProvision {
+  dev?: EnvironmentProvisionEntry    // key present = environment checked
+  prod?: EnvironmentProvisionEntry
+}
+
+interface EnvironmentProvisionEntry {
+  date?: string                                   // ISO date 'yyyy-MM-dd'
+  cidrs?: Partial<Record<ProvisionZone, string>>  // optional /26 or /27 per availability zone
+  completedAt?: string | null
+}
+
+type ProvisionZone = 'zoneA' | 'zoneB' | 'zoneC'
+```
+
+Each zone CIDR must be a network-aligned block carved from the configured parent blocks for that
+environment + zone with an allowed prefix length (default `/25`, `/26`, `/27`), and must not overlap
+a CIDR allocated to another project. Parent blocks and allowed prefixes are admin-configurable
+(Admin → Provision CIDR Blocks) and stored in migration settings:
+
+```ts
+// MigrationSettings.provisionCidrParents (api: provision_cidr_parents, zone_a/zone_b/zone_c)
+interface ProvisionCidrParents {
+  dev: Record<ProvisionZone, string[]>
+  prod: Record<ProvisionZone, string[]>
+}
+
+// MigrationSettings.provisionAllowedPrefixes (api: provision_allowed_prefixes)
+// default: [25, 26, 27]
+```
+
+Defaults: dev/A `10.248.32.0/20, 10.248.48.0/20, 10.248.64.0/20`; dev/B `10.248.160.0/20, 10.248.176.0/20, 10.248.192.0/20`;
+dev/C `10.249.32.0/20, 10.249.48.0/20, 10.249.64.0/20`; prod/A `10.248.80.0/20, 10.248.96.0/20, 10.248.112.0/20`;
+prod/B `10.248.208.0/20, 10.248.224.0/20, 10.248.240.0/20`; prod/C `10.249.80.0/20, 10.249.96.0/20, 10.249.112.0/20`.
+
+> **Legacy shape:** older records stored `{ date, environments: ('dev'|'prod')[], completedAt }`.
+> The frontend normalizes these on read (date/completedAt copied into each checked environment);
+> the next save writes the new shape.
 
 ---
 

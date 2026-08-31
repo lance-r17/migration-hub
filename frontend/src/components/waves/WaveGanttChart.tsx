@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, DatabaseBackup } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, DatabaseBackup, MessageSquare, MessageSquarePlus, Upload, Download, FolderOpen } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
-import type { Project, ProjectPlanning, PlanningMilestone, MilestoneType, MilestoneStatus, MigrationStrategy, ApplicationTier } from '@/types'
+import type { Project, ProjectPlanning, PlanningMilestone, MilestoneComment, MilestoneType, MilestoneStatus, MigrationStrategy, ApplicationTier } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { EmbargoRecord } from '@/types/embargo'
 import type { CategoryMilestone } from '@/types/categoryMilestone'
@@ -54,13 +54,15 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { MultiAutocomplete } from '@/components/ui/multi-autocomplete'
 import { BgiTree } from '@/components/bgi/BgiTree'
+import { useCurrentUser } from '@/context/UserContext'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type ZoomLevel = 'days' | 'weeks' | 'months'
-type DragType = 'move' | 'resize-start' | 'resize-end' | 'create'
+type DragType = 'move' | 'resize-start' | 'resize-end'
 
 interface DragState {
   projectId: string
@@ -69,8 +71,6 @@ interface DragState {
   startX: number
   originalStart: string
   originalEnd: string
-  originalMilestones?: { id: string; start: string; end: string }[]
-  originalCategoryMilestoneOverrides?: Record<string, { start: string; end: string; status?: MilestoneStatus }>
 }
 
 interface ConnState {
@@ -101,11 +101,78 @@ const ZOOM_DAYS_PER_COL: Record<ZoomLevel, number> = { days: 1,  weeks: 7,  mont
 
 const MILESTONE_PRESETS: { type: MilestoneType; label: string; icon: LucideIcon }[] = [
   { type: 'dev-resource-provision', label: 'DEV Resource Provision Stage', icon: Cpu         },
+  { type: 'dev-data-migration',     label: 'Data Migration (Dev)',      icon: Database    },
   { type: 'dev-cutover',            label: 'DEV Testing Cutover',       icon: ArrowRight  },
   { type: 'prd-resource-provision', label: 'PRD Resource Provision Stage', icon: HardDrive   },
   { type: 'prd-cutover',            label: 'PRD Cutover',                 icon: Sparkles    },
   { type: 'custom',                 label: 'Custom Milestone',            icon: Pencil      },
 ]
+
+/** Deterministic id for preset milestones: one instance per type per project. */
+function fixedMilestoneId(type: MilestoneType, projectId: string): string {
+  return `${type}-${projectId}`
+}
+
+/** Orders rows by a saved id list: known ids in saved order first, unknown ids appended in default order. */
+function orderByIdList<T extends { id: string }>(rows: T[], order?: string[]): T[] {
+  if (!order?.length) return rows
+  const idx = new Map(order.map((id, i) => [id, i]))
+  const known = rows.filter(r => idx.has(r.id)).sort((a, b) => idx.get(a.id)! - idx.get(b.id)!)
+  const unknown = rows.filter(r => !idx.has(r.id))
+  return [...known, ...unknown]
+}
+
+/** Moves arr[sourceIdx] to insertion point `overIndex`, clamped into [lo, hi]. Returns a new array. */
+function moveRowClamped<T>(rows: T[], sourceIdx: number, overIndex: number, lo: number, hi: number): T[] {
+  const arr = [...rows]
+  const [moved] = arr.splice(sourceIdx, 1)
+  const clampedOver = Math.max(lo, Math.min(hi, overIndex))
+  const maxIdx = lo === 0 ? hi - 1 : arr.length   // after removal, top group shrinks by one
+  const dropAt = Math.max(lo, Math.min(maxIdx, clampedOver > sourceIdx ? clampedOver - 1 : clampedOver))
+  arr.splice(dropAt, 0, moved)
+  return arr
+}
+
+/** Sample import file offered for download in the import dialog.
+ *  Mirrors docs/frontend/samples/milestone-import.sample.json. */
+const IMPORT_SAMPLE_JSON = {
+  projects: [
+    {
+      projectId: 'PRJ-2024-ALPHA',
+      milestones: [
+        { type: 'dev-resource-provision', start: '2026-04-06', end: '2026-04-17', status: 'done', deps: [] },
+        {
+          type: 'dev-data-migration', start: '2026-04-20', end: '2026-05-08', status: 'in-progress',
+          deps: ['dev-resource-provision-PRJ-2024-ALPHA'],
+          comments: [
+            { text: 'DTS instances provisioned, full load running.', author: 'Carol White', createdAt: '2026-04-22T09:30:00.000Z' },
+          ],
+        },
+        { type: 'dev-cutover', start: '2026-05-11', end: '2026-05-13', status: 'todo', deps: ['dev-data-migration-PRJ-2024-ALPHA'] },
+        { type: 'prd-resource-provision', start: '2026-05-18', end: '2026-05-29', status: 'todo', deps: ['dev-cutover-PRJ-2024-ALPHA'] },
+        { type: 'prd-cutover', start: '2026-06-15', end: '2026-06-17', status: 'todo', deps: ['prd-resource-provision-PRJ-2024-ALPHA'] },
+        {
+          type: 'custom', id: 'alpha-uat-signoff', name: 'UAT sign-off',
+          start: '2026-06-01', end: '2026-06-12', status: 'todo',
+          deps: ['prd-resource-provision-PRJ-2024-ALPHA'],
+          comments: [
+            { text: 'Business owner confirmed UAT window.', author: 'Sarah Jenkins', createdAt: '2026-04-10T14:00:00.000Z' },
+          ],
+        },
+      ],
+    },
+    {
+      projectId: 'M-77122',
+      milestones: [
+        { type: 'dev-resource-provision', start: '2026-04-06', end: '2026-04-10', status: 'done', deps: [] },
+        { type: 'dev-data-migration', start: '2026-04-13', end: '2026-04-24', status: 'todo', deps: ['dev-resource-provision-M-77122'] },
+        { type: 'dev-cutover', start: '2026-04-27', end: '2026-04-29', status: 'todo', deps: ['dev-data-migration-M-77122'] },
+        { type: 'prd-resource-provision', start: '2026-05-04', end: '2026-05-15', status: 'todo', deps: [] },
+        { type: 'prd-cutover', start: '2026-06-22', end: '2026-06-24', status: 'todo', deps: ['prd-resource-provision-M-77122', 'alpha-uat-signoff'] },
+      ],
+    },
+  ],
+}
 
 const MILESTONE_TYPE_META: Record<MilestoneType, { bg: string; color: string; label: string; icon: LucideIcon }> = {
   'env-provision':          { bg: 'oklch(0.88 0.05 185)', color: 'oklch(0.35 0.10 185)', label: 'Env',    icon: CloudUpload },
@@ -425,6 +492,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   const [embargosCollapsed, setEmbargosCollapsed] = useState(false)
 
   const { embargos } = useEmbargos()
+  const { user: currentUser } = useCurrentUser()
 
   const [dragState, setDragState]         = useState<DragState | null>(null)
   const [localPlanning, setLocalPlanning] = useState<Record<string, ProjectPlanning>>({})
@@ -440,6 +508,13 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   const [durationFilter, setDurationFilter]     = useState('all')
   const [statusDialog, setStatusDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; nextStatus: MilestoneStatus } | null>(null)
   const [deleteDialog, setDeleteDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; milestoneName: string } | null>(null)
+  const [commentDialog, setCommentDialog]       = useState<{ open: boolean; projectId: string; milestoneId: string } | null>(null)
+  const [commentText, setCommentText]           = useState('')
+  const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null)
+  const [importSummary, setImportSummary]       = useState<{ imported: number; errors: string[] } | null>(null)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importing, setImporting]               = useState(false)
+  const importInputRef                          = useRef<HTMLInputElement>(null)
   const [cmFilter, setCmFilter]                 = useState<Set<string>>(new Set())
   const [bgiFilterOpen, setBgiFilterOpen]       = useState(false)
   const [bgiFilterSearch, setBgiFilterSearch]   = useState('')
@@ -542,9 +617,9 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   // ─── Effective dates ─────────────────────────────────────────────────────────
 
   function effectiveProjectDates(p: Project): { start: string; end: string; isDraft: boolean } | null {
-    const local = localPlanning[p.id]
-    if (local?.startDate && local?.endDate) return { start: local.startDate, end: local.endDate, isDraft: false }
-    if (p.planning?.startDate && p.planning?.endDate) return { start: p.planning.startDate, end: p.planning.endDate, isDraft: false }
+    // Project dates are derived live from the union of all its milestones
+    const derived = deriveProjectDates(p)
+    if (derived) return { ...derived, isDraft: false }
     const cs = p.migrationConstraints?.earliestStartDate
     const ce = p.migrationConstraints?.latestEndDate
     if (cs && ce) return { start: cs, end: ce, isDraft: true }
@@ -553,6 +628,44 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       if (wave?.startDate && wave?.cutoverDate) return { start: wave.startDate, end: wave.cutoverDate, isDraft: true }
     }
     return null
+  }
+
+  /** Union of all milestone date ranges: persisted planning milestones, auto-derived
+   *  env-provision / data-migration period, and assigned category milestones (with overrides). */
+  function deriveProjectDates(p: Project, planningOverride?: ProjectPlanning): { start: string; end: string } | null {
+    const planning = planningOverride ?? getEffectivePlanning(p)
+    const assignedCmIds = new Set(p.categoryMilestoneIds ?? [])
+    const ranges: { start: string; end: string }[] = []
+    for (const m of planning.milestones ?? []) {
+      if (assignedCmIds.has(m.id)) continue
+      if (m.start && m.end) ranges.push({ start: m.start, end: m.end })
+    }
+    const envMilestones = buildEnvironmentProvisionMilestones(p)
+    for (const m of envMilestones) ranges.push({ start: m.start, end: m.end })
+    const dm = buildDataMigrationPeriodMilestone(p)
+    if (dm) ranges.push({ start: dm.start, end: dm.end })
+    for (const cm of categoryMilestones) {
+      if (!assignedCmIds.has(cm.id)) continue
+      const override = planning.categoryMilestoneOverrides?.[cm.id]
+      const start = override?.start || cm.startDate
+      const end = override?.end || cm.endDate
+      if (start && end) ranges.push({ start, end })
+    }
+    if (ranges.length === 0) return null
+    let start = ranges[0].start
+    let end = ranges[0].end
+    for (const r of ranges) {
+      if (r.start < start) start = r.start
+      if (r.end > end) end = r.end
+    }
+    return { start, end }
+  }
+
+  /** Returns planning with startDate/endDate refreshed from the milestone union. */
+  function withDerivedDates(p: Project, planning: ProjectPlanning): ProjectPlanning {
+    const derived = deriveProjectDates(p, planning)
+    if (!derived) return planning
+    return { ...planning, startDate: derived.start, endDate: derived.end }
   }
 
   function effectiveMilestoneDates(projectId: string, milestone: PlanningMilestone): { start: string; end: string } {
@@ -580,18 +693,6 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     }
   }
 
-  // ─── Client X → ISO date ─────────────────────────────────────────────────────
-
-  function clientXToDate(clientX: number): string {
-    const container = scrollRef.current
-    if (!container) return toIso(new Date())
-    const rect       = container.getBoundingClientRect()
-    const xInTimeline = clientX - rect.left - LEFT_PANEL_W + container.scrollLeft
-    const dayIndex    = Math.floor(xInTimeline / (colPx / daysPerCol))
-    const clamped     = Math.max(0, Math.min(totalDays - 1, dayIndex))
-    return toIso(new Date(timelineStart.getTime() + clamped * MS_PER_DAY))
-  }
-
   // ─── Drag handlers ────────────────────────────────────────────────────────────
 
   function onPointerDown(e: React.PointerEvent, projectId: string, milestoneId: string | null, type: DragType, start: string, end: string, milestoneType?: MilestoneType) {
@@ -609,10 +710,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     return { start: wave?.startDate, end: wave?.cutoverDate }
   }
 
-  function clampProjectDatesToWave(projectId: string, start: string, end: string): { start: string; end: string } {
+  /** Milestone bars clamp to the parent wave bounds. The project bar itself is derived
+   *  from the milestone union, so clamping to it would be self-referential. */
+  function clampMilestoneDatesToWave(projectId: string, start: string, end: string): { start: string; end: string } {
     const bounds = waveBoundsForProject(projectId)
-    if (!bounds.start && !bounds.end) return { start, end }
-
     const duration = daysBetween(parseDate(start), parseDate(end))
     let clampedStart = start
     let clampedEnd = end
@@ -623,15 +724,6 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       clampedEnd = addDays(clampedStart, duration)
     }
 
-    // Upper bound: start <= waveEnd - 1
-    if (bounds.end) {
-      const maxStart = addDays(bounds.end, -1)
-      if (clampedStart > maxStart) {
-        clampedStart = maxStart
-        clampedEnd = addDays(clampedStart, duration)
-      }
-    }
-
     // Ensure start < end (minimum 1 day); end may extend beyond waveEnd
     if (clampedStart >= clampedEnd) {
       clampedEnd = addDays(clampedStart, 1)
@@ -640,122 +732,37 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     return { start: clampedStart, end: clampedEnd }
   }
 
-  function projectDatesForMilestone(projectId: string): { start: string; end: string } | null {
-    const p = projects.find(x => x.id === projectId)
-    if (!p) return null
-    return effectiveProjectDates(p) ?? null
-  }
-
-  function clampMilestoneDatesToProject(projectId: string, start: string, end: string): { start: string; end: string } {
-    const pd = projectDatesForMilestone(projectId)
-    if (!pd) return { start, end }
-
-    let clampedStart = start
-    let clampedEnd = end
-
-    // Lower bound: start >= projectStart
-    if (clampedStart < pd.start) {
-      const duration = daysBetween(parseDate(start), parseDate(end))
-      clampedStart = pd.start
-      clampedEnd = addDays(clampedStart, duration)
-    }
-
-    // Upper bound: end <= projectEnd
-    if (clampedEnd > pd.end) {
-      const duration = daysBetween(parseDate(start), parseDate(end))
-      clampedEnd = pd.end
-      clampedStart = addDays(clampedEnd, -duration)
-      if (clampedStart < pd.start) clampedStart = pd.start
-    }
-
-    // Ensure start < end (minimum 1 day)
-    if (clampedStart >= clampedEnd) {
-      clampedEnd = addDays(clampedStart, 1)
-      if (clampedEnd > pd.end) {
-        clampedEnd = pd.end
-        clampedStart = addDays(clampedEnd, -1)
-        if (clampedStart < pd.start) clampedStart = pd.start
-      }
-    }
-
-    return { start: clampedStart, end: clampedEnd }
-  }
-
-  function onPointerDownCreate(e: React.PointerEvent, project: Project) {
-    if (readOnly) return
-    e.preventDefault(); e.stopPropagation()
-    let clickDate = clientXToDate(e.clientX)
-    const bounds = waveBoundsForProject(project.id)
-    if (bounds.start && clickDate < bounds.start) clickDate = bounds.start
-    if (bounds.end && clickDate >= bounds.end) clickDate = addDays(bounds.end, -1)
-    const base = getEffectivePlanning(project)
-    setLocalPlanning(prev => ({ ...prev, [project.id]: { ...base, startDate: clickDate, endDate: clickDate } }))
-    setDragState({ projectId: project.id, milestoneId: null, type: 'create', startX: e.clientX, originalStart: clickDate, originalEnd: clickDate })
-    document.body.style.cursor = 'crosshair'
-  }
-
   const onPointerMove = useCallback((e: PointerEvent) => {
-    if (!dragState) return
+    if (!dragState || dragState.milestoneId === null) return
     let newStart = dragState.originalStart
     let newEnd   = dragState.originalEnd
 
-    if (dragState.type === 'create') {
-      const curr = clientXToDate(e.clientX)
-      if (curr >= dragState.originalStart) { newStart = dragState.originalStart; newEnd = curr }
-      else                                  { newStart = curr; newEnd = dragState.originalStart }
-    } else {
-      const dx        = e.clientX - dragState.startX
-      const deltaDays = Math.round(dx / (colPx / daysPerCol))
-      if (deltaDays === 0) return
-      if (dragState.type === 'move')              { newStart = addDays(dragState.originalStart, deltaDays); newEnd = addDays(dragState.originalEnd, deltaDays) }
-      else if (dragState.type === 'resize-start') { newStart = addDays(dragState.originalStart, deltaDays); if (newStart >= dragState.originalEnd) return }
-      else                                        { newEnd   = addDays(dragState.originalEnd, deltaDays);   if (newEnd <= dragState.originalStart) return }
-    }
+    const dx        = e.clientX - dragState.startX
+    const deltaDays = Math.round(dx / (colPx / daysPerCol))
+    if (deltaDays === 0) return
+    if (dragState.type === 'move')              { newStart = addDays(dragState.originalStart, deltaDays); newEnd = addDays(dragState.originalEnd, deltaDays) }
+    else if (dragState.type === 'resize-start') { newStart = addDays(dragState.originalStart, deltaDays); if (newStart >= dragState.originalEnd) return }
+    else                                        { newEnd   = addDays(dragState.originalEnd, deltaDays);   if (newEnd <= dragState.originalStart) return }
 
-    // Clamp project-level dates to wave bounds
-    if (dragState.milestoneId === null) {
-      const clamped = clampProjectDatesToWave(dragState.projectId, newStart, newEnd)
-      newStart = clamped.start
-      newEnd   = clamped.end
-    } else {
-      // Clamp milestone dates to parent project range
-      const clamped = clampMilestoneDatesToProject(dragState.projectId, newStart, newEnd)
-      newStart = clamped.start
-      newEnd   = clamped.end
-    }
+    // Clamp milestone dates to wave bounds
+    const clamped = clampMilestoneDatesToWave(dragState.projectId, newStart, newEnd)
+    newStart = clamped.start
+    newEnd   = clamped.end
 
     setLocalPlanning(prev => {
       const { projectId, milestoneId } = dragState
+      if (milestoneId === null) return prev
       const project = projects.find(p => p.id === projectId)
       const base = prev[projectId] ?? (project ? getEffectivePlanning(project) : { startDate: newStart, endDate: newEnd, milestones: [] })
-      if (milestoneId === null) {
-        if (dragState.type === 'move' && dragState.originalMilestones) {
-          const actualMoveDelta = daysBetween(parseDate(dragState.originalStart), parseDate(newStart))
-          const milestones = (base.milestones ?? []).map(t => {
-            const orig = dragState.originalMilestones!.find(ot => ot.id === t.id)
-            if (!orig) return t
-            return { ...t, start: addDays(orig.start, actualMoveDelta), end: addDays(orig.end, actualMoveDelta) }
-          })
-          const categoryMilestoneOverrides = dragState.originalCategoryMilestoneOverrides
-            ? Object.fromEntries(
-                Object.entries(dragState.originalCategoryMilestoneOverrides).map(([id, o]) => [
-                  id,
-                  { ...o, start: addDays(o.start, actualMoveDelta), end: addDays(o.end, actualMoveDelta) },
-                ])
-              )
-            : base.categoryMilestoneOverrides
-          return { ...prev, [projectId]: { ...base, startDate: newStart, endDate: newEnd, milestones, categoryMilestoneOverrides } }
-        }
-        return { ...prev, [projectId]: { ...base, startDate: newStart, endDate: newEnd } }
-      } else {
-        const isCategoryMilestoneId = project?.categoryMilestoneIds?.includes(milestoneId)
-        if (isCategoryMilestoneId) {
-          const overrides = { ...(base.categoryMilestoneOverrides ?? {}), [milestoneId]: { start: newStart, end: newEnd } }
-          return { ...prev, [projectId]: { ...base, categoryMilestoneOverrides: overrides } }
-        }
-        const milestones = (base.milestones ?? []).map(t => t.id === milestoneId ? { ...t, start: newStart, end: newEnd } : t)
-        return { ...prev, [projectId]: { ...base, milestones } }
+      const isCategoryMilestoneId = project?.categoryMilestoneIds?.includes(milestoneId)
+      if (isCategoryMilestoneId) {
+        const overrides = { ...(base.categoryMilestoneOverrides ?? {}), [milestoneId]: { start: newStart, end: newEnd } }
+        const next = { ...base, categoryMilestoneOverrides: overrides }
+        return { ...prev, [projectId]: project ? withDerivedDates(project, next) : next }
       }
+      const milestones = (base.milestones ?? []).map(t => t.id === milestoneId ? { ...t, start: newStart, end: newEnd } : t)
+      const next = { ...base, milestones }
+      return { ...prev, [projectId]: project ? withDerivedDates(project, next) : next }
     })
     setTooltip({ start: newStart, end: newEnd })
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -802,27 +809,26 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   const onRowMilestonePointerUp = useCallback(async () => {
     if (!rowMilestoneDragState) return
     document.body.style.cursor = ''
-    const { projectId, milestoneId, sourceIndex, overIndex } = rowMilestoneDragState
+    const { projectId, milestoneId, overIndex } = rowMilestoneDragState
     setRowMilestoneDragState(null)
-    if (overIndex === sourceIndex || overIndex === sourceIndex + 1) return
     const project = projects.find(p => p.id === projectId)
     if (!project) return
-    const base = getEffectivePlanning(project)
-    const milestones = [...(base.milestones ?? [])]
-    const sourceIdxInMilestones = milestones.findIndex(m => m.id === milestoneId)
-    if (sourceIdxInMilestones === -1) return
-    const [moved] = milestones.splice(sourceIdxInMilestones, 1)
-    if (!moved) return
-    // Category milestones and the data-migration period are rendered first, so regular milestone indices are offset
+    const rows = getOrderedMilestoneRows(project)
+    const sourceIdx = rows.findIndex(m => m.id === milestoneId)
+    if (sourceIdx === -1) return
+    // Category milestones are pinned: CM rows clamp into [0, cmCount), others below
     const assignedCmIds = new Set(project.categoryMilestoneIds ?? [])
-    const cmCount = categoryMilestones.filter(cm => assignedCmIds.has(cm.id)).length
-    const dmPeriod = buildDataMigrationPeriodMilestone(project)
-    const fixedCount = (dmPeriod ? 1 : 0) + cmCount
-    const visualSourceIndex = fixedCount + sourceIdxInMilestones
-    const visualDropIndex = overIndex > visualSourceIndex ? overIndex - 1 : overIndex
-    const insertAt = Math.max(0, visualDropIndex - fixedCount)
-    milestones.splice(Math.min(insertAt, milestones.length), 0, moved)
-    const updated = { ...base, milestones }
+    const cmCount = rows.filter(r => assignedCmIds.has(r.id)).length
+    const isCmRow = sourceIdx < cmCount
+    const lo = isCmRow ? 0 : cmCount
+    const hi = isCmRow ? cmCount : rows.length
+    const clampedOver = Math.max(lo, Math.min(hi, overIndex))
+    if (clampedOver === sourceIdx || clampedOver === sourceIdx + 1) return
+    const newRows = moveRowClamped(rows, sourceIdx, overIndex, lo, hi)
+    const base = getEffectivePlanning(project)
+    const byId = new Map((base.milestones ?? []).map(m => [m.id, m]))
+    const reordered = newRows.map(r => byId.get(r.id)).filter((m): m is PlanningMilestone => !!m)
+    const updated: ProjectPlanning = { ...base, milestones: reordered, milestoneRowOrder: newRows.map(r => r.id) }
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
     try { await onUpdatePlanning(projectId, updated) }
     catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
@@ -901,10 +907,11 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     const milestoneStart  = today < rangeStart ? rangeStart : today > rangeEnd ? rangeStart : today
     const milestoneEnd    = (() => { const e = addDays(milestoneStart, 7); return e > rangeEnd ? rangeEnd : e })()
     const milestone: PlanningMilestone = {
-      id: crypto.randomUUID(), name: label, type,
+      id: type === 'custom' ? crypto.randomUUID() : fixedMilestoneId(type, projectId),
+      name: label, type,
       start: milestoneStart, end: milestoneEnd, status: 'todo', deps: [],
     }
-    const updated: ProjectPlanning = { ...base, milestones: [...(base.milestones ?? []), milestone] }
+    const updated: ProjectPlanning = withDerivedDates(project, { ...base, milestones: [...(base.milestones ?? []), milestone] })
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
     try { await onUpdatePlanning(projectId, updated) }
     catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
@@ -914,12 +921,12 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     const project = projects.find(p => p.id === projectId)
     if (!project) return
     const base = getEffectivePlanning(project)
-    const updated: ProjectPlanning = {
+    const updated: ProjectPlanning = withDerivedDates(project, {
       ...base,
       milestones: (base.milestones ?? [])
         .filter(t => t.id !== milestoneId)
         .map(t => ({ ...t, deps: t.deps.filter(d => d !== milestoneId) })),
-    }
+    })
     setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
     try { await onUpdatePlanning(projectId, updated) }
     catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
@@ -958,6 +965,27 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
         return
       }
     }
+  }
+
+  async function addComment(projectId: string, milestoneId: string, text: string) {
+    const project = projects.find(p => p.id === projectId)
+    if (!project) return
+    const base = getEffectivePlanning(project)
+    const comment: MilestoneComment = {
+      id: crypto.randomUUID(),
+      text,
+      author: currentUser?.name ?? 'Unknown User',
+      createdAt: new Date().toISOString(),
+    }
+    const updated: ProjectPlanning = {
+      ...base,
+      milestones: (base.milestones ?? []).map(t =>
+        t.id === milestoneId ? { ...t, comments: [...(t.comments ?? []), comment] } : t
+      ),
+    }
+    setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
+    try { await onUpdatePlanning(projectId, updated) }
+    catch { setLocalPlanning(prev => { const n = { ...prev }; delete n[projectId]; return n }) }
   }
 
   async function saveMilestoneName(projectId: string, milestoneId: string, name: string) {
@@ -1025,6 +1053,190 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
         return
       }
     }
+  }
+
+  // ─── Milestone import ────────────────────────────────────────────────────────
+
+  /** true if toId is reachable from fromId via deps (adding fromId → toId.deps would create a cycle) */
+  function createsDepCycle(depMap: Map<string, string[]>, fromId: string, toId: string): boolean {
+    const visited = new Set<string>()
+    const queue = [...(depMap.get(fromId) ?? [])]
+    while (queue.length) {
+      const id = queue.shift()!
+      if (id === toId) return true
+      if (visited.has(id)) continue
+      visited.add(id)
+      queue.push(...(depMap.get(id) ?? []))
+    }
+    return false
+  }
+
+  function downloadImportSample() {
+    const blob = new Blob([JSON.stringify(IMPORT_SAMPLE_JSON, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'milestone-import.sample.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleImportFile(file: File) {
+    setImporting(true)
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(await file.text())
+    } catch {
+      setImporting(false)
+      setImportSummary({ imported: 0, errors: [`${file.name}: file is not valid JSON`] })
+      return
+    }
+    const entries = (parsed as { projects?: unknown })?.projects
+    if (!Array.isArray(entries)) {
+      setImporting(false)
+      setImportSummary({ imported: 0, errors: [`${file.name}: expected a top-level "projects" array`] })
+      return
+    }
+
+    const importableTypes = new Set<MilestoneType>(MILESTONE_PRESETS.map(p => p.type))
+    const errors: string[] = []
+    const planned: { project: Project; milestones: PlanningMilestone[]; rawDeps: string[][] }[] = []
+
+    // Global id registry: existing milestones of projects not being overwritten + ids accepted from this file
+    const overwrittenIds = new Set(
+      entries.map(e => (e as { projectId?: unknown })?.projectId).filter((v): v is string => typeof v === 'string')
+    )
+    const takenIds = new Set<string>()
+    for (const p of projects) {
+      if (overwrittenIds.has(p.id)) continue
+      for (const m of getEffectivePlanning(p).milestones ?? []) takenIds.add(m.id)
+    }
+
+    entries.forEach((rawEntry, ei) => {
+      const entry = rawEntry as { projectId?: unknown; milestones?: unknown }
+      const projectId = typeof entry?.projectId === 'string' ? entry.projectId : null
+      const project = projectId ? projects.find(p => p.id === projectId) : undefined
+      if (!project) {
+        errors.push(`projects[${ei}]: unknown or missing projectId${projectId ? ` "${projectId}"` : ''} — project skipped`)
+        return
+      }
+      if (!Array.isArray(entry.milestones)) {
+        errors.push(`Project ${projectId}: "milestones" must be an array — project skipped`)
+        return
+      }
+      const milestones: PlanningMilestone[] = []
+      const rawDeps: string[][] = []
+      const seenTypes = new Set<MilestoneType>()
+      const idsInProject = new Set<string>()
+      entry.milestones.forEach((rawM: unknown, mi: number) => {
+        const m = rawM as Partial<PlanningMilestone>
+        const label = `Project ${projectId} milestones[${mi}]`
+        const type = typeof m?.type === 'string' ? m.type : ''
+        if (!importableTypes.has(type as MilestoneType)) {
+          errors.push(`${label}: unsupported type "${type}" — skipped`)
+          return
+        }
+        const start = typeof m?.start === 'string' ? m.start : ''
+        const end = typeof m?.end === 'string' ? m.end : ''
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start >= end) {
+          errors.push(`${label}: invalid start/end dates (expected yyyy-MM-dd with start < end) — skipped`)
+          return
+        }
+        let id: string
+        let name: string
+        if (type === 'custom') {
+          if (typeof m.name !== 'string' || !m.name.trim()) {
+            errors.push(`${label}: custom milestone requires a non-empty "name" — skipped`)
+            return
+          }
+          name = m.name.trim()
+          id = typeof m.id === 'string' && m.id.trim() ? m.id.trim() : crypto.randomUUID()
+        } else {
+          if (seenTypes.has(type as MilestoneType)) {
+            errors.push(`${label}: duplicate preset type "${type}" — skipped`)
+            return
+          }
+          seenTypes.add(type as MilestoneType)
+          id = fixedMilestoneId(type as MilestoneType, projectId!)
+          name = MILESTONE_PRESETS.find(p => p.type === type)!.label
+        }
+        if (idsInProject.has(id) || takenIds.has(id)) {
+          errors.push(`${label}: id "${id}" already in use — skipped`)
+          return
+        }
+        idsInProject.add(id)
+        takenIds.add(id)
+        const status: MilestoneStatus = m.status === 'in-progress' || m.status === 'done' ? m.status : 'todo'
+        const comments: MilestoneComment[] | undefined = Array.isArray(m.comments)
+          ? (m.comments as Partial<MilestoneComment>[])
+              .filter((c): c is Partial<MilestoneComment> & { text: string } => typeof c?.text === 'string' && Boolean(c.text.trim()))
+              .map(c => ({
+                id: typeof c.id === 'string' && c.id ? c.id : crypto.randomUUID(),
+                text: c.text,
+                author: typeof c.author === 'string' && c.author ? c.author : 'Imported',
+                createdAt: typeof c.createdAt === 'string' && c.createdAt ? c.createdAt : new Date().toISOString(),
+              }))
+          : undefined
+        milestones.push({
+          id, name, type: type as MilestoneType, start, end, status, deps: [],
+          ...(comments?.length ? { comments } : {}),
+        })
+        rawDeps.push(Array.isArray(m.deps) ? (m.deps as unknown[]).filter((d): d is string => typeof d === 'string') : [])
+      })
+      planned.push({ project, milestones, rawDeps })
+    })
+
+    if (planned.length === 0) {
+      setImporting(false)
+      setImportSummary({ imported: 0, errors: errors.length ? errors : ['Nothing to import'] })
+      return
+    }
+
+    // Resolve deps against a global id → deps map (existing milestones of unaffected projects + imported ones)
+    const depMap = new Map<string, string[]>()
+    for (const p of projects) {
+      if (planned.some(pl => pl.project.id === p.id)) continue
+      for (const m of getEffectivePlanning(p).milestones ?? []) depMap.set(m.id, [...m.deps])
+    }
+    for (const pl of planned) for (const m of pl.milestones) depMap.set(m.id, [])
+    for (const pl of planned) {
+      pl.milestones.forEach((m, i) => {
+        for (const depId of pl.rawDeps[i]) {
+          if (depId === m.id) {
+            errors.push(`Project ${pl.project.id} milestone "${m.name}": self-dependency ignored`)
+            continue
+          }
+          if (!depMap.has(depId)) {
+            errors.push(`Project ${pl.project.id} milestone "${m.name}": dep "${depId}" not found — ignored`)
+            continue
+          }
+          if (createsDepCycle(depMap, depId, m.id)) {
+            errors.push(`Project ${pl.project.id} milestone "${m.name}": dep "${depId}" would create a cycle — ignored`)
+            continue
+          }
+          depMap.get(m.id)!.push(depId)
+        }
+        m.deps = depMap.get(m.id)!
+      })
+    }
+
+    // Apply: overwrite planning.milestones per project (order + deps), preserving other planning keys.
+    // milestoneRowOrder is reset so the file's array order wins and fixed rows return to default order.
+    let imported = 0
+    for (const pl of planned) {
+      const base = getEffectivePlanning(pl.project)
+      const updated = withDerivedDates(pl.project, { ...base, milestones: pl.milestones, milestoneRowOrder: undefined })
+      setLocalPlanning(prev => ({ ...prev, [pl.project.id]: updated }))
+      try {
+        await onUpdatePlanning(pl.project.id, updated)
+        imported++
+      } catch {
+        setLocalPlanning(prev => { const n = { ...prev }; delete n[pl.project.id]; return n })
+        errors.push(`Project ${pl.project.id}: failed to save — reverted`)
+      }
+    }
+    setImporting(false)
+    setImportSummary({ imported, errors })
   }
 
   // ─── Derived lists ───────────────────────────────────────────────────────────
@@ -1225,26 +1437,31 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     | { type: 'milestone';             wave: Wave | null; project: Project; milestone: PlanningMilestone; projectIndex: number; milestoneIndex: number }
     | { type: 'unassigned-header' }
 
-  function buildEnvironmentProvisionMilestone(p: Project): PlanningMilestone | undefined {
+  function buildEnvironmentProvisionMilestones(p: Project): PlanningMilestone[] {
     const provision = p.environmentProvision
-    if (!provision?.date) return undefined
+    if (!provision) return []
 
     const today = toIso(new Date())
-    let status: MilestoneStatus
-    if (provision.completedAt) status = 'done'
-    else if (provision.date <= today) status = 'in-progress'
-    else status = 'todo'
-
-    return {
-      id: `env-provision-date-${p.id}`,
-      name: 'Environment Provision',
-      type: 'env-provision',
-      start: provision.date,
-      end: provision.date,
-      status,
-      deps: [],
-      immutable: true,
+    const result: PlanningMilestone[] = []
+    for (const env of ['dev', 'prod'] as const) {
+      const entry = provision[env]
+      if (!entry?.date) continue
+      let status: MilestoneStatus
+      if (entry.completedAt) status = 'done'
+      else if (entry.date <= today) status = 'in-progress'
+      else status = 'todo'
+      result.push({
+        id: `env-provision-date-${p.id}-${env}`,
+        name: `Environment Provision (${env === 'dev' ? 'Dev' : 'Prod'})`,
+        type: 'env-provision',
+        start: entry.date,
+        end: entry.date,
+        status,
+        deps: [],
+        immutable: true,
+      })
     }
+    return result
   }
 
   function buildDataMigrationPeriodMilestone(p: Project): PlanningMilestone | undefined {
@@ -1285,7 +1502,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     }
   }
 
-  function getMilestonesForProject(p: Project): PlanningMilestone[] {
+  /** Rendered milestone rows without drag preview: category milestones pinned first
+   *  (saved order, default createdAt ASC), then env-provision, data-migration period,
+   *  and persisted milestones — saved milestoneRowOrder applied per group. */
+  function getOrderedMilestoneRows(p: Project): PlanningMilestone[] {
     const plan = localPlanning[p.id] ?? p.planning
     let milestones = plan?.milestones ?? []
     // Remove any category milestones already in planning to avoid duplication
@@ -1311,31 +1531,32 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       })
 
     const dmPeriod = buildDataMigrationPeriodMilestone(p)
-    const envProvision = buildEnvironmentProvisionMilestone(p)
-    const fixedCount = (dmPeriod ? 1 : 0) + (envProvision ? 1 : 0) + assignedCMs.length
+    const envMilestones = buildEnvironmentProvisionMilestones(p)
 
-    if (rowMilestoneDragState?.projectId === p.id && milestones.length > 0) {
-      const arr = [...milestones]
-      const sourceIdxInMilestones = arr.findIndex(m => m.id === rowMilestoneDragState.milestoneId)
-      if (sourceIdxInMilestones !== -1) {
-        const [moved] = arr.splice(sourceIdxInMilestones, 1)
-        if (moved) {
-          const visualSourceIndex = fixedCount + sourceIdxInMilestones
-          const visualDropIndex = rowMilestoneDragState.overIndex > visualSourceIndex
-            ? rowMilestoneDragState.overIndex - 1
-            : rowMilestoneDragState.overIndex
-          const insertAt = Math.max(0, visualDropIndex - fixedCount)
-          arr.splice(Math.min(insertAt, arr.length), 0, moved)
-          milestones = arr
-        }
+    const savedOrder = plan?.milestoneRowOrder
+    return [
+      ...orderByIdList(assignedCMs, savedOrder),
+      ...orderByIdList([...envMilestones, ...(dmPeriod ? [dmPeriod] : []), ...milestones], savedOrder),
+    ]
+  }
+
+  function getMilestonesForProject(p: Project): PlanningMilestone[] {
+    const rows = getOrderedMilestoneRows(p)
+
+    // Drag preview with group clamping: category milestones stay pinned on top
+    if (rowMilestoneDragState?.projectId === p.id && rows.length > 0) {
+      const assignedCmIds = new Set(p.categoryMilestoneIds ?? [])
+      const cmCount = rows.filter(r => assignedCmIds.has(r.id)).length
+      const sourceIdx = rows.findIndex(m => m.id === rowMilestoneDragState.milestoneId)
+      if (sourceIdx !== -1) {
+        const isCmRow = sourceIdx < cmCount
+        const lo = isCmRow ? 0 : cmCount
+        const hi = isCmRow ? cmCount : rows.length
+        return moveRowClamped(rows, sourceIdx, rowMilestoneDragState.overIndex, lo, hi)
       }
     }
 
-    return envProvision
-      ? [envProvision, ...(dmPeriod ? [dmPeriod] : []), ...assignedCMs, ...milestones]
-      : dmPeriod
-        ? [dmPeriod, ...assignedCMs, ...milestones]
-        : [...assignedCMs, ...milestones]
+    return rows
   }
 
   // ─── Search filter ───────────────────────────────────────────────────────────
@@ -2018,6 +2239,29 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
           <ChevronsUpDown size={13} />
           Collapse all
         </button>
+        {!readOnly && (
+          <>
+            <div className="w-px h-3 bg-[var(--g-border)]" />
+            <button
+              onClick={() => setImportDialogOpen(true)}
+              className="text-[12px] text-[var(--g-text-muted)] bg-transparent border-none cursor-pointer flex items-center gap-1"
+            >
+              <Upload size={13} />
+              Import
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0]
+                e.target.value = ''
+                if (f) void handleImportFile(f)
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* Scroll container */}
@@ -2334,6 +2578,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
               const isCategoryMilestone = milestone.type === 'category-milestone'
               const isDataMigrationPeriod = milestone.type === 'data-migration-period'
               const isImmutable = isDataMigrationPeriod || milestone.immutable
+              // Fixed-id preset milestones have immutable names; legacy random-id milestones stay editable
+              const isFixedPreset = milestone.type !== 'custom' && milestone.id === fixedMilestoneId(milestone.type, project.id)
               const categoryMilestone = isCategoryMilestone
                 ? categoryMilestones.find(cm => cm.id === milestone.id)
                 : undefined
@@ -2370,34 +2616,15 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     </div>
                     {/* Name col */}
                     <div className={cn(cellClass, 'pl-6 group/taskname gap-[5px] text-[13px] text-[var(--g-text)]')}>
-                      {isImmutable ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Lock className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p className="text-xs">
-                              {isDataMigrationPeriod
-                                ? 'Data migration period is managed on the Data Migration page'
-                                : 'Environment provision is managed on the Environment Provision page'}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : !isCategoryMilestone ? (
-                        <GripVertical
-                          className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-grab"
-                          onPointerDown={e => {
-                            if (milestone.type === 'data-migration-period') return
-                            e.preventDefault(); e.stopPropagation()
-                            setRowMilestoneDragState({ projectId: project.id, milestoneId: milestone.id, sourceIndex: milestoneIdx0, overIndex: milestoneIdx0 })
-                            document.body.style.cursor = 'grabbing'
-                          }}
-                        />
-                      ) : (
-                        <Tag
-                          className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)]"
-                        />
-                      )}
+                      <GripVertical
+                        className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-grab"
+                        onPointerDown={e => {
+                          if (readOnly) return
+                          e.preventDefault(); e.stopPropagation()
+                          setRowMilestoneDragState({ projectId: project.id, milestoneId: milestone.id, sourceIndex: milestoneIdx0, overIndex: milestoneIdx0 })
+                          document.body.style.cursor = 'grabbing'
+                        }}
+                      />
                       {editingTaskId === milestone.id ? (
                         <input
                           autoFocus
@@ -2419,7 +2646,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                           >
                             {milestone.name}
                           </span>
-                          {!isCategoryMilestone && !isImmutable && (
+                          {!isCategoryMilestone && !isImmutable && !isFixedPreset && (
                             <button
                               className="opacity-0 group-hover/taskname:opacity-100 shrink-0 bg-transparent border-none cursor-pointer text-[var(--g-text-subtle)] p-0.5 rounded-[4px] flex items-center transition-[opacity] duration-[100ms]"
                               onClick={e => {
@@ -2430,6 +2657,42 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                             >
                               <Pencil className="w-3 h-3" />
                             </button>
+                          )}
+                          {(milestone.comments?.length ?? 0) > 0 && (
+                            <Popover open={hoveredCommentId === milestone.id}>
+                              <PopoverTrigger asChild>
+                                <span
+                                  className="shrink-0 flex items-center text-[var(--g-text-subtle)] cursor-default"
+                                  onMouseEnter={() => setHoveredCommentId(milestone.id)}
+                                  onMouseLeave={() => setHoveredCommentId(null)}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <MessageSquare className="w-[13px] h-[13px]" />
+                                </span>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                side="top"
+                                align="start"
+                                className="w-72 p-0"
+                                onMouseEnter={() => setHoveredCommentId(milestone.id)}
+                                onMouseLeave={() => setHoveredCommentId(null)}
+                              >
+                                <div className="px-3 py-2 border-b border-border">
+                                  <p className="text-xs font-semibold">Comments ({milestone.comments!.length})</p>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto p-3 space-y-3">
+                                  {milestone.comments!.map(c => (
+                                    <div key={c.id} className="text-xs">
+                                      <p className="font-medium text-foreground">
+                                        {c.author}
+                                        <span className="ml-1.5 font-normal text-muted-foreground">{formatDate(c.createdAt.slice(0, 10))}</span>
+                                      </p>
+                                      <p className="mt-0.5 text-muted-foreground whitespace-pre-wrap break-words">{c.text}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           )}
                         </>
                       )}
@@ -2507,7 +2770,15 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                                 </DropdownMenuItem>
                               )
                             })()}
-                            {nextMilestoneStatus(milestone.status) && <DropdownMenuSeparator />}
+                            {!isCategoryMilestone && (
+                              <DropdownMenuItem
+                                onClick={() => { setCommentText(''); setCommentDialog({ open: true, projectId: project.id, milestoneId: milestone.id }) }}
+                              >
+                                <MessageSquarePlus className="w-[13px] h-[13px] mr-1.5" />
+                                Add comment
+                              </DropdownMenuItem>
+                            )}
+                            {!isCategoryMilestone && <DropdownMenuSeparator />}
                             {!isCategoryMilestone && (
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
@@ -2616,7 +2887,6 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
             const isExpanded   = !collapsedProjects.has(p.id)
             const projectDates = effectiveProjectDates(p)
             const isDraft      = projectDates?.isDraft ?? false
-            const isDragging      = dragState?.projectId === p.id && dragState?.milestoneId === null
             const isProjDragging  = projRowDragState?.projectId === p.id
             const isSelected      = selectedBarId === p.id
             const labelText       = p.jiraStoryKey ?? null
@@ -2751,12 +3021,17 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                             </DropdownMenuSubTrigger>
                             <DropdownMenuPortal>
                               <DropdownMenuSubContent>
-                                {MILESTONE_PRESETS.map(preset => (
-                                  <DropdownMenuItem key={preset.type} onClick={() => void addMilestone(p.id, preset.type, preset.label)}>
-                                    <preset.icon size={14} />
-                                    {preset.label}
-                                  </DropdownMenuItem>
-                                ))}
+                                {MILESTONE_PRESETS.map(preset => {
+                                  const alreadyAdded = preset.type !== 'custom' &&
+                                    (getEffectivePlanning(p).milestones ?? []).some(m => m.id === fixedMilestoneId(preset.type, p.id))
+                                  return (
+                                    <DropdownMenuItem key={preset.type} disabled={alreadyAdded} onClick={() => void addMilestone(p.id, preset.type, preset.label)}>
+                                      <preset.icon size={14} />
+                                      {preset.label}
+                                      {alreadyAdded && <Check size={13} className="ml-auto text-[var(--g-text-subtle)]" />}
+                                    </DropdownMenuItem>
+                                  )
+                                })}
                               </DropdownMenuSubContent>
                             </DropdownMenuPortal>
                           </DropdownMenuSub>
@@ -2830,28 +3105,16 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                   {projectDates ? (
                     <div
                       data-bar-id={p.id}
-                      className="group absolute top-1/2 -translate-y-1/2 cursor-grab select-none z-[1] rounded-[11px]"
+                      className="group absolute top-1/2 -translate-y-1/2 cursor-default select-none z-[1] rounded-[11px]"
                       style={{
                         left: barLeft(projectDates.start),
                         width: Math.max(8, barWidth(projectDates.start, projectDates.end)),
                         height: 22,
                         background: softColor,
-                        opacity: isDraft ? 0.4 : isDragging ? 0.9 : 1,
+                        opacity: isDraft ? 0.4 : 1,
                         boxShadow: isSelected
                           ? '0 0 0 2px var(--g-bg), 0 0 0 3.5px var(--g-accent)'
-                          : isDragging
-                            ? '0 2px 8px rgba(0,0,0,0.2)'
-                            : undefined,
-                      }}
-                      onPointerDown={e => {
-                        if (readOnly) return
-                        e.preventDefault(); e.stopPropagation()
-                        const planning = getEffectivePlanning(p)
-                        const origTasks = (planning.milestones ?? []).map(t => ({ id: t.id, start: t.start, end: t.end }))
-                        const origOverrides = { ...(planning.categoryMilestoneOverrides ?? {}) }
-                        setDragState({ projectId: p.id, milestoneId: null, type: 'move', startX: e.clientX, originalStart: projectDates.start, originalEnd: projectDates.end, originalMilestones: origTasks, originalCategoryMilestoneOverrides: origOverrides })
-                        document.body.style.cursor = 'grabbing'
-                        setSelectedBarId(p.id)
+                          : undefined,
                       }}
                     >
                       {/* Progress fill */}
@@ -2862,28 +3125,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                         )}
                         style={{ width: `${pct}%`, background: waveColor }}
                       />
-                      {/* Resize handles */}
-                      <div
-                        className={cn(
-                          'absolute left-0 top-0 bottom-0 w-[5px] cursor-ew-resize z-[2] rounded-tl-[11px] rounded-bl-[11px]',
-                          isSelected ? 'bg-[rgba(0,0,0,0.18)]' : 'bg-transparent',
-                        )}
-                        onPointerDown={e => onPointerDown(e, p.id, null, 'resize-start', projectDates.start, projectDates.end)}
-                      />
-                      <div
-                        className={cn(
-                          'absolute right-0 top-0 bottom-0 w-[5px] cursor-ew-resize z-[2] rounded-tr-[11px] rounded-br-[11px]',
-                          isSelected ? 'bg-[rgba(0,0,0,0.18)]' : 'bg-transparent',
-                        )}
-                        onPointerDown={e => onPointerDown(e, p.id, null, 'resize-end', projectDates.start, projectDates.end)}
-                      />
                     </div>
-                  ) : (
-                    <div
-                      className="absolute inset-0 cursor-crosshair"
-                      onPointerDown={e => onPointerDownCreate(e, p)}
-                    />
-                  )}
+                  ) : null}
                 </div>
               </div>
             )
@@ -3105,6 +3348,104 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Add comment dialog */}
+      {commentDialog && (
+        <Dialog open={commentDialog.open} onOpenChange={open => { if (!open) setCommentDialog(null) }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Comment</DialogTitle>
+              <DialogDescription>
+                Add a comment to this milestone. Comments are visible to anyone viewing the Gantt chart.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              autoFocus
+              value={commentText}
+              onChange={e => setCommentText(e.target.value)}
+              placeholder="Write a comment..."
+              rows={4}
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCommentDialog(null)}>Cancel</Button>
+              <Button
+                disabled={!commentText.trim()}
+                onClick={() => {
+                  void addComment(commentDialog.projectId, commentDialog.milestoneId, commentText.trim())
+                  setCommentDialog(null)
+                }}
+              >
+                Add comment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Import dialog: intro → importing → result */}
+      <Dialog
+        open={importDialogOpen}
+        onOpenChange={open => {
+          if (importing) return
+          setImportDialogOpen(open)
+          if (!open) setImportSummary(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Milestones</DialogTitle>
+            <DialogDescription>
+              {importing
+                ? 'Importing milestones, please wait...'
+                : importSummary
+                  ? `Imported milestones for ${importSummary.imported} project${importSummary.imported === 1 ? '' : 's'}.${importSummary.errors.length > 0 ? ` ${importSummary.errors.length} issue${importSummary.errors.length === 1 ? '' : 's'} reported below.` : ''}`
+                  : 'Bulk-import milestones for multiple projects from a JSON file.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {importing ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <p className="text-xs">Validating and saving milestones...</p>
+            </div>
+          ) : importSummary ? (
+            <>
+              {importSummary.errors.length > 0 && (
+                <div className="max-h-60 overflow-y-auto rounded-md border border-border p-3 space-y-1.5">
+                  {importSummary.errors.map((err, i) => (
+                    <p key={i} className="text-xs text-muted-foreground">{err}</p>
+                  ))}
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setImportSummary(null)}>Import another file</Button>
+                <Button onClick={() => { setImportDialogOpen(false); setImportSummary(null) }}>Close</Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="text-xs text-muted-foreground space-y-2">
+                <p>How it works:</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Projects are matched by <code className="text-foreground">projectId</code>. For each listed project, its milestones are <strong className="text-foreground">fully replaced</strong> — array order becomes row order and <code className="text-foreground">deps</code> become dependency arrows.</li>
+                  <li>Preset milestones (e.g. <code className="text-foreground">dev-cutover</code>) are stored with a fixed id <code className="text-foreground">{'<type>-<projectId>'}</code> and may appear once per project. Custom milestones require a <code className="text-foreground">name</code> and may provide their own <code className="text-foreground">id</code> (generated if omitted).</li>
+                  <li>Projects not listed in the file are left untouched. Invalid entries are skipped and reported in a summary after the import.</li>
+                </ul>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={downloadImportSample}>
+                  <Download className="w-[13px] h-[13px] mr-1.5" />
+                  Download sample format
+                </Button>
+                <Button onClick={() => importInputRef.current?.click()}>
+                  <FolderOpen className="w-[13px] h-[13px] mr-1.5" />
+                  Open file
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
     </div>
   )

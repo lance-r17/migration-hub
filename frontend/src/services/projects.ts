@@ -34,6 +34,32 @@ import {
 } from '@/lib/scoring'
 import type { JiraSubtaskConfig } from '@/types/wave'
 
+/**
+ * Normalizes legacy environment provision blobs ({ date, environments: ['dev'|'prod'], completedAt })
+ * into the split per-environment shape. Legacy date/completedAt are copied into each checked env.
+ */
+function normalizeEnvironmentProvision(raw: EnvironmentProvision | null): EnvironmentProvision | undefined {
+  if (!raw) return undefined
+  const obj = raw as EnvironmentProvision & {
+    date?: string
+    environments?: ('dev' | 'prod')[]
+    completedAt?: string | null
+  }
+  if (!('dev' in obj) && !('prod' in obj) && !('environments' in obj) && !('date' in obj)) return undefined
+  if ('dev' in obj || 'prod' in obj) {
+    const result: EnvironmentProvision = {}
+    if (obj.dev) result.dev = obj.dev
+    if (obj.prod) result.prod = obj.prod
+    return Object.keys(result).length ? result : undefined
+  }
+  const result: EnvironmentProvision = {}
+  for (const env of obj.environments ?? []) {
+    if (env !== 'dev' && env !== 'prod') continue
+    result[env] = { date: obj.date, completedAt: obj.completedAt ?? null }
+  }
+  return Object.keys(result).length ? result : undefined
+}
+
 const ENDPOINTS = {
   projects: '/api/v1/projects',
   project: (id: string) => `/api/v1/projects/${id}`,
@@ -232,7 +258,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     stageProgress: raw.stage_progress ?? undefined,
     migrationConstraints: raw.migration_constraints ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
-    environmentProvision: raw.environment_provision ?? undefined,
+    environmentProvision: normalizeEnvironmentProvision(raw.environment_provision),
     dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
     dataMigrationPlan: raw.data_migration_plan ?? undefined,
     dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
@@ -280,7 +306,7 @@ function fromApi(raw: ProjectApiResponse): Project {
     migrationConstraints: raw.migration_constraints ?? undefined,
     targetArchitecture: raw.target_architecture ?? undefined,
     migrationEffortEstimation: raw.migration_effort_estimation ?? undefined,
-    environmentProvision: raw.environment_provision ?? undefined,
+    environmentProvision: normalizeEnvironmentProvision(raw.environment_provision),
     dataMigrationSchedule: raw.data_migration_schedule ?? undefined,
     dataMigrationPlan: raw.data_migration_plan ?? undefined,
     dataMigrationSurveySubmittedAt: raw.data_migration_survey_submitted_at ?? undefined,
@@ -370,6 +396,8 @@ interface ProjectTableRowApi {
   bgi_id: string | null
   itso: string | null
   itso_delegate: string | null
+  gbi_champion: string | null
+  gbi_champion_delegate: string | null
   jira_story_key: string | null
   jira_base_url: string | null
   is_survey_needed: boolean
@@ -433,6 +461,8 @@ function fromApiTableRow(raw: ProjectTableRowApi): ProjectTableRow {
     bgi_id: raw.bgi_id ?? undefined,
     itso: raw.itso ?? undefined,
     itsoDelegate: raw.itso_delegate ?? undefined,
+    gbiChampion: raw.gbi_champion ?? undefined,
+    gbiChampionDelegate: raw.gbi_champion_delegate ?? undefined,
     jiraStoryKey: raw.jira_story_key ?? undefined,
     jiraBaseUrl: raw.jira_base_url ?? undefined,
     isSurveyNeeded: raw.is_survey_needed,
@@ -453,6 +483,9 @@ export interface ProjectsTableParams {
   status?: string
   search?: string
   migrationRange?: string
+  /** Filter: projects where this user holds this role (itso, itso_delegate, gbi_champion, gbi_champion_delegate) */
+  role?: string
+  roleUserId?: string
   bgiIds?: string[] | null
 }
 
@@ -469,12 +502,14 @@ function mockTableRow(p: Project): ProjectTableRow {
     bgi_id: p.bgi_id,
     itso: p.itso,
     itsoDelegate: p.itsoDelegate,
+    gbiChampion: p.governanceRoles?.gbiChampion?.name,
+    gbiChampionDelegate: p.governanceRoles?.gbiChampionDelegate?.name,
     jiraStoryKey: p.jiraStoryKey,
     jiraBaseUrl: p.jiraBaseUrl,
     isSurveyNeeded: p.isSurveyNeeded,
     justificationWithoutSurvey: p.justificationWithoutSurvey,
     applicationOverview: p.applicationOverview,
-    planning: p.planning,
+    planning: mockDerivedProjectDates(p) ?? (p.planning ? { startDate: p.planning.startDate, endDate: p.planning.endDate } : undefined),
     migrationConstraints: p.migrationConstraints,
     migrationEffortEstimation: p.migrationEffortEstimation,
     infraFootprint: getInfraFootprintScore(p),
@@ -482,14 +517,61 @@ function mockTableRow(p: Project): ProjectTableRow {
   }
 }
 
+/** Mirrors backend get_derived_project_dates — union of the project's milestone date ranges. */
+function mockDerivedProjectDates(p: Project): { startDate: string; endDate: string } | null {
+  const starts: string[] = []
+  const ends: string[] = []
+  const push = (s?: string, e?: string) => { if (s && e) { starts.push(s); ends.push(e) } }
+  const assigned = new Set(p.categoryMilestoneIds ?? [])
+  for (const m of p.planning?.milestones ?? []) if (!assigned.has(m.id)) push(m.start, m.end)
+  for (const env of ['dev', 'prod'] as const) {
+    const d = p.environmentProvision?.[env]?.date
+    if (d) push(d, d)
+  }
+  const dm = p.dataMigrationPlan ?? p.dataMigrationSchedule
+  push(dm?.startDate, dm?.endDate)
+  for (const b of dm?.cycleBlocks ?? []) push(b.startDate, b.endDate)
+  for (const cmId of assigned) {
+    const cm = store.getCategoryMilestones().find(c => c.id === cmId)
+    const ov = p.planning?.categoryMilestoneOverrides?.[cmId]
+    push(ov?.start || cm?.startDate, ov?.end || cm?.endDate)
+  }
+  if (!starts.length) return null
+  return { startDate: starts.sort()[0], endDate: ends.sort()[ends.length - 1] }
+}
+
 function mockMigrationPeriodDays(p: Project): number | null {
-  const start = p.planning?.startDate || p.migrationConstraints?.earliestStartDate
-  const end = p.planning?.endDate || p.migrationConstraints?.latestEndDate
+  const derived = mockDerivedProjectDates(p)
+  let start = derived?.startDate
+  let end = derived?.endDate
+  if (!start || !end) {
+    start = p.planning?.startDate || p.migrationConstraints?.earliestStartDate
+    end = p.planning?.endDate || p.migrationConstraints?.latestEndDate
+  }
+  if ((!start || !end) && p.waveId) {
+    const wave = store.getWaves().find(w => w.id === p.waveId)
+    start = wave?.startDate
+    end = wave?.cutoverDate
+  }
   if (!start || !end) return null
   const s = new Date(start)
   const e = new Date(end)
   if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
   return Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+/** Mock mirror of backend _project_has_role_user. Mock data stores governance roles on the
+ *  project (with user ids) and ITSO names as free-text strings. */
+function mockProjectHasRoleUser(p: Project, role: string, userId: string): boolean {
+  const user = store.getUsers().find(u => u.id === userId)
+  if (!user) return false
+  switch (role) {
+    case 'gbi_champion': return p.governanceRoles?.gbiChampion?.id === userId
+    case 'gbi_champion_delegate': return p.governanceRoles?.gbiChampionDelegate?.id === userId
+    case 'itso': return !!p.itso && p.itso.startsWith(user.name)
+    case 'itso_delegate': return !!p.itsoDelegate && p.itsoDelegate.startsWith(user.name)
+    default: return false
+  }
 }
 
 function mockGetProjectsTable(params: ProjectsTableParams): ProjectTablePage {
@@ -534,6 +616,9 @@ function mockGetProjectsTable(params: ProjectsTableParams): ProjectTablePage {
       }
     })
   }
+  if (params.role && params.roleUserId) {
+    projects = projects.filter((p) => mockProjectHasRoleUser(p, params.role!, params.roleUserId!))
+  }
   const total = projects.length
   const sliced = params.pageSize > 0
     ? projects.slice((params.page - 1) * params.pageSize, params.page * params.pageSize)
@@ -552,6 +637,10 @@ export async function getProjectsTable(params: ProjectsTableParams): Promise<Pro
   if (params.status && params.status !== 'all') qs.set('status', params.status)
   if (params.search?.trim()) qs.set('search', params.search.trim())
   if (params.migrationRange && params.migrationRange !== 'all') qs.set('migration_range', params.migrationRange)
+  if (params.role && params.roleUserId) {
+    qs.set('role', params.role)
+    qs.set('role_user_id', params.roleUserId)
+  }
   for (const id of params.bgiIds ?? []) qs.append('bgi_ids', id)
   const raw = await apiClient.get<ProjectTablePageApi>(`${ENDPOINTS.projects}/table?${qs.toString()}`)
   return {
@@ -616,8 +705,8 @@ export async function updateEnvironmentProvision(
     await delay()
     const p = store.getProject(id)
     if (!p) throw new Error('Project not found')
-    const updated: EnvironmentProvision = { ...p.environmentProvision, ...provision }
-    return store.updateProject(id, 'environmentProvision', updated)
+    // Replace semantics: unchecked environments are discarded (omitted from the payload)
+    return store.updateProject(id, 'environmentProvision', provision)
   }
   const raw = await apiClient.patch<ProjectApiResponse>(ENDPOINTS.section(id, 'environmentProvision'), { value: provision })
   return fromApi(raw)

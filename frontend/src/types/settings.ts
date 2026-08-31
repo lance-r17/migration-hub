@@ -44,6 +44,16 @@ export interface MigrationSettings {
   dataMigrationAdjustmentEnabled: boolean
   createJiraStoriesOnSignoff?: boolean
   dataMigration: DataMigrationSettings
+  provisionCidrParents?: ProvisionCidrParents
+  /** Allowed prefix lengths for project zone CIDRs (e.g. [25, 26, 27]). Admin-overridable. */
+  provisionAllowedPrefixes?: number[]
+}
+
+/** Parent CIDR blocks per environment × availability zone; project zone CIDRs (/26, /27)
+ *  must be carved from these. Admin-overridable via /admin/provision-cidrs. */
+export interface ProvisionCidrParents {
+  dev: Record<'zoneA' | 'zoneB' | 'zoneC', string[]>
+  prod: Record<'zoneA' | 'zoneB' | 'zoneC', string[]>
 }
 
 export interface CustomNavCardConfig {

@@ -76,31 +76,29 @@ export interface PartialApplicationOverview extends Partial<ApplicationOverview>
 // ─── Environment Provision ────────────────────────────────────────────────
 
 export type ProvisionEnvironment = 'dev' | 'prod'
+export type ProvisionZone = 'zoneA' | 'zoneB' | 'zoneC'
 export type EnvironmentProvisionStatus = 'planned' | 'in-progress' | 'completed'
 
-export interface EnvironmentProvision {
-  date?: string
-  environments?: ProvisionEnvironment[]
+export interface EnvironmentProvisionEntry {
+  date?: string                              // ISO date 'yyyy-MM-dd'
+  cidrs?: Partial<Record<ProvisionZone, string>>  // optional /26 or /27 per availability zone
   completedAt?: string | null
 }
 
-export function getEnvironmentProvisionStatus(
-  provision: EnvironmentProvision | undefined,
-): EnvironmentProvisionStatus {
-  if (!provision) return 'planned'
-  if (provision.completedAt) return 'completed'
-  if (!provision.date) return 'planned'
-  const today = new Date().toISOString().slice(0, 10)
-  if (provision.date <= today) return 'in-progress'
-  return 'planned'
+export interface EnvironmentProvision {
+  dev?: EnvironmentProvisionEntry   // key present = environment checked
+  prod?: EnvironmentProvisionEntry
 }
 
-export function formatProvisionEnvironments(
-  environments: ProvisionEnvironment[] | undefined,
-): string {
-  if (!environments || environments.length === 0) return '—'
-  if (environments.length === 2) return 'DEV, PROD'
-  return environments[0].toUpperCase()
+export function getProvisionEntryStatus(
+  entry: EnvironmentProvisionEntry | undefined,
+): EnvironmentProvisionStatus {
+  if (!entry) return 'planned'
+  if (entry.completedAt) return 'completed'
+  if (!entry.date) return 'planned'
+  const today = new Date().toISOString().slice(0, 10)
+  if (entry.date <= today) return 'in-progress'
+  return 'planned'
 }
 
 // ─── Section 2: Current Infrastructure ──────────────────────────────────────
@@ -313,8 +311,15 @@ export interface Approval {
 export type MilestoneType = 'env-provision' | 'dev-resource-provision' | 'dev-data-migration' | 'dev-cutover' | 'prd-resource-provision' | 'prd-data-migration' | 'prd-cutover' | 'custom' | 'category-milestone' | 'data-migration-period'
 export type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 
-export interface PlanningMilestone {
+export interface MilestoneComment {
   id: string
+  text: string
+  author: string
+  createdAt: string   // ISO 8601
+}
+
+export interface PlanningMilestone {
+  id: string           // '<type>-<projectId>' for preset milestones; random UUID for custom
   name: string
   type: MilestoneType
   start: string      // ISO date
@@ -322,16 +327,19 @@ export interface PlanningMilestone {
   status: MilestoneStatus
   deps: string[]     // other PlanningMilestone ids
   immutable?: boolean
+  comments?: MilestoneComment[]
 }
 
 export interface ProjectPlanning {
+  /** Derived automatically from the union of the project's milestones (persisted +
+   *  auto-derived env-provision / data-migration period + category milestone overrides).
+   *  Cached here so backend scoring, reports and Jira sync can consume it. */
   startDate: string
   endDate: string
-  planStartDate?: string
-  planEndDate?: string
-  estimatedStartDate?: string
-  estimatedEndDate?: string
   milestones: PlanningMilestone[]
+  /** Ordered ids of all rendered milestone rows (category + env + data-migration + persisted).
+   *  Category milestone ids are pinned to the top; missing rows' ids are ignored at render. */
+  milestoneRowOrder?: string[]
   /** Per-project overrides for assigned category milestones (cmId → dates + status) */
   categoryMilestoneOverrides?: Record<string, { start: string; end: string; status?: MilestoneStatus }>
 }
@@ -450,6 +458,8 @@ export interface ProjectTableRow {
   bgi_id?: string
   itso?: string
   itsoDelegate?: string
+  gbiChampion?: string
+  gbiChampionDelegate?: string
   jiraStoryKey?: string
   jiraBaseUrl?: string
   isSurveyNeeded?: boolean

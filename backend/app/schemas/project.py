@@ -205,6 +205,8 @@ class ProjectTableRow(BaseModel):
     bgi_id: str | None = None
     itso: str | None = None
     itso_delegate: str | None = None
+    gbi_champion: str | None = None
+    gbi_champion_delegate: str | None = None
     jira_story_key: str | None = None
     jira_base_url: str | None = None
     is_survey_needed: bool = True

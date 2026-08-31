@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download, Network, X, MoreVertical } from 'lucide-react'
+import { Lock, FolderOpen, ChevronRight, ChevronLeft, Calendar, ListFilter, Search, Download, Network, X, MoreVertical, Users, Check } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { AppShell } from '@/components/layout/AppShell'
 import {
@@ -50,10 +50,12 @@ import {
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { useProjectsTable } from '@/hooks/use-projects-table'
+import { useUsers } from '@/hooks/use-users'
 import { useCurrentUser } from '@/context/UserContext'
 import { getProjectsTable, updateApplicationOverview, updateSurveyNeed } from '@/services/projects'
 import { getBgiHierarchy } from '@/services/bgi'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
+import { cn } from '@/lib/utils'
 import { BgiTree } from '@/components/bgi/BgiTree'
 import { getEffortTypeLabel } from '@/components/project/EffortTableEditor'
 import { InfraFootprintTooltip } from '@/components/project/InfraFootprintTooltip'
@@ -84,6 +86,13 @@ function getProgressVariant(project: Pick<ProjectTableRow, 'progress' | 'status'
   return 'primary'
 }
 
+const ROLE_FILTER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'itso', label: 'ITSO' },
+  { value: 'itso_delegate', label: 'ITSO Delegate' },
+  { value: 'gbi_champion', label: 'BGI Champion' },
+  { value: 'gbi_champion_delegate', label: 'BGI Champion Delegate' },
+]
+
 export function ProjectsPage() {
   const navigate = useNavigate()
   const { user } = useCurrentUser()
@@ -91,6 +100,10 @@ export function ProjectsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [migrationRange, setMigrationRange] = useState('all')
+  const [roleFilter, setRoleFilter] = useState('all')
+  const [roleUserIdFilter, setRoleUserIdFilter] = useState('all')
+  const [rolePopoverOpen, setRolePopoverOpen] = useState(false)
+  const [roleUserSearch, setRoleUserSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
@@ -176,12 +189,33 @@ export function ProjectsPage() {
     [selectedBgiDescendantIds]
   )
 
+  const { users } = useUsers()
+
+  const filteredRoleUsers = useMemo(() => {
+    const term = roleUserSearch.trim().toLowerCase()
+    const sorted = [...users].sort((a, b) => a.name.localeCompare(b.name))
+    if (!term) return sorted
+    return sorted.filter(u =>
+      u.name.toLowerCase().includes(term) || u.department?.toLowerCase().includes(term)
+    )
+  }, [users, roleUserSearch])
+
+  const roleFilterLabel = useMemo(() => {
+    if (roleFilter === 'all') return 'Filter by role'
+    const roleLabel = ROLE_FILTER_OPTIONS.find(o => o.value === roleFilter)?.label ?? roleFilter
+    if (roleUserIdFilter === 'all') return roleLabel
+    const userName = users.find(u => u.id === roleUserIdFilter)?.name ?? roleUserIdFilter
+    return `${roleLabel} · ${userName}`
+  }, [roleFilter, roleUserIdFilter, users])
+
   const { rows, total, loading, refresh } = useProjectsTable({
     page: currentPage,
     pageSize,
     status: statusFilter,
     search: searchQuery,
     migrationRange,
+    role: roleFilter !== 'all' ? roleFilter : undefined,
+    roleUserId: roleFilter !== 'all' && roleUserIdFilter !== 'all' ? roleUserIdFilter : undefined,
     bgiIds: bgiIdList,
   })
 
@@ -236,6 +270,8 @@ export function ProjectsPage() {
         status: statusFilter,
         search: searchQuery,
         migrationRange,
+        role: roleFilter !== 'all' ? roleFilter : undefined,
+        roleUserId: roleFilter !== 'all' && roleUserIdFilter !== 'all' ? roleUserIdFilter : undefined,
         bgiIds: bgiIdList,
       })
       exportProjectsToExcel(result.items, bgiRoot)
@@ -431,6 +467,106 @@ export function ProjectsPage() {
               <SelectItem value="gte180">{'≥ 180 days'}</SelectItem>
             </SelectContent>
           </Select>
+          <Popover open={rolePopoverOpen} onOpenChange={setRolePopoverOpen}>
+            <PopoverTrigger asChild>
+              <button className="h-7 px-2.5 flex items-center gap-1.5 rounded-lg border border-input bg-transparent text-sm whitespace-nowrap hover:bg-muted/50 transition-colors">
+                <Users className="size-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{roleFilterLabel}</span>
+                {roleFilter !== 'all' && (
+                  <span
+                    className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setRoleFilter('all')
+                      setRoleUserIdFilter('all')
+                      setCurrentPage(1)
+                    }}
+                  >
+                    <X size={8} />
+                  </span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="start">
+              <div className="p-3 border-b border-border">
+                <p className="text-sm font-semibold">Role Filter</p>
+                <p className="text-xs text-muted-foreground">Show projects where a person holds a role</p>
+              </div>
+              <div className="p-3 border-b border-border">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Role</p>
+                <div className="flex flex-wrap gap-2">
+                  {ROLE_FILTER_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setRoleFilter(prev => prev === opt.value ? 'all' : opt.value)
+                        setRoleUserIdFilter('all')
+                        setCurrentPage(1)
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[12px] transition-colors",
+                        roleFilter === opt.value
+                          ? "bg-primary/10 border-primary text-primary"
+                          : "bg-background border-border text-foreground hover:bg-muted"
+                      )}
+                    >
+                      {roleFilter === opt.value && <Check size={12} />}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className={cn("p-3", roleFilter === 'all' && "opacity-50 pointer-events-none")}>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Person</p>
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search people..."
+                    value={roleUserSearch}
+                    onChange={(e) => setRoleUserSearch(e.target.value)}
+                    className="pl-8 h-8 text-sm"
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-0.5">
+                  <button
+                    onClick={() => { setRoleUserIdFilter('all'); setCurrentPage(1) }}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-colors",
+                      roleUserIdFilter === 'all' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                    )}
+                  >
+                    <span className="w-3.5 flex items-center justify-center shrink-0">
+                      {roleUserIdFilter === 'all' && <Check size={12} />}
+                    </span>
+                    All people
+                  </button>
+                  {filteredRoleUsers.map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => { setRoleUserIdFilter(u.id); setCurrentPage(1) }}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-colors",
+                        roleUserIdFilter === u.id ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                      )}
+                    >
+                      <span className="w-3.5 flex items-center justify-center shrink-0">
+                        {roleUserIdFilter === u.id && <Check size={12} />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate">{u.name}</span>
+                        {u.department && (
+                          <span className="block truncate text-[11px] text-muted-foreground">{u.department}</span>
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                  {filteredRoleUsers.length === 0 && (
+                    <p className="py-3 text-center text-xs text-muted-foreground">No people found.</p>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
             <Input
@@ -509,6 +645,8 @@ export function ProjectsPage() {
                 <TableHead className="font-bold text-xs uppercase tracking-wider">BGI</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">Progress</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">BGI Champion</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider">BGI Champion Delegate</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ITSO</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">ITSO Delegate</TableHead>
                 <TableHead className="font-bold text-xs uppercase tracking-wider">BPS</TableHead>
@@ -527,14 +665,14 @@ export function ProjectsPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 20 }).map((_, j) => (
+                    {Array.from({ length: 22 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full rounded" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={20} className="text-center py-12 text-muted-foreground text-sm">
+                  <TableCell colSpan={22} className="text-center py-12 text-muted-foreground text-sm">
                     No projects found.
                   </TableCell>
                 </TableRow>
@@ -578,6 +716,12 @@ export function ProjectsPage() {
                           height="h-1.5"
                         />
                       </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {project.gbiChampion ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {project.gbiChampionDelegate ?? '—'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {project.itso ?? '—'}

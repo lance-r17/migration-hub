@@ -116,17 +116,23 @@ export const mockProjects: Project[] = [
       technicalLead: { id: 'u2', name: 'Dan Brown', email: 'dan.brown@corp.com', department: 'Platform Engineering', initials: 'DB' },
       businessOwner: { id: 'u1', name: 'Sarah Jenkins', email: 'sarah.jenkins@corp.com', department: 'Finance & Operations', initials: 'SJ' },
       dbaDataOwner: { id: 'u5', name: 'Carol White', email: 'carol.white@corp.com', department: 'Data Engineering', initials: 'CW' },
+      gbiChampion: { id: 'u1', name: 'Sarah Jenkins', email: 'sarah.jenkins@corp.com', department: 'Finance & Operations', initials: 'SJ' },
+      gbiChampionDelegate: { id: 'u5', name: 'Carol White', email: 'carol.white@corp.com', department: 'Data Engineering', initials: 'CW' },
     },
     planning: {
       startDate: '2026-06-01',
       endDate: '2026-09-30',
-      planStartDate: '2026-06-01',
-      planEndDate: '2026-09-30',
-      tasks: [],
+      milestones: [],
     },
     environmentProvision: {
-      date: '2026-05-15',
-      environments: ['dev', 'prod'],
+      dev: {
+        date: '2026-05-15',
+        cidrs: { zoneA: '10.248.32.0/26', zoneB: '10.248.160.0/26', zoneC: '10.249.32.0/26' },
+      },
+      prod: {
+        date: '2026-06-01',
+        cidrs: { zoneA: '10.248.80.0/26', zoneB: '10.248.208.0/27', zoneC: '10.249.80.0/26' },
+      },
     },
 
     // Section 1
@@ -474,18 +480,19 @@ export const mockProjects: Project[] = [
       technicalLead: { id: 'u7', name: 'Frank Miller', email: 'frank.miller@company.com', department: 'Platform Security', initials: 'FM' },
       businessOwner: { id: 'u6', name: 'Eve Davis', email: 'eve.davis@company.com', department: 'IT Operations', initials: 'ED' },
       dbaDataOwner: { id: 'u8', name: 'Grace Lee', email: 'grace.lee@corp.com', department: 'Data Engineering', initials: 'GL' },
+      gbiChampion: { id: 'u7', name: 'Frank Miller', email: 'frank.miller@company.com', department: 'Platform Security', initials: 'FM' },
     },
     planning: {
       startDate: '2025-03-01',
       endDate: '2025-08-15',
-      planStartDate: '2025-03-01',
-      planEndDate: '2025-08-15',
-      tasks: [],
+      milestones: [],
     },
     environmentProvision: {
-      date: '2025-02-10',
-      environments: ['dev'],
-      completedAt: '2025-02-12T10:00:00.000Z',
+      dev: {
+        date: '2025-02-10',
+        cidrs: { zoneA: '10.248.32.64/26' },
+        completedAt: '2025-02-12T10:00:00.000Z',
+      },
     },
 
     applicationOverview: {
@@ -633,6 +640,7 @@ export const mockProjects: Project[] = [
     },
 
     risks: [],
+    approvals: [],
     categoryMilestoneIds: ['cm-bi'],
   },
   {
@@ -649,11 +657,10 @@ export const mockProjects: Project[] = [
     planning: {
       startDate: '2026-07-01',
       endDate: '2026-12-31',
-      estimatedStartDate: '2026-07-01',
-      estimatedEndDate: '2026-12-31',
-      tasks: [],
+      milestones: [],
     },
     risks: [],
+    approvals: [],
   },
   {
     id: 'M-77122',
@@ -679,9 +686,7 @@ export const mockProjects: Project[] = [
     planning: {
       startDate: '2026-04-01',
       endDate: '2026-08-15',
-      planStartDate: '2026-04-01',
-      planEndDate: '2026-08-15',
-      tasks: [],
+      milestones: [],
     },
 
     applicationOverview: {
@@ -797,6 +802,7 @@ export const mockProjects: Project[] = [
         riskStatus: 'in progress',
       },
     ],
+    approvals: [],
   },
 ]
 

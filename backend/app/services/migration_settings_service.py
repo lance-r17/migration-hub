@@ -16,6 +16,19 @@ _DEFAULT = {
     "bgi_tier_depth": None,
     "data_migration_adjustment_enabled": True,
     "create_jira_stories_on_signoff": True,
+    "provision_allowed_prefixes": [25, 26, 27],
+    "provision_cidr_parents": {
+        "dev": {
+            "zone_a": ["10.248.32.0/20", "10.248.48.0/20", "10.248.64.0/20"],
+            "zone_b": ["10.248.160.0/20", "10.248.176.0/20", "10.248.192.0/20"],
+            "zone_c": ["10.249.32.0/20", "10.249.48.0/20", "10.249.64.0/20"],
+        },
+        "prod": {
+            "zone_a": ["10.248.80.0/20", "10.248.96.0/20", "10.248.112.0/20"],
+            "zone_b": ["10.248.208.0/20", "10.248.224.0/20", "10.248.240.0/20"],
+            "zone_c": ["10.249.80.0/20", "10.249.96.0/20", "10.249.112.0/20"],
+        },
+    },
     "data_migration": {
         "cycle_duration_days": 7,
         "min_cycle": 1,
@@ -35,6 +48,12 @@ def _default_data_migration() -> dict:
     return dict(_DEFAULT["data_migration"])
 
 
+def _default_provision_cidr_parents() -> dict:
+    import copy
+
+    return copy.deepcopy(_DEFAULT["provision_cidr_parents"])
+
+
 async def get_migration_settings(session: AsyncSession) -> MigrationSettingsOut:
     row = await session.get(ConfigStore, _KEY)
     data = row.value if row else dict(_DEFAULT)
@@ -45,6 +64,10 @@ async def get_migration_settings(session: AsyncSession) -> MigrationSettingsOut:
         bgi_tier_depth=data.get("bgi_tier_depth"),
         data_migration_adjustment_enabled=data.get("data_migration_adjustment_enabled", True),
         create_jira_stories_on_signoff=data.get("create_jira_stories_on_signoff", True),
+        provision_cidr_parents=data.get(
+            "provision_cidr_parents", _default_provision_cidr_parents()
+        ),
+        provision_allowed_prefixes=data.get("provision_allowed_prefixes", [25, 26, 27]),
         data_migration=data.get("data_migration", _default_data_migration()),
     )
 
@@ -73,6 +96,10 @@ async def update_migration_settings(
         current["create_jira_stories_on_signoff"] = patch.create_jira_stories_on_signoff
     if patch.data_migration is not None:
         current["data_migration"] = patch.data_migration.model_dump()
+    if patch.provision_cidr_parents is not None:
+        current["provision_cidr_parents"] = patch.provision_cidr_parents.model_dump()
+    if patch.provision_allowed_prefixes is not None:
+        current["provision_allowed_prefixes"] = patch.provision_allowed_prefixes
 
     if row:
         row.value = current
@@ -90,5 +117,9 @@ async def update_migration_settings(
             "data_migration_adjustment_enabled", True
         ),
         create_jira_stories_on_signoff=current.get("create_jira_stories_on_signoff", True),
+        provision_cidr_parents=current.get(
+            "provision_cidr_parents", _default_provision_cidr_parents()
+        ),
+        provision_allowed_prefixes=current.get("provision_allowed_prefixes", [25, 26, 27]),
         data_migration=current.get("data_migration", _default_data_migration()),
     )
