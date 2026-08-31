@@ -59,8 +59,8 @@ the bar falls back to migration constraints → wave dates (shown as a draft).
 Milestone rows are user-reorderable via drag handles. The order persists in
 `planning.milestoneRowOrder` (ordered ids of all rendered rows). Rules:
 
-- **Category milestones are pinned**: they always render before other milestone types and can only
-  be reordered within their own group (default: creation date ascending).
+- **Category milestones are pinned**: they always render before other milestone types in fixed
+  creation-date order and cannot be reordered (no drag handle).
 - Other rows (env provision, data-migration period, presets, custom) reorder freely below the
   category group.
 - Ids of rows that no longer exist (unchecked environment, unassigned category milestone) stay in

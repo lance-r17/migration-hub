@@ -113,6 +113,18 @@ function fixedMilestoneId(type: MilestoneType, projectId: string): string {
   return `${type}-${projectId}`
 }
 
+/** Synthetic per-project row id for a category milestone instance.
+ *  Consistent with other auto-derived ids and unique across projects sharing the same CM. */
+function categoryMilestoneRowId(projectId: string, cmId: string): string {
+  return `category-milestone-${projectId}-${cmId}`
+}
+
+/** Extracts the global CM id from a category-milestone row id (prefix slicing — cmIds contain dashes). */
+function parseCategoryMilestoneRowId(projectId: string, rowId: string): string | null {
+  const prefix = `category-milestone-${projectId}-`
+  return rowId.startsWith(prefix) ? rowId.slice(prefix.length) : null
+}
+
 /** Orders rows by a saved id list: known ids in saved order first, unknown ids appended in default order. */
 function orderByIdList<T extends { id: string }>(rows: T[], order?: string[]): T[] {
   if (!order?.length) return rows
@@ -674,7 +686,9 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     const planning = getEffectivePlanning(project)
     const t = planning.milestones?.find(lt => lt.id === milestone.id)
     if (t) return { start: t.start, end: t.end }
-    const override = planning.categoryMilestoneOverrides?.[milestone.id]
+    // Category milestone rows carry a synthetic per-project id; overrides are keyed by the global CM id
+    const cmId = parseCategoryMilestoneRowId(projectId, milestone.id) ?? milestone.id
+    const override = planning.categoryMilestoneOverrides?.[cmId]
     if (override) return { start: override.start, end: override.end }
     return { start: milestone.start, end: milestone.end }
   }
@@ -754,9 +768,9 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       if (milestoneId === null) return prev
       const project = projects.find(p => p.id === projectId)
       const base = prev[projectId] ?? (project ? getEffectivePlanning(project) : { startDate: newStart, endDate: newEnd, milestones: [] })
-      const isCategoryMilestoneId = project?.categoryMilestoneIds?.includes(milestoneId)
-      if (isCategoryMilestoneId) {
-        const overrides = { ...(base.categoryMilestoneOverrides ?? {}), [milestoneId]: { start: newStart, end: newEnd } }
+      const cmId = project ? parseCategoryMilestoneRowId(project.id, milestoneId) : null
+      if (cmId) {
+        const overrides = { ...(base.categoryMilestoneOverrides ?? {}), [cmId]: { start: newStart, end: newEnd } }
         const next = { ...base, categoryMilestoneOverrides: overrides }
         return { ...prev, [projectId]: project ? withDerivedDates(project, next) : next }
       }
@@ -817,8 +831,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     const sourceIdx = rows.findIndex(m => m.id === milestoneId)
     if (sourceIdx === -1) return
     // Category milestones are pinned: CM rows clamp into [0, cmCount), others below
-    const assignedCmIds = new Set(project.categoryMilestoneIds ?? [])
-    const cmCount = rows.filter(r => assignedCmIds.has(r.id)).length
+    const cmCount = rows.filter(r => r.type === 'category-milestone').length
     const isCmRow = sourceIdx < cmCount
     const lo = isCmRow ? 0 : cmCount
     const hi = isCmRow ? cmCount : rows.length
@@ -1011,13 +1024,13 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   async function changeMilestoneStatus(projectId: string, milestoneId: string, status: MilestoneStatus) {
     const project = projects.find(p => p.id === projectId)
     if (!project) return
-    const isCategoryMilestoneId = project.categoryMilestoneIds?.includes(milestoneId)
-    if (isCategoryMilestoneId) {
+    const cmId = parseCategoryMilestoneRowId(projectId, milestoneId)
+    if (cmId) {
       const base = getEffectivePlanning(project)
-      const existing = base.categoryMilestoneOverrides?.[milestoneId]
+      const existing = base.categoryMilestoneOverrides?.[cmId]
       const overrides = {
         ...(base.categoryMilestoneOverrides ?? {}),
-        [milestoneId]: { ...(existing ?? { start: '', end: '' }), status },
+        [cmId]: { ...(existing ?? { start: '', end: '' }), status },
       }
       const updated: ProjectPlanning = { ...base, categoryMilestoneOverrides: overrides }
       setLocalPlanning(prev => ({ ...prev, [projectId]: updated }))
@@ -1520,7 +1533,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       .map(cm => {
         const override = plan?.categoryMilestoneOverrides?.[cm.id]
         return {
-          id: cm.id,
+          id: categoryMilestoneRowId(p.id, cm.id),
           name: cm.name,
           type: 'category-milestone' as MilestoneType,
           start: override?.start ?? cm.startDate,
@@ -1534,8 +1547,9 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     const envMilestones = buildEnvironmentProvisionMilestones(p)
 
     const savedOrder = plan?.milestoneRowOrder
+    // Category milestones are pinned on top in fixed creation-date order (not reorderable)
     return [
-      ...orderByIdList(assignedCMs, savedOrder),
+      ...assignedCMs,
       ...orderByIdList([...envMilestones, ...(dmPeriod ? [dmPeriod] : []), ...milestones], savedOrder),
     ]
   }
@@ -1545,8 +1559,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
 
     // Drag preview with group clamping: category milestones stay pinned on top
     if (rowMilestoneDragState?.projectId === p.id && rows.length > 0) {
-      const assignedCmIds = new Set(p.categoryMilestoneIds ?? [])
-      const cmCount = rows.filter(r => assignedCmIds.has(r.id)).length
+      const cmCount = rows.filter(r => r.type === 'category-milestone').length
       const sourceIdx = rows.findIndex(m => m.id === rowMilestoneDragState.milestoneId)
       if (sourceIdx !== -1) {
         const isCmRow = sourceIdx < cmCount
@@ -2581,7 +2594,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
               // Fixed-id preset milestones have immutable names; legacy random-id milestones stay editable
               const isFixedPreset = milestone.type !== 'custom' && milestone.id === fixedMilestoneId(milestone.type, project.id)
               const categoryMilestone = isCategoryMilestone
-                ? categoryMilestones.find(cm => cm.id === milestone.id)
+                ? categoryMilestones.find(cm => cm.id === parseCategoryMilestoneRowId(project.id, milestone.id))
                 : undefined
               const CategoryIcon = categoryMilestone?.icon
                 ? CATEGORY_MILESTONE_ICON_MAP[categoryMilestone.icon]
@@ -2616,15 +2629,19 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     </div>
                     {/* Name col */}
                     <div className={cn(cellClass, 'pl-6 group/taskname gap-[5px] text-[13px] text-[var(--g-text)]')}>
-                      <GripVertical
-                        className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-grab"
-                        onPointerDown={e => {
-                          if (readOnly) return
-                          e.preventDefault(); e.stopPropagation()
-                          setRowMilestoneDragState({ projectId: project.id, milestoneId: milestone.id, sourceIndex: milestoneIdx0, overIndex: milestoneIdx0 })
-                          document.body.style.cursor = 'grabbing'
-                        }}
-                      />
+                      {isCategoryMilestone ? (
+                        <Tag className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)]" />
+                      ) : (
+                        <GripVertical
+                          className="w-[13px] h-[13px] shrink-0 text-[var(--g-text-subtle)] cursor-grab"
+                          onPointerDown={e => {
+                            if (readOnly) return
+                            e.preventDefault(); e.stopPropagation()
+                            setRowMilestoneDragState({ projectId: project.id, milestoneId: milestone.id, sourceIndex: milestoneIdx0, overIndex: milestoneIdx0 })
+                            document.body.style.cursor = 'grabbing'
+                          }}
+                        />
+                      )}
                       {editingTaskId === milestone.id ? (
                         <input
                           autoFocus
