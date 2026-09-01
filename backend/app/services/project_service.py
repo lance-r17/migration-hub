@@ -563,7 +563,7 @@ async def get_table_page(
         )
     if role_bgi_ids is not None:
         q = q.where(Project.bgi_id.in_(role_bgi_ids))
-    if filter_bgi_ids:
+    if filter_bgi_ids is not None:
         q = q.where(Project.bgi_id.in_(filter_bgi_ids))
     if search and search.strip():
         like = f"%{search.strip()}%"

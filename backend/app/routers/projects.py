@@ -552,6 +552,7 @@ async def list_projects_table(
     role: str | None = None,
     role_user_id: str | None = None,
     bgi_ids: list[str] | None = Query(None),
+    excluded_bgi_ids: list[str] | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -570,11 +571,21 @@ async def list_projects_table(
     if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
         role_bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
 
+    # Frontend sends the compact tree selection (selected nodes + excluded
+    # nodes); expand selected nodes to their subtrees here so the query string
+    # stays small even for deep hierarchies.
+    filter_bgi_ids: list[str] | None = None
+    if bgi_ids:
+        filter_bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, bgi_ids)
+        if excluded_bgi_ids:
+            excluded = set(await bgi_service.get_descendant_ids_for_multiple(db, excluded_bgi_ids))
+            filter_bgi_ids = [i for i in filter_bgi_ids if i not in excluded]
+
     rows, total = await project_service.get_table_page(
         db,
         member_user_id=member_user_id,
         role_bgi_ids=role_bgi_ids,
-        filter_bgi_ids=bgi_ids or None,
+        filter_bgi_ids=filter_bgi_ids,
         search=search,
         status=status,
         migration_range=migration_range,

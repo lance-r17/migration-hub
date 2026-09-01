@@ -7,12 +7,14 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import attributes
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.main import create_app
 from app.models.approval import Approval
 from app.models.cloud_resource import CloudResource
+from app.models.config_store import ConfigStore
 from app.models.project import Project
 from app.models.project_user import ProjectUser
 from app.models.survey_draft import SurveyDraft
@@ -85,6 +87,31 @@ async def _make_in_progress(session: AsyncSession, project: Project) -> None:
     session.add(
         ProjectUser(project_id=project.id, user_id=user.id, role="technical_lead")
     )
+    await session.commit()
+
+
+async def _seed_bgi_hierarchy(session: AsyncSession) -> None:
+    value = {
+        "id": "root",
+        "name": "Root",
+        "children": [
+            {
+                "id": "a",
+                "name": "A",
+                "children": [
+                    {"id": "a1", "name": "A1"},
+                    {"id": "a2", "name": "A2"},
+                ],
+            },
+            {"id": "b", "name": "B"},
+        ],
+    }
+    row = await session.get(ConfigStore, "bgi_hierarchy")
+    if row:
+        row.value = value
+        attributes.flag_modified(row, "value")
+    else:
+        session.add(ConfigStore(key="bgi_hierarchy", value=value))
     await session.commit()
 
 
@@ -193,6 +220,52 @@ class TestProjectsTableFilters:
         ids = [i["id"] for i in r.json()["items"]]
         assert p1.id in ids
         assert p2.id not in ids
+
+    @pytest.mark.asyncio
+    async def test_bgi_filter_expands_selected_subtree(self, lead_client: AsyncClient, db_session: AsyncSession):
+        await _seed_bgi_hierarchy(db_session)
+        p_root = await _create_project(db_session, name="RootProj", bgi_id="root")
+        p_a1 = await _create_project(db_session, name="A1Proj", bgi_id="a1")
+        p_b = await _create_project(db_session, name="BProj", bgi_id="b")
+
+        r = await lead_client.get(
+            "/api/v1/projects/table",
+            params={"page_size": 0, "bgi_ids": ["a"]},
+        )
+        ids = [i["id"] for i in r.json()["items"]]
+        assert p_a1.id in ids
+        assert p_root.id not in ids
+        assert p_b.id not in ids
+
+    @pytest.mark.asyncio
+    async def test_bgi_filter_subtracts_excluded_subtree(self, lead_client: AsyncClient, db_session: AsyncSession):
+        await _seed_bgi_hierarchy(db_session)
+        p_root = await _create_project(db_session, name="RootProj", bgi_id="root")
+        p_a1 = await _create_project(db_session, name="A1Proj", bgi_id="a1")
+        p_b = await _create_project(db_session, name="BProj", bgi_id="b")
+
+        r = await lead_client.get(
+            "/api/v1/projects/table",
+            params={"page_size": 0, "bgi_ids": ["root"], "excluded_bgi_ids": ["a"]},
+        )
+        ids = [i["id"] for i in r.json()["items"]]
+        assert p_root.id in ids
+        assert p_b.id in ids
+        assert p_a1.id not in ids
+
+    @pytest.mark.asyncio
+    async def test_bgi_filter_fully_excluded_returns_no_rows(self, lead_client: AsyncClient, db_session: AsyncSession):
+        await _seed_bgi_hierarchy(db_session)
+        await _create_project(db_session, name="A1Proj", bgi_id="a1")
+        await _create_project(db_session, name="BProj", bgi_id="b")
+
+        r = await lead_client.get(
+            "/api/v1/projects/table",
+            params={"page_size": 0, "bgi_ids": ["a"], "excluded_bgi_ids": ["a"]},
+        )
+        body = r.json()
+        assert body["total"] == 0
+        assert body["items"] == []
 
     @pytest.mark.asyncio
     async def test_migration_range_filter(self, lead_client: AsyncClient, db_session: AsyncSession):

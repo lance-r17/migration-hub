@@ -13,8 +13,10 @@ interface UseProjectsTableParams {
   /** Filter: projects where this user holds this role */
   role?: string
   roleUserId?: string
-  /** Pre-resolved BGI ids to include; null/undefined = no BGI filter */
+  /** Selected BGI hierarchy nodes; null/undefined = no BGI filter */
   bgiIds?: string[] | null
+  /** Excluded BGI hierarchy nodes (subtrees subtracted from the selection) */
+  excludedBgiIds?: string[] | null
 }
 
 interface ProjectsTableState {
@@ -49,12 +51,13 @@ export function useProjectsTable(params: UseProjectsTableParams): ProjectsTableS
     params.role ?? null,
     params.roleUserId ?? null,
     params.bgiIds ?? null,
+    params.excludedBgiIds ?? null,
     refreshKey,
   ])
 
   useEffect(() => {
     let cancelled = false
-    const request = JSON.parse(requestKey) as [number, number, string, string, string, string | null, string | null, string[] | null, number]
+    const request = JSON.parse(requestKey) as [number, number, string, string, string, string | null, string | null, string[] | null, string[] | null, number]
 
     getProjectsTable({
       page: request[0],
@@ -65,6 +68,7 @@ export function useProjectsTable(params: UseProjectsTableParams): ProjectsTableS
       role: request[5] ?? undefined,
       roleUserId: request[6] ?? undefined,
       bgiIds: request[7] ?? undefined,
+      excludedBgiIds: request[8] ?? undefined,
     })
       .then(res => {
         if (!cancelled) {

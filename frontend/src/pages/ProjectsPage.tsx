@@ -166,28 +166,16 @@ export function ProjectsPage() {
     return map
   }, [bgiRoot])
 
-  const selectedBgiDescendantIds = useMemo(() => {
-    if (!bgiRoot || selectedBgiIds.size === 0) return null
-    const allIds = new Set<string>()
-    for (const id of selectedBgiIds) {
-      const node = findNodeById(bgiRoot, id)
-      if (node) {
-        collectAllIds(node).forEach(i => allIds.add(i))
-      }
+  // Compact tree selection: the backend expands selected nodes to their
+  // subtrees and subtracts excluded subtrees, keeping the request small even
+  // for deep hierarchies.
+  const bgiFilterParams = useMemo(() => {
+    if (selectedBgiIds.size === 0) return { bgiIds: null, excludedBgiIds: null }
+    return {
+      bgiIds: Array.from(selectedBgiIds),
+      excludedBgiIds: excludedBgiIds.size > 0 ? Array.from(excludedBgiIds) : null,
     }
-    for (const eid of excludedBgiIds) {
-      const node = findNodeById(bgiRoot, eid)
-      if (node) {
-        collectAllIds(node).forEach(i => allIds.delete(i))
-      }
-    }
-    return allIds
-  }, [bgiRoot, selectedBgiIds, excludedBgiIds])
-
-  const bgiIdList = useMemo(
-    () => (selectedBgiDescendantIds ? Array.from(selectedBgiDescendantIds) : null),
-    [selectedBgiDescendantIds]
-  )
+  }, [selectedBgiIds, excludedBgiIds])
 
   const { users } = useUsers()
 
@@ -216,7 +204,8 @@ export function ProjectsPage() {
     migrationRange,
     role: roleFilter !== 'all' ? roleFilter : undefined,
     roleUserId: roleFilter !== 'all' && roleUserIdFilter !== 'all' ? roleUserIdFilter : undefined,
-    bgiIds: bgiIdList,
+    bgiIds: bgiFilterParams.bgiIds,
+    excludedBgiIds: bgiFilterParams.excludedBgiIds,
   })
 
   const totalPages = Math.ceil(total / pageSize)
@@ -272,7 +261,8 @@ export function ProjectsPage() {
         migrationRange,
         role: roleFilter !== 'all' ? roleFilter : undefined,
         roleUserId: roleFilter !== 'all' && roleUserIdFilter !== 'all' ? roleUserIdFilter : undefined,
-        bgiIds: bgiIdList,
+        bgiIds: bgiFilterParams.bgiIds,
+        excludedBgiIds: bgiFilterParams.excludedBgiIds,
       })
       exportProjectsToExcel(result.items, bgiRoot)
     } catch {

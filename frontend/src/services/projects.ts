@@ -486,7 +486,10 @@ export interface ProjectsTableParams {
   /** Filter: projects where this user holds this role (itso, itso_delegate, gbi_champion, gbi_champion_delegate) */
   role?: string
   roleUserId?: string
+  /** Selected BGI hierarchy nodes (backend expands to descendants); null/undefined = no BGI filter */
   bgiIds?: string[] | null
+  /** Excluded BGI hierarchy nodes (subtrees subtracted from the selection) */
+  excludedBgiIds?: string[] | null
 }
 
 function mockTableRow(p: Project): ProjectTableRow {
@@ -592,7 +595,8 @@ function mockGetProjectsTable(params: ProjectsTableParams): ProjectTablePage {
   }
   if (params.bgiIds?.length) {
     const allowed = new Set(params.bgiIds)
-    projects = projects.filter((p) => p.bgi_id && allowed.has(p.bgi_id))
+    const excluded = new Set(params.excludedBgiIds ?? [])
+    projects = projects.filter((p) => p.bgi_id && allowed.has(p.bgi_id) && !excluded.has(p.bgi_id))
   }
   if (query) {
     projects = projects.filter(
@@ -642,6 +646,7 @@ export async function getProjectsTable(params: ProjectsTableParams): Promise<Pro
     qs.set('role_user_id', params.roleUserId)
   }
   for (const id of params.bgiIds ?? []) qs.append('bgi_ids', id)
+  for (const id of params.excludedBgiIds ?? []) qs.append('excluded_bgi_ids', id)
   const raw = await apiClient.get<ProjectTablePageApi>(`${ENDPOINTS.projects}/table?${qs.toString()}`)
   return {
     items: raw.items.map(fromApiTableRow),
