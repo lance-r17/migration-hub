@@ -12,10 +12,18 @@ _DEFAULT: dict[str, Any] = {
         "enabled": True,
         "reminder_days": [7, 3, 1],
         "run_time_utc": "09:00",
-    }
+    },
+    "milestone_reminder": {
+        "enabled": True,
+        "reminder_days": [7, 3, 1],
+        "frequency_days": 3,
+        "run_time_utc": "09:00",
+        "scopes": {"planning": True, "auto_derived": True, "category": False},
+    },
 }
 
 _LAST_RUN_KEY = "email_cron_last_run"
+MILESTONE_LAST_RUN_KEY = "milestone_reminder_cron_last_run"
 
 
 async def get_email_event_config(session: AsyncSession) -> dict[str, Any]:
@@ -45,8 +53,8 @@ async def set_email_event_config(
     return current
 
 
-async def get_last_run(session: AsyncSession) -> datetime | None:
-    row = await session.get(ConfigStore, _LAST_RUN_KEY)
+async def get_last_run(session: AsyncSession, key: str = _LAST_RUN_KEY) -> datetime | None:
+    row = await session.get(ConfigStore, key)
     if row and isinstance(row.value, dict):
         ts = row.value.get("timestamp")
         if ts:
@@ -54,9 +62,11 @@ async def get_last_run(session: AsyncSession) -> datetime | None:
     return None
 
 
-async def set_last_run(session: AsyncSession, when: datetime | None = None) -> None:
+async def set_last_run(
+    session: AsyncSession, when: datetime | None = None, key: str = _LAST_RUN_KEY
+) -> None:
     when = when or datetime.now(timezone.utc)
-    row = await session.get(ConfigStore, _LAST_RUN_KEY)
+    row = await session.get(ConfigStore, key)
     value = {"timestamp": when.isoformat()}
     if row:
         row.value = value

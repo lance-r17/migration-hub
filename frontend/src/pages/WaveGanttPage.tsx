@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { GanttChart, ArrowLeft, LayoutDashboard } from 'lucide-react'
 import { toast } from 'sonner'
 import { WaveGanttChart } from '@/components/waves/WaveGanttChart'
@@ -19,6 +19,7 @@ import type { BgiNode } from '@/types/bgi'
 
 export function WaveGanttPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useCurrentUser()
   const { waves: initialWaves, loading: wavesLoading } = useWaves()
   const { projects: initialProjects, loading: projectsLoading } = useProjects({
@@ -152,6 +153,7 @@ export function WaveGanttPage() {
           <WaveGanttChart
             waves={sortedWaves}
             projects={liveProjects}
+            initialSearch={searchParams.get('projectId') ?? ''}
             categoryMilestones={categoryMilestones}
             bgiRoot={canUseBgiFilter ? bgiRoot : null}
             bgiScopeIds={isPlatformLead ? null : (user?.bgi_ids ?? null)}

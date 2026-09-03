@@ -17,6 +17,7 @@ const EVENT_COLORS: Record<string, string> = {
   project_signed_off: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   risk_alert: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
   cutover_reminder: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  milestone_reminder: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
   approval_submitted: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
   jira_stories_created: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
   survey_submitted: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',

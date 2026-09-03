@@ -96,6 +96,7 @@ async def process_email_job(job_id: str) -> None:
                 return
 
             job.status = "processing"
+            job.attempts = (job.attempts or 0) + 1
             await session.flush()
             await session.commit()
 

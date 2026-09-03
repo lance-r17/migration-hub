@@ -52,6 +52,7 @@ import {
 } from '@/components/ui/breadcrumb'
 import { useProject } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
+import { useCategoryMilestones } from '@/hooks/use-category-milestones'
 import { useCurrentUser } from '@/context/UserContext'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { createJiraJob } from '@/services/jiraJobs'
@@ -83,6 +84,7 @@ export function ProjectDetailsPage() {
   const { user } = useCurrentUser()
   const { project, loading, saveSection, refreshProject } = useProject(id)
   const { waves } = useWaves()
+  const { categoryMilestones } = useCategoryMilestones()
   const { settings: migrationSettings } = useMigrationSettings()
   const { surveyConfig } = useSurveyConfig()
   const { resourceSurveyConfig } = useResourceSurveyConfig()
@@ -413,7 +415,11 @@ export function ProjectDetailsPage() {
         </div>
 
         {/* Stage Progress Stepper */}
-        <StageProgressStepper project={project} />
+        <StageProgressStepper
+          project={project}
+          signoffEnabled={signoffEnabled}
+          categoryMilestones={categoryMilestones}
+        />
 
         {/* Metadata strip */}
         {(hasMetadata || preSignOffStatuses.includes(project.status)) && (

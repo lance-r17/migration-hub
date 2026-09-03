@@ -157,7 +157,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Jira Epic \u2192"
+                  "buttonText": "View Jira Epic →"
                 },
                 "config": {
                   "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
@@ -347,7 +347,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "Review & Approve \u2192"
+                  "buttonText": "Review & Approve →"
                 },
                 "config": {
                   "linkUrl": "{{platform.url}}/projects/{{project.id}}",
@@ -448,7 +448,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Migration Sign-Off Complete \u2713</span></h2>"
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Migration Sign-Off Complete ✓</span></h2>"
                 },
                 "config": {}
               }
@@ -494,7 +494,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<p>Hi {{user.name}},</p><p>Great news \u2014 <strong>{{project.name}}</strong> has received all required approvals and is now officially signed off for migration.</p><p>Jira migration tasks have been automatically created. You can track progress through the Jira epic below.</p>"
+                  "html": "<p>Hi {{user.name}},</p><p>Great news — <strong>{{project.name}}</strong> has received all required approvals and is now officially signed off for migration.</p><p>Jira migration tasks have been automatically created. You can track progress through the Jira epic below.</p>"
                 },
                 "config": {}
               }
@@ -541,7 +541,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Jira Epic \u2192"
+                  "buttonText": "View Jira Epic →"
                 },
                 "config": {
                   "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
@@ -578,7 +578,7 @@
     "name": "Risk Alert",
     "description": "Notification when a risk is raised on a project, reflecting the severity of the risk item.",
     "event_type": "risk_alert",
-    "subject": "\u26a0 {{risk.severityLabel}} Risk Alert: {{risk.title}} in {{project.name}}",
+    "subject": "⚠ {{risk.severityLabel}} Risk Alert: {{risk.title}} in {{project.name}}",
     "recipient_list": [
       {
         "type": "role",
@@ -638,7 +638,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">\u26a0 {{risk.severityLabel}} Risk Identified</span></h2>"
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">⚠ {{risk.severityLabel}} Risk Identified</span></h2>"
                 },
                 "config": {}
               }
@@ -871,7 +871,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Project Risks \u2192"
+                  "buttonText": "View Project Risks →"
                 },
                 "config": {
                   "linkUrl": "{{platform.url}}/projects/{{project.id}}",
@@ -919,7 +919,7 @@
         "role": "business_owner"
       }
     ],
-    "html_snapshot": "<div style=\"font-family:Montserrat,sans-serif;font-size:14px;color:#4A3F35;background-color:#FFFCF5;max-width:600px;padding:24px 32px;\"><div style=\"height:24px;\"></div><h2><span style=\"font-size:20px;color:#A67C52;\">Cutover Approaching</span></h2><div style=\"height:8px;\"></div><p>Hi {{user.name}},</p><p>This is a reminder that the cutover date for <strong>{{wave.name}}</strong> is in <strong>{{daysUntilCutover}} days</strong> (<strong>{{wave.cutoverDate}}</strong>).</p><p>Please ensure all migration sign-offs and Jira tasks for your application are completed before the cutover window.</p><div style=\"height:16px;\"></div><div style=\"text-align:center;padding:16px;background-color:#A67C52;border-radius:6px;\"><a href=\"{{jiraBaseUrl}}/browse/{{jiraStoryKey}}\" target=\"_blank\" style=\"color:#ffffff;text-decoration:none;\">View Jira Epic →</a></div><div style=\"height:24px;\"></div><p style=\"font-size:12px;color:#9ca3af;text-align:center;\">{{platformName}} · <a href=\"{{platformUrl}}\" style=\"color:#9ca3af;\">{{platformUrl}}</a></p></div>",
+    "html_snapshot": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n\n  <title>Reminder: {{wave.name}} cutover in {{daysUntilCutover}} days</title>\n  <style>\n    body { margin: 0; padding: 0; background: #F5F1E6; font-family: Montserrat, sans-serif, sans-serif; }\n    * { box-sizing: border-box; }\n    .prose p { margin: 0; line-height: 1.6; }\n    .prose h1, .prose h2, .prose h3 { margin: 0 0 8px; }\n    .prose ul, .prose ol { margin: 4px 0; padding-left: 20px; }\n    .prose a { color: #A67C52; }\n    @media screen and (max-width: 480px) {\n      body { padding: 12px !important; }\n      .email-content { width: 100% !important; }\n      .email-col { display: block !important; width: 100% !important; box-sizing: border-box !important; }\n    }\n  </style>\n</head>\n<body style=\"background: #F5F1E6; padding: 24px;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n    <tr>\n      <td align=\"center\">\n        <table\n          class=\"email-content\"\n          width=\"600\"\n          cellpadding=\"0\"\n          cellspacing=\"0\"\n          border=\"0\"\n          style=\"max-width: 600px; background-color: #FFFCF5; border-radius: 8px; overflow: hidden; font-family: Montserrat, sans-serif, sans-serif; font-size: 14px; color: #4A3F35;\"\n        >\n          <tr>\n            <td style=\"padding: 0; line-height: 0; font-size: 0;\">\n              <img src=\"/email-banner.png\" alt=\"Migration Engine\" width=\"600\" style=\"display: block; width: 100%; max-width: 600px; height: auto; border: 0;\" />\n            </td>\n          </tr>\n          <tr>\n            <td style=\"padding: 24px 32px;\">\n              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"height: 24px;\"></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div class=\"prose\" style=\"padding: 8px 0px 8px 0px; text-align: left; font-family: Montserrat, sans-serif; font-size: 14px; color: #4A3F35;\"><h2><span style=\"font-size: 20px; color: #A67C52;\">Cutover Approaching</span></h2></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"height: 8px;\"></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div class=\"prose\" style=\"padding: 8px 0px 8px 0px; text-align: left; font-family: Montserrat, sans-serif; font-size: 14px; color: #4A3F35;\"><p>Hi {{user.name}},</p><p>This is a reminder that the cutover date for <strong>{{wave.name}}</strong> is in <strong>{{daysUntilCutover}} days</strong> (<strong>{{wave.cutoverDate}}</strong>).</p><p>Please ensure all migration sign-offs and Jira tasks for your application are completed before the cutover window.</p></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"height: 16px;\"></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"padding: 16px 0px 16px 0px; text-align: center;\"><a href=\"{{jiraBaseUrl}}/browse/{{jiraStoryKey}}\" target=\"_blank\" style=\"display: inline-block; background-color: #A67C52; color: #ffffff; font-weight: 600; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-family: Montserrat, sans-serif; font-size: 14px;\">View Jira Epic →</a></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"padding: 0px 0px 0px 0px;\">\n        <div style=\"height: 24px;\"></div>\n        <div style=\"padding: 12px 0;\"><hr style=\"border: none; border-top: 1px solid #e5e7eb;\" /></div>\n        <p style=\"font-size: 12px; color: #6b7280; text-align: center; margin: 0; padding: 8px 0; font-family: Montserrat, sans-serif;\">\n          This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280; text-decoration: underline;\">{{platform.name}}</a>. Do not reply to this email.\n        </p>\n      </div></td></tr></table>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>",
     "template_style": {
       "fontFamily": "Montserrat, sans-serif",
       "fontSize": 14,
@@ -1062,7 +1062,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Jira Epic \u2192"
+                  "buttonText": "View Jira Epic →"
                 },
                 "config": {
                   "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
@@ -1248,7 +1248,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Sign-Off Status \u2192"
+                  "buttonText": "View Sign-Off Status →"
                 },
                 "config": {
                   "linkUrl": "{{platform.url}}/projects/{{project.id}}",
@@ -1511,7 +1511,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "Open in Jira \u2192"
+                  "buttonText": "Open in Jira →"
                 },
                 "config": {
                   "linkUrl": "{{jiraBaseUrl}}/browse/{{jiraStoryKey}}",
@@ -1608,7 +1608,7 @@
                   "textAlign": "left"
                 },
                 "content": {
-                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Survey Completed \u2713</span></h2>"
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Survey Completed ✓</span></h2>"
                 },
                 "config": {}
               }
@@ -1701,7 +1701,7 @@
                   "borderRadius": 6
                 },
                 "content": {
-                  "buttonText": "View Project Details \u2192"
+                  "buttonText": "View Project Details →"
                 },
                 "config": {
                   "linkUrl": "{{platform.url}}/projects/{{project.id}}",
@@ -1732,5 +1732,204 @@
       }
     ],
     "is_predefined": true
+  },
+  {
+    "id": "tpl-milestone-reminder",
+    "name": "Milestone Reminder",
+    "description": "Reminder sent when a project milestone start/end date is approaching.",
+    "event_type": "milestone_reminder",
+    "subject": "Reminder: {{milestone.name}} — {{project.name}}",
+    "recipient_list": [
+      {
+        "type": "role",
+        "role": "itso"
+      },
+      {
+        "type": "role",
+        "role": "itso_delegate"
+      },
+      {
+        "type": "role",
+        "role": "gbi_champion"
+      },
+      {
+        "type": "role",
+        "role": "gbi_champion_delegate"
+      }
+    ],
+    "template_style": {
+      "fontFamily": "Montserrat, sans-serif",
+      "fontSize": 14,
+      "textColor": "#4A3F35",
+      "accentColor": "#A67C52",
+      "backgroundColor": "#FFFCF5",
+      "maxWidth": 600,
+      "paddingX": 32,
+      "paddingY": 24
+    },
+    "rows": [
+      {
+        "id": "tmr-r1",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tmr-r1-c1",
+            "components": [
+              {
+                "id": "tmr-r1-c1-x1",
+                "style": {},
+                "config": {},
+                "type": "spacer",
+                "content": {
+                  "spacerHeight": 24
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tmr-r2",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tmr-r2-c1",
+            "components": [
+              {
+                "id": "tmr-r2-c1-x1",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "config": {},
+                "type": "text",
+                "content": {
+                  "html": "<h2><span style=\"font-size: 20px; color: #A67C52;\">Milestone Approaching</span></h2>"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tmr-r3",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tmr-r3-c1",
+            "components": [
+              {
+                "id": "tmr-r3-c1-x1",
+                "style": {},
+                "config": {},
+                "type": "spacer",
+                "content": {
+                  "spacerHeight": 8
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tmr-r4",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tmr-r4-c1",
+            "components": [
+              {
+                "id": "tmr-r4-c1-x1",
+                "style": {
+                  "paddingTop": 8,
+                  "paddingBottom": 8,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "textAlign": "left"
+                },
+                "config": {},
+                "type": "text",
+                "content": {
+                  "html": "<p>Hello,</p><p>This is a reminder that the milestone <strong>{{milestone.name}}</strong> for <strong>{{project.name}}</strong> ({{wave.name}}) is currently <strong>{{milestone.statusLabel}}</strong>, with its {{milestone.targetLabel}} on <strong>{{milestone.targetDate}}</strong> — <strong>{{milestone.dueLabel}}</strong>.</p><p>Please review the milestone progress and update its status in the platform.</p>"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tmr-r5",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tmr-r5-c1",
+            "components": [
+              {
+                "id": "tmr-r5-c1-x1",
+                "style": {},
+                "config": {},
+                "type": "spacer",
+                "content": {
+                  "spacerHeight": 16
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tmr-r6",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tmr-r6-c1",
+            "components": [
+              {
+                "id": "tmr-r6-c1-x1",
+                "style": {
+                  "paddingTop": 16,
+                  "paddingBottom": 16,
+                  "textAlign": "center",
+                  "backgroundColor": "#A67C52",
+                  "textColor": "#ffffff",
+                  "borderRadius": 6
+                },
+                "config": {
+                  "linkUrl": "{{platform.url}}/waves/gantt?projectId={{project.id}}",
+                  "openInNewTab": true
+                },
+                "type": "cta",
+                "content": {
+                  "buttonText": "View Milestone →"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "tmr-footer",
+        "layout": "full",
+        "columns": [
+          {
+            "id": "tmr-footer-c1",
+            "components": [
+              {
+                "id": "tmr-footer-c1-x1",
+                "style": {},
+                "config": {},
+                "type": "footer",
+                "content": {}
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "is_predefined": true,
+    "html_snapshot": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n\n  <title>Reminder: {{milestone.name}} — {{project.name}}</title>\n  <style>\n    body { margin: 0; padding: 0; background: #F5F1E6; font-family: Montserrat, sans-serif, sans-serif; }\n    * { box-sizing: border-box; }\n    .prose p { margin: 0; line-height: 1.6; }\n    .prose h1, .prose h2, .prose h3 { margin: 0 0 8px; }\n    .prose ul, .prose ol { margin: 4px 0; padding-left: 20px; }\n    .prose a { color: #A67C52; }\n    @media screen and (max-width: 480px) {\n      body { padding: 12px !important; }\n      .email-content { width: 100% !important; }\n      .email-col { display: block !important; width: 100% !important; box-sizing: border-box !important; }\n    }\n  </style>\n</head>\n<body style=\"background: #F5F1E6; padding: 24px;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n    <tr>\n      <td align=\"center\">\n        <table\n          class=\"email-content\"\n          width=\"600\"\n          cellpadding=\"0\"\n          cellspacing=\"0\"\n          border=\"0\"\n          style=\"max-width: 600px; background-color: #FFFCF5; border-radius: 8px; overflow: hidden; font-family: Montserrat, sans-serif, sans-serif; font-size: 14px; color: #4A3F35;\"\n        >\n          <tr>\n            <td style=\"padding: 0; line-height: 0; font-size: 0;\">\n              <img src=\"/email-banner.png\" alt=\"Migration Engine\" width=\"600\" style=\"display: block; width: 100%; max-width: 600px; height: auto; border: 0;\" />\n            </td>\n          </tr>\n          <tr>\n            <td style=\"padding: 24px 32px;\">\n              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"height: 24px;\"></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div class=\"prose\" style=\"padding: 8px 0px 8px 0px; text-align: left; font-family: Montserrat, sans-serif; font-size: 14px; color: #4A3F35;\"><h2><span style=\"font-size: 20px; color: #A67C52;\">Milestone Approaching</span></h2></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"height: 8px;\"></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div class=\"prose\" style=\"padding: 8px 0px 8px 0px; text-align: left; font-family: Montserrat, sans-serif; font-size: 14px; color: #4A3F35;\"><p>Hello,</p><p>This is a reminder that the milestone <strong>{{milestone.name}}</strong> for <strong>{{project.name}}</strong> ({{wave.name}}) is currently <strong>{{milestone.statusLabel}}</strong>, with its {{milestone.targetLabel}} on <strong>{{milestone.targetDate}}</strong> — <strong>{{milestone.dueLabel}}</strong>.</p><p>Please review the milestone progress and update its status in the platform.</p></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"height: 16px;\"></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"padding: 16px 0px 16px 0px; text-align: center;\"><a href=\"{{platform.url}}/waves/gantt?projectId={{project.id}}\" target=\"_blank\" style=\"display: inline-block; background-color: #A67C52; color: #ffffff; font-weight: 600; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-family: Montserrat, sans-serif; font-size: 14px;\">View Milestone →</a></div></td></tr></table><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td class=\"email-col\" style=\"width: 100%; vertical-align: top; padding: 0;\"><div style=\"padding: 0px 0px 0px 0px;\">\n        <div style=\"height: 24px;\"></div>\n        <div style=\"padding: 12px 0;\"><hr style=\"border: none; border-top: 1px solid #e5e7eb;\" /></div>\n        <p style=\"font-size: 12px; color: #6b7280; text-align: center; margin: 0; padding: 8px 0; font-family: Montserrat, sans-serif;\">\n          This is an automated message from <a href=\"{{platform.url}}\" style=\"color: #6b7280; text-decoration: underline;\">{{platform.name}}</a>. Do not reply to this email.\n        </p>\n      </div></td></tr></table>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>"
   }
 ]

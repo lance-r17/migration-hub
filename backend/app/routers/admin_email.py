@@ -8,9 +8,17 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models.email_job import EmailJob
 from app.models.user import User
-from app.services.cutover_reminder_service import scan_and_enqueue
+from app.services.cutover_reminder_service import (
+    enqueue_cutover_reminders,
+    scan_and_enqueue,
+    scan_cutover_reminders,
+)
 from app.services.email_event_config_service import get_email_event_config, set_email_event_config
 from app.services.email_service import process_email_job
+from app.services.milestone_reminder_service import (
+    enqueue_milestone_reminders,
+    scan_milestone_reminders,
+)
 
 router = APIRouter(prefix="/admin/email", tags=["admin-email"])
 
@@ -45,6 +53,132 @@ async def trigger_cutover_reminder(
     return {"enqueued": len(enqueued), "job_ids": enqueued}
 
 
+@router.get("/events/cutover-reminder/scan")
+async def scan_cutover_reminder_events(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Dry-run scan: list matching cutover reminders without enqueueing.
+
+    Manual scan works regardless of the enabled toggle and matches any
+    upcoming cutover within the configured reminder window (not only
+    exact reminder days).
+    """
+    matches = await scan_cutover_reminders(db, respect_enabled=False, exact_days=False)
+    return {
+        "items": [
+            {
+                "waveId": m["wave_id"],
+                "waveName": m["wave_name"],
+                "cutoverDate": m["cutover_date"],
+                "daysUntil": m["days_until"],
+                "projectId": m["project_id"],
+                "projectName": m["project_name"],
+                "toAddrs": m["to_addrs"],
+                "recipients": m["recipients"],
+                "subject": m["subject"],
+                "alreadyEnqueued": m["already_enqueued"],
+            }
+            for m in matches
+        ]
+    }
+
+
+@router.post("/events/cutover-reminder/enqueue")
+async def enqueue_cutover_reminder_events(
+    body: dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Enqueue cutover reminders only for the selected wave/project pairs.
+
+    Each selection may include a "recipients" list overriding the resolved
+    recipients (entries removed in the UI are excluded)."""
+    selections = body.get("selections", [])
+    sel_map = {(s.get("wave_id"), s.get("project_id")): s.get("recipients") for s in selections}
+
+    matches = await scan_cutover_reminders(db, respect_enabled=False, exact_days=False)
+    chosen = []
+    for m in matches:
+        key = (m["wave_id"], m["project_id"])
+        if key not in sel_map:
+            continue
+        override = sel_map[key]
+        if override is not None:
+            if not override:
+                continue  # all recipients removed
+            m["to_addrs"] = override
+        chosen.append(m)
+
+    job_ids = await enqueue_cutover_reminders(db, chosen)
+    await db.commit()
+    return {"enqueued": len(job_ids), "job_ids": job_ids}
+
+
+@router.get("/events/milestone-reminder/scan")
+async def scan_milestone_reminder_events(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Dry-run scan: list due milestone reminders without enqueueing.
+
+    Manual scan works regardless of the enabled toggle.
+    """
+    matches = await scan_milestone_reminders(db, respect_enabled=False)
+    return {
+        "items": [
+            {
+                "projectId": m["project_id"],
+                "projectName": m["project_name"],
+                "waveId": m["wave_id"],
+                "waveName": m["wave_name"],
+                "milestoneId": m["milestone_id"],
+                "milestoneName": m["milestone_name"],
+                "milestoneStatus": m["milestone_status"],
+                "targetDate": m["target_date"],
+                "daysUntil": m["days_until"],
+                "toAddrs": m["to_addrs"],
+                "recipients": m["recipients"],
+                "subject": m["subject"],
+                "onCooldown": m["on_cooldown"],
+                "lastSentAt": m["last_sent_at"],
+            }
+            for m in matches
+        ]
+    }
+
+
+@router.post("/events/milestone-reminder/enqueue")
+async def enqueue_milestone_reminder_events(
+    body: dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Enqueue milestone reminders only for the selected project/milestone pairs.
+
+    Each selection may include a "recipients" list overriding the resolved
+    recipients (entries removed in the UI are excluded)."""
+    selections = body.get("selections", [])
+    sel_map = {(s.get("project_id"), s.get("milestone_id")): s.get("recipients") for s in selections}
+
+    matches = await scan_milestone_reminders(db, respect_enabled=False)
+    chosen = []
+    for m in matches:
+        key = (m["project_id"], m["milestone_id"])
+        if key not in sel_map:
+            continue
+        override = sel_map[key]
+        if override is not None:
+            if not override:
+                continue  # all recipients removed
+            m["to_addrs"] = override
+        chosen.append(m)
+
+    job_ids = await enqueue_milestone_reminders(db, chosen)
+    await db.commit()
+    return {"enqueued": len(job_ids), "job_ids": job_ids}
+
+
 @router.get("/jobs")
 async def list_email_jobs(
     status: str | None = None,
@@ -77,6 +211,7 @@ async def list_email_jobs(
             "subject": j.subject,
             "status": j.status,
             "errorMessage": j.error_message,
+            "attempts": j.attempts,
             "idempotencyKey": j.idempotency_key,
             "createdAt": j.created_at.isoformat() if j.created_at else None,
             "sentAt": j.sent_at.isoformat() if j.sent_at else None,

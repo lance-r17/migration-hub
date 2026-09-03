@@ -1,9 +1,24 @@
 import { useState } from 'react'
-import { Check, ClipboardList, FileText, ShieldCheck, Server, Clock, Hourglass, Wrench, CreditCard, Cloud, Database, Shield, UserCheck } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Check, ClipboardList, FileText, ShieldCheck, Server, Clock, Hourglass, Wrench, CreditCard, Cloud, Database, Shield, UserCheck, GanttChart } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { ensureAllRoles, getProjectApprovalSequence } from '@/lib/approvals'
+import {
+  MILESTONE_TYPE_META,
+  categoryMilestoneRowId,
+  getMilestoneRows,
+  milestoneDurationDays,
+  milestoneRowDates,
+  projectMilestoneDurationStats,
+} from '@/lib/milestones'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import type { Project, StageProgress, Approval } from '@/types'
+import type { CategoryMilestone } from '@/types/categoryMilestone'
 
 const ROLE_LABELS: Record<string, string> = {
   platform_migration_lead: 'Platform Migration Lead',
@@ -88,16 +103,31 @@ function SurveyNode({ type }: { type: SurveyType }) {
 
 interface StageProgressStepperProps {
   project: Project
+  signoffEnabled?: boolean
+  categoryMilestones?: CategoryMilestone[]
 }
 
-export function StageProgressStepper({ project }: StageProgressStepperProps) {
+const MILESTONE_STATUS_LABELS: Record<string, string> = {
+  todo: 'To Do',
+  'in-progress': 'In Progress',
+  done: 'Completed',
+}
+
+export function StageProgressStepper({ project, signoffEnabled = true, categoryMilestones = [] }: StageProgressStepperProps) {
+  const navigate = useNavigate()
   const [surveyExpanded, setSurveyExpanded] = useState(false)
   const [signoffExpanded, setSignoffExpanded] = useState(false)
+  const [migrationExpanded, setMigrationExpanded] = useState(false)
+
+  // Milestone duration stats — same metric as the wave Gantt chart percentage column
+  const milestoneRows = getMilestoneRows(project, categoryMilestones)
+  const durationStats = projectMilestoneDurationStats(project, categoryMilestones)
+  const completedPct = durationStats && durationStats.total > 0
+    ? Math.round(durationStats.done / durationStats.total * 100)
+    : null
 
   const sp: StageProgress = project.stageProgress ?? { setup: 0, survey: 0, signoff: 0, migration: 0 }
   const approvedCount = project.approvals.filter(a => a.status === 'approved').length
-  const inScopeResources = project.currentInfrastructure?.resources.filter(r => r.needMigration !== false) ?? []
-  const completedResources = inScopeResources.filter(r => r.migrationCompleted).length
 
   const surveyTypes: SurveyType[] = [
     { key: 'application', label: 'Application Survey', icon: FileText, submittedAt: project.surveySubmittedAt },
@@ -110,11 +140,12 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
 
   const isSurveyClickable = sp.setup === 100 && !surveyComplete
   const isSignOffClickable = sp.signoff < 100
+  const isMigrationClickable = milestoneRows.length > 0
 
   const approvalSequence = getProjectApprovalSequence(project)
   const expectedApprovalCount = approvalSequence.length
 
-  const stages = [
+  const allStages = [
     {
       key: 'setup' as const,
       label: 'Setup',
@@ -137,16 +168,38 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
       key: 'migration' as const,
       label: 'Migration',
       icon: Server,
-      detail: inScopeResources.length === 0
-        ? 'No in-scope resources'
-        : completedResources === inScopeResources.length
-          ? 'Complete'
-          : `${completedResources}/${inScopeResources.length} migrated`,
+      detail: '',
     },
   ]
+  const stages = signoffEnabled ? allStages : allStages.filter(s => s.key !== 'signoff')
 
   const allApprovals = ensureAllRoles(project.approvals, approvalSequence)
   const remaining = allApprovals.filter(a => a.status !== 'approved').length
+
+  // Arrow x-position of an expanded panel, aligned to its stage icon
+  const stageArrowLeft = (key: string) => {
+    const idx = stages.findIndex(s => s.key === key)
+    return `calc(${(idx / stages.length) * 100}% + 14px)`
+  }
+
+  // Combination bar segments: one per milestone row, width = share of total duration.
+  // Status is encoded via opacity: solid = completed, mid = in progress, faint = to do.
+  const SEGMENT_STATUS_OPACITY: Record<string, number> = { done: 1, 'in-progress': 0.55, todo: 0.2 }
+  const milestoneSegments = milestoneRows.map((r) => {
+    const d = milestoneRowDates(project, r)
+    const dur = milestoneDurationDays(d.start, d.end, r.type === 'data-migration-period')
+    const share = durationStats && durationStats.total > 0 ? (dur / durationStats.total) * 100 : 0
+    const cm = r.type === 'category-milestone'
+      ? categoryMilestones.find(c => categoryMilestoneRowId(project.id, c.id) === r.id)
+      : undefined
+    return {
+      row: r,
+      share,
+      pctLabel: `${Math.round(share)}%`,
+      color: cm?.color ?? MILESTONE_TYPE_META[r.type]?.color ?? 'var(--g-text-subtle)',
+      statusOpacity: SEGMENT_STATUS_OPACITY[r.status] ?? 0.2,
+    }
+  })
 
   return (
     <div className="bg-muted/40 rounded-lg px-4 py-3 border border-border/50 overflow-x-auto">
@@ -154,27 +207,46 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
         {stages.map((stage, i) => {
           const isSurveyStage = stage.key === 'survey'
           const isSignOffStage = stage.key === 'signoff'
+          const isMigrationStage = stage.key === 'migration'
           const complete = isSurveyStage ? surveyComplete : sp[stage.key] === 100
           const partial = isSurveyStage ? surveyPartial : sp[stage.key] > 0 && sp[stage.key] < 100
           const Icon = stage.icon
+          const clickable =
+            (isSurveyStage && isSurveyClickable) ||
+            (isSignOffStage && isSignOffClickable) ||
+            (isMigrationStage && isMigrationClickable)
+
+          const toggleStage = () => {
+            if (isSurveyStage) {
+              setSurveyExpanded(prev => !prev)
+              setSignoffExpanded(false)
+              setMigrationExpanded(false)
+            } else if (isSignOffStage) {
+              setSignoffExpanded(prev => !prev)
+              setSurveyExpanded(false)
+              setMigrationExpanded(false)
+            } else {
+              setMigrationExpanded(prev => !prev)
+              setSurveyExpanded(false)
+              setSignoffExpanded(false)
+            }
+          }
 
           return (
             <div key={stage.key} className="flex items-center flex-1 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0 shrink-0">
-                {(isSurveyStage && isSurveyClickable) || (isSignOffStage && isSignOffClickable) ? (
+                {clickable ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (isSurveyStage) {
-                        setSurveyExpanded(prev => !prev)
-                        setSignoffExpanded(false)
-                      } else {
-                        setSignoffExpanded(prev => !prev)
-                        setSurveyExpanded(false)
-                      }
-                    }}
-                    aria-expanded={isSurveyStage ? surveyExpanded : signoffExpanded}
-                    aria-label={isSurveyStage ? 'Toggle survey submission details' : 'Toggle sign-off workflow details'}
+                    onClick={toggleStage}
+                    aria-expanded={isSurveyStage ? surveyExpanded : isSignOffStage ? signoffExpanded : migrationExpanded}
+                    aria-label={
+                      isSurveyStage
+                        ? 'Toggle survey submission details'
+                        : isSignOffStage
+                          ? 'Toggle sign-off workflow details'
+                          : 'Toggle milestone progress details'
+                    }
                     className={cn(
                       'w-7 h-7 rounded-full flex items-center justify-center shrink-0',
                       complete && 'bg-emerald-500 text-white',
@@ -204,7 +276,35 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
                   )}>
                     {stage.label}
                   </div>
-                  <div className="text-[11px] text-muted-foreground truncate">{stage.detail}</div>
+                  {isMigrationStage ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-14 h-1.5 rounded-full bg-muted overflow-hidden shrink-0">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${completedPct ?? 0}%`, background: 'oklch(0.50 0.13 150)' }}
+                        />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">{completedPct ?? 0}%</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label="View in wave Gantt chart"
+                            className="shrink-0 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/waves/gantt?projectId=${project.id}`)
+                            }}
+                          >
+                            <GanttChart size={12} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">View in wave Gantt chart</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-muted-foreground truncate">{stage.detail}</div>
+                  )}
                 </div>
               </div>
               {i < stages.length - 1 && (
@@ -238,7 +338,7 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
               className="relative mt-4 bg-muted rounded-lg border border-border/50 p-4"
             >
               {/* Arrow pointing to survey stage icon */}
-              <div className="absolute -top-1.5 left-[calc(25%+14px)] -translate-x-1/2 w-3 h-3 bg-muted border-l border-t border-border/50 rotate-45" />
+              <div className="absolute -top-1.5 -translate-x-1/2 w-3 h-3 bg-muted border-l border-t border-border/50 rotate-45" style={{ left: stageArrowLeft('survey') }} />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div className="space-y-1 shrink-0">
                   <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
@@ -274,7 +374,7 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
               className="relative mt-4 bg-muted rounded-lg border border-border/50 p-4"
             >
               {/* Arrow pointing to sign-off stage icon */}
-              <div className="absolute -top-1.5 left-[calc(50%+14px)] -translate-x-1/2 w-3 h-3 bg-muted border-l border-t border-border/50 rotate-45" />
+              <div className="absolute -top-1.5 -translate-x-1/2 w-3 h-3 bg-muted border-l border-t border-border/50 rotate-45" style={{ left: stageArrowLeft('signoff') }} />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div className="space-y-1 shrink-0">
                   <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
@@ -288,6 +388,65 @@ export function StageProgressStepper({ project }: StageProgressStepperProps) {
                   <div className="absolute h-0.25 top-3.5 left-12 right-10 bg-muted-foreground/20 z-0" />
                   {allApprovals.map((approval) => (
                     <ApprovalNode key={approval.id} approval={approval} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        {migrationExpanded && (
+          <motion.div
+            key="migration-timeline"
+            initial={{ height: 0, opacity: 0, y: -8 }}
+            animate={{ height: 'auto', opacity: 1, y: 0 }}
+            exit={{ height: 0, opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <div
+              role="region"
+              aria-label="Milestone progress breakdown"
+              className="relative mt-4 bg-muted rounded-lg border border-border/50 p-4"
+            >
+              {/* Arrow pointing to migration stage icon */}
+              <div className="absolute -top-1.5 -translate-x-1/2 w-3 h-3 bg-muted border-l border-t border-border/50 rotate-45" style={{ left: stageArrowLeft('migration') }} />
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
+                    Milestone Progress
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {milestoneRows.filter(r => r.status === 'done').length} of {milestoneRows.length} milestones completed
+                    {completedPct != null && ` · ${completedPct}% of total duration`}
+                  </p>
+                </div>
+                <div className="flex h-3 w-full rounded-full overflow-hidden bg-muted-foreground/10">
+                  {milestoneSegments.map((seg) => (
+                    <Tooltip key={seg.row.id}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="h-full transition-opacity hover:opacity-75 cursor-default"
+                          style={{ width: `${seg.share}%`, background: seg.color, opacity: seg.statusOpacity }}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="flex-col items-start">
+                        <p className="text-xs font-semibold">{seg.row.name}</p>
+                        <p className="text-xs">
+                          {MILESTONE_STATUS_LABELS[seg.row.status] ?? seg.row.status} · {seg.pctLabel}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                  {(['done', 'in-progress', 'todo'] as const).map((s) => (
+                    <span key={s} className="inline-flex items-center gap-1.5">
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-[3px] bg-foreground"
+                        style={{ opacity: SEGMENT_STATUS_OPACITY[s] }}
+                      />
+                      {MILESTONE_STATUS_LABELS[s]}
+                    </span>
                   ))}
                 </div>
               </div>

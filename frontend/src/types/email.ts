@@ -15,6 +15,7 @@ export type EmailEventType =
   | 'project_signed_off'
   | 'risk_alert'
   | 'cutover_reminder'
+  | 'milestone_reminder'
   | 'approval_submitted'
   | 'jira_stories_created'
   | 'survey_submitted'
@@ -162,6 +163,13 @@ export const TEMPLATE_VARIABLES: TemplateVariable[] = [
   { key: 'wave.cutoverDate', label: 'Cutover Date', category: 'Wave', example: '2026-06-30' },
   { key: 'daysUntilCutover', label: 'Days Until Cutover', category: 'Wave', example: '14' },
   { key: 'wave.jiraEpicKey', label: 'Jira Epic Key', category: 'Wave', example: 'MIG-42' },
+  // Milestone
+  { key: 'milestone.name', label: 'Milestone Name', category: 'Milestone', example: 'Data Migration (Dev)' },
+  { key: 'milestone.statusLabel', label: 'Milestone Status', category: 'Milestone', example: 'In Progress' },
+  { key: 'milestone.targetDate', label: 'Milestone Target Date', category: 'Milestone', example: '2026-05-08' },
+  { key: 'milestone.targetLabel', label: 'Milestone Target Label (start/end date)', category: 'Milestone', example: 'end date' },
+  { key: 'milestone.dueLabel', label: 'Milestone Due Label', category: 'Milestone', example: 'in 5 days' },
+  { key: 'daysUntil', label: 'Days Until Target Date', category: 'Milestone', example: '5' },
   // User
   { key: 'user.name', label: 'User Name', category: 'User', example: 'Jane Smith' },
   { key: 'user.email', label: 'User Email', category: 'User', example: 'jane.smith@company.com' },
@@ -200,6 +208,7 @@ export const EMAIL_EVENT_LABELS: Record<EmailEventType, string> = {
   project_signed_off: 'Project Signed Off',
   risk_alert: 'Risk Alert',
   cutover_reminder: 'Cutover Reminder',
+  milestone_reminder: 'Milestone Reminder',
   approval_submitted: 'Approval Submitted',
   jira_stories_created: 'Jira Stories Created',
   survey_submitted: 'Survey Submitted',

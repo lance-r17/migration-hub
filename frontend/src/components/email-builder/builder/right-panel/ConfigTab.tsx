@@ -25,6 +25,8 @@ const RECIPIENT_ROLES = [
   { value: 'business_owner', label: 'Business Owner' },
   { value: 'gbi_champion', label: 'BGI Champion' },
   { value: 'gbi_champion_delegate', label: 'BGI Champion Delegate' },
+  { value: 'itso', label: 'ITSO' },
+  { value: 'itso_delegate', label: 'ITSO Delegate' },
 ]
 
 const ROLE_LABELS: Record<string, string> = {
@@ -33,6 +35,8 @@ const ROLE_LABELS: Record<string, string> = {
   business_owner: 'Business Owner',
   gbi_champion: 'BGI Champion',
   gbi_champion_delegate: 'BGI Champion Delegate',
+  itso: 'ITSO',
+  itso_delegate: 'ITSO Delegate',
 }
 
 export function ConfigTab({ template, onTemplateChange, selectedComponent, onComponentConfigChange, selectedRow }: Props) {

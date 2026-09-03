@@ -1,5 +1,46 @@
 import { apiClient } from './client'
 
+export interface ResolvedRecipient {
+  email: string
+  badge: string
+}
+
+export interface MilestoneReminderMatch {
+  projectId: string
+  projectName: string
+  waveId: string
+  waveName: string
+  milestoneId: string
+  milestoneName: string
+  milestoneStatus: string
+  targetDate: string
+  daysUntil: number
+  toAddrs: string[]
+  recipients: ResolvedRecipient[]
+  subject: string
+  onCooldown: boolean
+  lastSentAt?: string
+}
+
+export async function scanMilestoneReminders(): Promise<{ items: MilestoneReminderMatch[] }> {
+  return apiClient.get<{ items: MilestoneReminderMatch[] }>('/api/v1/admin/email/events/milestone-reminder/scan')
+}
+
+export async function enqueueMilestoneReminders(
+  selections: { projectId: string; milestoneId: string; recipients?: string[] }[],
+): Promise<{ enqueued: number; job_ids: string[] }> {
+  return apiClient.post<{ enqueued: number; job_ids: string[] }>(
+    '/api/v1/admin/email/events/milestone-reminder/enqueue',
+    {
+      selections: selections.map((s) => ({
+        project_id: s.projectId,
+        milestone_id: s.milestoneId,
+        recipients: s.recipients,
+      })),
+    },
+  )
+}
+
 export interface EmailJob {
   id: string
   eventType: string
@@ -8,6 +49,7 @@ export interface EmailJob {
   subject: string
   status: 'pending' | 'processing' | 'sent' | 'failed'
   errorMessage?: string
+  attempts: number
   idempotencyKey?: string
   createdAt: string
   sentAt?: string
@@ -26,8 +68,17 @@ export interface CutoverReminderConfig {
   run_time_utc?: string
 }
 
+export interface MilestoneReminderConfig {
+  enabled?: boolean
+  reminder_days?: number[]
+  frequency_days?: number
+  run_time_utc?: string
+  scopes?: { planning?: boolean; auto_derived?: boolean; category?: boolean }
+}
+
 export interface EmailEventConfig {
   cutover_reminder?: CutoverReminderConfig
+  milestone_reminder?: MilestoneReminderConfig
 }
 
 export async function getEmailEventConfig(): Promise<EmailEventConfig> {
@@ -40,6 +91,38 @@ export async function updateEmailEventConfig(config: EmailEventConfig): Promise<
 
 export async function triggerCutoverReminder(): Promise<{ enqueued: number; job_ids: string[] }> {
   return apiClient.post<{ enqueued: number; job_ids: string[] }>('/api/v1/admin/email/events/cutover-reminder/trigger', {})
+}
+
+export interface CutoverReminderMatch {
+  waveId: string
+  waveName: string
+  cutoverDate: string
+  daysUntil: number
+  projectId: string
+  projectName: string
+  toAddrs: string[]
+  recipients: ResolvedRecipient[]
+  subject: string
+  alreadyEnqueued: boolean
+}
+
+export async function scanCutoverReminders(): Promise<{ items: CutoverReminderMatch[] }> {
+  return apiClient.get<{ items: CutoverReminderMatch[] }>('/api/v1/admin/email/events/cutover-reminder/scan')
+}
+
+export async function enqueueCutoverReminders(
+  selections: { waveId: string; projectId: string; recipients?: string[] }[],
+): Promise<{ enqueued: number; job_ids: string[] }> {
+  return apiClient.post<{ enqueued: number; job_ids: string[] }>(
+    '/api/v1/admin/email/events/cutover-reminder/enqueue',
+    {
+      selections: selections.map((s) => ({
+        wave_id: s.waveId,
+        project_id: s.projectId,
+        recipients: s.recipients,
+      })),
+    },
+  )
 }
 
 export async function listEmailJobs(params?: {

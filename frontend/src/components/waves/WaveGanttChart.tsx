@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, CloudUpload, Database, HardDrive, BarChart2, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, DatabaseBackup, MessageSquare, MessageSquarePlus, Upload, Download, FolderOpen } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, Database, HardDrive, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, CircleHelp, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, MessageSquare, MessageSquarePlus, Upload, Download, FolderOpen } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -22,6 +22,16 @@ import {
   pruneEmptySelections,
   promoteFullSelections,
 } from '@/lib/bgi-utils'
+import {
+  MILESTONE_TYPE_META as SHARED_MILESTONE_TYPE_META,
+  buildDataMigrationPeriodMilestone,
+  buildEnvironmentProvisionMilestones,
+  getMilestoneRows,
+  milestoneDurationDays,
+  milestoneRowDates,
+  parseCategoryMilestoneRowId,
+  projectMilestoneDurationStats as projectMilestoneDurationStatsShared,
+} from '@/lib/milestones'
 
 import { Button } from '../ui/button'
 import {
@@ -91,7 +101,7 @@ interface RowDragState {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const LEFT_PANEL_W = 680
+const LEFT_PANEL_W = 750
 const ROW_H        = 38
 const GROUP_H      = 42
 const HEADER_H     = 40
@@ -111,27 +121,6 @@ const MILESTONE_PRESETS: { type: MilestoneType; label: string; icon: LucideIcon 
 /** Deterministic id for preset milestones: one instance per type per project. */
 function fixedMilestoneId(type: MilestoneType, projectId: string): string {
   return `${type}-${projectId}`
-}
-
-/** Synthetic per-project row id for a category milestone instance.
- *  Consistent with other auto-derived ids and unique across projects sharing the same CM. */
-function categoryMilestoneRowId(projectId: string, cmId: string): string {
-  return `category-milestone-${projectId}-${cmId}`
-}
-
-/** Extracts the global CM id from a category-milestone row id (prefix slicing — cmIds contain dashes). */
-function parseCategoryMilestoneRowId(projectId: string, rowId: string): string | null {
-  const prefix = `category-milestone-${projectId}-`
-  return rowId.startsWith(prefix) ? rowId.slice(prefix.length) : null
-}
-
-/** Orders rows by a saved id list: known ids in saved order first, unknown ids appended in default order. */
-function orderByIdList<T extends { id: string }>(rows: T[], order?: string[]): T[] {
-  if (!order?.length) return rows
-  const idx = new Map(order.map((id, i) => [id, i]))
-  const known = rows.filter(r => idx.has(r.id)).sort((a, b) => idx.get(a.id)! - idx.get(b.id)!)
-  const unknown = rows.filter(r => !idx.has(r.id))
-  return [...known, ...unknown]
 }
 
 /** Moves arr[sourceIdx] to insertion point `overIndex`, clamped into [lo, hi]. Returns a new array. */
@@ -186,18 +175,7 @@ const IMPORT_SAMPLE_JSON = {
   ],
 }
 
-const MILESTONE_TYPE_META: Record<MilestoneType, { bg: string; color: string; label: string; icon: LucideIcon }> = {
-  'env-provision':          { bg: 'oklch(0.88 0.05 185)', color: 'oklch(0.35 0.10 185)', label: 'Env',    icon: CloudUpload },
-  'dev-resource-provision': { bg: 'oklch(0.91 0.05 200)', color: 'oklch(0.35 0.12 200)', label: 'DevRes', icon: Cpu         },
-  'dev-data-migration':     { bg: 'oklch(0.90 0.06 220)', color: 'oklch(0.35 0.13 260)', label: 'DevData', icon: Database    },
-  'dev-cutover':            { bg: 'oklch(0.92 0.04 290)', color: 'oklch(0.35 0.12 300)', label: 'DevCut', icon: ArrowRight  },
-  'prd-resource-provision': { bg: 'oklch(0.91 0.05 20)',  color: 'oklch(0.40 0.14 20)',  label: 'PrdRes', icon: HardDrive   },
-  'prd-data-migration':     { bg: 'oklch(0.92 0.04 240)', color: 'oklch(0.35 0.15 260)', label: 'PrdData', icon: BarChart2   },
-  'prd-cutover':            { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'PrdCut', icon: Sparkles    },
-  'custom':                 { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'Custom', icon: Pencil      },
-  'category-milestone':     { bg: 'oklch(0.90 0.05 140)', color: 'oklch(0.35 0.12 150)', label: 'Category', icon: Pencil      },
-  'data-migration-period':  { bg: 'oklch(0.88 0.06 300)', color: 'oklch(0.40 0.14 300)', label: 'DataMigration', icon: DatabaseBackup },
-}
+const MILESTONE_TYPE_META = SHARED_MILESTONE_TYPE_META
 
 const WAVE_STATUS_META: Record<string, { bg: string; color: string }> = {
   'planned':   { bg: 'var(--g-bg-alt)',      color: 'var(--g-text-muted)' },
@@ -224,7 +202,7 @@ const MILESTONE_STATUS_META: Record<MilestoneStatus, { label: string; icon: Luci
 
 const DEFAULT_WAVE_COLOR = '#6366F1'
 
-const LP_GRID = '40px minmax(160px,1fr) 100px 80px 100px 32px'
+const LP_GRID = '40px minmax(160px,1fr) 100px 80px 100px 70px 32px'
 const CELL_CLASS = 'h-full flex items-center px-2 border-r min-w-0'
 
 // ─── Memoized sub-components ───────────────────────────────────────────────────
@@ -248,7 +226,7 @@ interface LeftPanelHeaderProps {
 }
 
 const LeftPanelHeader = memo(function LeftPanelHeader({ searchQuery, onSearchChange, durationFilter, onDurationFilterChange }: LeftPanelHeaderProps) {
-  const [isSearching, setIsSearching] = useState(false)
+  const [isSearching, setIsSearching] = useState(() => searchQuery !== '')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -257,17 +235,17 @@ const LeftPanelHeader = memo(function LeftPanelHeader({ searchQuery, onSearchCha
 
   return (
     <div
-      className="border-b sticky left-0 z-20 grid shrink-0 h-[40px] w-[680px] bg-background border-r"
+      className="border-b sticky left-0 z-20 grid shrink-0 h-[40px] w-[750px] bg-background border-r"
       style={{ gridTemplateColumns: LP_GRID }}
     >
-      {['', 'Project / Milestones', 'Status', 'Labels', 'Duration', ''].map((col, i) => (
+      {['', 'Project / Milestones', 'Status', 'Labels', 'Duration', '%', ''].map((col, i) => (
         <div
           key={i}
           className={cn(
             CELL_CLASS,
             'text-[11.5px] font-semibold text-[var(--g-text-muted)] uppercase tracking-[0.02em]',
-            (i === 2 || i === 3 || i === 4) && 'justify-center',
-            i === 5 && 'border-r-0',
+            (i === 2 || i === 3 || i === 4 || i === 5) && 'justify-center',
+            i === 6 && 'border-r-0',
           )}
         >
           {i === 1 && isSearching ? (
@@ -330,6 +308,25 @@ const LeftPanelHeader = memo(function LeftPanelHeader({ searchQuery, onSearchCha
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : i === 5 ? (
+            <span className="inline-flex items-center gap-1">
+              <span>{col}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-help text-[var(--g-text-subtle)] hover:text-[var(--g-text)] transition-colors">
+                    <CircleHelp size={12} />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="center" className="max-w-[260px] normal-case tracking-normal font-normal flex-col items-start">
+                  <p className="text-xs">
+                    <span className="font-semibold">Milestone rows:</span> the milestone's share of the project's total milestone duration (milestone duration ÷ total).
+                  </p>
+                  <p className="text-xs mt-1.5">
+                    <span className="font-semibold">Project rows:</span> the share of total milestone duration already completed (sum of completed milestones), shown with a progress bar.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </span>
           ) : (
             col
           )}
@@ -490,9 +487,10 @@ interface Props {
   onUpdateProjectOrder?: (waveId: string, projectIds: string[]) => Promise<void>
   onAssign?: (projectId: string, waveId: string | undefined) => void
   readOnly?: boolean
+  initialSearch?: string
 }
 
-export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRoot = null, bgiScopeIds = null, bgiMaxDepth = null, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly }: Props) {
+export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRoot = null, bgiScopeIds = null, bgiMaxDepth = null, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly, initialSearch = '' }: Props) {
   const [showCompleted, setShowCompleted] = useState(true)
   const scrollRef    = useRef<HTMLDivElement>(null)
   const milestoneGhostRef     = useRef<HTMLDivElement>(null)
@@ -516,7 +514,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   const [editingTaskName, setEditingMilestoneName] = useState('')
   const [rowMilestoneDragState, setRowMilestoneDragState]         = useState<RowDragState | null>(null)
   const [projRowDragState, setProjRowDragState] = useState<ProjRowDragState | null>(null)
-  const [searchQuery, setSearchQuery]           = useState('')
+  const [searchQuery, setSearchQuery]           = useState(initialSearch)
   const [durationFilter, setDurationFilter]     = useState('all')
   const [statusDialog, setStatusDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; nextStatus: MilestoneStatus } | null>(null)
   const [deleteDialog, setDeleteDialog]         = useState<{ open: boolean; projectId: string; milestoneId: string; milestoneName: string } | null>(null)
@@ -683,14 +681,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   function effectiveMilestoneDates(projectId: string, milestone: PlanningMilestone): { start: string; end: string } {
     const project = projects.find(p => p.id === projectId)
     if (!project) return { start: milestone.start, end: milestone.end }
-    const planning = getEffectivePlanning(project)
-    const t = planning.milestones?.find(lt => lt.id === milestone.id)
-    if (t) return { start: t.start, end: t.end }
-    // Category milestone rows carry a synthetic per-project id; overrides are keyed by the global CM id
-    const cmId = parseCategoryMilestoneRowId(projectId, milestone.id) ?? milestone.id
-    const override = planning.categoryMilestoneOverrides?.[cmId]
-    if (override) return { start: override.start, end: override.end }
-    return { start: milestone.start, end: milestone.end }
+    return milestoneRowDates(project, milestone, getEffectivePlanning(project))
   }
 
   function getEffectivePlanning(p: Project): ProjectPlanning {
@@ -1450,108 +1441,15 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     | { type: 'milestone';             wave: Wave | null; project: Project; milestone: PlanningMilestone; projectIndex: number; milestoneIndex: number }
     | { type: 'unassigned-header' }
 
-  function buildEnvironmentProvisionMilestones(p: Project): PlanningMilestone[] {
-    const provision = p.environmentProvision
-    if (!provision) return []
-
-    const today = toIso(new Date())
-    const result: PlanningMilestone[] = []
-    for (const env of ['dev', 'prod'] as const) {
-      const entry = provision[env]
-      if (!entry?.date) continue
-      let status: MilestoneStatus
-      if (entry.completedAt) status = 'done'
-      else if (entry.date <= today) status = 'in-progress'
-      else status = 'todo'
-      result.push({
-        id: `env-provision-date-${p.id}-${env}`,
-        name: `Environment Provision (${env === 'dev' ? 'Dev' : 'Prod'})`,
-        type: 'env-provision',
-        start: entry.date,
-        end: entry.date,
-        status,
-        deps: [],
-        immutable: true,
-      })
-    }
-    return result
-  }
-
-  function buildDataMigrationPeriodMilestone(p: Project): PlanningMilestone | undefined {
-    const plan = p.dataMigrationPlan ?? p.dataMigrationSchedule
-    if (!plan) return undefined
-
-    const candidates: { start?: string; end?: string }[] = []
-    if (plan.startDate) candidates.push({ start: plan.startDate, end: plan.endDate })
-    if (plan.cycleBlocks?.length) {
-      for (const block of plan.cycleBlocks) {
-        candidates.push({ start: block.startDate, end: block.endDate })
-      }
-    }
-    if (candidates.length === 0) return undefined
-
-    let start: string | undefined
-    let end: string | undefined
-    for (const c of candidates) {
-      if (c.start && (!start || c.start < start)) start = c.start
-      if (c.end && (!end || c.end > end)) end = c.end
-    }
-    if (!start || !end) return undefined
-
-    const today = toIso(new Date())
-    let status: MilestoneStatus
-    if (plan.completedAt) status = 'done'
-    else if (today >= start && today <= end) status = 'in-progress'
-    else status = 'todo'
-
-    return {
-      id: `data-migration-period-${p.id}`,
-      name: 'Data Migration (Prod)',
-      type: 'data-migration-period',
-      start,
-      end,
-      status,
-      deps: [],
-    }
-  }
-
-  /** Rendered milestone rows without drag preview: category milestones pinned first
-   *  (saved order, default createdAt ASC), then env-provision, data-migration period,
-   *  and persisted milestones — saved milestoneRowOrder applied per group. */
+  /** Rendered milestone rows without drag preview: delegates to the shared lib
+   *  with the locally-edited (effective) planning. */
   function getOrderedMilestoneRows(p: Project): PlanningMilestone[] {
-    const plan = localPlanning[p.id] ?? p.planning
-    let milestones = plan?.milestones ?? []
-    // Remove any category milestones already in planning to avoid duplication
-    const assignedCmIds = new Set(p.categoryMilestoneIds ?? [])
-    milestones = milestones.filter(m => !assignedCmIds.has(m.id))
+    return getMilestoneRows(p, categoryMilestones, getEffectivePlanning(p))
+  }
 
-    // Inject category milestones (with per-project overrides), sorted by creation date
-    const assignedCMs = (p.categoryMilestoneIds ?? [])
-      .map(cmId => categoryMilestones.find(cm => cm.id === cmId))
-      .filter((cm): cm is CategoryMilestone => cm !== undefined)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      .map(cm => {
-        const override = plan?.categoryMilestoneOverrides?.[cm.id]
-        return {
-          id: categoryMilestoneRowId(p.id, cm.id),
-          name: cm.name,
-          type: 'category-milestone' as MilestoneType,
-          start: override?.start ?? cm.startDate,
-          end: override?.end ?? cm.endDate,
-          status: override?.status ?? 'todo' as MilestoneStatus,
-          deps: [],
-        }
-      })
-
-    const dmPeriod = buildDataMigrationPeriodMilestone(p)
-    const envMilestones = buildEnvironmentProvisionMilestones(p)
-
-    const savedOrder = plan?.milestoneRowOrder
-    // Category milestones are pinned on top in fixed creation-date order (not reorderable)
-    return [
-      ...assignedCMs,
-      ...orderByIdList([...envMilestones, ...(dmPeriod ? [dmPeriod] : []), ...milestones], savedOrder),
-    ]
+  /** Total/completed milestone-duration stats for a project (Percentage column). */
+  function projectMilestoneDurationStats(p: Project): { total: number; done: number } | null {
+    return projectMilestoneDurationStatsShared(p, categoryMilestones, getEffectivePlanning(p))
   }
 
   function getMilestonesForProject(p: Project): PlanningMilestone[] {
@@ -2330,7 +2228,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
               return (
                 <div key={rowKey} className="flex border-b" style={{ height: rh }}>
                   <div
-                    className="sticky left-0 z-10 grid shrink-0 w-[680px] border-r cursor-pointer bg-background"
+                    className="sticky left-0 z-10 grid shrink-0 w-[750px] border-r cursor-pointer bg-background"
                     style={{ gridTemplateColumns: LP_GRID }}
                     onClick={() => setEmbargosCollapsed(c => !c)}
                   >
@@ -2347,6 +2245,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                       </div>
                       <span className="text-xs text-[var(--g-text-muted)]">{embargos.length}</span>
                     </div>
+                    <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'justify-center')} />
@@ -2371,7 +2270,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
               return (
                 <div key={rowKey} className="flex border-b" style={{ height: rh }}>
                   <div
-                    className="sticky left-0 z-10 grid shrink-0 w-[680px] bg-card border-r cursor-pointer"
+                    className="sticky left-0 z-10 grid shrink-0 w-[750px] bg-card border-r cursor-pointer"
                     style={{ gridTemplateColumns: LP_GRID }}
                     onClick={() => scrollToBar(embargo.id)}
                   >
@@ -2398,6 +2297,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                         <span className="shrink-0 text-[10px] text-[var(--g-text-muted)]">+{extraCount}</span>
                       )}
                     </div>
+                    <div className={cn(cellClass, 'justify-center')} />
+                    <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'justify-center')} />
                     <div className={cn(cellClass, 'border-r-0')} />
@@ -2448,7 +2349,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                 <div key={rowKey} className="flex border-b" style={{ height: rh }}>
                   {/* Left cell */}
                   <div
-                    className="sticky left-0 z-10 grid shrink-0 w-[680px] bg-muted cursor-pointer border-r"
+                    className="sticky left-0 z-10 grid shrink-0 w-[750px] bg-muted cursor-pointer border-r"
                     style={{ gridTemplateColumns: LP_GRID }}
                     onClick={() => toggleWave(w.id)}
                   >
@@ -2496,6 +2397,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                             </code>
                       )}
                     </div>
+                    {/* Duration col */}
+                    <div className={cn(cellClass, 'justify-center')} />
+                    {/* Percentage col */}
+                    <div className={cn(cellClass, 'justify-center')} />
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0')} />
                   </div>
@@ -2542,7 +2447,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                 <div key={rowKey} className="flex border-b bg-muted" style={{ height: rh }}>
                   {/* Left cell */}
                   <div
-                    className="sticky left-0 z-10 grid shrink-0 w-[680px] bg-muted cursor-pointer border-r"
+                    className="sticky left-0 z-10 grid shrink-0 w-[750px] bg-muted cursor-pointer border-r"
                     style={{ gridTemplateColumns: LP_GRID }}
                     onClick={() => toggleWave('__unassigned__')}
                   >
@@ -2566,6 +2471,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     {/* Labels col */}
                     <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)]')} />
                     {/* Duration col */}
+                    <div className={cn(cellClass, 'justify-center')} />
+                    {/* Percentage col */}
                     <div className={cn(cellClass, 'justify-center')} />
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0')} />
@@ -2591,6 +2498,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
               const isCategoryMilestone = milestone.type === 'category-milestone'
               const isDataMigrationPeriod = milestone.type === 'data-migration-period'
               const isImmutable = isDataMigrationPeriod || milestone.immutable
+              const durationStats = projectMilestoneDurationStats(project)
+              const milestonePct = durationStats && durationStats.total > 0
+                ? Math.round(milestoneDurationDays(start, end, isDataMigrationPeriod) / durationStats.total * 100)
+                : 0
               // Fixed-id preset milestones have immutable names; legacy random-id milestones stay editable
               const isFixedPreset = milestone.type !== 'custom' && milestone.id === fixedMilestoneId(milestone.type, project.id)
               const categoryMilestone = isCategoryMilestone
@@ -2615,7 +2526,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                   {/* Left panel */}
                   <div
                     className={cn(
-                      'sticky left-0 z-10 grid shrink-0 w-[680px] border-r',
+                      'sticky left-0 z-10 grid shrink-0 w-[750px] border-r',
                       isSelected ? 'bg-[var(--g-accent-soft)]' : 'bg-card',
                     )}
                     style={{ gridTemplateColumns: LP_GRID }}
@@ -2747,6 +2658,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     {/* Duration col */}
                     <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
                       {formatDuration(start, end, isDataMigrationPeriod)}
+                    </div>
+                    {/* Percentage col */}
+                    <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
+                      {milestonePct}%
                     </div>
                     {/* Action col */}
                     <div className={cn(cellClass, 'border-r-0 justify-center relative')}>
@@ -2909,13 +2824,17 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
             const labelText       = p.jiraStoryKey ?? null
             const statusMeta      = PROJECT_STATUS_META[p.status]
             const pct             = p.progress ?? 0
+            const durationStats   = projectMilestoneDurationStats(p)
+            const completedPct    = durationStats && durationStats.total > 0
+              ? Math.round(durationStats.done / durationStats.total * 100)
+              : null
 
             return (
               <div key={rowKey} className="flex border-b" style={{ height: rh, opacity: isProjDragging ? 0.3 : 1 }}>
                 {/* Left panel */}
                 <div
                   className={cn(
-                    'group/row sticky left-0 z-10 grid shrink-0 w-[680px] border-r cursor-pointer',
+                    'group/row sticky left-0 z-10 grid shrink-0 w-[750px] border-r cursor-pointer',
                     isSelected ? 'bg-[var(--g-accent-soft)]' : 'bg-background',
                     isProjDragging ? 'bg-[var(--g-accent-soft)]' : '',
                   )}
@@ -3020,6 +2939,22 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                   {/* Duration col */}
                   <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
                     {projectDates ? formatDuration(projectDates.start, projectDates.end) : '—'}
+                  </div>
+                  {/* Percentage col: completed share of total milestone duration */}
+                  <div className={cn(cellClass, 'justify-center')}>
+                    {completedPct != null && (
+                      <div className="flex flex-col items-center gap-1 w-full px-1.5">
+                        <span className="text-[10px] text-[var(--g-text-subtle)] font-medium leading-none">
+                          {completedPct}%
+                        </span>
+                        <div className="h-1.5 w-full rounded-full bg-[var(--g-bg-alt)] overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${completedPct}%`, background: 'oklch(0.50 0.13 150)' }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {/* Action col */}
                   <div className={cn(cellClass, 'border-r-0 justify-center relative')}>

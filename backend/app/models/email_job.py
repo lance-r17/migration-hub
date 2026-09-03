@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +27,7 @@ class EmailJob(Base):
     context: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
     error_message: Mapped[str | None] = mapped_column(String, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     idempotency_key: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

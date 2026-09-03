@@ -35,6 +35,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import { RecipientsCell } from '@/components/RecipientsCell'
+import { BrowserContainer } from '@/components/email-builder/preview/BrowserContainer'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,12 +62,53 @@ function JobStatusBadge({ status }: { status: EmailJob['status'] }) {
   return <Badge variant="outline" className={className}>{label}</Badge>
 }
 
-function formatTs(iso: string) {
+function formatTsParts(iso: string): { date: string; time: string } {
   try {
-    return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium' })
+    const d = new Date(iso)
+    return {
+      date: d.toLocaleDateString(undefined, { dateStyle: 'short' }),
+      time: d.toLocaleTimeString(undefined, { timeStyle: 'medium' }),
+    }
   } catch {
-    return iso
+    return { date: iso, time: '' }
   }
+}
+
+function ScheduleCell({ job }: { job: EmailJob }) {
+  if (job.status === 'sent') {
+    const { date, time } = formatTsParts(job.sentAt ?? job.createdAt)
+    return (
+      <span className="text-sm text-muted-foreground whitespace-nowrap">
+        Sent {date} · {time}
+      </span>
+    )
+  }
+
+  if (job.status === 'failed') {
+    const tries = Math.max(job.attempts, 1)
+    return (
+      <div className="space-y-0.5">
+        <p className="text-sm text-foreground">
+          Gave up after {tries} {tries === 1 ? 'try' : 'tries'}
+        </p>
+        {job.errorMessage && (
+          <p className="text-xs text-destructive max-w-[260px] truncate">
+            {job.errorMessage}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  const { date, time } = formatTsParts(job.createdAt)
+  return (
+    <div className="space-y-0.5">
+      <p className="text-sm text-foreground">Ready to send</p>
+      <p className="text-xs text-muted-foreground whitespace-nowrap">
+        Queued {date} {time}
+      </p>
+    </div>
+  )
 }
 
 export function EmailJobsPage() {
@@ -77,6 +120,7 @@ export function EmailJobsPage() {
   const [retrying, setRetrying] = useState<string | null>(null)
   const [preview, setPreview] = useState<EmailJobPreview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewViewport, setPreviewViewport] = useState<'desktop' | 'mobile'>('desktop')
 
   const load = () => {
     setLoading(true)
@@ -113,6 +157,7 @@ export function EmailJobsPage() {
 
   async function handlePreview(job: EmailJob) {
     setPreviewLoading(true)
+    setPreviewViewport('desktop')
     try {
       const data = await previewEmailJob(job.id)
       setPreview(data)
@@ -186,11 +231,11 @@ export function EmailJobsPage() {
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Event</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Recipients</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Subject</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">Created</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider">Schedule</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -198,21 +243,16 @@ export function EmailJobsPage() {
                   <TableRow key={job.id} className="hover:bg-muted/30 transition-colors">
                     <TableCell className="font-medium text-sm">{job.eventType}</TableCell>
                     <TableCell>
-                      <JobStatusBadge status={job.status} />
-                      {job.status === 'failed' && job.errorMessage && (
-                        <p className="text-xs text-destructive mt-1 max-w-[260px] truncate">
-                          {job.errorMessage}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {job.toAddrs.join(', ')}
+                      <RecipientsCell toAddrs={job.toAddrs} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                       {job.subject}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatTs(job.createdAt)}
+                    <TableCell>
+                      <JobStatusBadge status={job.status} />
+                    </TableCell>
+                    <TableCell>
+                      <ScheduleCell job={job} />
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -269,27 +309,11 @@ export function EmailJobsPage() {
                 <span className="font-medium text-foreground">To:</span>{' '}
                 {preview.toAddrs.join(', ')}
               </div>
-              <div className="rounded border border-border overflow-hidden">
-                <iframe
-                  srcDoc={`<!DOCTYPE html><html><head><style>
-                    ::-webkit-scrollbar { width: 8px; height: 8px; }
-                    ::-webkit-scrollbar-track { background: transparent; }
-                    ::-webkit-scrollbar-thumb {
-                      background: rgba(100,90,80,0.12); border-radius: 9999px;
-                      border: 1px solid transparent; background-clip: padding-box;
-                      min-height: 32px;
-                    }
-                    ::-webkit-scrollbar-thumb:hover { background: rgba(100,90,80,0.28); }
-                    ::-webkit-scrollbar-thumb:active { background: rgba(100,90,80,0.40); }
-                    ::-webkit-scrollbar-corner { background: transparent; }
-                    * { scrollbar-width: thin; scrollbar-color: rgba(100,90,80,0.12) transparent; }
-                    body { margin: 0; }
-                  </style></head><body>${preview.htmlBody}</body></html>`}
-                  title="Email preview"
-                  className="w-full min-h-[600px] border-0"
-                  sandbox=""
-                />
-              </div>
+              <BrowserContainer
+                viewport={previewViewport}
+                onViewportChange={setPreviewViewport}
+                html={preview.htmlBody}
+              />
             </div>
           )}
         </DialogContent>

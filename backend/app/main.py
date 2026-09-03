@@ -35,6 +35,7 @@ async def lifespan(app: FastAPI):
     cleanup_task: asyncio.Task | None = None
     email_job_task: asyncio.Task | None = None
     cutover_task: asyncio.Task | None = None
+    milestone_task: asyncio.Task | None = None
 
     if settings.disable_background_tasks:
         logger.info("lifespan startup: DISABLE_BACKGROUND_TASKS=true — skipping background monitors")
@@ -74,6 +75,11 @@ async def lifespan(app: FastAPI):
         from app.services import cutover_reminder_service
         cutover_task = asyncio.create_task(cutover_reminder_service.start_cutover_reminder_monitor())
 
+        # Start milestone reminder monitor (interval=5m)
+        logger.info("lifespan startup: starting milestone reminder monitor (interval=5m)")
+        from app.services import milestone_reminder_service
+        milestone_task = asyncio.create_task(milestone_reminder_service.start_milestone_reminder_monitor())
+
     yield
 
     # Shutdown: cancel monitors gracefully (only if they were started)
@@ -108,6 +114,14 @@ async def lifespan(app: FastAPI):
             await cutover_task
         except asyncio.CancelledError:
             logger.info("lifespan shutdown: cutover reminder monitor stopped")
+
+    if milestone_task is not None:
+        logger.info("lifespan shutdown: cancelling milestone reminder monitor")
+        milestone_task.cancel()
+        try:
+            await milestone_task
+        except asyncio.CancelledError:
+            logger.info("lifespan shutdown: milestone reminder monitor stopped")
 
 
 _OPENAPI_TAGS = [
