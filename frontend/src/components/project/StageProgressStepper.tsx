@@ -187,7 +187,7 @@ export function StageProgressStepper({ project, signoffEnabled = true, categoryM
   const SEGMENT_STATUS_OPACITY: Record<string, number> = { done: 1, 'in-progress': 0.55, todo: 0.2 }
   const milestoneSegments = milestoneRows.map((r) => {
     const d = milestoneRowDates(project, r)
-    const dur = milestoneDurationDays(d.start, d.end, r.type === 'data-migration-period')
+    const dur = milestoneDurationDays(d.start, d.end)
     const share = durationStats && durationStats.total > 0 ? (dur / durationStats.total) * 100 : 0
     const cm = r.type === 'category-milestone'
       ? categoryMilestones.find(c => categoryMilestoneRowId(project.id, c.id) === r.id)

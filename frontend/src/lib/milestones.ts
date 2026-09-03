@@ -16,9 +16,10 @@ export function daysBetweenDates(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / MS_PER_DAY)
 }
 
-/** Duration in days, matching the Gantt chart's formatDuration rule. */
-export function milestoneDurationDays(start: string, end: string, inclusive = false): number {
-  return Math.max(1, daysBetweenDates(parseDate(start), parseDate(end)) + (inclusive ? 1 : 0))
+/** Duration in days, matching the Gantt chart's formatDuration rule.
+ *  End dates are inclusive: 8 Jun → 15 Jun spans 8 calendar days. */
+export function milestoneDurationDays(start: string, end: string): number {
+  return Math.max(1, daysBetweenDates(parseDate(start), parseDate(end)) + 1)
 }
 
 // ─── Id helpers ───────────────────────────────────────────────────────────────
@@ -199,7 +200,7 @@ export function projectMilestoneDurationStats(
   let done = 0
   for (const r of msRows) {
     const d = milestoneRowDates(p, r, planning)
-    const dur = milestoneDurationDays(d.start, d.end, r.type === 'data-migration-period')
+    const dur = milestoneDurationDays(d.start, d.end)
     total += dur
     if (r.status === 'done') done += dur
   }

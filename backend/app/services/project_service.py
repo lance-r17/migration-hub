@@ -1,4 +1,3 @@
-import math
 import re
 import uuid
 from datetime import datetime, timezone
@@ -479,7 +478,9 @@ def get_migration_period_days(project: "Project") -> int | None:
     end = _parse_iso_datetime(end_s)
     if not start or not end:
         return None
-    return math.ceil((end - start).total_seconds() / 86400)
+    # End dates are inclusive (aligned with the wave Gantt chart): a period covers
+    # both its start and end day, so 8 Jun → 15 Jun is 8 days.
+    return max(1, round((end - start).total_seconds() / 86400) + 1)
 
 
 def _matches_migration_range(days: int | None, migration_range: str) -> bool:

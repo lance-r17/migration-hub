@@ -820,11 +820,13 @@ export function getMigrationDates(project: MigrationDatesSource) {
 export function getMigrationPeriodDays(project: MigrationDatesSource): number | null {
   const { start, end } = getMigrationDates(project)
   if (!start || !end) return null
-  const s = new Date(start)
-  const e = new Date(end)
+  // Parse as UTC dates (yyyy-mm-dd) to avoid timezone drift
+  const s = new Date(start.slice(0, 10) + 'T00:00:00Z')
+  const e = new Date(end.slice(0, 10) + 'T00:00:00Z')
   if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
-  const diffTime = e.getTime() - s.getTime()
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  // End dates are inclusive (aligned with the wave Gantt chart): a period covers
+  // both its start and end day, so 8 Jun → 15 Jun is 8 days.
+  return Math.max(1, Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1)
 }
 
 export function getMigrationEffortSummary(project: Pick<Project, 'migrationEffortEstimation'>): {

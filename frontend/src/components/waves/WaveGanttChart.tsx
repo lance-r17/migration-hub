@@ -427,8 +427,9 @@ function formatDate(iso: string): string {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
 }
-function formatDuration(start: string, end: string, inclusive = false): string {
-  const days = Math.max(1, daysBetween(parseDate(start), parseDate(end)) + (inclusive ? 1 : 0))
+function formatDuration(start: string, end: string): string {
+  // End dates are inclusive: 8 Jun → 15 Jun spans 8 calendar days
+  const days = Math.max(1, daysBetween(parseDate(start), parseDate(end)) + 1)
   return `${days}d`
 }
 function formatDDMM(iso: string): string {
@@ -593,9 +594,9 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   function barLeft(isoDate: string): number {
     return daysBetween(timelineStart, parseDate(isoDate)) * (colPx / daysPerCol)
   }
-  function barWidth(start: string, end: string, inclusive = false): number {
-    const extra = inclusive ? 1 : 0
-    return Math.max(1, daysBetween(parseDate(start), parseDate(end)) + extra) * (colPx / daysPerCol)
+  function barWidth(start: string, end: string): number {
+    // End dates are inclusive: a range covers both its start and end day columns
+    return Math.max(1, daysBetween(parseDate(start), parseDate(end)) + 1) * (colPx / daysPerCol)
   }
 
   // ─── Embargo helpers ─────────────────────────────────────────────────────────
@@ -1480,7 +1481,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     if (!dates?.start || !dates?.end) return null
     const s = parseDate(dates.start)
     const e = parseDate(dates.end)
-    return Math.max(1, daysBetween(s, e))
+    return Math.max(1, daysBetween(s, e) + 1)
   }
 
   function durationMatches(days: number | null): boolean {
@@ -2500,7 +2501,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
               const isImmutable = isDataMigrationPeriod || milestone.immutable
               const durationStats = projectMilestoneDurationStats(project)
               const milestonePct = durationStats && durationStats.total > 0
-                ? Math.round(milestoneDurationDays(start, end, isDataMigrationPeriod) / durationStats.total * 100)
+                ? Math.round(milestoneDurationDays(start, end) / durationStats.total * 100)
                 : 0
               // Fixed-id preset milestones have immutable names; legacy random-id milestones stay editable
               const isFixedPreset = milestone.type !== 'custom' && milestone.id === fixedMilestoneId(milestone.type, project.id)
@@ -2657,7 +2658,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                     </div>
                     {/* Duration col */}
                     <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
-                      {formatDuration(start, end, isDataMigrationPeriod)}
+                      {formatDuration(start, end)}
                     </div>
                     {/* Percentage col */}
                     <div className={cn(cellClass, 'justify-center text-[11px] text-[var(--g-text-subtle)] font-medium')}>
@@ -2742,7 +2743,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                         )}
                         style={{
                           left: barLeft(start),
-                          width: Math.max(8, barWidth(start, end, isDataMigrationPeriod)),
+                          width: Math.max(8, barWidth(start, end)),
                           height: 22,
                           background: categoryMilestone?.color
                             ? hexToRgba(categoryMilestone.color, 0.25)

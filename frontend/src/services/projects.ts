@@ -557,10 +557,11 @@ function mockMigrationPeriodDays(p: Project): number | null {
     end = wave?.cutoverDate
   }
   if (!start || !end) return null
-  const s = new Date(start)
-  const e = new Date(end)
+  const s = new Date(start.slice(0, 10) + 'T00:00:00Z')
+  const e = new Date(end.slice(0, 10) + 'T00:00:00Z')
   if (isNaN(s.getTime()) || isNaN(e.getTime())) return null
-  return Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))
+  // End dates are inclusive (aligned with the wave Gantt chart)
+  return Math.max(1, Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1)
 }
 
 /** Mock mirror of backend _project_has_role_user. Mock data stores governance roles on the
