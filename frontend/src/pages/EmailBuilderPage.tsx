@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmailBuilderLayout } from '@/components/email-builder/builder/EmailBuilderLayout'
 import { generateEmailHtml } from '@/components/email-builder/preview/TemplateRenderer'
-import { getEmailTemplate, saveEmailTemplate } from '@/services/emailService'
+import { getEmailTemplate, saveEmailTemplate, getPlatformConfig } from '@/services/emailService'
 import type { EmailTemplate } from '@/types/email'
 
 export function EmailBuilderPage() {
@@ -12,6 +12,13 @@ export function EmailBuilderPage() {
   const [template, setTemplate] = useState<EmailTemplate | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [bannerUrl, setBannerUrl] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    getPlatformConfig()
+      .then(cfg => setBannerUrl(cfg.emailBannerUrl))
+      .catch(() => {}) // fall back to the renderer default
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -25,7 +32,7 @@ export function EmailBuilderPage() {
     if (!template) return
     setSaving(true)
     try {
-      const snapshot = generateEmailHtml(template, {})
+      const snapshot = generateEmailHtml(template, {}, bannerUrl)
       const toSave: EmailTemplate = { ...template, htmlSnapshot: snapshot }
       const saved = await saveEmailTemplate(toSave)
       setTemplate(saved)
