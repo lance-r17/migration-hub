@@ -34,8 +34,9 @@ def _project_to_list_item(p: Project) -> dict[str, Any]:
     }
 
 
-def _project_to_detail(p: Project) -> dict[str, Any]:
-    stage_progress = project_service.compute_stage_progress(p)
+def _project_to_detail(p: Project, progress_ctx=None) -> dict[str, Any]:
+    weights, signoff_enabled = progress_ctx if progress_ctx else (None, True)
+    stage_progress = project_service.compute_stage_progress(p, weights, signoff_enabled)
     return {
         "id": p.id,
         "name": p.name,
@@ -151,7 +152,10 @@ async def search_projects(args: dict, ctx: McpContext) -> list[dict]:
     # Post-filter for computed fields
     if args.get("min_progress") is not None:
         min_prog = args["min_progress"]
-        projects = [p for p in projects if project_service.compute_stage_progress(p)["overall"] >= min_prog]
+        for p in projects:
+            await ctx.db.refresh(p, ["cloud_resources", "approvals", "project_users", "category_milestones"])
+        progress_ctx = await project_service.get_progress_context(ctx.db)
+        projects = [p for p in projects if project_service.compute_stage_progress(p, *progress_ctx)["overall"] >= min_prog]
 
     if args.get("has_unsynced_resources") is True:
         # Need to load resources; simpler to just check in Python for now
@@ -180,7 +184,7 @@ async def get_project_detail(args: dict, ctx: McpContext) -> dict[str, Any]:
     project = await project_service.get_by_id(ctx.db, args["project_id"])
     if not project:
         return {"error": f"Project {args['project_id']} not found"}
-    return _project_to_detail(project)
+    return _project_to_detail(project, await project_service.get_progress_context(ctx.db))
 
 
 @register_tool(

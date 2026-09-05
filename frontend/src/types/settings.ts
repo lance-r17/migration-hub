@@ -1,5 +1,10 @@
-export interface SignoffConfig {
-  enabled: boolean
+export interface ProgressWeights {
+  /** Preparation weight (%). Migration weight is derived as 100 - preparation. */
+  preparation: number
+  /** Sub-weights of preparation; must sum to `preparation`. */
+  setup: number
+  survey: number
+  signoff: number
 }
 
 export interface PlatformPeriod {
@@ -43,6 +48,8 @@ export interface MigrationSettings {
   bgiTierDepth?: number
   dataMigrationAdjustmentEnabled: boolean
   createJiraStoriesOnSignoff?: boolean
+  signoffEnabled: boolean
+  progressWeights: ProgressWeights
   dataMigration: DataMigrationSettings
   provisionCidrParents?: ProvisionCidrParents
   /** Allowed prefix lengths for project zone CIDRs (e.g. [25, 26, 27]). Admin-overridable. */

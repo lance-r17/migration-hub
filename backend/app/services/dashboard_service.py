@@ -24,9 +24,10 @@ async def compute_stats(session: AsyncSession) -> OverallStatsOut:
     # Compute average progress from stage data (not a stored column)
     # Use lightweight loader that skips wave / project_users / risks
     projects = await project_service.get_all_for_stats(session)
+    weights, signoff_enabled = await project_service.get_progress_context(session)
     if projects:
         avg_progress = sum(
-            project_service.compute_stage_progress(p)["overall"] for p in projects
+            project_service.compute_stage_progress(p, weights, signoff_enabled)["overall"] for p in projects
         ) / len(projects)
     else:
         avg_progress = 0.0

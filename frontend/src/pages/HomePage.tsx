@@ -202,10 +202,14 @@ export function HomePage() {
   const isBgiCloudLead = user?.role.includes('bgi_cloud_lead') ?? false
   const isLead = isPlatformLead || isBgiCloudLead
 
-  const { stats: globalStats, activity: allActivity, loading: dashLoading } = useDashboard({ enabled: isPlatformLead })
+  const { activity: allActivity, loading: dashLoading } = useDashboard({ enabled: isPlatformLead, withStats: false })
   const { projects, loading: projectsLoading } = useProjects({
     home: true,
-    fields: ['basic', 'progress', 'planning', 'risks', 'team', 'approvals', 'engagement'],
+    // approvals/engagement only feed the lead-only dashboard cards (activity
+    // chart, status chart) — non-leads never render them, so don't pay for them.
+    fields: isLead
+      ? ['basic', 'progress', 'team', 'approvals', 'engagement']
+      : ['basic', 'progress', 'team'],
   })
   const { waves, loading: wavesLoading } = useWaves({ enabled: isPlatformLead })
   const { settings: migrationSettings } = useMigrationSettings()
@@ -291,24 +295,23 @@ export function HomePage() {
     [isPlatformLead, allActivity, projectIds],
   )
 
-  // For bgi_cloud_lead / non-platform-leads: compute stats scoped to their visible projects
-  const scopedStats = useMemo((): OverallStats | null => {
-    if (isPlatformLead || projects.length === 0) return null
+  // Overall stats are derived client-side from the already-fetched project list
+  // for all roles — avoids the /dashboard/stats round-trip, which recomputes the
+  // same per-project progress server-side. Same status sets as the backend.
+  const displayStats = useMemo((): OverallStats => {
     const completed = projects.filter(p => p.status === 'completed').length
     const inProgress = projects.filter(p => ['in-progress', 'migrating', 'signed-off'].includes(p.status)).length
-    const progress = Math.round(
-      projects.reduce((sum, p) => sum + p.progress, 0) / projects.length,
-    )
+    const progress = projects.length
+      ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
+      : 0
     return {
       progress,
       totalAssets: projects.length,
-      targetCloud: globalStats?.targetCloud ?? 'Azure',
+      targetCloud: 'Azure',
       completed,
       inProgress,
     }
-  }, [isPlatformLead, projects, globalStats?.targetCloud])
-
-  const displayStats = isPlatformLead ? globalStats : scopedStats
+  }, [projects])
 
   const sortedProjects = [...projects].sort((a, b) => {
     if (sortKey === 'progress') return b.progress - a.progress
@@ -492,7 +495,7 @@ export function HomePage() {
 
           {isLead && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {loading || !displayStats ? (
+              {loading ? (
                 <>
                   <Skeleton className="h-32 rounded-xl" />
                   <Skeleton className="h-40 rounded-xl" />

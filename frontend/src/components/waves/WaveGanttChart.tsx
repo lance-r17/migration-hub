@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, Database, HardDrive, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, CircleHelp, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, MessageSquare, MessageSquarePlus, Upload, Download, FolderOpen } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, Database, HardDrive, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, CircleHelp, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, MessageSquare, MessageSquarePlus, Upload, Download, FolderOpen, ExternalLink } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -112,8 +114,10 @@ const ZOOM_DAYS_PER_COL: Record<ZoomLevel, number> = { days: 1,  weeks: 7,  mont
 const MILESTONE_PRESETS: { type: MilestoneType; label: string; icon: LucideIcon }[] = [
   { type: 'dev-resource-provision', label: 'DEV Resource Provision Stage', icon: Cpu         },
   { type: 'dev-data-migration',     label: 'Data Migration (Dev)',      icon: Database    },
+  { type: 'dev-big-data-migration', label: 'Data Migration - Big data (Dev)', icon: Database },
   { type: 'dev-cutover',            label: 'DEV Testing Cutover',       icon: ArrowRight  },
   { type: 'prd-resource-provision', label: 'PRD Resource Provision Stage', icon: HardDrive   },
+  { type: 'prd-big-data-migration', label: 'Data Migration - Big data (Prod)', icon: Database },
   { type: 'prd-cutover',            label: 'PRD Cutover',                 icon: Sparkles    },
   { type: 'custom',                 label: 'Custom Milestone',            icon: Pencil      },
 ]
@@ -149,9 +153,11 @@ const IMPORT_SAMPLE_JSON = {
             { text: 'DTS instances provisioned, full load running.', author: 'Carol White', createdAt: '2026-04-22T09:30:00.000Z' },
           ],
         },
+        { type: 'dev-big-data-migration', start: '2026-04-20', end: '2026-05-08', status: 'in-progress', deps: ['dev-resource-provision-PRJ-2024-ALPHA'] },
         { type: 'dev-cutover', start: '2026-05-11', end: '2026-05-13', status: 'todo', deps: ['dev-data-migration-PRJ-2024-ALPHA'] },
         { type: 'prd-resource-provision', start: '2026-05-18', end: '2026-05-29', status: 'todo', deps: ['dev-cutover-PRJ-2024-ALPHA'] },
-        { type: 'prd-cutover', start: '2026-06-15', end: '2026-06-17', status: 'todo', deps: ['prd-resource-provision-PRJ-2024-ALPHA'] },
+        { type: 'prd-big-data-migration', start: '2026-06-01', end: '2026-06-12', status: 'todo', deps: ['prd-resource-provision-PRJ-2024-ALPHA'] },
+        { type: 'prd-cutover', start: '2026-06-15', end: '2026-06-17', status: 'todo', deps: ['prd-resource-provision-PRJ-2024-ALPHA', 'prd-big-data-migration-PRJ-2024-ALPHA'] },
         {
           type: 'custom', id: 'alpha-uat-signoff', name: 'UAT sign-off',
           start: '2026-06-01', end: '2026-06-12', status: 'todo',
@@ -492,6 +498,7 @@ interface Props {
 }
 
 export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRoot = null, bgiScopeIds = null, bgiMaxDepth = null, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly, initialSearch = '' }: Props) {
+  const navigate = useNavigate()
   const [showCompleted, setShowCompleted] = useState(true)
   const scrollRef    = useRef<HTMLDivElement>(null)
   const milestoneGhostRef     = useRef<HTMLDivElement>(null)
@@ -1082,6 +1089,34 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     const a = document.createElement('a')
     a.href = url
     a.download = 'milestone-import.sample.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  /** Export a project's milestones as a JSON file compatible with the import format. */
+  function downloadProjectMilestones(p: Project) {
+    const importableTypes = new Set<MilestoneType>(MILESTONE_PRESETS.map(pr => pr.type))
+    const milestones = (getEffectivePlanning(p).milestones ?? [])
+      .filter(m => importableTypes.has(m.type))
+      .map(m => ({
+        type: m.type,
+        ...(m.type === 'custom' ? { id: m.id, name: m.name } : {}),
+        start: m.start,
+        end: m.end,
+        status: m.status,
+        deps: m.deps,
+        ...(m.comments?.length ? { comments: m.comments } : {}),
+      }))
+    if (milestones.length === 0) {
+      toast.info(`No milestones to export for ${p.id}`)
+      return
+    }
+    const payload = { projects: [{ projectId: p.id, milestones }] }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${p.id}-milestones.json`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -2610,7 +2645,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                                   <p className="text-xs font-semibold">Comments ({milestone.comments!.length})</p>
                                 </div>
                                 <div className="max-h-60 overflow-y-auto p-3 space-y-3">
-                                  {milestone.comments!.map(c => (
+                                  {[...milestone.comments!].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(c => (
                                     <div key={c.id} className="text-xs">
                                       <p className="font-medium text-foreground">
                                         {c.author}
@@ -2885,7 +2920,20 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                         </span>
                       </TooltipTrigger>
                       <TooltipContent side="top">
-                        <p className="text-xs font-medium">{p.name}</p>
+                        <p className="text-xs font-medium">{p.applicationOverview?.applicationName ?? p.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className="shrink-0 inline-flex items-center justify-center cursor-pointer text-[var(--g-text-subtle)] hover:text-[var(--g-text)]"
+                          onClick={e => { e.stopPropagation(); navigate(`/projects/${p.id}`) }}
+                        >
+                          <ExternalLink size={13} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p className="text-xs font-medium">View project details</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -2989,6 +3037,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                             </DropdownMenuPortal>
                           </DropdownMenuSub>
                         )}
+                        <DropdownMenuItem onClick={() => downloadProjectMilestones(p)}>
+                          <Download className="w-[13px] h-[13px] text-[var(--g-text-muted)]" />
+                          Download milestone data
+                        </DropdownMenuItem>
                         {!!p.waveId && onAssign && (
                           <>
                             <DropdownMenuSeparator />

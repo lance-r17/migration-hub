@@ -1,6 +1,6 @@
 import { store } from '@/data/store'
 import { USE_MOCK, delay, apiClient } from './client'
-import type { DataMigrationPeriod, DataMigrationSettings, MigrationSettings, ProvisionCidrParents } from '@/types/settings'
+import type { DataMigrationPeriod, DataMigrationSettings, MigrationSettings, ProgressWeights, ProvisionCidrParents } from '@/types/settings'
 
 const ENDPOINT = '/api/v1/settings/migration'
 
@@ -22,6 +22,15 @@ interface DataMigrationSettingsApi {
   support_email: string | null
 }
 
+interface ProgressWeightsApi {
+  preparation: number
+  setup: number
+  survey: number
+  signoff: number
+}
+
+const DEFAULT_PROGRESS_WEIGHTS: ProgressWeights = { preparation: 30, setup: 5, survey: 15, signoff: 10 }
+
 interface MigrationSettingsApi {
   platform_period: PeriodApi | null
   new_cloud_setup_period: PeriodApi | null
@@ -29,6 +38,8 @@ interface MigrationSettingsApi {
   bgi_tier_depth: number | null
   data_migration_adjustment_enabled: boolean
   create_jira_stories_on_signoff: boolean
+  signoff_enabled?: boolean | null
+  progress_weights?: ProgressWeightsApi | null
   data_migration: DataMigrationSettingsApi
   provision_cidr_parents?: ProvisionCidrParentsApi | null
   provision_allowed_prefixes?: number[] | null
@@ -127,6 +138,8 @@ function fromApi(raw: MigrationSettingsApi): MigrationSettings {
     bgiTierDepth: raw.bgi_tier_depth ?? undefined,
     dataMigrationAdjustmentEnabled: raw.data_migration_adjustment_enabled ?? true,
     createJiraStoriesOnSignoff: raw.create_jira_stories_on_signoff ?? true,
+    signoffEnabled: raw.signoff_enabled ?? true,
+    progressWeights: raw.progress_weights ?? { ...DEFAULT_PROGRESS_WEIGHTS },
     dataMigration: raw.data_migration
       ? dataMigrationFromApi(raw.data_migration)
       : {
@@ -151,6 +164,8 @@ function toApi(config: MigrationSettings): MigrationSettingsApi {
     bgi_tier_depth: config.bgiTierDepth ?? null,
     data_migration_adjustment_enabled: config.dataMigrationAdjustmentEnabled ?? true,
     create_jira_stories_on_signoff: config.createJiraStoriesOnSignoff ?? true,
+    signoff_enabled: config.signoffEnabled ?? true,
+    progress_weights: config.progressWeights ?? { ...DEFAULT_PROGRESS_WEIGHTS },
     data_migration: config.dataMigration ? dataMigrationToApi(config.dataMigration) : dataMigrationToApi({
       cycleDurationDays: 7,
       minCycle: 1,

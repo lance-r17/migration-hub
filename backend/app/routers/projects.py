@@ -155,9 +155,15 @@ def _derive_status(p, stage_data: dict) -> str:
     return project_service.derive_status_from_stage_progress(stage_data)
 
 
-def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
+def _unpack_ctx(ctx) -> tuple:
+    """(weights, signoff_enabled) from a progress context tuple, or defaults."""
+    return ctx if ctx is not None else (None, True)
+
+
+def _project_list_item(p, fields: set[str] | None = None, ctx=None) -> ProjectListItem:
     if fields is None:
-        stage_data = project_service.compute_stage_progress(p)
+        weights, signoff_enabled = _unpack_ctx(ctx)
+        stage_data = project_service.compute_stage_progress(p, weights, signoff_enabled)
         return ProjectListItem(
             id=p.id,
             name=p.name,
@@ -231,7 +237,8 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
         )
 
     if "progress" in fields:
-        stage_data = project_service.compute_stage_progress(p)
+        weights, signoff_enabled = _unpack_ctx(ctx)
+        stage_data = project_service.compute_stage_progress(p, weights, signoff_enabled)
         data["status"] = _derive_status(p, stage_data)
         data["progress"] = stage_data["overall"]
         data["stage_progress"] = {k: v for k, v in stage_data.items() if k != "overall"}
@@ -299,9 +306,10 @@ def _project_list_item(p, fields: set[str] | None = None) -> ProjectListItem:
     return ProjectListItem(**data)
 
 
-def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
+def _project_home_item(p, fields: set[str] | None = None, ctx=None) -> ProjectHomeItem:
     if fields is None:
-        stage_data = project_service.compute_stage_progress(p)
+        weights, signoff_enabled = _unpack_ctx(ctx)
+        stage_data = project_service.compute_stage_progress(p, weights, signoff_enabled)
         return ProjectHomeItem(
             id=p.id,
             name=p.name,
@@ -344,28 +352,26 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
                 "name": p.name,
                 "status": p.status,
                 "blocked_reason": p.blocked_reason,
-                "description": p.description,
                 "migration_wave": p.migration_wave,
                 "wave_id": p.wave_id,
                 "jira_story_key": p.jira_story_key,
                 "jira_job_status": p.jira_job_status,
-                "planning": p.planning,
+                # HomePage only reads the two date pairs; trim the heavy JSONB blobs.
+                "planning": _trim_keys(p.planning, _TABLE_PLANNING_KEYS),
                 "survey_submitted_at": p.survey_submitted_at,
                 "is_survey_needed": p.is_survey_needed,
-                "justification_without_survey": p.justification_without_survey,
-                "data_migration_schedule": p.data_migration_schedule,
-                "data_migration_plan": p.data_migration_plan,
-                "environment_provision": p.environment_provision,
                 "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
-                "data_migration_survey_submitted_by": p.data_migration_survey_submitted_by,
-                "migration_constraints": p.migration_constraints,
-                "jira_base_url": settings.jira_base_url,
-                "updated_at": p.updated_at.strftime("%d %b %Y").upper() if p.updated_at else None,
+                "migration_constraints": _trim_keys(p.migration_constraints, _TABLE_CONSTRAINT_KEYS),
+                # ISO so HomePage's string sort is chronological; count avoids
+                # serializing full resource rows for the rich card asset count.
+                "resource_count": len(p.cloud_resources or []),
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
             }
         )
 
     if "progress" in fields:
-        stage_data = project_service.compute_stage_progress(p)
+        weights, signoff_enabled = _unpack_ctx(ctx)
+        stage_data = project_service.compute_stage_progress(p, weights, signoff_enabled)
         data["status"] = _derive_status(p, stage_data)
         data["progress"] = stage_data["overall"]
         data["stage_progress"] = {k: v for k, v in stage_data.items() if k != "overall"}
@@ -401,8 +407,9 @@ def _project_home_item(p, fields: set[str] | None = None) -> ProjectHomeItem:
     return ProjectHomeItem(**data)
 
 
-def _project_detail(p) -> ProjectDetail:
-    stage_data = project_service.compute_stage_progress(p)
+def _project_detail(p, ctx=None) -> ProjectDetail:
+    weights, signoff_enabled = _unpack_ctx(ctx)
+    stage_data = project_service.compute_stage_progress(p, weights, signoff_enabled)
     return ProjectDetail(
         id=p.id,
         name=p.name,
@@ -460,10 +467,11 @@ async def list_projects(
     if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
         bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
     projects = await project_service.get_all(db, user_id=userId, fields=field_set, bgi_ids=bgi_ids)
-    return [_project_list_item(p, fields=field_set) for p in projects]
+    ctx = await project_service.get_progress_context(db)
+    return [_project_list_item(p, fields=field_set, ctx=ctx) for p in projects]
 
 
-@router.get("/home", response_model=list[ProjectHomeItem])
+@router.get("/home", response_model=list[ProjectHomeItem], response_model_exclude_none=True)
 async def list_projects_home(
     userId: str | None = None,
     fields: list[str] | None = Query(None),
@@ -475,7 +483,8 @@ async def list_projects_home(
     if _user_has_bgi_cloud_lead_role(current_user.role) and current_user.bgi_ids:
         bgi_ids = await bgi_service.get_descendant_ids_for_multiple(db, current_user.bgi_ids)
     projects = await project_service.get_all_home(db, user_id=userId, fields=field_set, bgi_ids=bgi_ids)
-    return [_project_home_item(p, fields=field_set) for p in projects]
+    ctx = await project_service.get_progress_context(db)
+    return [_project_home_item(p, fields=field_set, ctx=ctx) for p in projects]
 
 
 _TABLE_OVERVIEW_KEYS = (
@@ -636,7 +645,7 @@ async def create_project(
 ):
     actor = _user_to_actor(current_user)
     project = await project_service.create(db, body, actor)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.get("/survey-drafts", response_model=list[str])
@@ -658,7 +667,7 @@ async def get_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     await _require_bgi_access(db, current_user, project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.get("/{project_id}/users", response_model=list[UserOut])
@@ -704,7 +713,7 @@ async def update_governance_roles(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.put("/{project_id}/project-user-roles", response_model=ProjectDetail)
@@ -734,7 +743,7 @@ async def update_project_user_roles(
     assignments = [a.model_dump() for a in body]
     await project_service.update_project_user_roles(db, project, assignments, actor)
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 async def _validate_migration_constraints(session: AsyncSession, value: dict[str, Any]) -> None:
@@ -839,13 +848,14 @@ async def update_survey_need(
 
     await db.flush()
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
-def _resolve_status_if_unblocking(project, new_status: str) -> str:
+def _resolve_status_if_unblocking(project, new_status: str, ctx=None) -> str:
     """If unblocking, derive the correct status from stage progress."""
     if project.status == "blocked" and new_status != "blocked":
-        stage_data = project_service.compute_stage_progress(project)
+        weights, signoff_enabled = _unpack_ctx(ctx)
+        stage_data = project_service.compute_stage_progress(project, weights, signoff_enabled)
         return project_service.derive_status_from_stage_progress(stage_data)
     return new_status
 
@@ -868,7 +878,7 @@ async def update_project(
         new_status = patch_data["status"]
         if old_status == "blocked" or new_status == "blocked":
             _require_platform_lead_for_block(current_user)
-            patch_data["status"] = _resolve_status_if_unblocking(project, new_status)
+            patch_data["status"] = _resolve_status_if_unblocking(project, new_status, await project_service.get_progress_context(db))
             if patch_data["status"] != "blocked":
                 unblocking = True
         body = ProjectPatch(**patch_data)
@@ -880,7 +890,7 @@ async def update_project(
         project = await project_service.update(db, project, body, actor)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.patch("/{project_id}/sections/{section_key}", response_model=ProjectDetail)
@@ -906,7 +916,7 @@ async def update_section(
         new_status = value
         if old_status == "blocked" or new_status == "blocked":
             _require_platform_lead_for_block(current_user)
-            value = _resolve_status_if_unblocking(project, new_status)
+            value = _resolve_status_if_unblocking(project, new_status, await project_service.get_progress_context(db))
 
     if section_key == "migrationConstraints":
         await _validate_migration_constraints(db, value)
@@ -963,7 +973,7 @@ async def update_section(
         project = await project_service.update_section(db, project, section_key, value, actor)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.get("/{project_id}/audit-log", response_model=AuditLogResponse)
@@ -1053,7 +1063,7 @@ async def restore_audit_log_entry(
     )
     await db.flush()
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.post("/{project_id}/resources/specs", status_code=204)
@@ -1083,7 +1093,7 @@ async def upsert_project_resources(
     actor = _user_to_actor(current_user)
     await project_service.upsert_resources(db, project, body.resources, actor)
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.delete("/{project_id}/resources", response_model=ProjectDetail)
@@ -1099,7 +1109,7 @@ async def delete_project_resources(
     actor = _user_to_actor(current_user)
     await project_service.delete_resources_by_ids(db, project, body.resource_ids, actor)
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.post("/{project_id}/resources/{resource_id}/sync-complete", response_model=ProjectDetail, status_code=202)
@@ -1163,7 +1173,7 @@ async def mark_resource_sync_complete(
     await project_service._derive_and_store_status(db, project)
     await db.flush()
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.post("/{project_id}/survey-submitted", response_model=ProjectDetail)
@@ -1186,7 +1196,7 @@ async def mark_survey_submitted(
     await project_service._derive_and_store_status(db, project)
     await db.flush()
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.post("/{project_id}/data-migration-survey-submitted", response_model=ProjectDetail)
@@ -1209,7 +1219,7 @@ async def mark_data_migration_survey_submitted(
     )
     await db.flush()
     await db.refresh(project)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.post("/{project_id}/data-migration-complete", response_model=ProjectDetail)
@@ -1233,7 +1243,7 @@ async def mark_data_migration_complete(
 
     actor = _user_to_actor(current_user)
     updated = await project_service.mark_data_migration_complete(db, project, body.remark, actor)
-    return _project_detail(updated)
+    return _project_detail(updated, await project_service.get_progress_context(db))
 
 
 @router.post("/{project_id}/data-migration-reopen", response_model=ProjectDetail)
@@ -1263,7 +1273,7 @@ async def mark_data_migration_reopen(
 
     actor = _user_to_actor(current_user)
     updated = await project_service.mark_data_migration_reopen(db, project, body.reason.strip(), actor)
-    return _project_detail(updated)
+    return _project_detail(updated, await project_service.get_progress_context(db))
 
 
 @router.get("/{project_id}/survey-draft", response_model=SurveyDraftOut | None)
@@ -1318,7 +1328,7 @@ async def reset_project(
 
     actor = _user_to_actor(current_user)
     project = await project_service.reset_project(db, project, actor)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 @router.patch("/{project_id}/planning", response_model=ProjectDetail)
@@ -1340,7 +1350,7 @@ async def update_planning(
         start = body.planning.get("startDate")
         end = body.planning.get("endDate")
         background_tasks.add_task(jira_client.update_issue_dates, story_key, start, end)
-    return _project_detail(project)
+    return _project_detail(project, await project_service.get_progress_context(db))
 
 
 # ─── Project Attachments ──────────────────────────────────────────────────────

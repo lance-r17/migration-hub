@@ -22,7 +22,7 @@ import type { Wave, JiraJobRequest } from '@/types/wave'
 import type { SurveyConfig, ResourceSurveyConfig } from '@/types/survey'
 import type { BillingBreakdownRecord, BillingRecord, BillingThresholdConfig } from '@/types/finance'
 import type { EmbargoRecord } from '@/types/embargo'
-import type { SignoffConfig, MigrationSettings, CustomNavCardConfig } from '@/types/settings'
+import type { MigrationSettings, CustomNavCardConfig } from '@/types/settings'
 import { DEFAULT_PROVISION_CIDR_PARENTS, DEFAULT_PROVISION_ALLOWED_PREFIXES } from '@/lib/provision-cidr'
 
 // Mutable in-memory session store — deep copy of mock data.
@@ -43,7 +43,6 @@ let _resourceSurveyConfig: ResourceSurveyConfig = structuredClone(mockResourceSu
 let _embargos: EmbargoRecord[] = structuredClone(mockEmbargos)
 let _categoryMilestones: CategoryMilestone[] = structuredClone(mockCategoryMilestones)
 let _billingThresholdConfig: BillingThresholdConfig = { healthyAtRiskThreshold: 100, atRiskOverThreshold: 120, currency: 'CNY', baselineMonth: undefined, ytdStartMonth: undefined }
-let _signoffConfig: SignoffConfig = { enabled: true }
 let _migrationSettings: MigrationSettings = {
   platformPeriod: undefined,
   cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' },
@@ -51,6 +50,8 @@ let _migrationSettings: MigrationSettings = {
   bgiTierDepth: undefined,
   dataMigrationAdjustmentEnabled: true,
   createJiraStoriesOnSignoff: true,
+  signoffEnabled: true,
+  progressWeights: { preparation: 30, setup: 5, survey: 15, signoff: 10 },
   dataMigration: {
     cycleDurationDays: 7,
     minCycle: 1,
@@ -324,15 +325,6 @@ export const store = {
   setBillingThresholdConfig(config: BillingThresholdConfig): BillingThresholdConfig {
     _billingThresholdConfig = { ...config }
     return _billingThresholdConfig
-  },
-
-  getSignoffConfig(): SignoffConfig {
-    return _signoffConfig
-  },
-
-  setSignoffConfig(config: SignoffConfig): SignoffConfig {
-    _signoffConfig = { ...config }
-    return _signoffConfig
   },
 
   // ─── Migration Settings ────────────────────────────────────────────────────

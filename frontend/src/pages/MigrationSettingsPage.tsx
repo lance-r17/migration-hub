@@ -30,6 +30,8 @@ const DEFAULTS: MigrationSettings = {
   cloudSetupPeriod: { startDate: '2026-04-01', endDate: '2026-12-12' },
   dataMigrationAdjustmentEnabled: true,
   createJiraStoriesOnSignoff: true,
+  signoffEnabled: true,
+  progressWeights: { preparation: 30, setup: 5, survey: 15, signoff: 10 },
   dataMigration: {
     cycleDurationDays: 7,
     minCycle: 1,
@@ -176,6 +178,19 @@ export function MigrationSettingsPage() {
       },
     }))
   }
+
+  const updateProgressWeight = (key: keyof MigrationSettings['progressWeights'], value: string) => {
+    const parsed = parseInt(value, 10)
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return
+    setConfig(prev => ({
+      ...prev,
+      progressWeights: { ...prev.progressWeights, [key]: parsed },
+    }))
+  }
+
+  const weights = config.progressWeights ?? DEFAULTS.progressWeights
+  const subWeightSum = weights.setup + weights.survey + weights.signoff
+  const weightsValid = subWeightSum === weights.preparation
 
   return (
     <div className="space-y-8">
@@ -330,17 +345,107 @@ export function MigrationSettingsPage() {
                 </Button>
               </div>
             </div>
+            {/* Progress Weights */}
+            <div className="space-y-1.5">
+              <Label>Migration Progress Weights (%)</Label>
+              <p className="text-xs text-muted-foreground">
+                The preparation stage is split between setup, survey, and sign-off. The migration weight is the remainder and is multiplied by each project's completed milestone percentage.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="weight-preparation" className="text-xs">Preparation</Label>
+                  <Input
+                    id="weight-preparation"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={weights.preparation}
+                    onChange={(e) => updateProgressWeight('preparation', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Migration (derived)</Label>
+                  <Input type="number" value={100 - weights.preparation} disabled />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="weight-setup" className="text-xs">Setup</Label>
+                  <Input
+                    id="weight-setup"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={weights.setup}
+                    onChange={(e) => updateProgressWeight('setup', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="weight-survey" className="text-xs">Survey</Label>
+                  <Input
+                    id="weight-survey"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={weights.survey}
+                    onChange={(e) => updateProgressWeight('survey', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="weight-signoff" className="text-xs">Sign-off</Label>
+                  <Input
+                    id="weight-signoff"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={weights.signoff}
+                    onChange={(e) => updateProgressWeight('signoff', e.target.value)}
+                  />
+                </div>
+              </div>
+              {!weightsValid && (
+                <p className="text-xs text-destructive">
+                  Setup + Survey + Sign-off ({subWeightSum}%) must equal the Preparation weight ({weights.preparation}%).
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Survey weight folds into Setup for projects that don't require a survey. Sign-off weight folds into Setup when sign-off is disabled.
+              </p>
+            </div>
+
+            {/* Sign-off Control */}
+            <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/30 p-3">
+              <div className="space-y-1">
+                <Label htmlFor="signoff-enabled" className="text-sm font-medium">Enable sign-off workflow</Label>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, eligible users see the Sign-off button on project detail pages.
+                </p>
+              </div>
+              <Switch
+                id="signoff-enabled"
+                checked={config.signoffEnabled ?? true}
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    signoffEnabled: checked,
+                    // Sign-off gated features can't run without the workflow
+                    createJiraStoriesOnSignoff: checked ? prev.createJiraStoriesOnSignoff : false,
+                  }))
+                }
+              />
+            </div>
             {/* Jira Creation Toggle */}
             <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/30 p-3">
               <div className="space-y-1">
                 <Label htmlFor="create-jira-stories" className="text-sm font-medium">Create Jira stories/sub-tasks on sign-off</Label>
                 <p className="text-xs text-muted-foreground">
-                  When enabled, sign-off by the Platform Migration Lead will auto-create Jira stories and sub-tasks for the project.
+                  When enabled, sign-off by the Platform Migration Lead will auto-create Jira stories and sub-tasks for the project. Requires the sign-off workflow to be enabled.
                 </p>
               </div>
               <Switch
                 id="create-jira-stories"
-                checked={config.createJiraStoriesOnSignoff ?? true}
+                disabled={!(config.signoffEnabled ?? true)}
+                checked={(config.signoffEnabled ?? true) && (config.createJiraStoriesOnSignoff ?? true)}
                 onCheckedChange={(checked) =>
                   setConfig((prev) => ({ ...prev, createJiraStoriesOnSignoff: checked }))
                 }
@@ -559,7 +664,7 @@ export function MigrationSettingsPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || !weightsValid}>
               {saving ? 'Saving…' : 'Save settings'}
             </Button>
             <Button

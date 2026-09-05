@@ -14,13 +14,14 @@ from app.models.project import Project
 from app.models.risk import Risk
 from app.models.survey_draft import SurveyDraft
 from app.models.user import User
-from app.schemas.migration_settings import DataMigrationCycleBlock
+from app.schemas.migration_settings import DataMigrationCycleBlock, ProgressWeights
 from app.schemas.project import ProjectCreate, ProjectPatch
-from app.services import audit_service, attachment_service
+from app.services import audit_service, attachment_service, milestone_stats
 
 # Field group → ORM relationships required
 _FIELD_REL_REQUIREMENTS: dict[str, set[str]] = {
-    "progress": {"cloud_resources", "project_users", "approvals"},
+    "basic": {"cloud_resources"},  # home payload emits resource_count (rows not serialized)
+    "progress": {"cloud_resources", "project_users", "approvals", "category_milestones"},
     "team": {"project_users"},
     "itso": {"project_users"},
     "itso_delegate": {"project_users"},
@@ -114,11 +115,34 @@ def approval_sequence_for_project(approvals: list[Any] | None = None) -> list[st
     return ["technical_lead", gbi_role, "platform_migration_lead"]
 
 
-_STAGE_WEIGHTS = {"setup": 5, "survey": 15, "signoff": 10, "migration": 70}
+_DEFAULT_PROGRESS_WEIGHTS = ProgressWeights()
 
 
-def compute_stage_progress(project: "Project") -> dict[str, int]:
-    """Compute per-stage progress (0-100) and weighted overall progress."""
+async def get_progress_context(session: AsyncSession) -> tuple[ProgressWeights, bool]:
+    """Load the configured progress weights and sign-off enablement (one
+    ConfigStore read) for use with compute_stage_progress."""
+    from app.services import migration_settings_service
+
+    settings = await migration_settings_service.get_migration_settings(session)
+    return settings.progress_weights, settings.signoff_enabled
+
+
+def compute_stage_progress(
+    project: "Project",
+    weights: ProgressWeights | None = None,
+    signoff_enabled: bool = True,
+) -> dict[str, int]:
+    """Compute per-stage progress (0-100) and weighted overall progress.
+
+    Weights come from the platform migration settings: preparation is split into
+    setup + survey + signoff; the migration weight is 100 - preparation and is
+    multiplied by the completed milestone-duration percentage (same metric as the
+    wave Gantt "%" column). Redistribution rules:
+      - survey not required -> survey weight folds into setup
+      - sign-off disabled   -> signoff weight folds into setup
+    """
+    w = weights or _DEFAULT_PROGRESS_WEIGHTS
+
     has_resources = any(r.need_migration for r in (project.cloud_resources or []))
     governance_roles = {"technical_lead", "business_owner", "dba_data_owner", "gbi_champion", "gbi_champion_delegate"}
     has_team = any(
@@ -128,22 +152,33 @@ def compute_stage_progress(project: "Project") -> dict[str, int]:
     )
     setup = 100 if (has_resources and has_team) else 0
 
-    survey = 100 if project.survey_submitted_at is not None else 0
+    survey_needed = project.is_survey_needed
+    # Survey folds into setup when not required: treat as complete.
+    survey = 100 if (project.survey_submitted_at is not None or not survey_needed) else 0
 
-    seq = approval_sequence_for_project(project.approvals)
-    approved = sum(
-        1 for a in (project.approvals or []) if a.status == "approved" and a.role in seq
-    )
-    signoff = round(approved / len(seq) * 100) if seq else 0
+    if signoff_enabled:
+        seq = approval_sequence_for_project(project.approvals)
+        approved = sum(
+            1 for a in (project.approvals or []) if a.status == "approved" and a.role in seq
+        )
+        signoff = round(approved / len(seq) * 100) if seq else 0
+    else:
+        # Sign-off folds into setup when disabled: treat as complete.
+        signoff = 100
 
-    in_scope = [r for r in (project.cloud_resources or []) if r.need_migration]
-    migration = round(sum(1 for r in in_scope if r.migration_completed) / len(in_scope) * 100) if in_scope else 0
+    stats = milestone_stats.project_milestone_duration_stats(project)
+    migration = round(stats[1] / stats[0] * 100) if stats and stats[0] > 0 else 0
+
+    w_migration = 100 - w.preparation
+    w_survey = w.survey if survey_needed else 0
+    w_signoff = w.signoff if signoff_enabled else 0
+    w_setup = w.setup + (w.survey if not survey_needed else 0) + (w.signoff if not signoff_enabled else 0)
 
     overall = round(
-        setup * _STAGE_WEIGHTS["setup"] / 100
-        + survey * _STAGE_WEIGHTS["survey"] / 100
-        + signoff * _STAGE_WEIGHTS["signoff"] / 100
-        + migration * _STAGE_WEIGHTS["migration"] / 100
+        setup * w_setup / 100
+        + survey * w_survey / 100
+        + signoff * w_signoff / 100
+        + migration * w_migration / 100
     )
     return {"setup": setup, "survey": survey, "signoff": signoff, "migration": migration, "overall": overall}
 
@@ -178,7 +213,8 @@ def derive_status_from_stage_progress(stage_data: dict[str, int]) -> str:
 
 
 async def _derive_and_store_status(session: AsyncSession, project: "Project") -> None:
-    stage_data = compute_stage_progress(project)
+    weights, signoff_enabled = await get_progress_context(session)
+    stage_data = compute_stage_progress(project, weights, signoff_enabled)
     if project.status != "blocked":
         project.status = derive_status_from_stage_progress(stage_data)
 
@@ -580,11 +616,12 @@ async def get_table_page(
     result = await session.execute(q.order_by(Project.name))
     candidates = list(result.scalars().all())
 
+    weights, signoff_enabled = await get_progress_context(session)
     draft_ids = set(await get_survey_draft_project_ids(session))
 
     rows: list[tuple["Project", dict[str, int], str, bool]] = []
     for project in candidates:
-        stage_data = compute_stage_progress(project)
+        stage_data = compute_stage_progress(project, weights, signoff_enabled)
         effective_status = (
             "blocked"
             if project.status == "blocked"
@@ -647,6 +684,7 @@ async def get_all_for_stats(
         selectinload(Project.approvals),
         selectinload(Project.cloud_resources),
         selectinload(Project.project_users),
+        selectinload(Project.category_milestones),
     )
     result = await session.execute(q.order_by(Project.name))
     return list(result.scalars().all())

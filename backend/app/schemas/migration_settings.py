@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class PlatformPeriod(BaseModel):
@@ -40,6 +40,24 @@ class ProvisionCidrParents(BaseModel):
     prod: ProvisionCidrZoneMap = Field(default_factory=ProvisionCidrZoneMap)
 
 
+class ProgressWeights(BaseModel):
+    """Configurable stage weights (percent). Migration weight is derived as
+    100 - preparation; the preparation sub-weights must sum to preparation."""
+
+    preparation: int = Field(default=30, ge=0, le=100)
+    setup: int = Field(default=5, ge=0, le=100)
+    survey: int = Field(default=15, ge=0, le=100)
+    signoff: int = Field(default=10, ge=0, le=100)
+
+    @model_validator(mode="after")
+    def _sub_weights_sum_to_preparation(self):
+        if self.setup + self.survey + self.signoff != self.preparation:
+            raise ValueError(
+                "setup + survey + signoff must equal the preparation weight"
+            )
+        return self
+
+
 class MigrationSettingsOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -49,6 +67,8 @@ class MigrationSettingsOut(BaseModel):
     bgi_tier_depth: int | None = None
     data_migration_adjustment_enabled: bool = True
     create_jira_stories_on_signoff: bool = True
+    signoff_enabled: bool = True
+    progress_weights: ProgressWeights = Field(default_factory=ProgressWeights)
     data_migration: DataMigrationSettings = Field(default_factory=DataMigrationSettings)
     provision_cidr_parents: ProvisionCidrParents = Field(default_factory=ProvisionCidrParents)
     provision_allowed_prefixes: list[int] = [25, 26, 27]
@@ -61,6 +81,8 @@ class MigrationSettingsUpdate(BaseModel):
     bgi_tier_depth: int | None = None
     data_migration_adjustment_enabled: bool | None = None
     create_jira_stories_on_signoff: bool | None = None
+    signoff_enabled: bool | None = None
+    progress_weights: ProgressWeights | None = None
     data_migration: DataMigrationSettings | None = None
     provision_cidr_parents: ProvisionCidrParents | None = None
     provision_allowed_prefixes: list[int] | None = None

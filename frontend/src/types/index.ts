@@ -308,7 +308,7 @@ export interface Approval {
 
 // ─── Wave planning milestones ─────────────────────────────────────────────────
 
-export type MilestoneType = 'env-provision' | 'dev-resource-provision' | 'dev-data-migration' | 'dev-cutover' | 'prd-resource-provision' | 'prd-data-migration' | 'prd-cutover' | 'custom' | 'category-milestone' | 'data-migration-period'
+export type MilestoneType = 'env-provision' | 'dev-resource-provision' | 'dev-data-migration' | 'dev-big-data-migration' | 'dev-cutover' | 'prd-resource-provision' | 'prd-data-migration' | 'prd-big-data-migration' | 'prd-cutover' | 'custom' | 'category-milestone' | 'data-migration-period'
 export type MilestoneStatus = 'todo' | 'in-progress' | 'done'
 
 export interface MilestoneComment {
@@ -393,6 +393,8 @@ export interface Project {
   isSurveyNeeded?: boolean
   justificationWithoutSurvey?: string
   team: TeamMember[]
+  /** Count of cloud resources; returned by the home endpoint in place of full rows. */
+  resourceCount?: number
   description?: string
   bgi_id?: string
   // Header metadata

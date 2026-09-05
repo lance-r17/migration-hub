@@ -152,6 +152,7 @@ class ProjectHomeItem(BaseModel):
     data_migration_survey_submitted_by: str | None = None
     stage_progress: dict[str, int] | None = None
     team: list[dict[str, Any]] | None = None
+    resource_count: int | None = None
     migration_constraints: dict[str, Any] | None = None
     engagement: dict[str, Any] | None = None
     environment_provision: dict[str, Any] | None = None

@@ -123,6 +123,7 @@ interface ProjectListItemApi {
   stage_progress: StageProgress | null
   survey_submitted_at: string | null
   team: TeamMember[]
+  resource_count: number | null
   description: string | null
   migration_wave: string | null
   itso: string | null
@@ -240,6 +241,7 @@ function fromApiListItem(raw: ProjectListItemApi): Project {
     blockedReason: raw.blocked_reason ?? undefined,
     progress: raw.progress,
     team: raw.team ?? [],
+    resourceCount: raw.resource_count ?? undefined,
     description: raw.description ?? undefined,
     migrationWave: raw.migration_wave ?? undefined,
     itso: raw.itso ?? undefined,

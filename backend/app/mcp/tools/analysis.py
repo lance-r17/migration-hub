@@ -56,13 +56,15 @@ async def analyze_wave_readiness(args: dict, ctx: McpContext) -> dict:
             selectinload(Project.approvals),
             selectinload(Project.risks),
             selectinload(Project.project_users).selectinload(ProjectUser.user),
+            selectinload(Project.category_milestones),
         )
     )
     projects = list(result.scalars().all())
 
+    progress_ctx = await project_service.get_progress_context(ctx.db)
     breakdown = []
     for p in projects:
-        stage = project_service.compute_stage_progress(p)
+        stage = project_service.compute_stage_progress(p, *progress_ctx)
         blocking = []
         if stage["survey"] < 100:
             blocking.append("survey incomplete")

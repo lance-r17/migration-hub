@@ -41,7 +41,7 @@ export function ProjectCard({ project, rich = false }: ProjectCardProps) {
   const isBlocked = project.status === 'blocked'
   const ctaLabel = isBlocked ? 'Resolve Issues' : 'View Details'
   const sp: StageProgress = project.stageProgress ?? { setup: 0, survey: 0, signoff: 0, migration: 0 }
-  const resourceCount = project.currentInfrastructure?.resources?.length ?? 0
+  const resourceCount = project.resourceCount ?? project.currentInfrastructure?.resources?.length ?? 0
   const migStart = project.migrationConstraints?.earliestStartDate ?? project.planning?.startDate
   const migEnd = project.migrationConstraints?.latestEndDate ?? project.planning?.endDate
 

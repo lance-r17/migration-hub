@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BadgeCheck, Building2, CalendarRange, ClipboardList, DollarSign, ExternalLink, Settings2, ShieldAlert } from 'lucide-react'
+import { Building2, CalendarRange, ClipboardList, DollarSign, ExternalLink, Settings2, ShieldAlert } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const SETTINGS_SECTIONS = [
@@ -32,12 +32,6 @@ const SETTINGS_SECTIONS = [
     description: 'Adjust the ratio thresholds that classify resource sets as Healthy, At Risk, or Over budget.',
     icon: <DollarSign size={20} className="text-primary" />,
     href: '/settings/billing',
-  },
-  {
-    title: 'Sign-off Control',
-    description: 'Enable or disable the sign-off workflow for project team members.',
-    icon: <BadgeCheck size={20} className="text-primary" />,
-    href: '/settings/signoff',
   },
   {
     title: 'Custom Navigation Card',

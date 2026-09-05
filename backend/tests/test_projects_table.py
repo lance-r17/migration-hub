@@ -25,6 +25,21 @@ def _fresh_id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:8]}"
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _default_progress_settings(db_session: AsyncSession):
+    """Project progress/status derivation now depends on the global migration
+    settings (ConfigStore). Pin sign-off enabled + default weights so status
+    filters are deterministic regardless of the dev DB's current values."""
+    row = await db_session.get(ConfigStore, "migration_settings")
+    if row:
+        row.value = {
+            **row.value,
+            "signoff_enabled": True,
+            "progress_weights": {"preparation": 30, "setup": 5, "survey": 15, "signoff": 10},
+        }
+        attributes.flag_modified(row, "value")
+
+
 def _make_user(role: str, bgi_ids: list[str] | None = None) -> User:
     suffix = uuid.uuid4().hex[:8]
     return User(

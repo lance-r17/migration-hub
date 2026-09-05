@@ -15,9 +15,11 @@
             { "text": "Incremental sync lag under 5 minutes.", "author": "Henry Wilson" }
           ]
         },
+        { "type": "dev-big-data-migration", "start": "2026-04-20", "end": "2026-05-08", "status": "in-progress", "deps": ["dev-resource-provision-PRJ-2024-ALPHA"] },
         { "type": "dev-cutover", "start": "2026-05-11", "end": "2026-05-13", "status": "todo", "deps": ["dev-data-migration-PRJ-2024-ALPHA"] },
         { "type": "prd-resource-provision", "start": "2026-05-18", "end": "2026-05-29", "status": "todo", "deps": ["dev-cutover-PRJ-2024-ALPHA"] },
-        { "type": "prd-cutover", "start": "2026-06-15", "end": "2026-06-17", "status": "todo", "deps": ["prd-resource-provision-PRJ-2024-ALPHA"] },
+        { "type": "prd-big-data-migration", "start": "2026-06-01", "end": "2026-06-12", "status": "todo", "deps": ["prd-resource-provision-PRJ-2024-ALPHA"] },
+        { "type": "prd-cutover", "start": "2026-06-15", "end": "2026-06-17", "status": "todo", "deps": ["prd-resource-provision-PRJ-2024-ALPHA", "prd-big-data-migration-PRJ-2024-ALPHA"] },
         {
           "type": "custom",
           "id": "alpha-uat-signoff",

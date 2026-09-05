@@ -57,7 +57,6 @@ import { useCurrentUser } from '@/context/UserContext'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { createJiraJob } from '@/services/jiraJobs'
 import { markResourceSyncComplete, blockProject, updateGovernanceRoles } from '@/services/projects'
-import { getSignoffConfig } from '@/services/signoffConfig'
 import { getBgiHierarchy } from '@/services/bgi'
 import { apiClient } from '@/services/client'
 import { ensureAllRoles, getProjectApprovalSequence } from '@/lib/approvals'
@@ -90,7 +89,7 @@ export function ProjectDetailsPage() {
   const { resourceSurveyConfig } = useResourceSurveyConfig()
   const { getCategoryForProduct } = useProductCategoryMap()
   const { embargos } = useEmbargos()
-  const [signoffEnabled, setSignoffEnabled] = useState(true)
+  const signoffEnabled = migrationSettings?.signoffEnabled ?? true
   const [modalOpen, setModalOpen] = useState(false)
   const [blockDialogOpen, setBlockDialogOpen] = useState(false)
   const [blockReason, setBlockReason] = useState('')
@@ -136,10 +135,6 @@ export function ProjectDetailsPage() {
     const interval = setInterval(() => { refreshProject() }, 2_000)
     return () => clearInterval(interval)
   }, [project?.jiraJobStatus, refreshProject])
-
-  useEffect(() => {
-    getSignoffConfig().then(cfg => setSignoffEnabled(cfg.enabled)).catch(() => {})
-  }, [])
 
   const approvalSequence = useMemo(() =>
     project ? getProjectApprovalSequence(project) : ['technical_lead', 'gbi_champion', 'platform_migration_lead'],

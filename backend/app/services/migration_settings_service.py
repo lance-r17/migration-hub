@@ -16,6 +16,8 @@ _DEFAULT = {
     "bgi_tier_depth": None,
     "data_migration_adjustment_enabled": True,
     "create_jira_stories_on_signoff": True,
+    "signoff_enabled": True,
+    "progress_weights": {"preparation": 30, "setup": 5, "survey": 15, "signoff": 10},
     "provision_allowed_prefixes": [25, 26, 27],
     "provision_cidr_parents": {
         "dev": {
@@ -64,6 +66,8 @@ async def get_migration_settings(session: AsyncSession) -> MigrationSettingsOut:
         bgi_tier_depth=data.get("bgi_tier_depth"),
         data_migration_adjustment_enabled=data.get("data_migration_adjustment_enabled", True),
         create_jira_stories_on_signoff=data.get("create_jira_stories_on_signoff", True),
+        signoff_enabled=data.get("signoff_enabled", True),
+        progress_weights=data.get("progress_weights", _DEFAULT["progress_weights"]),
         provision_cidr_parents=data.get(
             "provision_cidr_parents", _default_provision_cidr_parents()
         ),
@@ -94,6 +98,10 @@ async def update_migration_settings(
         current["data_migration_adjustment_enabled"] = patch.data_migration_adjustment_enabled
     if patch.create_jira_stories_on_signoff is not None:
         current["create_jira_stories_on_signoff"] = patch.create_jira_stories_on_signoff
+    if patch.signoff_enabled is not None:
+        current["signoff_enabled"] = patch.signoff_enabled
+    if patch.progress_weights is not None:
+        current["progress_weights"] = patch.progress_weights.model_dump()
     if patch.data_migration is not None:
         current["data_migration"] = patch.data_migration.model_dump()
     if patch.provision_cidr_parents is not None:
@@ -117,6 +125,8 @@ async def update_migration_settings(
             "data_migration_adjustment_enabled", True
         ),
         create_jira_stories_on_signoff=current.get("create_jira_stories_on_signoff", True),
+        signoff_enabled=current.get("signoff_enabled", True),
+        progress_weights=current.get("progress_weights", _DEFAULT["progress_weights"]),
         provision_cidr_parents=current.get(
             "provision_cidr_parents", _default_provision_cidr_parents()
         ),
