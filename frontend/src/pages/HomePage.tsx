@@ -399,7 +399,7 @@ export function HomePage() {
                     <DropdownMenuItem onClick={() => exportProjectDependenciesReport()}>
                       Project Dependencies Report
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => exportProjectDetailsReport()}>
+                    <DropdownMenuItem onClick={() => exportProjectDetailsReport(migrationSettings?.signoffEnabled ?? true)}>
                       Project Details Report
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => exportProjectRisksAndBlockersReport()}>
@@ -604,7 +604,7 @@ export function HomePage() {
             ) : (
               <>
                 {gridProjects.map(project => (
-                  <ProjectCard key={project.id} project={project} rich={!isLead} />
+                  <ProjectCard key={project.id} project={project} rich={!isLead} signoffEnabled={migrationSettings?.signoffEnabled ?? true} />
                 ))}
                 {isLead && gridTotal > 0 && (
                   <div

@@ -131,6 +131,14 @@ export function ProjectsPage() {
   const canViewProjects = isAdmin || isPlatformLead || isBgiCloudLead || isGbiChampionOrDelegate
 
   const { settings: migrationSettings } = useMigrationSettings()
+  const signoffEnabled = migrationSettings?.signoffEnabled ?? true
+
+  // When sign-off is disabled, the sign-off related filters are hidden and would
+  // never match — fall back to "all" if one is still selected.
+  const effectiveStatusFilter =
+    !signoffEnabled && ['awaiting-signoff', 'survey-submitted'].includes(statusFilter)
+      ? 'all'
+      : statusFilter
 
   useEffect(() => {
     let cancelled = false
@@ -199,7 +207,7 @@ export function ProjectsPage() {
   const { rows, total, loading, refresh } = useProjectsTable({
     page: currentPage,
     pageSize,
-    status: statusFilter,
+    status: effectiveStatusFilter,
     search: searchQuery,
     migrationRange,
     role: roleFilter !== 'all' ? roleFilter : undefined,
@@ -256,7 +264,7 @@ export function ProjectsPage() {
       const result = await getProjectsTable({
         page: 1,
         pageSize: 0,
-        status: statusFilter,
+        status: effectiveStatusFilter,
         search: searchQuery,
         migrationRange,
         role: roleFilter !== 'all' ? roleFilter : undefined,
@@ -264,7 +272,7 @@ export function ProjectsPage() {
         bgiIds: bgiFilterParams.bgiIds,
         excludedBgiIds: bgiFilterParams.excludedBgiIds,
       })
-      exportProjectsToExcel(result.items, bgiRoot)
+      exportProjectsToExcel(result.items, bgiRoot, signoffEnabled)
     } catch {
       toast.error('Failed to load projects for export')
     }
@@ -312,7 +320,7 @@ export function ProjectsPage() {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Select
-              value={statusFilter}
+              value={effectiveStatusFilter}
             onValueChange={(value) => {
               setStatusFilter(value)
               setCurrentPage(1)
@@ -327,9 +335,9 @@ export function ProjectsPage() {
               <SelectItem value="planning">Planning</SelectItem>
               <SelectItem value="awaiting-survey">Awaiting Survey</SelectItem>
               <SelectItem value="drafting-survey">Drafting Survey</SelectItem>
-              <SelectItem value="survey-submitted">Survey Submitted</SelectItem>
-              <SelectItem value="awaiting-signoff">Awaiting Sign-off</SelectItem>
-              <SelectItem value="signed-off">Signed Off</SelectItem>
+              {signoffEnabled && <SelectItem value="survey-submitted">Survey Submitted</SelectItem>}
+              {signoffEnabled && <SelectItem value="awaiting-signoff">Awaiting Sign-off</SelectItem>}
+              <SelectItem value="signed-off">{signoffEnabled ? 'Signed Off' : 'Ready for Migration'}</SelectItem>
               <SelectItem value="migrating">Migrating</SelectItem>
               <SelectItem value="blocked">Blocked</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
@@ -692,7 +700,7 @@ export function ProjectsPage() {
                       {project.bgi_id ? (bgiNameMap.get(project.bgi_id) ?? project.bgi_id) : '—'}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={project.status} stageProgress={project.stageProgress} hasSurveyDraft={project.hasSurveyDraft} surveySubmittedAt={project.surveySubmittedAt} />
+                      <StatusBadge status={project.status} stageProgress={project.stageProgress} hasSurveyDraft={project.hasSurveyDraft} surveySubmittedAt={project.surveySubmittedAt} signoffEnabled={signoffEnabled} />
                     </TableCell>
                     <TableCell>
                       <div className="w-full max-w-[120px]">

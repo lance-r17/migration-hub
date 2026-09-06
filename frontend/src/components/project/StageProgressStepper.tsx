@@ -104,6 +104,7 @@ function SurveyNode({ type }: { type: SurveyType }) {
 interface StageProgressStepperProps {
   project: Project
   signoffEnabled?: boolean
+  surveyNeeded?: boolean
   categoryMilestones?: CategoryMilestone[]
 }
 
@@ -113,7 +114,7 @@ const MILESTONE_STATUS_LABELS: Record<string, string> = {
   done: 'Completed',
 }
 
-export function StageProgressStepper({ project, signoffEnabled = true, categoryMilestones = [] }: StageProgressStepperProps) {
+export function StageProgressStepper({ project, signoffEnabled = true, surveyNeeded = true, categoryMilestones = [] }: StageProgressStepperProps) {
   const navigate = useNavigate()
   const [surveyExpanded, setSurveyExpanded] = useState(false)
   const [signoffExpanded, setSignoffExpanded] = useState(false)
@@ -171,7 +172,11 @@ export function StageProgressStepper({ project, signoffEnabled = true, categoryM
       detail: '',
     },
   ]
-  const stages = signoffEnabled ? allStages : allStages.filter(s => s.key !== 'signoff')
+  // When the survey is waived for this project the backend folds it into setup
+  // and reports survey=100 — hide the step so it doesn't show as a completed stage.
+  const stages = allStages.filter(
+    s => (signoffEnabled || s.key !== 'signoff') && (surveyNeeded || s.key !== 'survey')
+  )
 
   const allApprovals = ensureAllRoles(project.approvals, approvalSequence)
   const remaining = allApprovals.filter(a => a.status !== 'approved').length

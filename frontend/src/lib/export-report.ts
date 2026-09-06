@@ -548,7 +548,7 @@ export async function exportDataMigrationReport() {
   }
 }
 
-export async function exportProjectDetailsReport() {
+export async function exportProjectDetailsReport(signoffEnabled = true) {
   const toastId = toast.loading('Generating project details report...')
 
   try {
@@ -665,7 +665,7 @@ export async function exportProjectDetailsReport() {
         'BGI L2': bgiAncestry?.l2 ?? '',
         'BGI L3': bgiAncestry?.l3 ?? '',
         'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName ?? project.bgi_id ?? '') : (project.bgi_id ?? ''),
-        'Status': project.status,
+        'Status': getStatusLabel(project.status, project.stageProgress, undefined, signoffEnabled),
         'Blocked Reason': project.blockedReason ?? '',
         'Description': project.description ?? '',
         'Migration Wave': project.migrationWave ?? '',
@@ -1197,7 +1197,7 @@ export function exportWavePlanningToExcel(projects: Project[], waves: Wave[]) {
   }
 }
 
-export function exportProjectsToExcel(projects: ProjectTableRow[], bgiRoot?: BgiNode | null) {
+export function exportProjectsToExcel(projects: ProjectTableRow[], bgiRoot?: BgiNode | null, signoffEnabled = true) {
   const toastId = toast.loading('Generating projects report...')
 
   try {
@@ -1216,7 +1216,7 @@ export function exportProjectsToExcel(projects: ProjectTableRow[], bgiRoot?: Bgi
         'BGI L2': bgiAncestry?.l2 ?? '—',
         'BGI L3': bgiAncestry?.l3 ?? '—',
         'BGI L4': bgiAncestry ? (bgiAncestry.l4 ?? bgiAncestry.leafName) : (p.bgi_id ?? '—'),
-        'Status': getStatusLabel(p.status, p.stageProgress, p.hasSurveyDraft),
+        'Status': getStatusLabel(p.status, p.stageProgress, p.hasSurveyDraft, signoffEnabled),
         'Progress (%)': p.progress,
         'BGI Champion': p.gbiChampion ?? '—',
         'BGI Champion Delegate': p.gbiChampionDelegate ?? '—',

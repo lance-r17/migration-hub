@@ -27,7 +27,13 @@ import { useSurveyConfig, useResourceSurveyConfig } from '@/hooks/use-survey'
 import { useProductCategoryMap } from '@/hooks/use-product-category'
 import { useEmbargos } from '@/hooks/use-embargos'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   Dialog,
   DialogContent,
@@ -372,7 +378,24 @@ export function ProjectDetailsPage() {
         <div>
           <div className="flex items-center gap-3 mb-1 flex-wrap">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">{project.name}</h1>
-            <StatusBadge status={project.status} stageProgress={project.stageProgress} />
+            <StatusBadge status={project.status} stageProgress={project.stageProgress} signoffEnabled={signoffEnabled} />
+            {project.isSurveyNeeded === false && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-bold uppercase tracking-wider border-violet-500 text-violet-700 dark:text-violet-300"
+                  >
+                    Survey Not Required
+                  </Badge>
+                </TooltipTrigger>
+                {project.justificationWithoutSurvey && (
+                  <TooltipContent side="bottom" className="text-xs max-w-xs">
+                    {project.justificationWithoutSurvey}
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            )}
             <div className="ml-auto flex items-center gap-3">
               {isSurveyActive && !isLocked && canEditProject && project.isSurveyNeeded !== false && (
                 <DropdownMenu>
@@ -413,6 +436,7 @@ export function ProjectDetailsPage() {
         <StageProgressStepper
           project={project}
           signoffEnabled={signoffEnabled}
+          surveyNeeded={project.isSurveyNeeded !== false}
           categoryMilestones={categoryMilestones}
         />
 

@@ -14,6 +14,7 @@ import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
 import type { Wave } from '@/types/wave'
@@ -89,6 +90,7 @@ function ProjectCard({
     data: { project },
     disabled: locked
   })
+  const { settings: migrationSettings } = useMigrationSettings()
 
   const style = transform && !isDragOverlay ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -112,7 +114,7 @@ function ProjectCard({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground truncate">{project.name}</p>
           <div className="mt-1 flex items-center gap-2">
-            <StatusBadge status={project.status} />
+            <StatusBadge status={project.status} signoffEnabled={migrationSettings?.signoffEnabled ?? true} />
           </div>
         </div>
         {!locked && (

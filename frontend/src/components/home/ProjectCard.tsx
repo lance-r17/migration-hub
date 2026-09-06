@@ -12,6 +12,7 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from '@/component
 interface ProjectCardProps {
   project: Project
   rich?: boolean
+  signoffEnabled?: boolean
 }
 
 function getProgressVariant(project: Project) {
@@ -36,7 +37,7 @@ function formatDate(iso?: string | null) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-export function ProjectCard({ project, rich = false }: ProjectCardProps) {
+export function ProjectCard({ project, rich = false, signoffEnabled = true }: ProjectCardProps) {
   const navigate = useNavigate()
   const isBlocked = project.status === 'blocked'
   const ctaLabel = isBlocked ? 'Resolve Issues' : 'View Details'
@@ -62,7 +63,7 @@ export function ProjectCard({ project, rich = false }: ProjectCardProps) {
           </div>
           <CardDescription>Project ID: {project.id}</CardDescription>
         </div>
-        <StatusBadge status={project.status} stageProgress={project.stageProgress} />
+        <StatusBadge status={project.status} stageProgress={project.stageProgress} signoffEnabled={signoffEnabled} />
       </CardHeader>
 
       <CardContent className="flex flex-col gap-6">
@@ -81,7 +82,7 @@ export function ProjectCard({ project, rich = false }: ProjectCardProps) {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
                 <div className="space-y-1 min-w-[140px]">
-                  {STAGES.map(s => (
+                  {STAGES.filter(s => (signoffEnabled || s.key !== 'signoff') && (project.isSurveyNeeded !== false || s.key !== 'survey')).map(s => (
                     <div key={s.key} className="flex justify-between gap-4">
                       <span className="text-muted-foreground">{s.label}</span>
                       <span className="font-medium">{sp[s.key]}%</span>

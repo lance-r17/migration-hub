@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { getProject } from '@/services/projects'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
 import type { Project } from '@/types'
 
 interface Props {
@@ -31,6 +32,7 @@ function FieldRow({ label, value }: { label: string; value?: React.ReactNode }) 
 
 export function ProjectPreviewDrawer({ projectId, open, onOpenChange }: Props) {
   const navigate = useNavigate()
+  const { settings: migrationSettings } = useMigrationSettings()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,7 +92,7 @@ export function ProjectPreviewDrawer({ projectId, open, onOpenChange }: Props) {
                   <Skeleton className="h-4 w-20 rounded-full" />
                 ) : project ? (
                   <>
-                    <StatusBadge status={project.status} />
+                    <StatusBadge status={project.status} signoffEnabled={migrationSettings?.signoffEnabled ?? true} />
                     {project.jiraStoryKey && (
                       <a
                         href={`${project.jiraBaseUrl || ''}/browse/${project.jiraStoryKey}`}

@@ -25,7 +25,11 @@ export function getStatusLabel(
   status: ProjectStatus,
   stageProgress?: StageProgress,
   hasSurveyDraft?: boolean,
+  signoffEnabled = true,
 ): string {
+  // When the sign-off workflow is disabled, projects that would be "signed-off"
+  // (survey complete, migration not started) are presented as ready for migration.
+  if (!signoffEnabled && status === 'signed-off') return 'Ready for Migration'
   const config = statusConfig[status]
   if (status !== 'in-progress' || !stageProgress) return config.label
 
@@ -94,11 +98,12 @@ interface StatusBadgeProps {
   stageProgress?: StageProgress
   hasSurveyDraft?: boolean
   surveySubmittedAt?: string
+  signoffEnabled?: boolean
   className?: string
 }
 
-export function StatusBadge({ status, stageProgress, hasSurveyDraft, surveySubmittedAt, className }: StatusBadgeProps) {
-  let label = getStatusLabel(status, stageProgress, hasSurveyDraft)
+export function StatusBadge({ status, stageProgress, hasSurveyDraft, surveySubmittedAt, signoffEnabled = true, className }: StatusBadgeProps) {
+  let label = getStatusLabel(status, stageProgress, hasSurveyDraft, signoffEnabled)
   let { className: colorClass } = statusConfig[status]
   let variant = statusVariant[status]
 
