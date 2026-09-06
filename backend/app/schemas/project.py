@@ -163,6 +163,13 @@ class ProjectHomeItem(BaseModel):
     category_milestone_ids: list[str] | None = None
 
 
+class ProjectHomeSummary(BaseModel):
+    """Lightweight platform-lead landing payload: latest active projects + total count."""
+
+    projects: list[ProjectHomeItem]
+    total: int
+
+
 class InfraFootprintScoreOut(BaseModel):
     score: str | None = None
     ecs_count: int = 0

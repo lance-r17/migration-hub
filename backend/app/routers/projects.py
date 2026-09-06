@@ -27,6 +27,7 @@ from app.schemas.project import (
     ProjectCreate,
     ProjectDetail,
     ProjectHomeItem,
+    ProjectHomeSummary,
     ProjectListItem,
     ProjectPatch,
     ProjectTablePage,
@@ -485,6 +486,21 @@ async def list_projects_home(
     projects = await project_service.get_all_home(db, user_id=userId, fields=field_set, bgi_ids=bgi_ids)
     ctx = await project_service.get_progress_context(db)
     return [_project_home_item(p, fields=field_set, ctx=ctx) for p in projects]
+
+
+@router.get("/home-summary", response_model=ProjectHomeSummary, response_model_exclude_none=True)
+async def get_projects_home_summary(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Platform-lead landing payload: 5 latest active projects + total count.
+    The full project list lazy-loads separately via /home for the charts."""
+    projects, total = await project_service.get_home_summary(db)
+    ctx = await project_service.get_progress_context(db)
+    return ProjectHomeSummary(
+        projects=[_project_home_item(p, fields={"basic", "progress", "team"}, ctx=ctx) for p in projects],
+        total=total,
+    )
 
 
 _TABLE_OVERVIEW_KEYS = (

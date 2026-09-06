@@ -19,7 +19,7 @@ import { useProjects } from '@/hooks/use-projects'
 import { useWaves } from '@/hooks/use-waves'
 import { useCurrentUser } from '@/context/UserContext'
 import { useMigrationSettings } from '@/hooks/use-migration-settings'
-import { getSurveyDraftProjectIds } from '@/services/projects'
+import { getSurveyDraftProjectIds, getProjectsHomeSummary, type ProjectsHomeSummary } from '@/services/projects'
 import { getBgiHierarchy } from '@/services/bgi'
 import { BgiTree } from '@/components/bgi/BgiTree'
 import {
@@ -205,16 +205,21 @@ export function HomePage() {
   const { activity: allActivity, loading: dashLoading } = useDashboard({ enabled: isPlatformLead, withStats: false })
   const { projects, loading: projectsLoading } = useProjects({
     home: true,
-    // approvals/engagement only feed the lead-only dashboard cards (activity
-    // chart, status chart) — non-leads never render them, so don't pay for them.
-    fields: isLead
-      ? ['basic', 'progress', 'team', 'approvals', 'engagement']
-      : ['basic', 'progress', 'team'],
+    // Platform leads get their cards from the lightweight /home-summary call; the
+    // full list lazy-loads for the charts only (no team needed there).
+    // approvals/engagement feed the lead-only dashboard cards — members skip them.
+    fields: isPlatformLead
+      ? ['basic', 'progress', 'approvals', 'engagement']
+      : isBgiCloudLead
+        ? ['basic', 'progress', 'team', 'approvals', 'engagement']
+        : ['basic', 'progress', 'team'],
   })
   const { waves, loading: wavesLoading } = useWaves({ enabled: isPlatformLead })
   const { settings: migrationSettings } = useMigrationSettings()
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([])
   const [draftsLoading, setDraftsLoading] = useState(true)
+  const [summaryLoading, setSummaryLoading] = useState(isPlatformLead)
+  const [homeSummary, setHomeSummary] = useState<ProjectsHomeSummary | null>(null)
   const [bgiOpen, setBgiOpen] = useState(false)
   const [bgiSearchQuery, setBgiSearchQuery] = useState('')
   const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
@@ -239,6 +244,23 @@ export function HomePage() {
       })
     return () => { cancelled = true }
   }, [])
+
+  // Platform lead: instant top-5 + total count; the full list lazy-loads for charts.
+  useEffect(() => {
+    if (!isPlatformLead) return
+    let cancelled = false
+    getProjectsHomeSummary()
+      .then(s => {
+        if (!cancelled) {
+          setHomeSummary(s)
+          setSummaryLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSummaryLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [isPlatformLead])
 
   useEffect(() => {
     if (!isBgiCloudLead) return
@@ -284,7 +306,9 @@ export function HomePage() {
     return allIds
   }, [bgiRoot, selectedBgiIds, excludedBgiIds])
 
-  const loading = dashLoading || projectsLoading || wavesLoading || draftsLoading
+  const chartsLoading = projectsLoading || wavesLoading || draftsLoading
+  // Platform-lead grid only waits on the lightweight summary call.
+  const gridLoading = isPlatformLead ? summaryLoading : chartsLoading || dashLoading
 
   // For non-platform-leads: filter activity to their assigned projects only
   const projectIds = useMemo(() => projects.map(p => p.id), [projects])
@@ -324,7 +348,8 @@ export function HomePage() {
     return sortedProjects.filter(p => p.bgi_id && selectedBgiDescendantIds.has(p.bgi_id))
   }, [sortedProjects, selectedBgiDescendantIds])
 
-  // For platform leads / bgi leads: show latest 5 active projects on the home grid
+  // For bgi leads: show latest 5 active projects on the home grid
+  // (platform leads get theirs from the /home-summary call above)
   const homeProjects = useMemo(() => {
     if (!isLead) return bgiFilteredSortedProjects
     const active = bgiFilteredSortedProjects.filter(p => p.status !== 'completed')
@@ -335,7 +360,8 @@ export function HomePage() {
     return latestActive.slice(0, 5)
   }, [isLead, bgiFilteredSortedProjects])
 
-
+  const gridProjects = isPlatformLead ? (homeSummary?.projects ?? []) : homeProjects
+  const gridTotal = isPlatformLead ? (homeSummary?.total ?? 0) : bgiFilteredSortedProjects.length
 
   return (
     <AppShell>
@@ -495,7 +521,7 @@ export function HomePage() {
 
           {isLead && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {loading ? (
+              {chartsLoading ? (
                 <>
                   <Skeleton className="h-32 rounded-xl" />
                   <Skeleton className="h-40 rounded-xl" />
@@ -503,7 +529,7 @@ export function HomePage() {
               ) : (
                 <>
                   <OverallProgressCard stats={displayStats} projects={bgiFilteredSortedProjects} waves={waves} />
-                  <ProjectStatusChartCard projects={bgiFilteredSortedProjects} draftProjectIds={draftProjectIds} />
+                  <ProjectStatusChartCard projects={bgiFilteredSortedProjects} draftProjectIds={draftProjectIds} signoffEnabled={migrationSettings?.signoffEnabled ?? true} />
                 </>
               )}
             </div>
@@ -565,22 +591,22 @@ export function HomePage() {
           </div>
 
           <div className={cn('grid gap-6 w-full', isLead ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-2')}>
-            {loading ? (
+            {gridLoading ? (
               <>
                 <Skeleton className="h-40 rounded-xl" />
                 <Skeleton className="h-40 rounded-xl" />
                 {!isLead && <Skeleton className="h-40 rounded-xl" />}
               </>
-            ) : homeProjects.length === 0 ? (
+            ) : gridProjects.length === 0 ? (
               <p className="text-sm text-muted-foreground col-span-full">
                 No projects are assigned to you yet.
               </p>
             ) : (
               <>
-                {homeProjects.map(project => (
+                {gridProjects.map(project => (
                   <ProjectCard key={project.id} project={project} rich={!isLead} />
                 ))}
-                {isLead && bgiFilteredSortedProjects.length > 0 && (
+                {isLead && gridTotal > 0 && (
                   <div
                     onClick={() => navigate('/projects')}
                     className="cursor-pointer rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 hover:bg-muted/50 hover:border-muted-foreground/50 transition-colors flex flex-col items-center justify-center gap-3 p-6 min-h-[160px]"
@@ -590,7 +616,7 @@ export function HomePage() {
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-semibold text-foreground">View All Projects</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{bgiFilteredSortedProjects.length} total projects</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{gridTotal} total projects</p>
                     </div>
                     <div className="flex items-center gap-1 text-xs font-semibold text-primary">
                       <span>Go to Projects</span>
@@ -606,7 +632,7 @@ export function HomePage() {
         {/* Section 3: Activity Timeline — only for platform leads */}
         {isPlatformLead && (
           <section>
-            {loading ? (
+            {dashLoading ? (
               <Skeleton className="h-48 rounded-xl" />
             ) : (
               <ActivityTimeline activities={activity} />

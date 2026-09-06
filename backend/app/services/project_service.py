@@ -646,6 +646,34 @@ async def get_table_page(
     return rows, total
 
 
+async def get_home_summary(
+    session: AsyncSession, limit: int = 5
+) -> tuple[list[Project], int]:
+    """Latest active (non-completed) projects by updated_at + total project count.
+
+    Powers the platform lead's landing grid; the full project list lazy-loads
+    separately for the charts.
+    """
+    from app.models.project_user import ProjectUser
+
+    q = (
+        select(Project)
+        .where(Project.status != "completed")
+        .options(
+            selectinload(Project.cloud_resources),
+            selectinload(Project.approvals),
+            selectinload(Project.category_milestones),
+            selectinload(Project.project_users).selectinload(ProjectUser.user),
+        )
+        .order_by(Project.updated_at.desc())
+        .limit(limit)
+    )
+    result = await session.execute(q)
+    projects = list(result.scalars().all())
+    total_result = await session.execute(select(func.count()).select_from(Project))
+    return projects, total_result.scalar() or 0
+
+
 async def get_all_home(
     session: AsyncSession, user_id: str | None = None, fields: set[str] | None = None, bgi_ids: list[str] | None = None
 ) -> list[Project]:

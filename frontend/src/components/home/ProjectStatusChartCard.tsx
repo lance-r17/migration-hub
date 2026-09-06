@@ -23,6 +23,7 @@ const ENGAGEMENT_STATUS_META: { key: string; label: string; color: string }[] = 
 interface ProjectStatusChartCardProps {
   projects: Project[]
   draftProjectIds?: string[]
+  signoffEnabled?: boolean
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -36,7 +37,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   monitoring: '#6366F1',
 }
 
-export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: ProjectStatusChartCardProps) {
+export function ProjectStatusChartCard({ projects, draftProjectIds = [], signoffEnabled = true }: ProjectStatusChartCardProps) {
   const [assetStats, setAssetStats] = useState<Record<string, number> | null>(null)
 
   useEffect(() => {
@@ -50,15 +51,16 @@ export function ProjectStatusChartCard({ projects, draftProjectIds = [] }: Proje
   const stageData = useMemo(() => {
     const counts = new Map<string, number>()
     for (const project of projects) {
-      const stage = getProjectStage(project)
+      const stage = getProjectStage(project, signoffEnabled)
       counts.set(stage, (counts.get(stage) ?? 0) + 1)
     }
-    return STAGE_META.map((meta) => ({
-      label: meta.label,
-      value: counts.get(meta.key) ?? 0,
-      color: meta.colorVar,
-    })).filter((d) => d.value > 0)
-  }, [projects])
+    return STAGE_META.filter((meta) => signoffEnabled || meta.key !== 'sign-off')
+      .map((meta) => ({
+        label: meta.label,
+        value: counts.get(meta.key) ?? 0,
+        color: meta.colorVar,
+      })).filter((d) => d.value > 0)
+  }, [projects, signoffEnabled])
 
   const engagementData = useMemo(() => {
     const counts = new Map<string, number>()

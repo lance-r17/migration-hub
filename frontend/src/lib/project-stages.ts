@@ -16,10 +16,13 @@ export const STAGE_META: StageMeta[] = [
   { key: 'completed', label: 'Completed', colorVar: '#94a3b8' },
 ]
 
-export function getProjectStage(project: Project): ProjectStage {
+export function getProjectStage(project: Project, signoffEnabled = true): ProjectStage {
   if (project.status === 'completed') return 'completed'
   if (project.status === 'migrating' || ((project.stageProgress?.migration ?? 0) > 0 && (project.stageProgress?.migration ?? 0) < 100)) return 'migration'
-  if (project.status === 'signed-off' || (project.stageProgress?.signoff ?? 0) === 100) return 'sign-off'
+  // When the sign-off workflow is disabled the backend folds it into setup and
+  // reports signoff=100 for every project — skip the bucket so those projects
+  // distribute across survey/migration instead of all landing in "sign-off".
+  if (signoffEnabled && (project.status === 'signed-off' || (project.stageProgress?.signoff ?? 0) === 100)) return 'sign-off'
   if ((project.stageProgress?.survey ?? 0) === 100 || project.surveySubmittedAt) return 'survey'
   return 'setup'
 }

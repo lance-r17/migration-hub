@@ -357,6 +357,25 @@ export async function getProjectsHomeForUser(userId: string, fields?: string[]):
   return items.map(fromApiListItem)
 }
 
+export interface ProjectsHomeSummary {
+  projects: Project[]
+  total: number
+}
+
+/** Lightweight platform-lead landing payload: latest active projects + total count. */
+export async function getProjectsHomeSummary(): Promise<ProjectsHomeSummary> {
+  if (USE_MOCK) {
+    await delay()
+    const all = store.getProjects()
+    const active = all
+      .filter(p => p.status !== 'completed')
+      .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
+    return { projects: active.slice(0, 5), total: all.length }
+  }
+  const raw = await apiClient.get<{ projects: ProjectListItemApi[]; total: number }>(`${ENDPOINTS.projects}/home-summary`)
+  return { projects: raw.projects.map(fromApiListItem), total: raw.total }
+}
+
 // ─── Projects table (lean, paginated) ────────────────────────────────────────
 
 interface InfraFootprintScoreApi {
