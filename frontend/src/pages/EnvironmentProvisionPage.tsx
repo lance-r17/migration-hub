@@ -1,6 +1,6 @@
-import { useState, useMemo, Fragment } from 'react'
+import { useState, useMemo, useRef, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Cloud, Lock, Search, Server, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Cloud, Download, FolderOpen, Loader2, Lock, Search, Server, SlidersHorizontal, Upload, X } from 'lucide-react'
 import { format } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { toast } from 'sonner'
@@ -69,6 +69,22 @@ const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'not-scheduled', label: 'Not Scheduled' },
 ]
 
+/** Sample import file offered for download in the import dialog.
+ *  Mirrors docs/frontend/samples/provision-import.sample.json. */
+const PROVISION_IMPORT_SAMPLE_JSON = {
+  projects: [
+    {
+      projectId: 'PRJ-2024-ALPHA',
+      dev: { date: '2026-04-06', cidrs: { zoneA: '10.248.32.0/26', zoneB: '10.248.160.0/26' } },
+      prod: { date: '2026-05-18', cidrs: { zoneA: '10.248.80.0/26' } },
+    },
+    {
+      projectId: 'M-77122',
+      dev: { date: '2026-04-13', cidrs: { zoneA: '10.248.32.64/26' } },
+    },
+  ],
+}
+
 function formatDate(iso: string | undefined): string {
   if (!iso) return '—'
   const [year, month, day] = iso.split('-')
@@ -114,6 +130,10 @@ export function EnvironmentProvisionPage() {
   const [selectedMigrationStrategies, setSelectedMigrationStrategies] = useState<Set<MigrationStrategy>>(new Set())
   const [provisionDateRange, setProvisionDateRange] = useState<DateRange | undefined>(undefined)
   const [provisionDateOpen, setProvisionDateOpen] = useState(false)
+  const [importSummary, setImportSummary] = useState<{ imported: number; errors: string[] } | null>(null)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const liveProjects = useMemo<Project[]>(() => {
     return initialProjects.map(project => {
@@ -235,6 +255,199 @@ export function EnvironmentProvisionPage() {
     const next: Record<string, boolean> = {}
     for (const id of allGroupIds) next[id] = true
     setCollapsedGroups(next)
+  }
+
+  // ─── Provision import ────────────────────────────────────────────────────────
+
+  /** Builds an imported env entry by merging file fields over the existing entry
+   *  (`date`/`cidrs` fall back to existing values; `completedAt` is always kept —
+   *  completion is only changed via the UI). Validates the effective (merged) CIDRs
+   *  with the same rules as the sheet: format, parent containment, overlap. */
+  function buildImportedEntry(
+    project: Project,
+    opt: { value: ProvisionEnvironment; label: string },
+    raw: unknown,
+    externalCidrs: AllocatedCidr[],
+    acceptedCidrs: AllocatedCidr[],
+  ): { entry?: EnvironmentProvisionEntry; accepted: AllocatedCidr[]; error?: string } {
+    const none = { accepted: [] }
+    if (raw === undefined || raw === null) return none  // omitted env discards existing data
+    if (typeof raw !== 'object' || Array.isArray(raw)) {
+      return { ...none, error: `"${opt.value}" must be an object` }
+    }
+    const envData = raw as { date?: unknown; cidrs?: unknown }
+    const existing = project.environmentProvision?.[opt.value]
+
+    let date = existing?.date
+    if (envData.date !== undefined) {
+      if (typeof envData.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(envData.date)) {
+        return { ...none, error: `${opt.label}: invalid "date" (expected yyyy-MM-dd)` }
+      }
+      date = envData.date
+    }
+
+    const mergedCidrs: Partial<Record<ProvisionZone, string>> = { ...existing?.cidrs }
+    if (envData.cidrs !== undefined) {
+      if (typeof envData.cidrs !== 'object' || envData.cidrs === null || Array.isArray(envData.cidrs)) {
+        return { ...none, error: `${opt.label}: "cidrs" must be an object` }
+      }
+      for (const [zone, value] of Object.entries(envData.cidrs as Record<string, unknown>)) {
+        const zoneOpt = ZONE_OPTIONS.find(z => z.value === zone)
+        if (!zoneOpt) return { ...none, error: `${opt.label}: unknown zone "${zone}" (expected zoneA, zoneB, zoneC)` }
+        if (typeof value !== 'string') return { ...none, error: `${opt.label} ${zoneOpt.label}: CIDR must be a string` }
+        const v = value.trim()
+        if (!v) delete mergedCidrs[zoneOpt.value]
+        else mergedCidrs[zoneOpt.value] = v
+      }
+    }
+
+    const accepted: AllocatedCidr[] = []
+    for (const z of ZONE_OPTIONS) {
+      const v = mergedCidrs[z.value]
+      if (!v) continue
+      if (!parseCidr(v)) return { ...none, error: `${opt.label} ${z.label}: invalid CIDR format "${v}"` }
+      if (!isValidProvisionCidr(v, cidrParents[opt.value][z.value], allowedPrefixes)) {
+        return { ...none, error: `${opt.label} ${z.label}: "${v}" must be a ${formatAllowedPrefixes(allowedPrefixes)} block within: ${cidrParents[opt.value][z.value].join(', ')}` }
+      }
+      const conflict =
+        externalCidrs.find(a => cidrRangesOverlap(a.cidr, v)) ??
+        acceptedCidrs.find(a => a.projectId !== project.id && cidrRangesOverlap(a.cidr, v))
+      if (conflict) {
+        return { ...none, error: `${opt.label} ${z.label}: "${v}" conflicts with ${conflict.projectName} (${conflict.env.toUpperCase()} ${zoneLabel(conflict.zone)}: ${conflict.cidr})` }
+      }
+      accepted.push({ cidr: v, projectId: project.id, projectName: project.name, env: opt.value, zone: z.value })
+    }
+
+    return {
+      entry: {
+        date,
+        cidrs: Object.keys(mergedCidrs).length ? mergedCidrs : undefined,
+        completedAt: existing?.completedAt ?? null,
+      },
+      accepted,
+    }
+  }
+
+  function downloadProvisionImportSample() {
+    const blob = new Blob([JSON.stringify(PROVISION_IMPORT_SAMPLE_JSON, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'provision-import.sample.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  /** Export all projects' provision data as a JSON file compatible with the import format. */
+  function handleExportProvisions() {
+    const entries = liveProjects.map(p => {
+      const entry: Record<string, unknown> = { projectId: p.id }
+      for (const opt of ENV_OPTIONS) {
+        const env = p.environmentProvision?.[opt.value]
+        if (!env) continue
+        entry[opt.value] = {
+          ...(env.date ? { date: env.date } : {}),
+          ...(env.cidrs && Object.keys(env.cidrs).length ? { cidrs: env.cidrs } : {}),
+        }
+      }
+      return entry
+    })
+    if (entries.length === 0) {
+      toast.info('No projects to export')
+      return
+    }
+    const blob = new Blob([JSON.stringify({ projects: entries }, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'environment-provision-export.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleImportFile(file: File) {
+    setImporting(true)
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(await file.text())
+    } catch {
+      setImporting(false)
+      setImportSummary({ imported: 0, errors: [`${file.name}: file is not valid JSON`] })
+      return
+    }
+    const entries = (parsed as { projects?: unknown })?.projects
+    if (!Array.isArray(entries)) {
+      setImporting(false)
+      setImportSummary({ imported: 0, errors: [`${file.name}: expected a top-level "projects" array`] })
+      return
+    }
+
+    const errors: string[] = []
+    const planned: { project: Project; provision: EnvironmentProvision }[] = []
+    // Import replaces the whole provision per listed project, so conflict checks use
+    // allocations of projects NOT in the file + CIDRs accepted from earlier entries.
+    const fileProjectIds = new Set(
+      entries.map(e => (e as { projectId?: unknown })?.projectId).filter((v): v is string => typeof v === 'string')
+    )
+    const externalCidrs = allocatedCidrs.filter(a => !fileProjectIds.has(a.projectId))
+    const acceptedCidrs: AllocatedCidr[] = []
+
+    entries.forEach((rawEntry, ei) => {
+      const entry = rawEntry as { projectId?: unknown }
+      const projectId = typeof entry?.projectId === 'string' ? entry.projectId : null
+      const project = projectId ? liveProjects.find(p => p.id === projectId) : undefined
+      if (!project) {
+        errors.push(`projects[${ei}]: unknown or missing projectId${projectId ? ` "${projectId}"` : ''} — project skipped`)
+        return
+      }
+      const label = `Project ${projectId}`
+      const provision: EnvironmentProvision = {}
+      const acceptedForEntry: AllocatedCidr[] = []
+      for (const opt of ENV_OPTIONS) {
+        const result = buildImportedEntry(project, opt, (entry as Record<string, unknown>)[opt.value], externalCidrs, acceptedCidrs)
+        if (result.error) {
+          errors.push(`${label}: ${result.error} — project skipped`)
+          return
+        }
+        if (result.entry) {
+          provision[opt.value] = result.entry
+          acceptedForEntry.push(...result.accepted)
+        }
+      }
+      if (Object.keys(provision).length === 0) return  // no dev/prod keys (e.g. from a full export) — nothing to update
+      planned.push({ project, provision })
+      acceptedCidrs.push(...acceptedForEntry)
+    })
+
+    if (planned.length === 0) {
+      setImporting(false)
+      setImportSummary({ imported: 0, errors: errors.length ? errors : ['Nothing to import'] })
+      return
+    }
+
+    let imported = 0
+    for (const pl of planned) {
+      setLocalOverrides(prev => ({ ...prev, [pl.project.id]: pl.provision }))
+      try {
+        const updated = await updateEnvironmentProvision(pl.project.id, pl.provision)
+        setServerUpdates(prev => ({ ...prev, [pl.project.id]: updated }))
+        setLocalOverrides(prev => {
+          const next = { ...prev }
+          delete next[pl.project.id]
+          return next
+        })
+        imported++
+      } catch {
+        setLocalOverrides(prev => {
+          const next = { ...prev }
+          delete next[pl.project.id]
+          return next
+        })
+        errors.push(`Project ${pl.project.id}: failed to save — reverted`)
+      }
+    }
+    setImporting(false)
+    setImportSummary({ imported, errors })
   }
 
   async function handleSave(projectId: string, provision: EnvironmentProvision): Promise<boolean> {
@@ -509,6 +722,37 @@ export function EnvironmentProvisionPage() {
                 <ChevronsUpDown size={13} />
                 <span>Collapse all</span>
               </button>
+
+              <div className="w-px h-3 bg-border" />
+
+              <button
+                onClick={() => setImportDialogOpen(true)}
+                className="text-[12px] text-muted-foreground bg-transparent border-none cursor-pointer flex items-center gap-1"
+              >
+                <Upload size={13} />
+                <span>Import</span>
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  e.target.value = ''
+                  if (f) void handleImportFile(f)
+                }}
+              />
+
+              <div className="w-px h-3 bg-border" />
+
+              <button
+                onClick={handleExportProvisions}
+                className="text-[12px] text-muted-foreground bg-transparent border-none cursor-pointer flex items-center gap-1"
+              >
+                <Download size={13} />
+                <span>Export</span>
+              </button>
             </div>
 
             {/* Table */}
@@ -649,6 +893,72 @@ export function EnvironmentProvisionPage() {
         allowedPrefixes={allowedPrefixes}
         allocatedCidrs={allocatedCidrs}
       />
+
+      {/* Import dialog: intro → importing → result */}
+      <Dialog
+        open={importDialogOpen}
+        onOpenChange={open => {
+          if (importing) return
+          setImportDialogOpen(open)
+          if (!open) setImportSummary(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Environment Provisions</DialogTitle>
+            <DialogDescription>
+              {importing
+                ? 'Importing provisions, please wait...'
+                : importSummary
+                  ? `Imported provisions for ${importSummary.imported} project${importSummary.imported === 1 ? '' : 's'}.${importSummary.errors.length > 0 ? ` ${importSummary.errors.length} issue${importSummary.errors.length === 1 ? '' : 's'} reported below.` : ''}`
+                  : 'Bulk-update environment provision dates and zone CIDRs for multiple projects from a JSON file.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {importing ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <p className="text-xs">Validating and saving provisions...</p>
+            </div>
+          ) : importSummary ? (
+            <>
+              {importSummary.errors.length > 0 && (
+                <div className="max-h-60 overflow-y-auto rounded-md border border-border p-3 space-y-1.5">
+                  {importSummary.errors.map((err, i) => (
+                    <p key={i} className="text-xs text-muted-foreground">{err}</p>
+                  ))}
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setImportSummary(null)}>Import another file</Button>
+                <Button onClick={() => { setImportDialogOpen(false); setImportSummary(null) }}>Close</Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="text-xs text-muted-foreground space-y-2">
+                <p>How it works:</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Projects are matched by <code className="text-foreground">projectId</code>. For each listed project, its provision is <strong className="text-foreground">fully replaced</strong> — an environment (<code className="text-foreground">dev</code>/<code className="text-foreground">prod</code>) that is omitted discards its existing data.</li>
+                  <li>Within an environment, <code className="text-foreground">date</code> and <code className="text-foreground">cidrs</code> (<code className="text-foreground">zoneA</code>/<code className="text-foreground">zoneB</code>/<code className="text-foreground">zoneC</code>) are optional — omitted fields keep their existing values.</li>
+                  <li>CIDRs are validated like in the edit panel: they must fit the configured parent blocks and must not overlap other projects' allocations. Completion status is never imported — mark provisions completed from the edit panel.</li>
+                  <li>Projects not listed in the file are left untouched. Invalid entries are skipped and reported in a summary after the import.</li>
+                </ul>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={downloadProvisionImportSample}>
+                  <Download className="w-[13px] h-[13px] mr-1.5" />
+                  Download sample format
+                </Button>
+                <Button onClick={() => importInputRef.current?.click()}>
+                  <FolderOpen className="w-[13px] h-[13px] mr-1.5" />
+                  Open file
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

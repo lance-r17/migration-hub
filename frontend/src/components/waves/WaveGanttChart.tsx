@@ -70,6 +70,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { MultiAutocomplete } from '@/components/ui/multi-autocomplete'
 import { BgiTree } from '@/components/bgi/BgiTree'
 import { useCurrentUser } from '@/context/UserContext'
+import { useMigrationSettings } from '@/hooks/use-migration-settings'
+import { getStatusLabel } from '@/components/shared/StatusBadge'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -511,6 +513,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
 
   const { embargos } = useEmbargos()
   const { user: currentUser } = useCurrentUser()
+  const { settings: migrationSettings } = useMigrationSettings()
+  const signoffEnabled = migrationSettings?.signoffEnabled ?? true
 
   const [dragState, setDragState]         = useState<DragState | null>(null)
   const [localPlanning, setLocalPlanning] = useState<Record<string, ProjectPlanning>>({})
@@ -2859,6 +2863,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
             const isSelected      = selectedBarId === p.id
             const labelText       = p.jiraStoryKey ?? null
             const statusMeta      = PROJECT_STATUS_META[p.status]
+            const statusLabel     = getStatusLabel(p.status, p.stageProgress, undefined, signoffEnabled)
             const pct             = p.progress ?? 0
             const durationStats   = projectMilestoneDurationStats(p)
             const completedPct    = durationStats && durationStats.total > 0
@@ -2944,10 +2949,10 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span
-                              className="py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent cursor-help"
+                              className="block max-w-full min-w-0 overflow-hidden text-ellipsis py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent cursor-help"
                               style={{ background: statusMeta.bg, color: statusMeta.color }}
                             >
-                              {p.status}
+                              {statusLabel}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs text-xs">
@@ -2956,12 +2961,19 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
                           </TooltipContent>
                         </Tooltip>
                       ) : (
-                        <span
-                          className="py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent"
-                          style={{ background: statusMeta.bg, color: statusMeta.color }}
-                        >
-                          {p.status}
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="block max-w-full min-w-0 overflow-hidden text-ellipsis py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent"
+                              style={{ background: statusMeta.bg, color: statusMeta.color }}
+                            >
+                              {statusLabel}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            {statusLabel}
+                          </TooltipContent>
+                        </Tooltip>
                       )
                     )}
                   </div>
@@ -3262,6 +3274,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
         if (!milestoneGhostRow || milestoneGhostRow.type !== 'project') return null
         const { project: gp } = milestoneGhostRow
         const gStatusMeta = PROJECT_STATUS_META[gp.status]
+        const gStatusLabel = getStatusLabel(gp.status, gp.stageProgress, undefined, signoffEnabled)
         return (
           <div
             ref={projGhostRef}
@@ -3289,8 +3302,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
             </div>
             <div className={cellClass}>
               {gStatusMeta && (
-                <span className="py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent" style={{ background: gStatusMeta.bg, color: gStatusMeta.color }}>
-                  {gp.status}
+                <span className="block max-w-full min-w-0 overflow-hidden text-ellipsis py-0.5 px-[7px] rounded-full text-[11px] font-medium whitespace-nowrap border border-transparent" style={{ background: gStatusMeta.bg, color: gStatusMeta.color }}>
+                  {gStatusLabel}
                 </span>
               )}
             </div>
