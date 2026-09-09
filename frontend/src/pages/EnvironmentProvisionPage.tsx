@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Cloud, Download, FolderOpen, Loader2, Lock, Search, Server, SlidersHorizontal, Upload, X } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Cloud, Copy, Download, FolderOpen, Loader2, Lock, Search, Server, SlidersHorizontal, Upload, X } from 'lucide-react'
 import { format } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { toast } from 'sonner'
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 import { useWaves } from '@/hooks/use-waves'
@@ -134,6 +135,8 @@ export function EnvironmentProvisionPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importing, setImporting] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportWaveIds, setExportWaveIds] = useState<Set<string>>(new Set())
 
   const liveProjects = useMemo<Project[]>(() => {
     return initialProjects.map(project => {
@@ -338,20 +341,22 @@ export function EnvironmentProvisionPage() {
     URL.revokeObjectURL(url)
   }
 
-  /** Export all projects' provision data as a JSON file compatible with the import format. */
-  function handleExportProvisions() {
-    const entries = liveProjects.map(p => {
-      const entry: Record<string, unknown> = { projectId: p.id }
-      for (const opt of ENV_OPTIONS) {
-        const env = p.environmentProvision?.[opt.value]
-        if (!env) continue
-        entry[opt.value] = {
-          ...(env.date ? { date: env.date } : {}),
-          ...(env.cidrs && Object.keys(env.cidrs).length ? { cidrs: env.cidrs } : {}),
+  /** Export the selected waves' projects' provision data as a JSON file compatible with the import format. */
+  function handleExportProvisions(selected: Set<string>) {
+    const entries = liveProjects
+      .filter(p => p.waveId ? selected.has(p.waveId) : selected.has('__unassigned__'))
+      .map(p => {
+        const entry: Record<string, unknown> = { projectId: p.id }
+        for (const opt of ENV_OPTIONS) {
+          const env = p.environmentProvision?.[opt.value]
+          if (!env) continue
+          entry[opt.value] = {
+            ...(env.date ? { date: env.date } : {}),
+            ...(env.cidrs && Object.keys(env.cidrs).length ? { cidrs: env.cidrs } : {}),
+          }
         }
-      }
-      return entry
-    })
+        return entry
+      })
     if (entries.length === 0) {
       toast.info('No projects to export')
       return
@@ -747,7 +752,10 @@ export function EnvironmentProvisionPage() {
               <div className="w-px h-3 bg-border" />
 
               <button
-                onClick={handleExportProvisions}
+                onClick={() => {
+                  setExportWaveIds(new Set(groups.map(g => g.id)))
+                  setExportDialogOpen(true)
+                }}
                 className="text-[12px] text-muted-foreground bg-transparent border-none cursor-pointer flex items-center gap-1"
               >
                 <Download size={13} />
@@ -959,6 +967,57 @@ export function EnvironmentProvisionPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Export dialog: pick which waves' projects to include */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Environment Provisions</DialogTitle>
+            <DialogDescription>
+              Choose which waves' projects to include in the export.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-60 overflow-y-auto rounded-md border border-border divide-y divide-border">
+            {groups.map(g => (
+              <label key={g.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors">
+                <Checkbox
+                  checked={exportWaveIds.has(g.id)}
+                  onCheckedChange={() => setExportWaveIds(prev => {
+                    const next = new Set(prev)
+                    if (next.has(g.id)) next.delete(g.id)
+                    else next.add(g.id)
+                    return next
+                  })}
+                />
+                <span className="text-sm flex-1 truncate">{g.name}</span>
+                <span className="text-xs text-muted-foreground">{g.projects.length}</span>
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => setExportWaveIds(new Set(groups.map(g => g.id)))}>
+              Select all
+            </Button>
+            <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => setExportWaveIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>Cancel</Button>
+            <Button
+              disabled={exportWaveIds.size === 0}
+              onClick={() => {
+                handleExportProvisions(exportWaveIds)
+                setExportDialogOpen(false)
+              }}
+            >
+              Export
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1026,6 +1085,13 @@ function draftFromEntry(entry: EnvironmentProvisionEntry | undefined): EnvDraft 
 
 function zoneLabel(zone: ProvisionZone): string {
   return ZONE_OPTIONS.find(z => z.value === zone)?.label ?? zone
+}
+
+/** Target resource set name for an env: base id (new project id when present, else project id)
+ *  with any trailing -dev/-prod suffix stripped, then '-{env}' appended. */
+function targetResourceSet(project: Project, env: ProvisionEnvironment): string {
+  const base = (project.applicationOverview?.newProjectId ?? project.id).replace(/-(dev|prod)$/i, '')
+  return `${base}-${env}`
 }
 
 function ProvisionSheet({ project, onClose, onSave, saving, cidrParents, allowedPrefixes, allocatedCidrs }: ProvisionSheetProps) {
@@ -1096,6 +1162,14 @@ function ProvisionSheet({ project, onClose, onSave, saving, cidrParents, allowed
     const status = draft.checked && (draft.date || draft.completedAt)
       ? getProvisionEntryStatus({ date: draft.date, completedAt: draft.completedAt })
       : null
+    const filledCidrs = Object.fromEntries(
+      ZONE_OPTIONS.map(z => [z.value, (draft.cidrs[z.value] ?? '').trim()]).filter(([, v]) => v)
+    )
+    async function handleCopyCommand() {
+      const cmd = `migrate vpc create-vpc --resource-set '${targetResourceSet(project!, opt.value)}' --cidrs '${JSON.stringify(filledCidrs)}'`
+      await navigator.clipboard.writeText(cmd)
+      toast.success('Command copied to clipboard')
+    }
     return (
       <div key={opt.value} className="rounded-lg border border-border overflow-hidden">
         <label className="flex items-center gap-3 p-3 hover:bg-muted/40 cursor-pointer transition-colors">
@@ -1112,6 +1186,13 @@ function ProvisionSheet({ project, onClose, onSave, saving, cidrParents, allowed
         </label>
         {draft.checked && (
           <div className="border-t border-border px-3 py-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <Server className="size-3.5 text-muted-foreground" />
+                Target Resource Set
+              </Label>
+              <p className="text-xs font-mono text-muted-foreground">{targetResourceSet(project!, opt.value)}</p>
+            </div>
             <div className="space-y-2">
               <Label className="text-xs font-medium flex items-center gap-1.5">
                 <CalendarDays className="size-3.5 text-muted-foreground" />
@@ -1149,14 +1230,31 @@ function ProvisionSheet({ project, onClose, onSave, saving, cidrParents, allowed
                 )
               })}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConfirmEnv(opt.value)}
-              disabled={saving}
-            >
-              {draft.completedAt ? `Reopen ${opt.label} Provision` : `Mark ${opt.label} Completed`}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmEnv(opt.value)}
+                disabled={saving}
+              >
+                {draft.completedAt ? `Reopen ${opt.label} Provision` : `Mark ${opt.label} Completed`}
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyCommand}
+                    disabled={saving || Object.keys(filledCidrs).length === 0}
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Copy create-vpc command
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         )}
       </div>
