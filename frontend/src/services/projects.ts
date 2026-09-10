@@ -71,6 +71,7 @@ const ENDPOINTS = {
   dataMigrationSurveySubmitted: (id: string) => `/api/v1/projects/${id}/data-migration-survey-submitted`,
   dataMigrationComplete: (id: string) => `/api/v1/projects/${id}/data-migration-complete`,
   dataMigrationReopen: (id: string) => `/api/v1/projects/${id}/data-migration-reopen`,
+  dataMigrationRemoveFromScope: (id: string) => `/api/v1/projects/${id}/data-migration-remove-from-scope`,
   dataMigrationCycleBlocks: '/api/v1/projects/data-migration-cycle-blocks',
   resourceSyncComplete: (projectId: string, resourceId: string) => `/api/v1/projects/${projectId}/resources/${resourceId}/sync-complete`,
 }
@@ -366,7 +367,7 @@ export interface ProjectsHomeSummary {
 export async function getProjectsHomeSummary(): Promise<ProjectsHomeSummary> {
   if (USE_MOCK) {
     await delay()
-    const all = store.getProjects()
+    const all = store.getProjects().filter(p => p.applicationOverview?.migrationStrategy !== 'Deboard')
     const active = all
       .filter(p => p.status !== 'completed')
       .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
@@ -511,6 +512,8 @@ export interface ProjectsTableParams {
   bgiIds?: string[] | null
   /** Excluded BGI hierarchy nodes (subtrees subtracted from the selection) */
   excludedBgiIds?: string[] | null
+  /** When true, Deboard-strategy projects are included; default is to hide them */
+  includeDeboard?: boolean
 }
 
 function mockTableRow(p: Project): ProjectTableRow {
@@ -602,6 +605,9 @@ function mockProjectHasRoleUser(p: Project, role: string, userId: string): boole
 function mockGetProjectsTable(params: ProjectsTableParams): ProjectTablePage {
   const query = (params.search ?? '').trim().toLowerCase()
   let projects = store.getProjects()
+  if (!params.includeDeboard) {
+    projects = projects.filter((p) => p.applicationOverview?.migrationStrategy !== 'Deboard')
+  }
   if (params.status && params.status !== 'all') {
     projects = projects.filter((p) => {
       const sp = p.stageProgress
@@ -663,6 +669,7 @@ export async function getProjectsTable(params: ProjectsTableParams): Promise<Pro
   if (params.status && params.status !== 'all') qs.set('status', params.status)
   if (params.search?.trim()) qs.set('search', params.search.trim())
   if (params.migrationRange && params.migrationRange !== 'all') qs.set('migration_range', params.migrationRange)
+  if (params.includeDeboard) qs.set('include_deboard', 'true')
   if (params.role && params.roleUserId) {
     qs.set('role', params.role)
     qs.set('role_user_id', params.roleUserId)
@@ -824,6 +831,21 @@ export async function reopenDataMigration(
     return store.getProject(id)!
   }
   const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.dataMigrationReopen(id), payload)
+  return fromApi(raw)
+}
+
+/** Remove a project from the data migration scope (platform lead only).
+ *  Destructively clears both the adjusted plan and the survey schedule. */
+export async function removeFromDataMigrationScope(id: string): Promise<Project> {
+  if (USE_MOCK) {
+    await delay()
+    const p = store.getProject(id)
+    if (!p) throw new Error('Project not found')
+    store.updateProject(id, 'dataMigrationPlan', undefined)
+    store.updateProject(id, 'dataMigrationSchedule', undefined)
+    return store.getProject(id)!
+  }
+  const raw = await apiClient.post<ProjectApiResponse>(ENDPOINTS.dataMigrationRemoveFromScope(id), {})
   return fromApi(raw)
 }
 

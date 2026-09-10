@@ -153,7 +153,7 @@ def _governance_roles_from_project_users(p) -> GovernanceRolesOut | None:
 def _derive_status(p, stage_data: dict) -> str:
     if p.status == "blocked":
         return "blocked"
-    return project_service.derive_status_from_stage_progress(stage_data)
+    return project_service.derive_status_from_stage_progress(stage_data, (p.application_overview or {}).get("migrationStrategy"))
 
 
 def _unpack_ctx(ctx) -> tuple:
@@ -363,6 +363,9 @@ def _project_home_item(p, fields: set[str] | None = None, ctx=None) -> ProjectHo
                 "is_survey_needed": p.is_survey_needed,
                 "data_migration_survey_submitted_at": p.data_migration_survey_submitted_at,
                 "migration_constraints": _trim_keys(p.migration_constraints, _TABLE_CONSTRAINT_KEYS),
+                # Just the strategy — HomePage excludes Deboard projects from
+                # progress metrics and the active-projects grid.
+                "application_overview": _trim_keys(p.application_overview, ("migrationStrategy",)),
                 # ISO so HomePage's string sort is chronological; count avoids
                 # serializing full resource rows for the rich card asset count.
                 "resource_count": len(p.cloud_resources or []),
@@ -576,6 +579,7 @@ async def list_projects_table(
     migration_range: str | None = None,
     role: str | None = None,
     role_user_id: str | None = None,
+    include_deboard: bool = False,
     bgi_ids: list[str] | None = Query(None),
     excluded_bgi_ids: list[str] | None = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -616,6 +620,7 @@ async def list_projects_table(
         migration_range=migration_range,
         role=role,
         role_user_id=role_user_id,
+        include_deboard=include_deboard,
         page=page,
         page_size=page_size,
     )
@@ -872,7 +877,7 @@ def _resolve_status_if_unblocking(project, new_status: str, ctx=None) -> str:
     if project.status == "blocked" and new_status != "blocked":
         weights, signoff_enabled = _unpack_ctx(ctx)
         stage_data = project_service.compute_stage_progress(project, weights, signoff_enabled)
-        return project_service.derive_status_from_stage_progress(stage_data)
+        return project_service.derive_status_from_stage_progress(stage_data, (project.application_overview or {}).get("migrationStrategy"))
     return new_status
 
 
@@ -1289,6 +1294,28 @@ async def mark_data_migration_reopen(
 
     actor = _user_to_actor(current_user)
     updated = await project_service.mark_data_migration_reopen(db, project, body.reason.strip(), actor)
+    return _project_detail(updated, await project_service.get_progress_context(db))
+
+
+@router.post("/{project_id}/data-migration-remove-from-scope", response_model=ProjectDetail)
+async def remove_from_data_migration_scope(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = await project_service.get_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    is_platform_lead = "platform_migration_lead" in (current_user.role or "")
+    if not is_platform_lead and not _user_has_admin_role(current_user.role):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Platform Migration Leads or Admins can remove a project from the data migration scope.",
+        )
+
+    actor = _user_to_actor(current_user)
+    updated = await project_service.remove_from_data_migration_scope(db, project, actor)
     return _project_detail(updated, await project_service.get_progress_context(db))
 
 

@@ -105,6 +105,7 @@ export function ProjectsPage() {
   const [rolePopoverOpen, setRolePopoverOpen] = useState(false)
   const [roleUserSearch, setRoleUserSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [showDeboard, setShowDeboard] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
   const [bgiPopoverOpen, setBgiPopoverOpen] = useState(false)
@@ -214,6 +215,7 @@ export function ProjectsPage() {
     roleUserId: roleFilter !== 'all' && roleUserIdFilter !== 'all' ? roleUserIdFilter : undefined,
     bgiIds: bgiFilterParams.bgiIds,
     excludedBgiIds: bgiFilterParams.excludedBgiIds,
+    includeDeboard: showDeboard,
   })
 
   const totalPages = Math.ceil(total / pageSize)
@@ -271,6 +273,7 @@ export function ProjectsPage() {
         roleUserId: roleFilter !== 'all' && roleUserIdFilter !== 'all' ? roleUserIdFilter : undefined,
         bgiIds: bgiFilterParams.bgiIds,
         excludedBgiIds: bgiFilterParams.excludedBgiIds,
+        includeDeboard: showDeboard,
       })
       exportProjectsToExcel(result.items, bgiRoot, signoffEnabled)
     } catch {
@@ -341,6 +344,7 @@ export function ProjectsPage() {
               <SelectItem value="migrating">Migrating</SelectItem>
               <SelectItem value="blocked">Blocked</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="no-migration-required">No Migration Required</SelectItem>
             </SelectContent>
           </Select>
           <Popover open={bgiPopoverOpen} onOpenChange={setBgiPopoverOpen}>
@@ -577,6 +581,20 @@ export function ProjectsPage() {
               }}
               className="w-[220px] pl-9 h-7"
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-deboard"
+              checked={showDeboard}
+              onCheckedChange={(checked) => {
+                setShowDeboard(checked)
+                setCurrentPage(1)
+              }}
+              className="scale-75 origin-left"
+            />
+            <Label htmlFor="show-deboard" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+              Show Deboard
+            </Label>
           </div>
           </div>
           <button

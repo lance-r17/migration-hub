@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, Database, HardDrive, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, CircleHelp, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, MessageSquare, MessageSquarePlus, Upload, Download, FolderOpen, ExternalLink } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, RotateCcw, MoreHorizontal, Plus, Trash2, Pencil, Sparkles, ArrowRight, Unlink, Database, HardDrive, Cpu, Lock, Info, Search, X, Circle, CheckCircle2, CircleHelp, Loader2, ListFilter, Check, Tag, Network, SlidersHorizontal, MessageSquare, MessageSquarePlus, Upload, Download, FolderOpen, ExternalLink, User as UserIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -198,6 +198,7 @@ const PROJECT_STATUS_META: Record<string, { bg: string; color: string }> = {
   'blocked':     { bg: 'oklch(0.93 0.05 20)',      color: 'oklch(0.40 0.14 20)'  },
   'completed':   { bg: 'oklch(0.90 0.05 140)',     color: 'oklch(0.35 0.12 150)' },
   'signed-off':  { bg: 'oklch(0.90 0.05 140)',     color: 'oklch(0.35 0.12 150)' },
+  'no-migration-required': { bg: 'var(--g-bg-alt)', color: 'var(--g-text-muted)' },
 }
 
 const MILESTONE_STATUS_PROGRESS: Record<string, number> = { 'todo': 0, 'in-progress': 50, 'done': 100 }
@@ -492,6 +493,8 @@ interface Props {
   bgiRoot?: BgiNode | null
   bgiScopeIds?: string[] | null
   bgiMaxDepth?: number | null
+  /** Engagement manager options; non-empty only for platform leads (filter hidden otherwise) */
+  engagementManagers?: { id: string; name: string }[]
   onUpdatePlanning: (projectId: string, planning: ProjectPlanning) => Promise<void>
   onUpdateProjectOrder?: (waveId: string, projectIds: string[]) => Promise<void>
   onAssign?: (projectId: string, waveId: string | undefined) => void
@@ -499,7 +502,7 @@ interface Props {
   initialSearch?: string
 }
 
-export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRoot = null, bgiScopeIds = null, bgiMaxDepth = null, onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly, initialSearch = '' }: Props) {
+export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRoot = null, bgiScopeIds = null, bgiMaxDepth = null, engagementManagers = [], onUpdatePlanning, onUpdateProjectOrder, onAssign, readOnly, initialSearch = '' }: Props) {
   const navigate = useNavigate()
   const [showCompleted, setShowCompleted] = useState(true)
   const scrollRef    = useRef<HTMLDivElement>(null)
@@ -550,6 +553,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
   const [selectedRpos, setSelectedRpos]         = useState<Set<string>>(new Set())
   const [rtoSearch, setRtoSearch]               = useState('')
   const [rpoSearch, setRpoSearch]               = useState('')
+  const [selectedEngagementManagerIds, setSelectedEngagementManagerIds] = useState<Set<string>>(new Set())
 
   const colPx      = ZOOM_COL_PX[zoom]
   const daysPerCol = ZOOM_DAYS_PER_COL[zoom]
@@ -1631,6 +1635,18 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     return set
   }, [hasAdvFilter, selectedMigrationStrategies, selectedApplicationTiers, selectedReArch, selectedRtos, selectedRpos, projects])
 
+  const hasManagerFilter = selectedEngagementManagerIds.size > 0
+
+  const matchingManagerIds = useMemo(() => {
+    if (!hasManagerFilter) return new Set<string>()
+    const set = new Set<string>()
+    for (const p of projects) {
+      const mgrId = p.engagement?.engagementManagerId
+      if (mgrId && selectedEngagementManagerIds.has(mgrId)) set.add(p.id)
+    }
+    return set
+  }, [hasManagerFilter, selectedEngagementManagerIds, projects])
+
   const rows = useMemo<RowItem[]>(() => {
     const result: RowItem[] = []
     let projectCounter = 0
@@ -1656,10 +1672,11 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
         (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
         (!hasCmFilter || matchingCmIds.has(p.id)) &&
         (!hasBgiFilter || (p.bgi_id && selectedBgiDescendantIds!.has(p.bgi_id))) &&
-        (!hasAdvFilter || matchingAdvIds.has(p.id))
+        (!hasAdvFilter || matchingAdvIds.has(p.id)) &&
+        (!hasManagerFilter || matchingManagerIds.has(p.id))
       )
 
-      if ((hasSearch || hasDurationFilter || hasCmFilter || hasBgiFilter || hasAdvFilter) && visibleWaveProjects.length === 0) continue
+      if ((hasSearch || hasDurationFilter || hasCmFilter || hasBgiFilter || hasAdvFilter || hasManagerFilter) && visibleWaveProjects.length === 0) continue
 
       result.push({ type: 'wave', wave })
       if (!collapsedWaves.has(wave.id)) {
@@ -1693,7 +1710,8 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
       (!hasCmFilter || matchingCmIds.has(p.id)) &&
       (!hasBgiFilter || (p.bgi_id && selectedBgiDescendantIds!.has(p.bgi_id))) &&
-      (!hasAdvFilter || matchingAdvIds.has(p.id))
+      (!hasAdvFilter || matchingAdvIds.has(p.id)) &&
+      (!hasManagerFilter || matchingManagerIds.has(p.id))
     )
 
     if (visibleUnassigned.length > 0) {
@@ -1713,7 +1731,7 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
     }
     return result
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds, categoryMilestones])
+  }, [sortedWaves, collapsedWaves, collapsedProjects, projectsByWave, unassignedProjects, localPlanning, rowMilestoneDragState, projRowDragState, embargos, embargosCollapsed, hasSearch, matchingProjectIds, matchingEmbargoIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds, hasManagerFilter, matchingManagerIds, categoryMilestones])
 
   // ─── Row height helpers ──────────────────────────────────────────────────────
 
@@ -1732,13 +1750,14 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
         (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
         (!hasCmFilter || matchingCmIds.has(p.id)) &&
         (!hasBgiFilter || (p.bgi_id && selectedBgiDescendantIds!.has(p.bgi_id))) &&
-        (!hasAdvFilter || matchingAdvIds.has(p.id))
+        (!hasAdvFilter || matchingAdvIds.has(p.id)) &&
+        (!hasManagerFilter || matchingManagerIds.has(p.id))
       )
       map.set(wave.id, visibleWaveProjects.length)
     }
     return map
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedWaves, projectsByWave, hasSearch, matchingProjectIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds])
+  }, [sortedWaves, projectsByWave, hasSearch, matchingProjectIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds, hasManagerFilter, matchingManagerIds])
 
   const filteredUnassignedCount = useMemo(() => {
     return unassignedProjects.filter(p =>
@@ -1746,10 +1765,11 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
       (!hasDurationFilter || matchingDurationIds.has(p.id)) &&
       (!hasCmFilter || matchingCmIds.has(p.id)) &&
       (!hasBgiFilter || (p.bgi_id && selectedBgiDescendantIds!.has(p.bgi_id))) &&
-      (!hasAdvFilter || matchingAdvIds.has(p.id))
+      (!hasAdvFilter || matchingAdvIds.has(p.id)) &&
+      (!hasManagerFilter || matchingManagerIds.has(p.id))
     ).length
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unassignedProjects, hasSearch, matchingProjectIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds])
+  }, [unassignedProjects, hasSearch, matchingProjectIds, hasDurationFilter, matchingDurationIds, hasCmFilter, matchingCmIds, hasBgiFilter, selectedBgiDescendantIds, hasAdvFilter, matchingAdvIds, hasManagerFilter, matchingManagerIds])
 
   // Cumulative row tops for SVG overlay
   const rowTops = useMemo(() => {
@@ -1861,6 +1881,70 @@ export function WaveGanttChart({ waves, projects, categoryMilestones = [], bgiRo
           </Label>
         </div>
         <div className="flex-1" />
+        {/* Engagement Manager filter — platform lead only (options passed from the page) */}
+        {engagementManagers.length > 0 && (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    "relative flex items-center gap-1 bg-transparent border-none cursor-pointer text-[12px] text-[var(--g-text-muted)] mr-2",
+                    hasManagerFilter && "text-[var(--g-accent)]"
+                  )}
+                  data-testid="manager-filter-btn"
+                >
+                  <UserIcon size={13} className={hasManagerFilter ? 'text-[oklch(0.48_0.20_260)]' : ''} />
+                  <span>Manager</span>
+                  {selectedEngagementManagerIds.size > 0 && (
+                    <span className="absolute -top-1 -right-4 text-[10px] bg-primary text-primary-foreground rounded-full size-4 flex items-center justify-center">
+                      {selectedEngagementManagerIds.size}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[200px]">
+                {engagementManagers.map(mgr => (
+                  <DropdownMenuItem
+                    key={mgr.id}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setSelectedEngagementManagerIds(prev => {
+                        const next = new Set(prev)
+                        if (next.has(mgr.id)) next.delete(mgr.id)
+                        else next.add(mgr.id)
+                        return next
+                      })
+                    }}
+                    className={cn(
+                      'text-xs flex items-center gap-2',
+                      selectedEngagementManagerIds.has(mgr.id) && 'bg-primary/10 text-primary font-medium',
+                    )}
+                  >
+                    <span className="w-3.5 flex items-center justify-center">
+                      {selectedEngagementManagerIds.has(mgr.id) && <Check size={12} />}
+                    </span>
+                    {mgr.name}
+                  </DropdownMenuItem>
+                ))}
+                {selectedEngagementManagerIds.size > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setSelectedEngagementManagerIds(new Set())
+                      }}
+                      className="text-xs text-muted-foreground"
+                    >
+                      Clear filter
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="w-px h-3 bg-[var(--g-border)] mr-2" />
+          </>
+        )}
         <Popover open={advFilterOpen} onOpenChange={setAdvFilterOpen}>
           <PopoverTrigger asChild>
             <button

@@ -12,8 +12,9 @@ import { updatePlanning, updateProject } from '@/services/projects'
 import { updateProjectOrder } from '@/services/waves'
 import { appendAuditEntryMock } from '@/services/auditLog'
 import { getBgiHierarchy } from '@/services/bgi'
+import { apiClient } from '@/services/client'
 import { USE_MOCK } from '@/services/client'
-import type { Project, ProjectPlanning } from '@/types'
+import type { Project, ProjectPlanning, User } from '@/types'
 import type { Wave } from '@/types/wave'
 import type { BgiNode } from '@/types/bgi'
 
@@ -23,13 +24,14 @@ export function WaveGanttPage() {
   const { user } = useCurrentUser()
   const { waves: initialWaves, loading: wavesLoading } = useWaves()
   const { projects: initialProjects, loading: projectsLoading } = useProjects({
-    fields: ['basic', 'progress', 'planning', 'availability', 'target_architecture'],
+    fields: ['basic', 'progress', 'planning', 'availability', 'target_architecture', 'engagement'],
   })
   const { categoryMilestones, loading: cmLoading } = useCategoryMilestones()
 
   const [liveWaves, setLiveWaves] = useState<Wave[]>(initialWaves)
   const [liveProjects, setLiveProjects] = useState<Project[]>(initialProjects)
   const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
+  const [allUsers, setAllUsers] = useState<User[]>([])
 
   useEffect(() => { setLiveWaves(initialWaves) }, [initialWaves])
   useEffect(() => { setLiveProjects(initialProjects) }, [initialProjects])
@@ -40,6 +42,10 @@ export function WaveGanttPage() {
       .then(data => { if (!cancelled) setBgiRoot(data) })
       .catch(() => {})
     return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    apiClient.get<User[]>('/api/v1/users').then(setAllUsers).catch(() => {})
   }, [])
 
   const sortedWaves = useMemo(() => {
@@ -108,6 +114,21 @@ export function WaveGanttPage() {
   const isLoading = wavesLoading || projectsLoading || cmLoading
   const { settings: migrationSettings } = useMigrationSettings()
 
+  // Engagement managers across projects — platform-lead-only filter, matching
+  // the Engagement Calendar's manager dropdown.
+  const engagementManagers = useMemo(() => {
+    if (!isPlatformLead) return []
+    const map = new Map<string, { id: string; name: string }>()
+    for (const p of liveProjects) {
+      const mgrId = p.engagement?.engagementManagerId
+      if (mgrId) {
+        const u = allUsers.find(user => user.id === mgrId)
+        if (u) map.set(mgrId, { id: mgrId, name: u.name })
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [isPlatformLead, liveProjects, allUsers])
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
@@ -158,6 +179,7 @@ export function WaveGanttPage() {
             bgiRoot={canUseBgiFilter ? bgiRoot : null}
             bgiScopeIds={isPlatformLead ? null : (user?.bgi_ids ?? null)}
             bgiMaxDepth={migrationSettings?.bgiTierDepth ?? null}
+            engagementManagers={engagementManagers}
             onUpdatePlanning={handleUpdatePlanning}
             onUpdateProjectOrder={isPlatformLead ? handleUpdateProjectOrder : undefined}
             onAssign={isPlatformLead ? handleAssign : undefined}

@@ -75,3 +75,35 @@ class TestHomeSummary:
         first = items[0]
         for key in ("id", "name", "status", "progress", "stage_progress", "team", "resource_count"):
             assert key in first
+
+    @pytest.mark.asyncio
+    async def test_excludes_deboard_projects(self, lead_client: AsyncClient, db_session: AsyncSession):
+        before = (await lead_client.get("/api/v1/projects/home-summary")).json()
+
+        deboard = Project(
+            id=_fresh_id("proj"),
+            name="DeboardSummaryProj",
+            status="planning",
+            application_overview={"migrationStrategy": "Deboard"},
+        )
+        normal = Project(
+            id=_fresh_id("proj"),
+            name="NormalSummaryProj",
+            status="planning",
+            application_overview={"migrationStrategy": "Lift & Shift"},
+        )
+        db_session.add_all([deboard, normal])
+        await db_session.commit()
+
+        r = await lead_client.get("/api/v1/projects/home-summary")
+        assert r.status_code == 200
+        data = r.json()
+
+        # total counts only non-deboard projects
+        assert data["total"] == before["total"] + 1
+        returned_ids = {i["id"] for i in data["projects"]}
+        assert deboard.id not in returned_ids
+        assert normal.id in returned_ids
+        # the basic payload carries the trimmed strategy so the frontend can filter
+        normal_item = next(i for i in data["projects"] if i["id"] == normal.id)
+        assert normal_item["application_overview"] == {"migrationStrategy": "Lift & Shift"}

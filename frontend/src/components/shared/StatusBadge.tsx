@@ -10,6 +10,7 @@ const statusConfig: Record<ProjectStatus, { label: string; className: string }> 
   'planning':    { label: 'Planning',    className: '' },
   'in-progress': { label: 'In Progress', className: 'bg-secondary text-secondary-foreground hover:bg-secondary/80' },
   'completed':   { label: 'Completed',   className: 'border-emerald-600 text-emerald-700 dark:text-emerald-300' },
+  'no-migration-required': { label: 'No Migration Required', className: 'border-slate-400 text-slate-600 dark:text-slate-300' },
 }
 
 const statusVariant: Record<ProjectStatus, 'secondary' | 'destructive' | 'outline'> = {
@@ -19,6 +20,7 @@ const statusVariant: Record<ProjectStatus, 'secondary' | 'destructive' | 'outlin
   'planning':    'outline',
   'in-progress': 'secondary',
   'completed':   'outline',
+  'no-migration-required': 'outline',
 }
 
 export function getStatusLabel(
@@ -86,6 +88,8 @@ function getStatusDetail(status: ProjectStatus, stageProgress?: StageProgress, s
       return `Migration ${stageProgress.migration}%`
     case 'completed':
       return 'All done'
+    case 'no-migration-required':
+      return 'Deboard strategy — no migration needed'
     case 'blocked':
       return 'Needs attention'
     default:

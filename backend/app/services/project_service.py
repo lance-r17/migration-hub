@@ -183,13 +183,14 @@ def compute_stage_progress(
     return {"setup": setup, "survey": survey, "signoff": signoff, "migration": migration, "overall": overall}
 
 
-def derive_status_from_stage_progress(stage_data: dict[str, int]) -> str:
+def derive_status_from_stage_progress(stage_data: dict[str, int], migration_strategy: str | None = None) -> str:
     """Derive project status from stage progress percentages.
 
     Rules:
       - setup == 0                          -> planning
       - setup == 100 && survey < 100        -> in-progress
       - setup == 100 && survey == 100 && signoff < 100 -> in-progress
+      - Deboard && prepare complete (setup/survey/signoff == 100) -> no-migration-required
       - setup == 100 && survey == 100 && signoff == 100 && migration == 0 -> signed-off
       - setup == 100 && survey == 100 && signoff == 100 && migration > 0 && migration < 100 -> migrating
       - setup == 100 && survey == 100 && signoff == 100 && migration == 100 -> completed
@@ -205,6 +206,8 @@ def derive_status_from_stage_progress(stage_data: dict[str, int]) -> str:
         return "in-progress"
     if signoff < 100:
         return "in-progress"
+    if migration_strategy == "Deboard":
+        return "no-migration-required"
     if migration == 0:
         return "signed-off"
     if migration < 100:
@@ -212,11 +215,15 @@ def derive_status_from_stage_progress(stage_data: dict[str, int]) -> str:
     return "completed"
 
 
+def _migration_strategy(project: "Project") -> str | None:
+    return (project.application_overview or {}).get("migrationStrategy")
+
+
 async def _derive_and_store_status(session: AsyncSession, project: "Project") -> None:
     weights, signoff_enabled = await get_progress_context(session)
     stage_data = compute_stage_progress(project, weights, signoff_enabled)
     if project.status != "blocked":
-        project.status = derive_status_from_stage_progress(stage_data)
+        project.status = derive_status_from_stage_progress(stage_data, _migration_strategy(project))
 
 
 def _to_label(key: str) -> str:
@@ -575,6 +582,7 @@ async def get_table_page(
     migration_range: str | None = None,
     role: str | None = None,
     role_user_id: str | None = None,
+    include_deboard: bool = False,
     page: int = 1,
     page_size: int = 20,
 ) -> tuple[list[tuple["Project", dict[str, int], str, bool]], int]:
@@ -621,11 +629,13 @@ async def get_table_page(
 
     rows: list[tuple["Project", dict[str, int], str, bool]] = []
     for project in candidates:
+        if not include_deboard and _migration_strategy(project) == "Deboard":
+            continue
         stage_data = compute_stage_progress(project, weights, signoff_enabled)
         effective_status = (
             "blocked"
             if project.status == "blocked"
-            else derive_status_from_stage_progress(stage_data)
+            else derive_status_from_stage_progress(stage_data, _migration_strategy(project))
         )
         has_draft = project.id in draft_ids
         if status and status != "all":
@@ -652,13 +662,17 @@ async def get_home_summary(
     """Latest active (non-completed) projects by updated_at + total project count.
 
     Powers the platform lead's landing grid; the full project list lazy-loads
-    separately for the charts.
+    separately for the charts. Deboard projects are excluded — they require no
+    migration and should not appear in the landing grid or its total count.
     """
     from app.models.project_user import ProjectUser
+
+    not_deboard = func.coalesce(Project.application_overview["migrationStrategy"].astext, "") != "Deboard"
 
     q = (
         select(Project)
         .where(Project.status != "completed")
+        .where(not_deboard)
         .options(
             selectinload(Project.cloud_resources),
             selectinload(Project.approvals),
@@ -670,7 +684,9 @@ async def get_home_summary(
     )
     result = await session.execute(q)
     projects = list(result.scalars().all())
-    total_result = await session.execute(select(func.count()).select_from(Project))
+    total_result = await session.execute(
+        select(func.count()).select_from(Project).where(not_deboard)
+    )
     return projects, total_result.scalar() or 0
 
 
@@ -921,7 +937,7 @@ async def mark_data_migration_complete(
         event_type="data_migration_completed",
         entity_type="data_migration",
         actor=actor,
-        changes=[{"field": "dataMigrationPlan.completedAt", "new": completed_at}],
+        changes=[{"field": "dataMigrationPlan.completedAt", "label": "Data Migration Completed At", "new_value": completed_at}],
     )
     return project
 
@@ -951,8 +967,34 @@ async def mark_data_migration_reopen(
         entity_type="data_migration",
         actor=actor,
         changes=[
-            {"field": "dataMigrationPlan.reopenedAt", "new": reopened_at},
-            {"field": "dataMigrationPlan.reopenReason", "new": reason},
+            {"field": "dataMigrationPlan.reopenedAt", "label": "Data Migration Reopened At", "new_value": reopened_at},
+            {"field": "dataMigrationPlan.reopenReason", "label": "Reopen Reason", "new_value": reason},
+        ],
+    )
+    return project
+
+
+async def remove_from_data_migration_scope(
+    session: AsyncSession,
+    project: Project,
+    actor: dict[str, Any],
+) -> Project:
+    """Remove a project from the data migration scope.
+
+    Destructively clears both the adjusted plan and the survey schedule so the
+    project drops out of cycle-block lists and its booked capacity is freed.
+    """
+    project.data_migration_plan = None
+    project.data_migration_schedule = None
+    await session.flush()
+    await audit_service.append_entry(
+        session,
+        project_id=project.id,
+        event_type="data_migration_scope_removed",
+        entity_type="data_migration",
+        actor=actor,
+        changes=[
+            {"field": "dataMigrationScope", "label": "Data Migration Scope", "old_value": "In scope", "new_value": "Removed"},
         ],
     )
     return project

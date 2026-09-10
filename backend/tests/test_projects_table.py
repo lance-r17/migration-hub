@@ -520,3 +520,96 @@ class TestProjectsTableRoleScoping:
         ids = [i["id"] for i in r.json()["items"]]
         assert inside.id in ids
         assert outside.id not in ids
+
+
+def _fully_approved(session: AsyncSession, project: Project) -> None:
+    for role in ("technical_lead", "gbi_champion", "platform_migration_lead"):
+        session.add(
+            Approval(
+                id=_fresh_id("appr"),
+                project_id=project.id,
+                role=role,
+                status="approved",
+                icon="check",
+            )
+        )
+
+
+class TestDeboardFilter:
+    @pytest.mark.asyncio
+    async def test_deboard_excluded_by_default(self, lead_client: AsyncClient, db_session: AsyncSession):
+        prefix = f"DeboardProj-{uuid.uuid4().hex[:6]}"
+        deboard = await _create_project(
+            db_session, name=f"{prefix} D", application_overview={"migrationStrategy": "Deboard"}
+        )
+        normal = await _create_project(
+            db_session, name=f"{prefix} N", application_overview={"migrationStrategy": "Lift & Shift"}
+        )
+        unset = await _create_project(db_session, name=f"{prefix} U")
+
+        r = await lead_client.get(
+            "/api/v1/projects/table", params={"page_size": 0, "search": prefix}
+        )
+        ids = [i["id"] for i in r.json()["items"]]
+        assert deboard.id not in ids
+        assert normal.id in ids
+        assert unset.id in ids
+
+        r = await lead_client.get(
+            "/api/v1/projects/table",
+            params={"page_size": 0, "search": prefix, "include_deboard": "true"},
+        )
+        ids = [i["id"] for i in r.json()["items"]]
+        assert deboard.id in ids
+        assert normal.id in ids
+        assert unset.id in ids
+
+    @pytest.mark.asyncio
+    async def test_deboard_prepare_complete_is_no_migration_required(
+        self, lead_client: AsyncClient, db_session: AsyncSession
+    ):
+        deboard = await _create_project(
+            db_session,
+            name="DeboardDone",
+            survey_submitted=True,
+            application_overview={"migrationStrategy": "Deboard"},
+        )
+        await _make_in_progress(db_session, deboard)
+        _fully_approved(db_session, deboard)
+
+        normal = await _create_project(
+            db_session,
+            name="NormalDone",
+            survey_submitted=True,
+            application_overview={"migrationStrategy": "Refactor"},
+        )
+        await _make_in_progress(db_session, normal)
+        _fully_approved(db_session, normal)
+        await db_session.commit()
+
+        r = await lead_client.get(
+            "/api/v1/projects/table",
+            params={"page_size": 0, "status": "no-migration-required", "include_deboard": "true"},
+        )
+        ids = [i["id"] for i in r.json()["items"]]
+        assert deboard.id in ids
+        assert normal.id not in ids
+
+        # Non-deboard project with the same stage progress is signed-off, not no-migration-required
+        r = await lead_client.get(
+            "/api/v1/projects/table", params={"page_size": 0, "search": "NormalDone"}
+        )
+        assert r.json()["items"][0]["status"] == "signed-off"
+
+    @pytest.mark.asyncio
+    async def test_deboard_before_prepare_keeps_normal_status(
+        self, lead_client: AsyncClient, db_session: AsyncSession
+    ):
+        deboard = await _create_project(
+            db_session, name="DeboardEarly", application_overview={"migrationStrategy": "Deboard"}
+        )
+        r = await lead_client.get(
+            "/api/v1/projects/table",
+            params={"page_size": 0, "search": "DeboardEarly", "include_deboard": "true"},
+        )
+        assert r.json()["items"][0]["status"] == "planning"

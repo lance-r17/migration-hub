@@ -13,6 +13,9 @@ export type AuditEventType =
   | 'wave_imported'
   | 'jira_story_created'
   | 'survey_submitted'
+  | 'data_migration_completed'
+  | 'data_migration_reopened'
+  | 'data_migration_scope_removed'
 
 export type AuditEntityType =
   | 'project'
@@ -21,6 +24,7 @@ export type AuditEntityType =
   | 'risk'
   | 'cloud_resource'
   | 'wave'
+  | 'data_migration'
 
 export interface AuditChange {
   field: string       // technical key

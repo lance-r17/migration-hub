@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useCallback, type ComponentProps } from 'react'
 import { Select as SelectPrimitive } from 'radix-ui'
 import { useNavigate } from 'react-router-dom'
-import { Database, ArrowLeft, LayoutDashboard, Save, CalendarRange, Users, Shield, Check, RotateCcw, CheckCircle } from 'lucide-react'
+import { Database, ArrowLeft, LayoutDashboard, Save, CalendarRange, Users, Shield, Check, RotateCcw, CheckCircle, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -21,7 +22,7 @@ import {
 import { useDataMigrationCycleBlocks } from '@/hooks/use-data-migration-cycle-blocks'
 import { useProjects } from '@/hooks/use-projects'
 import { useCurrentUser } from '@/context/UserContext'
-import { updateProject, markDataMigrationComplete, reopenDataMigration } from '@/services/projects'
+import { updateProject, markDataMigrationComplete, reopenDataMigration, removeFromDataMigrationScope } from '@/services/projects'
 import { getBgiCloudLeads } from '@/services/adminUsers'
 import { getBgiHierarchy } from '@/services/bgi'
 import { cn } from '@/lib/utils'
@@ -199,6 +200,7 @@ export function DataMigrationPage() {
 
   const [selectedBlock, setSelectedBlock] = useState<DataMigrationCycleBlock | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [projectSearch, setProjectSearch] = useState('')
   const [allowMultipleCycleBlocks, setAllowMultipleCycleBlocks] = useState(false)
   const [bgiRoot, setBgiRoot] = useState<BgiNode | null>(null)
   const [bgiCloudLeads, setBgiCloudLeads] = useState<User[]>([])
@@ -211,6 +213,8 @@ export function DataMigrationPage() {
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false)
   const [reopenReason, setReopenReason] = useState('')
   const [reopening, setReopening] = useState(false)
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
+  const [removing, setRemoving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -262,8 +266,21 @@ export function DataMigrationPage() {
     })
   }, [liveProjects, isPlatformLead, user, bgiRoot])
 
+  /** Projects matching the search term (in scope of data migration), regardless of block.
+   *  null when no search is active. */
+  const searchedProjects = useMemo(() => {
+    const term = projectSearch.trim().toLowerCase()
+    if (!term) return null
+    return userProjects.filter(p => {
+      const plan = p.dataMigrationPlan ?? p.dataMigrationSchedule
+      if (!plan) return false
+      return p.name.toLowerCase().includes(term) || p.id.toLowerCase().includes(term)
+    })
+  }, [userProjects, projectSearch])
+
   const filteredProjects = useMemo(() => {
     if (!selectedBlock) return []
+    const term = projectSearch.trim().toLowerCase()
     return userProjects
       .filter(p => {
         const plan = p.dataMigrationPlan ?? p.dataMigrationSchedule
@@ -278,8 +295,12 @@ export function DataMigrationPage() {
           b => b.startDate === selectedBlock.startDate && b.endDate === selectedBlock.endDate
         )
       })
+      .filter(p => {
+        if (!term) return true
+        return p.name.toLowerCase().includes(term) || p.id.toLowerCase().includes(term)
+      })
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [userProjects, selectedBlock])
+  }, [userProjects, selectedBlock, projectSearch])
 
   const blockBookedCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -330,10 +351,13 @@ export function DataMigrationPage() {
   }, [userProjects, blocks])
 
   const visibleBlocks = useMemo(() => {
-    if (isPlatformLead) return blocks
+    if (isPlatformLead && !searchedProjects) return blocks
+    // Non-leads only see blocks containing their projects; when a search is
+    // active, only blocks containing the matched projects are shown.
+    const sourceProjects = searchedProjects ?? userProjects
     return blocks.filter(block => {
       const blockKey = `${block.startDate}|${block.endDate}`
-      return userProjects.some(project => {
+      return sourceProjects.some(project => {
         const plan = project.dataMigrationPlan ?? project.dataMigrationSchedule
         if (!plan) return false
         const planBlocks =
@@ -345,7 +369,7 @@ export function DataMigrationPage() {
         return planBlocks.some(b => `${b.startDate}|${b.endDate}` === blockKey)
       })
     })
-  }, [blocks, userProjects, isPlatformLead])
+  }, [blocks, userProjects, isPlatformLead, searchedProjects])
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -615,6 +639,25 @@ export function DataMigrationPage() {
 
   const isLoading = settingsLoading || projectsLoading || blocksLoading
 
+  const handleRemoveFromScope = useCallback(async () => {
+    if (!selectedProject || !isPlatformLead) return
+    setRemoving(true)
+    try {
+      await removeFromDataMigrationScope(selectedProject.id)
+      setProjectOverrides(prev => ({
+        ...prev,
+        [selectedProject.id]: { dataMigrationPlan: undefined, dataMigrationSchedule: undefined },
+      }))
+      setRemoveDialogOpen(false)
+      setSelectedProjectId(null)
+      toast.success('Project removed from data migration scope')
+    } catch {
+      toast.error('Failed to remove project from data migration scope')
+    } finally {
+      setRemoving(false)
+    }
+  }, [selectedProject, isPlatformLead])
+
   const readOnly = !isPlatformLead || isPlanCompleted
 
   const changed = (key: keyof DataMigrationSchedule) => isDifferent(form[key], survey?.[key])
@@ -660,6 +703,23 @@ export function DataMigrationPage() {
         )}
       </div>
 
+      {/* Search toolbar */}
+      <div className="bg-background shrink-0 flex items-center gap-2 px-3 h-11 border-b">
+        <div className="flex-1" />
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search projects..."
+            value={projectSearch}
+            onChange={(e) => {
+              setProjectSearch(e.target.value)
+              setSelectedProjectId(null)
+            }}
+            className="pl-8 h-8 text-sm w-[200px]"
+          />
+        </div>
+      </div>
+
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {isLoading ? (
@@ -685,7 +745,9 @@ export function DataMigrationPage() {
                     <p className="text-sm text-muted-foreground">
                       {blocks.length === 0
                         ? 'No cycle blocks available. Configure the cycle period in Migration Settings.'
-                        : 'No cycle blocks match your projects.'}
+                        : searchedProjects
+                          ? 'No cycle blocks match the searched projects.'
+                          : 'No cycle blocks match your projects.'}
                     </p>
                   ) : (
                     visibleBlocks.map(block => {
@@ -743,9 +805,21 @@ export function DataMigrationPage() {
               <div className="flex-1 overflow-y-auto -mx-1 px-1 min-h-0">
                 <div className="flex flex-col gap-2 pb-2">
                   {!selectedBlock ? (
-                    <p className="text-sm text-muted-foreground">Select a cycle block to see assigned projects.</p>
+                    <p className="text-sm text-muted-foreground">
+                      {searchedProjects
+                        ? searchedProjects.length === 0
+                          ? `No projects found matching "${projectSearch.trim()}".`
+                          : 'Select a cycle block to see the matched projects.'
+                        : 'Select a cycle block to see assigned projects.'}
+                    </p>
                   ) : filteredProjects.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No projects assigned to this block.</p>
+                    <p className="text-sm text-muted-foreground">
+                      {searchedProjects
+                        ? searchedProjects.length === 0
+                          ? `No projects found matching "${projectSearch.trim()}".`
+                          : 'No matched projects in this cycle block.'
+                        : 'No projects assigned to this block.'}
+                    </p>
                   ) : (
                     filteredProjects.map(project => {
                       const isSelected = selectedProjectId === project.id
@@ -850,6 +924,18 @@ export function DataMigrationPage() {
                             </Button>
                           )}
                         </>
+                      )}
+                      {isPlatformLead && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setRemoveDialogOpen(true)}
+                          disabled={removing}
+                        >
+                          <Trash2 size={14} className="mr-1.5" />
+                          Remove from scope
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -1223,6 +1309,62 @@ export function DataMigrationPage() {
             </Button>
             <Button onClick={handleReopen} disabled={reopening || !reopenReason.trim()}>
               {reopening ? 'Reopening…' : 'Confirm reopen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove from data migration scope</DialogTitle>
+            <DialogDescription>
+              This permanently removes {selectedProject?.name} ({selectedProject?.id}) from the data
+              migration scope. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProject && (
+            <div className="space-y-3 text-sm">
+              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-1 text-xs">
+                <p>
+                  <span className="font-medium">Cycle block(s):</span>{' '}
+                  {savedBlocksForSelectedProject.length > 0
+                    ? savedBlocksForSelectedProject.map(b => formatBlockRange({ ...b, bookedCount: 0, asrDrBookedCount: 0 })).join(', ')
+                    : '—'}
+                </p>
+                <p>
+                  <span className="font-medium">Cycle count:</span>{' '}
+                  {(selectedProject.dataMigrationPlan ?? selectedProject.dataMigrationSchedule)?.cycleCountOption === 'more'
+                    ? `> ${minCycle}`
+                    : ((selectedProject.dataMigrationPlan ?? selectedProject.dataMigrationSchedule)?.cycleCount ?? minCycle)}
+                </p>
+                <p>
+                  <span className="font-medium">DTS instances:</span>{' '}
+                  {(selectedProject.dataMigrationPlan ?? selectedProject.dataMigrationSchedule)?.dtsInstanceCount ?? minDts}
+                </p>
+                <p>
+                  <span className="font-medium">ASR-DR:</span>{' '}
+                  {(selectedProject.dataMigrationPlan ?? selectedProject.dataMigrationSchedule)?.needAsrDr ? 'Yes' : 'No'}
+                </p>
+              </div>
+              <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
+                <li>The data migration plan <strong className="text-foreground">and</strong> the submitted survey schedule will be permanently deleted.</li>
+                {savedBlocksForSelectedProject.length > 0 && (
+                  <li>Booked capacity will be freed in {savedBlocksForSelectedProject.length} cycle block{savedBlocksForSelectedProject.length !== 1 ? 's' : ''}.</li>
+                )}
+                {(selectedProject.dataMigrationPlan ?? selectedProject.dataMigrationSchedule)?.needAsrDr && (
+                  <li>The project's ASR-DR slot will be released.</li>
+                )}
+                <li>The project will no longer appear on this page. This action will be recorded in the audit log.</li>
+              </ul>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveDialogOpen(false)} disabled={removing}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemoveFromScope} disabled={removing}>
+              {removing ? 'Removing…' : 'Confirm removal'}
             </Button>
           </DialogFooter>
         </DialogContent>

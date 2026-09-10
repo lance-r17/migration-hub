@@ -194,6 +194,11 @@ function promoteFullSelections(
 
 type SortKey = 'progress' | 'status'
 
+/** Deboard projects require no migration — excluded from home progress metrics and grids. */
+function isDeboard(p: { applicationOverview?: { migrationStrategy?: string } }): boolean {
+  return p.applicationOverview?.migrationStrategy === 'Deboard'
+}
+
 export function HomePage() {
   const [sortKey, setSortKey] = useState<SortKey>('progress')
   const navigate = useNavigate()
@@ -323,14 +328,15 @@ export function HomePage() {
   // for all roles — avoids the /dashboard/stats round-trip, which recomputes the
   // same per-project progress server-side. Same status sets as the backend.
   const displayStats = useMemo((): OverallStats => {
-    const completed = projects.filter(p => p.status === 'completed').length
-    const inProgress = projects.filter(p => ['in-progress', 'migrating', 'signed-off'].includes(p.status)).length
-    const progress = projects.length
-      ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
+    const nonDeboard = projects.filter(p => !isDeboard(p))
+    const completed = nonDeboard.filter(p => p.status === 'completed').length
+    const inProgress = nonDeboard.filter(p => ['in-progress', 'migrating', 'signed-off'].includes(p.status)).length
+    const progress = nonDeboard.length
+      ? Math.round(nonDeboard.reduce((sum, p) => sum + p.progress, 0) / nonDeboard.length)
       : 0
     return {
       progress,
-      totalAssets: projects.length,
+      totalAssets: nonDeboard.length,
       targetCloud: 'Azure',
       completed,
       inProgress,
@@ -344,8 +350,9 @@ export function HomePage() {
   })
 
   const bgiFilteredSortedProjects = useMemo(() => {
-    if (!selectedBgiDescendantIds) return sortedProjects
-    return sortedProjects.filter(p => p.bgi_id && selectedBgiDescendantIds.has(p.bgi_id))
+    const nonDeboard = sortedProjects.filter(p => !isDeboard(p))
+    if (!selectedBgiDescendantIds) return nonDeboard
+    return nonDeboard.filter(p => p.bgi_id && selectedBgiDescendantIds.has(p.bgi_id))
   }, [sortedProjects, selectedBgiDescendantIds])
 
   // For bgi leads: show latest 5 active projects on the home grid
@@ -541,7 +548,7 @@ export function HomePage() {
           <div className={cn('flex items-center', isLead ? 'justify-between' : 'justify-end')}>
             {isLead && (
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-foreground">Active Projects</h2>
+                <h2 className="text-xl font-semibold text-foreground">Active Projects ({gridTotal})</h2>
                 {bgiRoot && Array.from(selectedBgiIds).map(id => {
                   const node = findNodeById(bgiRoot, id)
                   if (!node) return null
@@ -616,7 +623,6 @@ export function HomePage() {
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-semibold text-foreground">View All Projects</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{gridTotal} total projects</p>
                     </div>
                     <div className="flex items-center gap-1 text-xs font-semibold text-primary">
                       <span>Go to Projects</span>

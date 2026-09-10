@@ -14,6 +14,7 @@ import {
   CircleDot,
   RotateCcw,
   History,
+  Database,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatValue } from '@/utils/diff'
@@ -110,6 +111,24 @@ const EVENT_CONFIG: Record<AuditEventType, {
     label: 'Restored from history',
     iconClass: 'text-sky-600 dark:text-sky-400',
     dotClass: 'bg-sky-500',
+  },
+  data_migration_completed: {
+    icon: BadgeCheck,
+    label: 'Data migration completed',
+    iconClass: 'text-emerald-600 dark:text-emerald-400',
+    dotClass: 'bg-emerald-500',
+  },
+  data_migration_reopened: {
+    icon: RotateCcw,
+    label: 'Data migration reopened',
+    iconClass: 'text-amber-600 dark:text-amber-400',
+    dotClass: 'bg-amber-500',
+  },
+  data_migration_scope_removed: {
+    icon: Database,
+    label: 'Removed from data migration scope',
+    iconClass: 'text-red-600 dark:text-red-400',
+    dotClass: 'bg-red-500',
   },
 }
 

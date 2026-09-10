@@ -161,6 +161,7 @@ class ProjectHomeItem(BaseModel):
     risks: list[RiskHomeOut] | None = None
     bgi_id: str | None = None
     category_milestone_ids: list[str] | None = None
+    application_overview: dict[str, Any] | None = None
 
 
 class ProjectHomeSummary(BaseModel):

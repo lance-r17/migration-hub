@@ -2,7 +2,7 @@ import type { JiraSubtaskConfig } from './wave'
 import type { InfraFootprintResult, MigrationDriverResult } from '@/lib/scoring'
 export type { JiraSubtaskConfig }
 
-export type ProjectStatus = 'migrating' | 'signed-off' | 'blocked' | 'planning' | 'in-progress' | 'completed'
+export type ProjectStatus = 'migrating' | 'signed-off' | 'blocked' | 'planning' | 'in-progress' | 'completed' | 'no-migration-required'
 export type ApprovalStatus = 'approved' | 'pending' | 'waiting'
 export type RiskSeverity = 'critical' | 'medium' | 'low'
 export type SyncStatus = 'synced' | 'out-of-sync' | 'provisioning'
