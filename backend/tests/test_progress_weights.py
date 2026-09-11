@@ -11,7 +11,7 @@ import pytest
 
 from app.schemas.migration_settings import ProgressWeights
 from app.services import milestone_stats
-from app.services.project_service import compute_stage_progress
+from app.services.project_service import compute_stage_progress, derive_status_from_stage_progress
 
 
 def _resource(need_migration=True, migration_completed=False):
@@ -34,6 +34,7 @@ def _make_project(**overrides):
         approvals=[],
         is_survey_needed=True,
         survey_submitted_at=None,
+        application_overview=None,
         planning=None,
         environment_provision=None,
         data_migration_plan=None,
@@ -102,6 +103,52 @@ def test_signoff_disabled_folds_into_setup():
 def test_no_milestones_means_zero_migration():
     p = _make_project()
     assert compute_stage_progress(p)["migration"] == 0
+
+
+# ─── Deboard setup relaxation ────────────────────────────────────────────────
+
+
+def test_deboard_setup_ignores_resource_condition():
+    p = _make_project(
+        cloud_resources=[],
+        application_overview={"migrationStrategy": "Deboard"},
+    )
+    stage = compute_stage_progress(p)
+    assert stage["setup"] == 100
+
+
+def test_deboard_setup_still_requires_governance_role():
+    p = _make_project(
+        cloud_resources=[],
+        project_users=[],
+        application_overview={"migrationStrategy": "Deboard"},
+    )
+    stage = compute_stage_progress(p)
+    assert stage["setup"] == 0
+
+
+def test_deboard_fully_prepared_derives_no_migration_required():
+    p = _make_project(
+        cloud_resources=[],
+        application_overview={"migrationStrategy": "Deboard"},
+        survey_submitted_at=datetime.now(timezone.utc),
+        approvals=[
+            _approval("technical_lead", "approved"),
+            _approval("gbi_champion", "approved"),
+            _approval("platform_migration_lead", "approved"),
+        ],
+    )
+    stage = compute_stage_progress(p)
+    assert derive_status_from_stage_progress(stage, "Deboard") == "no-migration-required"
+
+
+def test_non_deboard_setup_still_requires_resources():
+    p = _make_project(
+        cloud_resources=[],
+        application_overview={"migrationStrategy": "Lift & Shift"},
+    )
+    stage = compute_stage_progress(p)
+    assert stage["setup"] == 0
 
 
 # ─── Milestone duration stats ─────────────────────────────────────────────────

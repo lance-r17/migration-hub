@@ -140,10 +140,12 @@ def compute_stage_progress(
     wave Gantt "%" column). Redistribution rules:
       - survey not required -> survey weight folds into setup
       - sign-off disabled   -> signoff weight folds into setup
+      - Deboard strategy    -> setup ignores the in-scope-resource condition
     """
     w = weights or _DEFAULT_PROGRESS_WEIGHTS
 
-    has_resources = any(r.need_migration for r in (project.cloud_resources or []))
+    is_deboard = _migration_strategy(project) == "Deboard"
+    has_resources = is_deboard or any(r.need_migration for r in (project.cloud_resources or []))
     governance_roles = {"technical_lead", "business_owner", "dba_data_owner", "gbi_champion", "gbi_champion_delegate"}
     has_team = any(
         r.strip() in governance_roles
