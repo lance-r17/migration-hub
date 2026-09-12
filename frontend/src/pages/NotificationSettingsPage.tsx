@@ -39,6 +39,10 @@ import {
   type EmailEventConfig,
   type ResolvedRecipient,
 } from '@/services/adminEmailService'
+import {
+  getNotificationConfig,
+  updateNotificationConfig,
+} from '@/services/notifications'
 
 const DEFAULT_REMINDER_DAYS = [1, 3, 7, 14, 30]
 
@@ -136,8 +140,80 @@ export function NotificationSettingsPage() {
       <div className="grid gap-6 lg:grid-cols-2 items-start">
         <CutoverReminderCard initial={config?.cutover_reminder} />
         <MilestoneReminderCard initial={config?.milestone_reminder} />
+        <InAppNotificationsCard />
       </div>
     </div>
+  )
+}
+
+// ─── In-App Notifications card ───────────────────────────────────────────────
+
+function InAppNotificationsCard() {
+  const [retentionLimit, setRetentionLimit] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    getNotificationConfig()
+      .then((c) => setRetentionLimit(String(c.retention_limit)))
+      .catch(() => toast.error('Failed to load in-app notification settings'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleSave = async () => {
+    const limit = Number(retentionLimit)
+    if (!Number.isInteger(limit) || limit < 1) {
+      toast.error('Retention limit must be a positive integer')
+      return
+    }
+    setSaving(true)
+    try {
+      await updateNotificationConfig({ retention_limit: limit })
+      toast.success('In-app notification settings saved')
+    } catch {
+      toast.error('Failed to save settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Bell className="size-4 text-muted-foreground" />
+          In-App Notifications
+        </CardTitle>
+        <CardDescription>
+          Configure retention for user menu notifications.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {loading ? (
+          <Skeleton className="h-9 w-32" />
+        ) : (
+          <div className="space-y-2">
+            <p className="font-medium text-sm">Retention limit (per user)</p>
+            <p className="text-muted-foreground text-xs">
+              Oldest notifications beyond this count are automatically removed.
+            </p>
+            <Input
+              type="number"
+              min={1}
+              value={retentionLimit}
+              onChange={(e) => setRetentionLimit(e.target.value)}
+              className="w-32"
+            />
+          </div>
+        )}
+
+        <div className="pt-2 border-t border-border">
+          <Button onClick={handleSave} disabled={saving || loading}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

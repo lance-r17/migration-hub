@@ -66,6 +66,13 @@ import {
   updateGovernanceRoles,
 } from '@/services/projects'
 import { getAllUserProjectRoles } from '@/services/adminUsers'
+import {
+  getLocalAccount,
+  createLocalAccount,
+  updateLocalAccountPassword,
+  deleteLocalAccount,
+} from '@/services/adminUsers'
+import type { LocalAccount } from '@/services/adminUsers'
 import type { User } from '@/types'
 import type { UserAdminUpdate, UserProjectRole } from '@/services/adminUsers'
 import type { Project } from '@/types'
@@ -141,6 +148,12 @@ export function UserAccountsPage() {
     currentUserName: string
   } | null>(null)
 
+  // Early Access Experience (local account) state
+  const [localAccount, setLocalAccount] = useState<LocalAccount | null>(null)
+  const [localAccountName, setLocalAccountName] = useState('')
+  const [localAccountPassword, setLocalAccountPassword] = useState('')
+  const [localAccountSaving, setLocalAccountSaving] = useState(false)
+
   // Filter and pagination
   const [filterText, setFilterText] = useState('')
   const [page, setPage] = useState(1)
@@ -214,6 +227,16 @@ export function UserAccountsPage() {
       setAllProjects(projects)
     } catch {
       // ignore; dropdown will be empty
+    }
+
+    // Load local account (Early Access Experience)
+    setLocalAccount(null)
+    setLocalAccountName(`${user.id}-poc`)
+    setLocalAccountPassword('')
+    try {
+      setLocalAccount(await getLocalAccount(user.id))
+    } catch {
+      // ignore; section will show the create form
     }
   }
 
@@ -396,6 +419,60 @@ export function UserAccountsPage() {
       toast.error(msg)
     } finally {
       setGovRoleSaving(false)
+    }
+  }
+
+  const handleCreateLocalAccount = async () => {
+    if (!editingUser) return
+    if (!localAccountName.trim()) { toast.error('Account name is required.'); return }
+    if (!localAccountPassword) { toast.error('Initial password is required.'); return }
+    setLocalAccountSaving(true)
+    try {
+      const created = await createLocalAccount(editingUser.id, {
+        account_name: localAccountName.trim(),
+        password: localAccountPassword,
+      })
+      setLocalAccount(created)
+      setLocalAccountPassword('')
+      toast.success('Local account created')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create local account.'
+      toast.error(msg)
+    } finally {
+      setLocalAccountSaving(false)
+    }
+  }
+
+  const handleUpdateLocalAccountPassword = async () => {
+    if (!editingUser || !localAccountPassword) return
+    setLocalAccountSaving(true)
+    try {
+      const updated = await updateLocalAccountPassword(editingUser.id, localAccountPassword)
+      setLocalAccount(updated)
+      setLocalAccountPassword('')
+      toast.success('Password updated')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update password.'
+      toast.error(msg)
+    } finally {
+      setLocalAccountSaving(false)
+    }
+  }
+
+  const handleRemoveLocalAccount = async () => {
+    if (!editingUser) return
+    setLocalAccountSaving(true)
+    try {
+      await deleteLocalAccount(editingUser.id)
+      setLocalAccount(null)
+      setLocalAccountName(`${editingUser.id}-poc`)
+      setLocalAccountPassword('')
+      toast.success('Local account removed')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to remove local account.'
+      toast.error(msg)
+    } finally {
+      setLocalAccountSaving(false)
     }
   }
 
@@ -641,6 +718,72 @@ export function UserAccountsPage() {
                 />
                 <p className="text-xs text-muted-foreground">Roles are managed via SSO and cannot be edited here.</p>
               </div>
+            </div>
+
+            <div className="border-t border-border pt-4 space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">Early Access Experience</h3>
+              <p className="text-xs text-muted-foreground">
+                Local account for the new cloud environment. Each user can have at most one.
+              </p>
+              <div className="flex items-end gap-2">
+                <div className="flex-1 space-y-1.5">
+                  <Label htmlFor="local-account-name">Account Name</Label>
+                  <Input
+                    id="local-account-name"
+                    value={localAccount ? localAccount.account_name : localAccountName}
+                    onChange={(e) => setLocalAccountName(e.target.value)}
+                    placeholder="e.g. jdoe-poc"
+                    disabled={!!localAccount || localAccountSaving}
+                  />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <Label htmlFor="local-account-password">
+                    {localAccount ? 'New Password' : 'Initial Password'}
+                  </Label>
+                  <Input
+                    id="local-account-password"
+                    type="password"
+                    value={localAccountPassword}
+                    onChange={(e) => setLocalAccountPassword(e.target.value)}
+                    placeholder={localAccount ? 'Enter new password to update' : 'Enter initial password'}
+                    disabled={localAccountSaving}
+                  />
+                </div>
+                {localAccount ? (
+                  <>
+                    <Button
+                      onClick={handleUpdateLocalAccountPassword}
+                      disabled={!localAccountPassword || localAccountSaving}
+                    >
+                      Update Password
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={handleRemoveLocalAccount}
+                      disabled={localAccountSaving}
+                      title="Remove local account"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={handleCreateLocalAccount}
+                    disabled={localAccountSaving}
+                    className="gap-1"
+                  >
+                    <Plus className="size-4" />
+                    Create
+                  </Button>
+                )}
+              </div>
+              {localAccount && (
+                <p className="text-xs text-muted-foreground">
+                  The current password is never displayed here. The user can view it on their Account page.
+                </p>
+              )}
             </div>
 
             <div className="border-t border-border pt-4 space-y-4">

@@ -20,3 +20,6 @@ class User(Base):
     api_key_hash: Mapped[str | None] = mapped_column(String, nullable=True)
 
     project_users: Mapped[list["ProjectUser"]] = relationship("ProjectUser", back_populates="user")
+    local_account: Mapped["UserLocalAccount | None"] = relationship(
+        "UserLocalAccount", back_populates="user", uselist=False
+    )

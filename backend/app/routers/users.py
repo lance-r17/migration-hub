@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.user import User
+from app.models.user_local_account import UserLocalAccount
+from app.schemas.local_account import LocalAccountOwnerOut
 from app.schemas.user import LoginRequest, UserOut
 from app.services import user_service
 
@@ -24,6 +26,19 @@ async def get_me(
     return UserOut.model_validate(current_user).model_copy(
         update={"project_roles": sorted(project_roles)}
     )
+
+
+@router.get("/me/local-account", response_model=LocalAccountOwnerOut)
+async def get_my_local_account(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the current user's local account, including the password.
+    This is the only endpoint that exposes the password, and only to the owner."""
+    account = await db.get(UserLocalAccount, current_user.id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Local account not found")
+    return account
 
 
 @router.get("/{user_id}", response_model=UserOut)

@@ -180,6 +180,7 @@ def create_app() -> FastAPI:
         bgi,
         jira,
         note_templates,
+        notifications,
         oauth,
         product_categories,
         projects,
@@ -213,6 +214,7 @@ def create_app() -> FastAPI:
     app.include_router(bgi.router, prefix=prefix)
     app.include_router(admin.router, prefix=prefix)
     app.include_router(admin_email.router, prefix=prefix)
+    app.include_router(notifications.router, prefix=prefix)
 
     # MCP SSE endpoint — mounted outside /api/v1 so the SSE path is /mcp/sse
     from app.mcp import sse_router as mcp_sse_router

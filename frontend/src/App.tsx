@@ -31,6 +31,8 @@ import { AdminJiraJobsPage } from './pages/AdminJiraJobsPage'
 import { ServiceAccountsPage } from './pages/ServiceAccountsPage'
 import { AdminAttachmentsPage } from './pages/AdminAttachmentsPage'
 import { UserAccountsPage } from './pages/UserAccountsPage'
+import { AccountPage } from './pages/AccountPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { EmailJobsPage } from './pages/EmailJobsPage'
 import { AdminPage } from './pages/AdminPage'
@@ -72,6 +74,8 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/callback" element={<CallbackPage />} />
           <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+          <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
           <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
           <Route path="/engagements" element={<ProtectedRoute><EngagementCalendarPage /></ProtectedRoute>} />
           <Route path="/engagements/:projectId" element={<ProtectedRoute><EngagementNotesPage /></ProtectedRoute>} />

@@ -23,6 +23,8 @@ from app.models.engagement import Engagement
 from app.models.note_template import NoteTemplate
 from app.models.note_template_version import NoteTemplateVersion
 from app.models.confluence_parent_page import ConfluenceParentPage
+from app.models.user_local_account import UserLocalAccount
+from app.models.notification import Notification
 
 __all__ = [
     "Base",
@@ -50,4 +52,6 @@ __all__ = [
     "NoteTemplate",
     "NoteTemplateVersion",
     "ConfluenceParentPage",
+    "UserLocalAccount",
+    "Notification",
 ]

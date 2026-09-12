@@ -41,3 +41,18 @@ export async function login(_email: string, _password: string): Promise<User> {
   if (USE_MOCK) { await delay(); return store.getCurrentUser() }
   return userFromApi(await apiClient.post<Record<string, unknown>>('/api/v1/auth/login', { email: _email, password: _password }))
 }
+
+export interface MyLocalAccount {
+  account_name: string
+  password: string
+}
+
+/** Returns null when the current user has no local account (404). */
+export async function getMyLocalAccount(): Promise<MyLocalAccount | null> {
+  try {
+    return await apiClient.get<MyLocalAccount>(`${ENDPOINTS.me}/local-account`)
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes('404')) return null
+    throw err
+  }
+}

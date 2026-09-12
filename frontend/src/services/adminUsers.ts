@@ -38,6 +38,43 @@ export async function getAllUserProjectRoles(): Promise<UserProjectRole[]> {
   return apiClient.get<UserProjectRole[]>(PROJECT_ROLES_ENDPOINT)
 }
 
+export interface LocalAccount {
+  user_id: string
+  account_name: string
+  created_at: string
+  updated_at: string
+}
+
+const localAccountEndpoint = (userId: string) => `${ENDPOINT}/${userId}/local-account`
+
+/** Returns null when the user has no local account (404). */
+export async function getLocalAccount(userId: string): Promise<LocalAccount | null> {
+  try {
+    return await apiClient.get<LocalAccount>(localAccountEndpoint(userId))
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes('404')) return null
+    throw err
+  }
+}
+
+export async function createLocalAccount(
+  userId: string,
+  data: { account_name: string; password: string },
+): Promise<LocalAccount> {
+  return apiClient.post<LocalAccount>(localAccountEndpoint(userId), data)
+}
+
+export async function updateLocalAccountPassword(
+  userId: string,
+  password: string,
+): Promise<LocalAccount> {
+  return apiClient.put<LocalAccount>(localAccountEndpoint(userId), { password })
+}
+
+export async function deleteLocalAccount(userId: string): Promise<void> {
+  return apiClient.delete<void>(localAccountEndpoint(userId))
+}
+
 const BGI_CLOUD_LEADS_ENDPOINT = '/api/v1/admin/bgi-cloud-leads'
 
 export interface BgiCloudLeadCreate {

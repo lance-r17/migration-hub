@@ -11,11 +11,18 @@ from app.database import get_db
 from app.models.project import Project
 from app.models.project_user import ProjectUser
 from app.models.user import User
+from app.models.user_local_account import UserLocalAccount
 from app.schemas.admin_attachment import (
     AdminAttachmentOut,
     BulkDeleteAttachmentsRequest,
     BulkDeleteAttachmentsResponse,
 )
+from app.schemas.local_account import (
+    LocalAccountAdminOut,
+    LocalAccountCreate,
+    LocalAccountUpdate,
+)
+from app.schemas.notification import NotificationConfig
 from app.schemas.service_account import (
     ServiceAccountCreate,
     ServiceAccountCreated,
@@ -32,7 +39,7 @@ from app.schemas.user import (
     UserOut,
     UserProjectRoleOut,
 )
-from app.services import attachment_service, user_service
+from app.services import attachment_service, notification_service, user_service
 from app.auth import _user_has_bgi_cloud_lead_role, _user_has_engagement_reviewer_role
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -304,6 +311,125 @@ async def delete_user(
     await db.execute(delete(ProjectUser).where(ProjectUser.user_id == user_id))
     await db.delete(user)
     await db.flush()
+
+
+@router.get("/users/{user_id}/local-account", response_model=LocalAccountAdminOut)
+async def get_local_account(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Get a user's local account (never includes the password)."""
+    account = await db.get(UserLocalAccount, user_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Local account not found")
+    return account
+
+
+@router.post(
+    "/users/{user_id}/local-account",
+    response_model=LocalAccountAdminOut,
+    status_code=201,
+)
+async def create_local_account(
+    user_id: str,
+    body: LocalAccountCreate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Create the local account for a user (at most one per user)."""
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if await db.get(UserLocalAccount, user_id):
+        raise HTTPException(status_code=409, detail="User already has a local account")
+
+    existing = await db.execute(
+        select(UserLocalAccount).where(UserLocalAccount.account_name == body.account_name)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Account name already in use")
+
+    account = UserLocalAccount(
+        user_id=user_id,
+        account_name=body.account_name,
+        password=body.password,
+    )
+    db.add(account)
+    await db.flush()
+    await notification_service.create_notification(
+        db,
+        user_id=user_id,
+        type="early_access_account_created",
+        title="Early Access: Local Account Created",
+        message=(
+            f"A local account {account.account_name} has been provisioned for you "
+            "for the new cloud environment."
+        ),
+        link="/account",
+    )
+    return account
+
+
+@router.put("/users/{user_id}/local-account", response_model=LocalAccountAdminOut)
+async def update_local_account(
+    user_id: str,
+    body: LocalAccountUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Update the password of a user's local account (account name is immutable)."""
+    account = await db.get(UserLocalAccount, user_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Local account not found")
+    account.password = body.password
+    await db.flush()
+    await notification_service.create_notification(
+        db,
+        user_id=user_id,
+        type="early_access_password_updated",
+        title="Early Access: Initial Password Updated",
+        message=(
+            f"The initial password for your local account {account.account_name} "
+            "has been updated."
+        ),
+        link="/account",
+    )
+    return account
+
+
+@router.delete("/users/{user_id}/local-account", status_code=204)
+async def delete_local_account(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Remove a user's local account."""
+    account = await db.get(UserLocalAccount, user_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Local account not found")
+    await db.delete(account)
+    await db.flush()
+
+
+@router.get("/notification-config", response_model=NotificationConfig)
+async def get_notification_config(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Get in-app notification configuration (retention limit)."""
+    return await notification_service.get_notification_config(db)
+
+
+@router.put("/notification-config", response_model=NotificationConfig)
+async def update_notification_config(
+    body: NotificationConfig,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """Update in-app notification configuration."""
+    return await notification_service.set_notification_config(db, body.model_dump())
 
 
 @router.post("/users/batch", response_model=BatchUserCreateResponse, status_code=201)
