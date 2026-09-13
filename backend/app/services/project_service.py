@@ -33,6 +33,7 @@ _FIELD_REL_REQUIREMENTS: dict[str, set[str]] = {
     "approvals": {"approvals"},
     "engagement": {"engagement"},
     "category_milestones": {"category_milestones"},
+    "gantt": {"cloud_resources", "project_users", "approvals", "category_milestones", "engagement"},
 }
 
 

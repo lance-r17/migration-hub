@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.user_local_account import UserLocalAccount
 from app.schemas.local_account import LocalAccountOwnerOut
-from app.schemas.user import LoginRequest, UserOut
+from app.schemas.user import LoginRequest, UserOut, UserSummaryOut
 from app.services import user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -14,6 +14,12 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("", response_model=list[UserOut])
 async def list_users(db: AsyncSession = Depends(get_db)):
+    return await user_service.get_all(db)
+
+
+@router.get("/summary", response_model=list[UserSummaryOut])
+async def list_users_summary(db: AsyncSession = Depends(get_db)):
+    """Lightweight id+name list for pickers that don't need full user records."""
     return await user_service.get_all(db)
 
 

@@ -24,6 +24,16 @@ export async function getUsers(): Promise<User[]> {
   return (await apiClient.get<Record<string, unknown>[]>(ENDPOINTS.users)).map(userFromApi)
 }
 
+export interface UserSummary {
+  id: string
+  name: string
+}
+
+export async function getUsersSummary(): Promise<UserSummary[]> {
+  if (USE_MOCK) { await delay(); return store.getUsers().map(u => ({ id: u.id, name: u.name })) }
+  return apiClient.get<UserSummary[]>(`${ENDPOINTS.users}/summary`)
+}
+
 export async function getCurrentUser(): Promise<User> {
   // TODO (backend): return apiClient.get<User>(ENDPOINTS.me)
   if (USE_MOCK) { await delay(); return store.getCurrentUser() }

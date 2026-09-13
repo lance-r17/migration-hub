@@ -15,6 +15,15 @@ class UserOut(BaseModel):
     bgi_ids: list[str] = []
 
 
+class UserSummaryOut(BaseModel):
+    """Minimal user payload for name-only lookups (e.g. filter dropdowns)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+
+
 class UserCreate(BaseModel):
     id: str | None = None
     name: str

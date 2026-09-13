@@ -156,6 +156,13 @@ def _derive_status(p, stage_data: dict) -> str:
     return project_service.derive_status_from_stage_progress(stage_data, (p.application_overview or {}).get("migrationStrategy"))
 
 
+def _pick(d: dict[str, Any] | None, *keys: str) -> dict[str, Any] | None:
+    """Subset a JSON-section dict to the given keys, dropping nulls."""
+    if not d:
+        return None
+    return {k: v for k in keys if (v := d.get(k)) is not None}
+
+
 def _unpack_ctx(ctx) -> tuple:
     """(weights, signoff_enabled) from a progress context tuple, or defaults."""
     return ctx if ctx is not None else (None, True)
@@ -278,6 +285,30 @@ def _project_list_item(p, fields: set[str] | None = None, ctx=None) -> ProjectLi
 
     if "engagement" in fields:
         data["engagement"] = project_service._engagement_to_dict(p)
+
+    # Lean payload for the Wave Gantt page: only the keys WaveGanttChart reads.
+    if "gantt" in fields:
+        weights, signoff_enabled = _unpack_ctx(ctx)
+        stage_data = project_service.compute_stage_progress(p, weights, signoff_enabled)
+        data.update(
+            {
+                "id": p.id,
+                "name": p.name,
+                "status": _derive_status(p, stage_data),
+                "blocked_reason": p.blocked_reason,
+                "wave_id": p.wave_id,
+                "jira_story_key": p.jira_story_key,
+                "jira_base_url": settings.jira_base_url,
+                "planning": p.planning,
+                "progress": stage_data["overall"],
+                "stage_progress": {k: v for k, v in stage_data.items() if k != "overall"},
+                "migration_constraints": _pick(p.migration_constraints, "earliestStartDate", "latestEndDate"),
+                "application_overview": _pick(p.application_overview, "applicationName", "migrationStrategy", "applicationTier"),
+                "availability": _pick(p.availability, "rto", "rpo"),
+                "target_architecture": _pick(p.target_architecture, "reArchitectureNeeded"),
+                "engagement": _pick(project_service._engagement_to_dict(p), "engagementManagerId"),
+            }
+        )
 
     if "resources" in fields or "resources_full" in fields:
         data["cloud_resources"] = [
@@ -459,7 +490,7 @@ def _project_detail(p, ctx=None) -> ProjectDetail:
     )
 
 
-@router.get("", response_model=list[ProjectListItem])
+@router.get("", response_model=list[ProjectListItem], response_model_exclude_none=True)
 async def list_projects(
     userId: str | None = None,
     fields: list[str] | None = Query(None),
