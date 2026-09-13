@@ -287,6 +287,9 @@ def _project_list_item(p, fields: set[str] | None = None, ctx=None) -> ProjectLi
         data["engagement"] = project_service._engagement_to_dict(p)
 
     # Lean payload for the Wave Gantt page: only the keys WaveGanttChart reads.
+    # Note: milestone derivation lives in frontend src/lib/milestones.ts, which
+    # also reads environmentProvision and dataMigrationPlan/dataMigrationSchedule
+    # (startDate/endDate/cycleBlocks/completedAt) for the auto-derived bars.
     if "gantt" in fields:
         weights, signoff_enabled = _unpack_ctx(ctx)
         stage_data = project_service.compute_stage_progress(p, weights, signoff_enabled)
@@ -307,6 +310,9 @@ def _project_list_item(p, fields: set[str] | None = None, ctx=None) -> ProjectLi
                 "availability": _pick(p.availability, "rto", "rpo"),
                 "target_architecture": _pick(p.target_architecture, "reArchitectureNeeded"),
                 "engagement": _pick(project_service._engagement_to_dict(p), "engagementManagerId"),
+                "environment_provision": p.environment_provision,
+                "data_migration_plan": _pick(p.data_migration_plan, "startDate", "endDate", "cycleBlocks", "completedAt"),
+                "data_migration_schedule": _pick(p.data_migration_schedule, "startDate", "endDate", "cycleBlocks", "completedAt"),
             }
         )
 
