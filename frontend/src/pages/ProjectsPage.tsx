@@ -315,7 +315,7 @@ export function ProjectsPage() {
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">Projects</h1>
           </div>
           <p className="text-muted-foreground text-sm">
-            All migration projects across the platform.
+            This list includes only projects identified since May 2026 — projects demised before May 2026 are not shown. Each project has exactly one profile. If a project has been or will be demised after May 2026, set its migration strategy to Deboard to exclude it from the migration.
           </p>
         </div>
 

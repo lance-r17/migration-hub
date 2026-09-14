@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Cloud, Copy, Download, FolderOpen, Loader2, Lock, Search, Server, SlidersHorizontal, Upload, X } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Cloud, Copy, Download, FolderOpen, Loader2, Lock, Network, Search, Server, SlidersHorizontal, Upload, X } from 'lucide-react'
 import { format } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { toast } from 'sonner'
@@ -137,6 +137,10 @@ export function EnvironmentProvisionPage() {
   const importInputRef = useRef<HTMLInputElement>(null)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportWaveIds, setExportWaveIds] = useState<Set<string>>(new Set())
+  const [cidrCheckOpen, setCidrCheckOpen] = useState(false)
+  const [cidrCheckInput, setCidrCheckInput] = useState('')
+  const [cidrCheckError, setCidrCheckError] = useState<string | null>(null)
+  const [cidrCheckResults, setCidrCheckResults] = useState<AllocatedCidr[] | null>(null)
 
   const liveProjects = useMemo<Project[]>(() => {
     return initialProjects.map(project => {
@@ -481,6 +485,17 @@ export function EnvironmentProvisionPage() {
     }
   }
 
+  function handleCidrCheck() {
+    const cidr = cidrCheckInput.trim()
+    if (!parseCidr(cidr)) {
+      setCidrCheckError('Invalid CIDR format (expected e.g. 10.248.32.0/26)')
+      setCidrCheckResults(null)
+      return
+    }
+    setCidrCheckError(null)
+    setCidrCheckResults(allocatedCidrs.filter(a => cidrRangesOverlap(a.cidr, cidr)))
+  }
+
   if (!isPlatformLead) {
     return (
       <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -524,6 +539,20 @@ export function EnvironmentProvisionPage() {
           <div className="flex flex-col h-full">
             {/* Filter / expand toolbar */}
             <div className="bg-background shrink-0 flex items-center gap-2 px-3 h-11 border-b">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setCidrCheckOpen(true)}
+                    className="flex items-center justify-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <Network size={13} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Check CIDR conflicts
+                </TooltipContent>
+              </Tooltip>
+
               <div className="flex-1" />
 
               <div className="relative">
@@ -1016,6 +1045,76 @@ export function EnvironmentProvisionPage() {
               Export
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CIDR conflict check dialog: probe an arbitrary CIDR against all allocations */}
+      <Dialog
+        open={cidrCheckOpen}
+        onOpenChange={open => {
+          setCidrCheckOpen(open)
+          if (!open) {
+            setCidrCheckInput('')
+            setCidrCheckError(null)
+            setCidrCheckResults(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>CIDR Conflict Check</DialogTitle>
+            <DialogDescription>
+              Enter a CIDR block to find projects whose allocated zone CIDRs overlap it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-start gap-2">
+            <div className="flex-1 space-y-1">
+              <Input
+                value={cidrCheckInput}
+                onChange={e => { setCidrCheckInput(e.target.value); setCidrCheckError(null) }}
+                onKeyDown={e => { if (e.key === 'Enter' && cidrCheckInput.trim()) handleCidrCheck() }}
+                placeholder="e.g. 10.248.32.0/26"
+                className={cn('h-8 text-xs font-mono', cidrCheckError && 'border-destructive')}
+              />
+              {cidrCheckError && <p className="text-[11px] text-destructive">{cidrCheckError}</p>}
+            </div>
+            <Button size="sm" onClick={handleCidrCheck} disabled={!cidrCheckInput.trim()}>
+              Analyze
+            </Button>
+          </div>
+
+          {cidrCheckResults && (
+            cidrCheckResults.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">No conflicts found for this CIDR block.</p>
+            ) : (
+              <div className="max-h-60 overflow-y-auto rounded-md border border-border">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-muted/50 text-muted-foreground">
+                      <th className="text-left px-3 py-1.5 font-medium">Project ID</th>
+                      <th className="text-left px-3 py-1.5 font-medium">Target Resource Set</th>
+                      <th className="text-left px-3 py-1.5 font-medium">Zone</th>
+                      <th className="text-left px-3 py-1.5 font-medium">Conflict CIDR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cidrCheckResults.map((r, i) => {
+                      const project = liveProjects.find(p => p.id === r.projectId)
+                      return (
+                        <tr key={i} className="border-t border-border/50">
+                          <td className="px-3 py-1.5 font-mono whitespace-nowrap">{r.projectId}</td>
+                          <td className="px-3 py-1.5 font-mono whitespace-nowrap">{project ? targetResourceSet(project, r.env) : '—'}</td>
+                          <td className="px-3 py-1.5 whitespace-nowrap">{zoneLabel(r.zone)}</td>
+                          <td className="px-3 py-1.5 font-mono whitespace-nowrap">{r.cidr}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
         </DialogContent>
       </Dialog>
     </div>
